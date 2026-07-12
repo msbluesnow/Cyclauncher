@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -25,10 +26,19 @@ fun AutoResizingText(
     text: String,
     targetFontSize: Int,
     textAlign: TextAlign,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showShadows: Boolean = false
 ) {
     var fontSize by remember(text) { mutableStateOf(targetFontSize.sp) }
     var readyToDraw by remember(text) { mutableStateOf(false) }
+
+    val shadow = if (showShadows) {
+        Shadow(
+            color = Color.Black.copy(alpha = 0.6f),
+            offset = Offset(2f, 2f),
+            blurRadius = 4f
+        )
+    } else null
 
     Text(
         text = text,
@@ -46,7 +56,7 @@ fun AutoResizingText(
                 readyToDraw = true
             }
         },
-        style = MaterialTheme.typography.bodyLarge
+        style = MaterialTheme.typography.bodyLarge.copy(shadow = shadow)
     )
 }
 
@@ -82,7 +92,8 @@ fun AppListItem(
     app: AppInfo, 
     onClick: () -> Unit,
     onLongClick: (Offset) -> Unit = {},
-    textAlign: TextAlign = TextAlign.Center
+    textAlign: TextAlign = TextAlign.Center,
+    showShadows: Boolean = false
 ) {
     var itemPosition by remember { mutableStateOf(Offset.Zero) }
 
@@ -106,7 +117,8 @@ fun AppListItem(
         AutoResizingText(
             text = app.label,
             targetFontSize = 20,
-            textAlign = textAlign
+            textAlign = textAlign,
+            showShadows = showShadows
         )
     }
 }
@@ -118,7 +130,8 @@ fun AppListItemWithIcon(
     fontSize: Int = 18,
     iconSize: Int = 40,
     onClick: () -> Unit,
-    onLongClick: (Offset) -> Unit = {}
+    onLongClick: (Offset) -> Unit = {},
+    showShadows: Boolean = false
 ) {
     var itemPosition by remember { mutableStateOf(Offset.Zero) }
 
@@ -143,14 +156,16 @@ fun AppListItemWithIcon(
                 text = app.label,
                 targetFontSize = fontSize,
                 textAlign = TextAlign.Start,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                showShadows = showShadows
             )
         } else {
             AutoResizingText(
                 text = app.label,
                 targetFontSize = fontSize,
                 textAlign = TextAlign.End,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                showShadows = showShadows
             )
             Spacer(modifier = Modifier.width(16.dp))
             AppIconItem(app = app, size = iconSize, onClick = onClick, onLongClick = onLongClick)

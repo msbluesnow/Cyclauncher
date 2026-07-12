@@ -6,12 +6,14 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -53,6 +55,8 @@ fun WheelSearchLayout(
 ) {
     val filteredApps by viewModel.filteredApps.collectAsState()
     val listAlignment by viewModel.searchListAlignment.collectAsState()
+    val accentColor by viewModel.accentColor.collectAsState()
+    val showShadows by viewModel.showShadows.collectAsState()
     val scope = rememberCoroutineScope()
     val scrollOffset = remember { Animatable(0f) }
 
@@ -94,11 +98,11 @@ fun WheelSearchLayout(
             if (listAlignment == TextAlign.End) {
                 Box(modifier = scrollModifier)
                 Box(modifier = Modifier.weight(1f)) {
-                    AppListContent(filteredApps, listAlignment, onAppClick, onAppLongClick)
+                    AppListContent(filteredApps, listAlignment, showShadows, onAppClick, onAppLongClick)
                 }
             } else {
                 Box(modifier = Modifier.weight(1f)) {
-                    AppListContent(filteredApps, listAlignment, onAppClick, onAppLongClick)
+                    AppListContent(filteredApps, listAlignment, showShadows, onAppClick, onAppLongClick)
                 }
                 Box(modifier = scrollModifier)
             }
@@ -120,12 +124,13 @@ fun WheelSearchLayout(
                     filteredApps.find { "${it.packageName}/${it.activityName}" == componentKey }?.let { app ->
                         onAppLongClick(app, offset)
                     }
-                }
+                },
+                accentColor = accentColor
             )
         }
 
         // Bottom Bar
-        SearchToggleBar(handSide) { viewModel.toggleTextSearchMode() }
+        SearchToggleBar(handSide, accentColor, showShadows) { viewModel.toggleTextSearchMode() }
     }
 }
 
@@ -133,6 +138,7 @@ fun WheelSearchLayout(
 private fun AppListContent(
     apps: List<AppInfo>,
     alignment: TextAlign,
+    showShadows: Boolean,
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit
 ) {
@@ -146,20 +152,39 @@ private fun AppListContent(
                 app = app, 
                 onClick = { onAppClick("${app.packageName}/${app.activityName}") },
                 onLongClick = { offset -> onAppLongClick(app, offset) },
-                textAlign = alignment
+                textAlign = alignment,
+                showShadows = showShadows
             )
         }
     }
 }
 
 @Composable
-private fun SearchToggleBar(handSide: HandSide, onToggle: () -> Unit) {
+private fun SearchToggleBar(
+    handSide: HandSide, 
+    accentColor: AccentColor,
+    showShadows: Boolean,
+    onToggle: () -> Unit
+) {
+    val shadow = if (showShadows) {
+        Shadow(
+            color = Color.Black.copy(alpha = 0.6f),
+            offset = Offset(2f, 2f),
+            blurRadius = 4f
+        )
+    } else null
+
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
         horizontalArrangement = if (handSide == HandSide.LEFT) Arrangement.Start else Arrangement.End
     ) {
         IconButton(onClick = onToggle) {
-            Text("⌨", color = Color.White.copy(alpha = 0.7f), fontSize = 32.sp)
+            Text(
+                "⌨", 
+                color = accentColor.color.copy(alpha = 0.8f), 
+                fontSize = 32.sp,
+                style = MaterialTheme.typography.bodyLarge.copy(shadow = shadow)
+            )
         }
     }
 }

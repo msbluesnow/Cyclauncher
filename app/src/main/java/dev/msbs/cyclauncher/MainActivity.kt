@@ -15,7 +15,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.VerticalPager
@@ -28,7 +27,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import kotlinx.coroutines.launch
 
@@ -71,7 +69,8 @@ class MainActivity : ComponentActivity() {
                 var menuOffset by remember { mutableStateOf(Offset.Zero) }
                 val haptic = LocalHapticFeedback.current
                 val handSide by viewModel.handSide.collectAsState()
-                val screenWidth = LocalConfiguration.current.screenWidthDp
+                val accentColor by viewModel.accentColor.collectAsState()
+                val showShadows by viewModel.showShadows.collectAsState()
 
                 LaunchedEffect(verticalPagerState.currentPage, horizontalPagerState.currentPage) {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -86,14 +85,14 @@ class MainActivity : ComponentActivity() {
                             state = horizontalPagerState,
                             modifier = Modifier.fillMaxSize(),
                             beyondViewportPageCount = 1,
-                            userScrollEnabled = false // Manual triggers
+                            userScrollEnabled = false 
                         ) { hIndex ->
                             if (hIndex == 0) {
                                 VerticalPager(
                                     state = verticalPagerState,
                                     modifier = Modifier.fillMaxSize(),
                                     beyondViewportPageCount = 1,
-                                    userScrollEnabled = false // Manual triggers
+                                    userScrollEnabled = false 
                                 ) { vIndex ->
                                     if (vIndex == 0) {
                                         Box(
@@ -108,26 +107,6 @@ class MainActivity : ComponentActivity() {
                                                         }
                                                     )
                                                 }
-                                                .pointerInput(handSide) {
-                                                    detectVerticalDragGestures { change, dragAmount ->
-                                                        // Get current pointer X in Px and convert to Dp
-                                                        val currentXPx = change.position.x
-                                                        val currentXDp = currentXPx / (resources.displayMetrics.density)
-                                                        val isTargetHalf = if (handSide == HandSide.LEFT) {
-                                                            currentXDp < screenWidth / 2
-                                                        } else {
-                                                            currentXDp > screenWidth / 2
-                                                        }
-
-                                                        if (dragAmount > 60) {
-                                                            openNotifications()
-                                                        } else if (dragAmount < -35 && isTargetHalf) {
-                                                            scope.launch {
-                                                                verticalPagerState.animateScrollToPage(1)
-                                                            }
-                                                        }
-                                                    }
-                                                }
                                         ) {
                                             MainMenuScreen(
                                                 viewModel = viewModel,
@@ -136,7 +115,11 @@ class MainActivity : ComponentActivity() {
                                                     showActionMenuFor = app
                                                     menuOffset = offset
                                                     menuSource = "history_or_favorites" 
-                                                }
+                                                },
+                                                onSwipeUp = {
+                                                    scope.launch { verticalPagerState.animateScrollToPage(1) }
+                                                },
+                                                onSwipeDown = ::openNotifications
                                             )
                                         }
                                     } else {
@@ -196,7 +179,8 @@ class MainActivity : ComponentActivity() {
                                 onDismiss = { showActionMenuFor = null },
                                 onToggleFavorite = { viewModel.toggleFavorite(componentKey) },
                                 onUninstall = { uninstallApp(app.packageName) },
-                                onRemoveFromHistory = { viewModel.removeFromHistory(componentKey) }
+                                onRemoveFromHistory = { viewModel.removeFromHistory(componentKey) },
+                                accentColor = accentColor
                             )
                         }
                     }

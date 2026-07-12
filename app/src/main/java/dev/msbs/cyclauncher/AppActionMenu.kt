@@ -28,7 +28,8 @@ fun AppActionMenu(
     onDismiss: () -> Unit,
     onToggleFavorite: () -> Unit,
     onUninstall: () -> Unit,
-    onRemoveFromHistory: () -> Unit = {}
+    onRemoveFromHistory: () -> Unit = {},
+    accentColor: AccentColor = AccentColor.CYAN
 ) {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
@@ -66,7 +67,7 @@ fun AppActionMenu(
                     text = app.label,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     style = MaterialTheme.typography.titleSmall,
-                    color = Color.Cyan
+                    color = accentColor.color
                 )
                 
                 Spacer(modifier = Modifier.height(4.dp))
