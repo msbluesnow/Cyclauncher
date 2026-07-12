@@ -11,7 +11,7 @@ A modern, minimalist Android launcher built with **Jetpack Compose**. Fast and i
 - **Minimalist Design**: A clutter-free environment is maintained, focused on productivity and speed.
 - **One-Handed Optimized**: Dynamic layout adjustments are supported for left or right-handed use.
 - **Intelligent Lists**: A history of recent launches and a customizable favorites section are included.
-Л
+
 ## 🛠 Tech Stack
 
 - **Language**: [Kotlin](https://kotlinlang.org/)
