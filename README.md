@@ -5,7 +5,7 @@ A modern, minimalist Android launcher built with **Jetpack Compose**. Fast and i
 > [!IMPORTANT]
 > **Alpha Version**: This project is currently in early development. Features are subject to change, and bugs may be encountered as the experience is refined.
 
-## ✨ Key Features
+## Key Features
 
 - **Unique Navigation**: Fast app access is facilitated by a custom rectangular alphabet wheel.
 - **Minimalist Design**: A clutter-free environment is maintained, focused on productivity and speed.
