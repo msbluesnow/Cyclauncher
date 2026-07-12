@@ -3,11 +3,14 @@ package dev.msbs.cyclauncher
 import android.graphics.Paint
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,6 +42,7 @@ fun RectangularAlphabetWheel(
     apps: List<AppInfo>,
     onAppClick: (String) -> Unit,
     onAppLongClick: (String, Offset) -> Unit = { _, _ -> },
+    accentColor: AccentColor = AccentColor.CYAN,
     modifier: Modifier = Modifier
 ) {
     val alphabet = remember { ('A'..'Z').toList() + '#' }
@@ -176,7 +180,7 @@ fun RectangularAlphabetWheel(
                             change.consume()
                             val sensitivity = 1f + (abs(dragAmount) / 45f).coerceAtMost(2.5f)
                             scope.launch {
-                                scrollOffset.snapTo(scrollOffset.value + (dragAmount / 100f) * sensitivity)
+                                scrollOffset.snapTo(scrollOffset.value - (dragAmount / 100f) * sensitivity)
                             }
                         },
                         onDragEnd = {
@@ -233,7 +237,7 @@ fun RectangularAlphabetWheel(
 
                             drawIntoCanvas { canvas ->
                                 val nativeCanvas = canvas.nativeCanvas
-                                paint.color = Color.Cyan.toArgb()
+                                paint.color = accentColor.color.toArgb()
                                 paint.strokeWidth = with(density) { 4.dp.toPx() * scaleFactor }
                                 nativeCanvas.drawPath(segmentPath.asAndroidPath(), paint)
                                 
@@ -253,6 +257,7 @@ fun RectangularAlphabetWheel(
                     val scale = (1.5f - (dist * 0.4f)).coerceIn(1.0f, 1.5f)
                     val alpha = (1.0f - (dist * 0.2f)).coerceIn(0.4f, 1.0f)
                     val isExact = dist < 0.5f
+                    val glowAlpha = (1f - dist * 2f).coerceIn(0f, 1f)
 
                     Box(
                         modifier = Modifier
@@ -266,11 +271,27 @@ fun RectangularAlphabetWheel(
                             },
                         contentAlignment = Alignment.Center
                     ) {
+                        if (glowAlpha > 0f) {
+                            Box(
+                                modifier = Modifier
+                                    .size(stepSize * 0.85f)
+                                    .align(Alignment.Center)
+                                    .background(
+                                        color = accentColor.glowColor.copy(alpha = accentColor.glowColor.alpha * glowAlpha),
+                                        shape = CircleShape
+                                    )
+                                    .border(
+                                        width = 1.dp,
+                                        color = accentColor.color.copy(alpha = 0.25f * glowAlpha),
+                                        shape = CircleShape
+                                    )
+                            )
+                        }
                         Text(
                             text = letter.toString(),
                             fontSize = fontSize,
                             fontWeight = if (isExact) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isExact) Color.Cyan else Color.White
+                            color = if (isExact) accentColor.color else Color.White
                         )
                     }
                 }
@@ -343,7 +364,12 @@ fun AppsGrid(
                     translationX = x
                     translationY = y
                 }
-                .clip(androidx.compose.foundation.shape.CircleShape)
+                .clip(CircleShape)
+                .border(
+                    width = 1.dp,
+                    color = Color.White.copy(alpha = 0.15f),
+                    shape = CircleShape
+                )
                 .pointerInput("${app.packageName}/${app.activityName}") {
                     detectTapGestures(
                         onTap = { onAppClick("${app.packageName}/${app.activityName}") },

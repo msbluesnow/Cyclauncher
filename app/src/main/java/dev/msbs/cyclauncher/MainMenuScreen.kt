@@ -1,5 +1,6 @@
 package dev.msbs.cyclauncher
 
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,6 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -19,11 +22,15 @@ import androidx.compose.ui.unit.sp
 fun MainMenuScreen(
     viewModel: LauncherViewModel,
     onAppClick: (String) -> Unit,
-    onAppLongClick: (AppInfo, Offset) -> Unit
+    onAppLongClick: (AppInfo, Offset) -> Unit,
+    onSwipeUp: () -> Unit,
+    onSwipeDown: () -> Unit
 ) {
     val favorites by viewModel.favoriteApps.collectAsState()
     val history by viewModel.historyApps.collectAsState()
     val handSide by viewModel.handSide.collectAsState()
+    val showShadows by viewModel.showShadows.collectAsState()
+    val accentColor by viewModel.accentColor.collectAsState()
 
     Row(
         modifier = Modifier
@@ -32,14 +39,35 @@ fun MainMenuScreen(
             .navigationBarsPadding()
             .padding(24.dp)
     ) {
+        val favoritesWeight = 1f
+        val historyWeight = 1f
+
         if (handSide == HandSide.LEFT) {
-            FavoritesSection(Modifier.width(64.dp), favorites, onAppClick, onAppLongClick)
-            Spacer(modifier = Modifier.width(32.dp))
-            HistorySection(Modifier.weight(1f), history, handSide, onAppClick, onAppLongClick)
+            FavoritesSection(
+                Modifier.weight(favoritesWeight), 
+                favorites, 
+                accentColor,
+                showShadows,
+                onAppClick, 
+                onAppLongClick,
+                onSwipeUp,
+                onSwipeDown
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            HistorySection(Modifier.weight(historyWeight), history, handSide, showShadows, accentColor, onAppClick, onAppLongClick)
         } else {
-            HistorySection(Modifier.weight(1f), history, handSide, onAppClick, onAppLongClick)
-            Spacer(modifier = Modifier.width(32.dp))
-            FavoritesSection(Modifier.width(64.dp), favorites, onAppClick, onAppLongClick)
+            HistorySection(Modifier.weight(historyWeight), history, handSide, showShadows, accentColor, onAppClick, onAppLongClick)
+            Spacer(modifier = Modifier.width(16.dp))
+            FavoritesSection(
+                Modifier.weight(favoritesWeight), 
+                favorites, 
+                accentColor,
+                showShadows,
+                onAppClick, 
+                onAppLongClick,
+                onSwipeUp,
+                onSwipeDown
+            )
         }
     }
 }
@@ -49,9 +77,19 @@ private fun HistorySection(
     modifier: Modifier,
     history: List<AppInfo>,
     handSide: HandSide,
+    showShadows: Boolean,
+    accentColor: AccentColor,
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit
 ) {
+    val shadow = if (showShadows) {
+        Shadow(
+            color = Color.Black.copy(alpha = 0.6f),
+            offset = Offset(2f, 2f),
+            blurRadius = 4f
+        )
+    } else null
+
     Column(
         modifier = modifier.fillMaxHeight(),
         verticalArrangement = Arrangement.Bottom,
@@ -59,8 +97,8 @@ private fun HistorySection(
     ) {
         Text(
             "HISTORY", 
-            color = Color.Cyan, 
-            style = MaterialTheme.typography.titleSmall, 
+            color = accentColor.color,
+            style = MaterialTheme.typography.titleSmall.copy(shadow = shadow), 
             fontWeight = FontWeight.Bold,
             textAlign = if (handSide == HandSide.LEFT) TextAlign.End else TextAlign.Start,
             modifier = Modifier.fillMaxWidth()
@@ -78,7 +116,8 @@ private fun HistorySection(
                     iconSize = 44,
                     fontSize = 20,
                     onClick = { onAppClick("${app.packageName}/${app.activityName}") },
-                    onLongClick = { offset -> onAppLongClick(app, offset) }
+                    onLongClick = { offset -> onAppLongClick(app, offset) },
+                    showShadows = showShadows
                 )
             }
         }
@@ -89,30 +128,54 @@ private fun HistorySection(
 private fun FavoritesSection(
     modifier: Modifier,
     favorites: List<AppInfo>,
+    accentColor: AccentColor,
+    showShadows: Boolean,
     onAppClick: (String) -> Unit,
-    onAppLongClick: (AppInfo, Offset) -> Unit
+    onAppLongClick: (AppInfo, Offset) -> Unit,
+    onSwipeUp: () -> Unit,
+    onSwipeDown: () -> Unit
 ) {
+    val shadow = if (showShadows) {
+        Shadow(
+            color = Color.Black.copy(alpha = 0.6f),
+            offset = Offset(2f, 2f),
+            blurRadius = 4f
+        )
+    } else null
+
     Column(
-        modifier = modifier.fillMaxHeight(),
+        modifier = modifier
+            .fillMaxHeight()
+            // Capture vertical swipes on the favorites side for navigation
+            .pointerInput(Unit) {
+                detectVerticalDragGestures { _, dragAmount ->
+                    if (dragAmount > 60) {
+                        onSwipeDown()
+                    } else if (dragAmount < -40) {
+                        onSwipeUp()
+                    }
+                }
+            },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Bottom
     ) {
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Bottom),
-            modifier = Modifier.fillMaxWidth(),
-            reverseLayout = true
-        ) {
-            items(favorites, key = { "${it.packageName}_${it.label}" }) { app ->
-                AppIconItem(
-                    app = app,
-                    onClick = { onAppClick("${app.packageName}/${app.activityName}") },
-                    onLongClick = { offset -> onAppLongClick(app, offset) }
-                )
-            }
-            item {
-                Text("★", color = Color.Yellow, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
-            }
+        // Simplified Favorites display to avoid scroll conflicts with navigation
+        favorites.reversed().take(10).forEach { app ->
+            AppIconItem(
+                app = app,
+                onClick = { onAppClick("${app.packageName}/${app.activityName}") },
+                onLongClick = { offset -> onAppLongClick(app, offset) }
+            )
+            Spacer(modifier = Modifier.height(12.dp))
         }
+        
+        Text(
+            text = "★", 
+            color = accentColor.color, 
+            fontSize = 24.sp, 
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.bodyLarge.copy(shadow = shadow)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
     }
 }
