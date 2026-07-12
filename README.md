@@ -1,16 +1,22 @@
 # Cyclauncher
 
+<p align="center">
+  <img src="assets/logo.png" width="128" height="128" alt="Cyclauncher Logo">
+</p>
+
 A modern, minimalist Android launcher built with **Jetpack Compose**. Fast and intuitive app navigation is provided via a unique rectangular alphabet wheel.
 
 > [!IMPORTANT]
 > **Alpha Version**: This project is currently in early development. Features are subject to change, and bugs may be encountered as the experience is refined.
 
-## Key Features
+## ✨ Key Features
 
 - **Unique Navigation**: Fast app access is facilitated by a custom rectangular alphabet wheel.
 - **Minimalist Design**: A clutter-free environment is maintained, focused on productivity and speed.
 - **One-Handed Optimized**: Dynamic layout adjustments are supported for left or right-handed use.
 - **Intelligent Lists**: A history of recent launches and a customizable favorites section are included.
+- **Adaptive UI**: Elements are automatically scaled based on device screen size for a consistent experience.
+- **Theme Accents**: Preferred accent colors can be selected to match user style.
 
 ## 🛠 Tech Stack
 
