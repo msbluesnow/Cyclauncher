@@ -1,4 +1,4 @@
-# Cyclauncher
+# Cyclauncher 🎡
 
 <p align="center">
   <img src="assets/logo.png" width="128" height="128" alt="Cyclauncher Logo">
@@ -17,6 +17,11 @@ A modern, minimalist Android launcher built with **Jetpack Compose**. Fast and i
 - **Intelligent Lists**: A history of recent launches and a customizable favorites section are included.
 - **Adaptive UI**: Elements are automatically scaled based on device screen size for a consistent experience.
 - **Theme Accents**: Preferred accent colors can be selected to match user style.
+
+## 🤝 Community & Support
+
+- **Discord**: Join the community for feedback and updates: [![Discord](https://img.shields.io/badge/Discord-Join%20Community-7289DA?style=for-the-badge&logo=discord)](https://discord.gg/9cnf49JnM)
+- **Tribute**: Support the development of this project: [![Support on Tribute](https://img.shields.io/badge/Support-Tribute-orange?style=for-the-badge)](https://web.tribute.tg/e/1dW)
 
 ## 🛠 Tech Stack
 

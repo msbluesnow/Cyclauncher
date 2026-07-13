@@ -10,11 +10,13 @@ import android.os.Bundle
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.VerticalPager
@@ -27,6 +29,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import kotlinx.coroutines.launch
 
@@ -64,13 +67,24 @@ class MainActivity : ComponentActivity() {
                 val horizontalPagerState = rememberPagerState { 2 } // [MainCluster, Settings]
                 val verticalPagerState = rememberPagerState { 2 } // [Main, Search]
                 val scope = rememberCoroutineScope()
+                
+                BackHandler(enabled = horizontalPagerState.currentPage != 0 || verticalPagerState.currentPage != 0) {
+                    scope.launch {
+                        if (horizontalPagerState.currentPage != 0) {
+                            horizontalPagerState.animateScrollToPage(0)
+                        } else if (verticalPagerState.currentPage != 0) {
+                            verticalPagerState.animateScrollToPage(0)
+                        }
+                    }
+                }
+
                 var showActionMenuFor by remember { mutableStateOf<AppInfo?>(null) }
                 var menuSource by remember { mutableStateOf("none") }
                 var menuOffset by remember { mutableStateOf(Offset.Zero) }
                 val haptic = LocalHapticFeedback.current
                 val handSide by viewModel.handSide.collectAsState()
                 val accentColor by viewModel.accentColor.collectAsState()
-                val showShadows by viewModel.showShadows.collectAsState()
+                val screenWidth = LocalConfiguration.current.screenWidthDp
 
                 LaunchedEffect(verticalPagerState.currentPage, horizontalPagerState.currentPage) {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -95,33 +109,22 @@ class MainActivity : ComponentActivity() {
                                     userScrollEnabled = false 
                                 ) { vIndex ->
                                     if (vIndex == 0) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .pointerInput(Unit) {
-                                                    detectTapGestures(
-                                                        onLongPress = {
-                                                            scope.launch {
-                                                                horizontalPagerState.animateScrollToPage(1)
-                                                            }
-                                                        }
-                                                    )
-                                                }
-                                        ) {
-                                            MainMenuScreen(
-                                                viewModel = viewModel,
-                                                onAppClick = ::openApp,
-                                                onAppLongClick = { app, offset -> 
-                                                    showActionMenuFor = app
-                                                    menuOffset = offset
-                                                    menuSource = "history_or_favorites" 
-                                                },
-                                                onSwipeUp = {
-                                                    scope.launch { verticalPagerState.animateScrollToPage(1) }
-                                                },
-                                                onSwipeDown = ::openNotifications
-                                            )
-                                        }
+                                        MainMenuScreen(
+                                            viewModel = viewModel,
+                                            onAppClick = ::openApp,
+                                            onAppLongClick = { app, offset -> 
+                                                showActionMenuFor = app
+                                                menuOffset = offset
+                                                menuSource = "history_or_favorites" 
+                                            },
+                                            onSwipeUp = {
+                                                scope.launch { verticalPagerState.animateScrollToPage(1) }
+                                            },
+                                            onSwipeDown = ::openNotifications,
+                                            onSettingsClick = {
+                                                scope.launch { horizontalPagerState.animateScrollToPage(1) }
+                                            }
+                                        )
                                     } else {
                                         Box(
                                             modifier = Modifier
@@ -135,9 +138,15 @@ class MainActivity : ComponentActivity() {
                                                         }
                                                     )
                                                 }
-                                                .pointerInput(Unit) {
+                                                .pointerInput(handSide) {
                                                     detectHorizontalDragGestures { _, dragAmount ->
-                                                        if (dragAmount < -45) {
+                                                        val isBackGesture = if (handSide == HandSide.LEFT) {
+                                                            dragAmount < -30
+                                                        } else {
+                                                            dragAmount > 30
+                                                        }
+
+                                                        if (isBackGesture) {
                                                             scope.launch {
                                                                 verticalPagerState.animateScrollToPage(0)
                                                             }

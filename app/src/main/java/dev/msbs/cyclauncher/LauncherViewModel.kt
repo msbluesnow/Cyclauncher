@@ -160,6 +160,27 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         getApplication<Application>().startActivity(intent)
     }
 
+    fun openSupportPage() {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://web.tribute.tg/e/1dW")).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        getApplication<Application>().startActivity(intent)
+    }
+
+    fun openGitHubPage() {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/msbluesnow/Cyclauncher")).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        getApplication<Application>().startActivity(intent)
+    }
+
+    fun openDiscordPage() {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://discord.gg/9cnf49JnM")).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        getApplication<Application>().startActivity(intent)
+    }
+
     private fun mapToSearchChar(char: Char): Char {
         val mapped = when (char.uppercaseChar()) {
             'А' -> 'A'; 'Б' -> 'B'; 'В' -> 'V'; 'Г' -> 'G'; 'Д' -> 'D'

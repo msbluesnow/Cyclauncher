@@ -36,7 +36,6 @@ fun SettingsScreen(
     var showDefaultLauncherDialog by remember { mutableStateOf(false) }
     var currentIsDefault by remember { mutableStateOf(viewModel.isDefaultLauncher()) }
 
-    // Observe lifecycle to refresh default launcher status when user returns from settings
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -45,9 +44,7 @@ fun SettingsScreen(
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     val shadow = if (showShadows) {
@@ -79,18 +76,13 @@ fun SettingsScreen(
         
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Glassmorphic Settings Card
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.White.copy(alpha = 0.05f)
-            ),
+            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
+            Column(modifier = Modifier.padding(16.dp)) {
                 // Handside Selector
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -116,18 +108,13 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Accent Color Selector (Dropdown)
+                // Accent Color Selector
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        "Theme Accent:", 
-                        color = Color.White, 
-                        style = TextStyle(shadow = shadow, fontSize = 16.sp)
-                    )
-                    
+                    Text("Theme Accent:", color = Color.White, style = TextStyle(shadow = shadow, fontSize = 16.sp))
                     AccentColorDropdown(accentColor) { viewModel.setAccentColor(it) }
                 }
 
@@ -139,11 +126,7 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        "Adaptive Shadows:", 
-                        color = Color.White, 
-                        style = TextStyle(shadow = shadow, fontSize = 16.sp)
-                    )
+                    Text("Adaptive Shadows:", color = Color.White, style = TextStyle(shadow = shadow, fontSize = 16.sp))
                     Switch(
                         checked = showShadows,
                         onCheckedChange = { viewModel.setShowShadows(it) },
@@ -166,6 +149,28 @@ fun SettingsScreen(
                         showDefaultLauncherDialog = true
                     }
                 )
+
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
+
+                // Support Project Section
+                Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                    Text("Support Project:", color = Color.White, style = TextStyle(shadow = shadow, fontSize = 16.sp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        TextButton(onClick = { viewModel.openGitHubPage() }, modifier = Modifier.weight(1f)) {
+                            Text("GitHub ⭐", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
+                        }
+                        TextButton(onClick = { viewModel.openDiscordPage() }, modifier = Modifier.weight(1f)) {
+                            Text("Discord 💬", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
+                        }
+                        TextButton(onClick = { viewModel.openSupportPage() }, modifier = Modifier.weight(1f)) {
+                            Text("Tribute 💝", color = accentColor.color, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                    }
+                }
             }
         }
         
@@ -177,12 +182,7 @@ fun SettingsScreen(
             shape = RoundedCornerShape(24.dp),
             modifier = Modifier.fillMaxWidth().height(48.dp)
         ) {
-            Text(
-                "Back to Home", 
-                color = Color.Black, 
-                fontWeight = FontWeight.Bold, 
-                style = MaterialTheme.typography.bodyLarge
-            )
+            Text("Back to Home", color = Color.Black, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
         }
     }
 
@@ -190,31 +190,13 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { showDefaultLauncherDialog = false },
             title = { Text("Default Launcher", color = accentColor.color) },
-            text = { 
-                Text(
-                    if (currentIsDefault) 
-                        "Cyclauncher is now your default launcher!" 
-                    else 
-                        "Cyclauncher is not set as default. Would you like to try again?",
-                    color = Color.White
-                ) 
-            },
+            text = { Text(if (currentIsDefault) "Cyclauncher is now your default launcher!" else "Cyclauncher is not set as default. Try again?", color = Color.White) },
             confirmButton = {
-                TextButton(onClick = {
-                    if (!currentIsDefault) {
-                        viewModel.openDefaultLauncherSettings()
-                    } else {
-                        showDefaultLauncherDialog = false
-                    }
-                }) {
+                TextButton(onClick = { if (!currentIsDefault) viewModel.openDefaultLauncherSettings() else showDefaultLauncherDialog = false }) {
                     Text(if (currentIsDefault) "Great!" else "Set Default", color = accentColor.color)
                 }
             },
-            dismissButton = {
-                TextButton(onClick = { showDefaultLauncherDialog = false }) {
-                    Text("Cancel", color = Color.Gray)
-                }
-            },
+            dismissButton = { TextButton(onClick = { showDefaultLauncherDialog = false }) { Text("Cancel", color = Color.Gray) } },
             containerColor = Color(0xFF1E1E1E),
             textContentColor = Color.White
         )
@@ -222,140 +204,43 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun AccentColorDropdown(
-    selectedColor: AccentColor,
-    onSelect: (AccentColor) -> Unit
-) {
+private fun AccentColorDropdown(selectedColor: AccentColor, onSelect: (AccentColor) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-
     Box {
         Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.White.copy(alpha = 0.1f))
-                .clickable { expanded = true }
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = 0.1f)).clickable { expanded = true }.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(16.dp)
-                    .clip(CircleShape)
-                    .background(selectedColor.color)
-            )
-            Text(selectedColor.displayName, color = Color.White)
+            Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(selectedColor.color).border(1.dp, Color.White.copy(alpha = 0.2f), CircleShape))
+            Text("▼", color = Color.White.copy(alpha = 0.6f), fontSize = 10.sp)
         }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.background(Color(0xFF2D2D2D))
-        ) {
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.width(60.dp).background(Color(0xFF2D2D2D))) {
             AccentColor.entries.forEach { color ->
-                DropdownMenuItem(
-                    text = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(16.dp)
-                                    .clip(CircleShape)
-                                    .background(color.color)
-                            )
-                            Text(color.displayName, color = Color.White)
-                        }
-                    },
-                    onClick = {
-                        onSelect(color)
-                        expanded = false
-                    }
-                )
+                DropdownMenuItem(text = { Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(color.color)) }, onClick = { onSelect(color); expanded = false }, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp))
             }
         }
     }
 }
 
 @Composable
-private fun DefaultLauncherSelector(
-    isDefault: Boolean, 
-    accentColor: AccentColor,
-    showShadows: Boolean,
-    onClick: () -> Unit
-) {
-    val shadow = if (showShadows) {
-        Shadow(
-            color = Color.Black.copy(alpha = 0.6f),
-            offset = Offset(2f, 2f),
-            blurRadius = 4f
-        )
-    } else null
-
+private fun DefaultLauncherSelector(isDefault: Boolean, accentColor: AccentColor, showShadows: Boolean, onClick: () -> Unit) {
+    val shadow = if (showShadows) Shadow(color = Color.Black.copy(alpha = 0.6f), offset = Offset(2f, 2f), blurRadius = 4f) else null
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            "Default Launcher", 
-            color = Color.White, 
-            style = TextStyle(shadow = shadow, fontWeight = FontWeight.Medium, fontSize = 18.sp)
-        )
-        Text(
-            if (isDefault) "Currently set as default" else "Not set as default", 
-            color = if (isDefault) Color.Green else Color.Gray, 
-            fontSize = 12.sp,
-            style = TextStyle(shadow = shadow)
-        )
+        Text("Default Launcher", color = Color.White, style = TextStyle(shadow = shadow, fontWeight = FontWeight.Medium, fontSize = 18.sp))
+        Text(if (isDefault) "Currently set as default" else "Not set as default", color = if (isDefault) Color.Green else Color.Gray, fontSize = 12.sp, style = TextStyle(shadow = shadow))
         Spacer(modifier = Modifier.height(12.dp))
-        Button(
-            onClick = onClick,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (isDefault) Color.Transparent else Color.White.copy(alpha = 0.1f)
-            ),
-            border = if (isDefault) BorderStroke(1.dp, Color.Green.copy(alpha = 0.5f)) else null,
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text(
-                if (isDefault) "Change Default" else "Set as Default", 
-                color = if (isDefault) Color.Green else Color.White,
-                style = TextStyle(shadow = shadow, fontWeight = FontWeight.Bold)
-            )
+        Button(onClick = onClick, colors = ButtonDefaults.buttonColors(containerColor = if (isDefault) Color.Transparent else Color.White.copy(alpha = 0.1f)), border = if (isDefault) BorderStroke(1.dp, Color.Green.copy(alpha = 0.5f)) else null, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(12.dp)) {
+            Text(if (isDefault) "Change Default" else "Set as Default", color = if (isDefault) Color.Green else Color.White, style = TextStyle(shadow = shadow, fontWeight = FontWeight.Bold))
         }
     }
 }
 
 @Composable
-private fun HandOption(
-    label: String,
-    isSelected: Boolean,
-    accentColor: AccentColor,
-    showShadows: Boolean,
-    onClick: () -> Unit
-) {
-    val shadow = if (showShadows) {
-        Shadow(
-            color = Color.Black.copy(alpha = 0.6f),
-            offset = Offset(2f, 2f),
-            blurRadius = 4f
-        )
-    } else null
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.clickable { onClick() }
-    ) {
-        RadioButton(
-            selected = isSelected,
-            onClick = onClick,
-            colors = RadioButtonDefaults.colors(
-                selectedColor = accentColor.color,
-                unselectedColor = Color.Gray
-            )
-        )
-        Text(
-            label, 
-            color = if (isSelected) accentColor.color else Color.White,
-            style = TextStyle(shadow = shadow)
-        )
+private fun HandOption(label: String, isSelected: Boolean, accentColor: AccentColor, showShadows: Boolean, onClick: () -> Unit) {
+    val shadow = if (showShadows) Shadow(color = Color.Black.copy(alpha = 0.6f), offset = Offset(2f, 2f), blurRadius = 4f) else null
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onClick() }) {
+        RadioButton(selected = isSelected, onClick = onClick, colors = RadioButtonDefaults.colors(selectedColor = accentColor.color, unselectedColor = accentColor.color.copy(alpha = 0.3f)))
+        Text(label, color = if (isSelected) accentColor.color else accentColor.color.copy(alpha = 0.4f), style = TextStyle(shadow = shadow))
     }
 }
