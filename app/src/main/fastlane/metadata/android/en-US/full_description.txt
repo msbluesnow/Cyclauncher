@@ -1,0 +1,9 @@
+Cyclauncher is a modern, minimalist Android launcher built with Jetpack Compose.
+It features a unique rectangular alphabet wheel for fast and intuitive app navigation.
+The UI is optimized for one-handed use and supports dynamic accent colors.
+
+Key Features:
+- Unique rectangular alphabet wheel.
+- One-handed optimization (Left/Right hand support).
+- Dynamic accent colors and adaptive shadows.
+- Fast, minimalist, and battery-efficient.

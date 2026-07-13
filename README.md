@@ -34,9 +34,16 @@ A modern, minimalist Android launcher built with **Jetpack Compose**. Fast and i
 
 Testing of this alpha version is performed by cloning the repository and running it via Android Studio.
 
-1. The repository is cloned: `git clone https://github.com/your-username/Cyclauncher.git`
+1. The repository is cloned: `git clone https://github.com/msbluesnow/Cyclauncher.git`
 2. The project is opened in **Android Studio Ladybug (or newer)**.
 3. The application is built and deployed to a device.
+
+### CLI Build Instructions
+For automated systems or command-line enthusiasts, the application is built using the following commands:
+```bash
+chmod +x gradlew
+./gradlew assembleRelease
+```
 
 ## 📈 Project Status
 
