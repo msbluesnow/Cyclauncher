@@ -9,6 +9,25 @@ A modern, minimalist Android launcher built with **Jetpack Compose**. Fast and i
 > [!IMPORTANT]
 > **Alpha Version**: This project is currently in early development. Features are subject to change, and bugs may be encountered as the experience is refined.
 
+## 📽️ Demo Showcases
+
+<table style="width: 100%; border: none;">
+  <tr>
+    <td align="center" style="border: none; width: 33%;">
+      <b>Uninstalling apps</b><br><br>
+      <video src="https://github.com/user-attachments/assets/d769d4b5-c7e7-4843-abf8-8f19cb0b5ae6" width="100%" autoplay loop muted playsinline></video>
+    </td>
+    <td align="center" style="border: none; width: 33%;">
+      <b>Add and remove from favorites</b><br><br>
+      <video src="https://github.com/user-attachments/assets/ff1584bd-d147-4c3f-97f9-5dbdfd1145b9" width="100%" autoplay loop muted playsinline></video>
+    </td>
+    <td align="center" style="border: none; width: 33%;">
+      <b>Change accent color and search for applications</b><br><br>
+      <video src="https://github.com/user-attachments/assets/4f253962-1167-4a46-ab79-d45350c8709a" width="100%" autoplay loop muted playsinline></video>
+    </td>
+  </tr>
+</table>
+
 ## ✨ Key Features
 
 - **Unique Navigation**: Fast app access is facilitated by a custom rectangular alphabet wheel.
