@@ -1,5 +1,6 @@
 package dev.msbs.cyclauncher
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,7 +25,8 @@ fun MainMenuScreen(
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit,
     onSwipeUp: () -> Unit,
-    onSwipeDown: () -> Unit
+    onSwipeDown: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     val favorites by viewModel.favoriteApps.collectAsState()
     val history by viewModel.historyApps.collectAsState()
@@ -51,12 +53,13 @@ fun MainMenuScreen(
                 onAppClick, 
                 onAppLongClick,
                 onSwipeUp,
-                onSwipeDown
+                onSwipeDown,
+                onSettingsClick
             )
             Spacer(modifier = Modifier.width(16.dp))
-            HistorySection(Modifier.weight(historyWeight), history, handSide, showShadows, accentColor, onAppClick, onAppLongClick)
+            HistorySection(Modifier.weight(historyWeight), history, handSide, showShadows, accentColor, onAppClick, onAppLongClick, onSettingsClick)
         } else {
-            HistorySection(Modifier.weight(historyWeight), history, handSide, showShadows, accentColor, onAppClick, onAppLongClick)
+            HistorySection(Modifier.weight(historyWeight), history, handSide, showShadows, accentColor, onAppClick, onAppLongClick, onSettingsClick)
             Spacer(modifier = Modifier.width(16.dp))
             FavoritesSection(
                 Modifier.weight(favoritesWeight), 
@@ -66,7 +69,8 @@ fun MainMenuScreen(
                 onAppClick, 
                 onAppLongClick,
                 onSwipeUp,
-                onSwipeDown
+                onSwipeDown,
+                onSettingsClick
             )
         }
     }
@@ -80,7 +84,8 @@ private fun HistorySection(
     showShadows: Boolean,
     accentColor: AccentColor,
     onAppClick: (String) -> Unit,
-    onAppLongClick: (AppInfo, Offset) -> Unit
+    onAppLongClick: (AppInfo, Offset) -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     val shadow = if (showShadows) {
         Shadow(
@@ -91,7 +96,11 @@ private fun HistorySection(
     } else null
 
     Column(
-        modifier = modifier.fillMaxHeight(),
+        modifier = modifier
+            .fillMaxHeight()
+            .pointerInput(Unit) {
+                detectTapGestures(onLongPress = { onSettingsClick() })
+            },
         verticalArrangement = Arrangement.Bottom,
         horizontalAlignment = if (handSide == HandSide.LEFT) Alignment.End else Alignment.Start
     ) {
@@ -133,7 +142,8 @@ private fun FavoritesSection(
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit,
     onSwipeUp: () -> Unit,
-    onSwipeDown: () -> Unit
+    onSwipeDown: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     val shadow = if (showShadows) {
         Shadow(
@@ -146,7 +156,9 @@ private fun FavoritesSection(
     Column(
         modifier = modifier
             .fillMaxHeight()
-            // Capture vertical swipes on the favorites side for navigation
+            .pointerInput(Unit) {
+                detectTapGestures(onLongPress = { onSettingsClick() })
+            }
             .pointerInput(Unit) {
                 detectVerticalDragGestures { _, dragAmount ->
                     if (dragAmount > 60) {

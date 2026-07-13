@@ -78,7 +78,7 @@ fun WheelSearchLayout(
                         onVerticalDrag = { change, dragAmount ->
                             change.consume()
                             scope.launch {
-                                scrollOffset.snapTo(scrollOffset.value + dragAmount / 35f)
+                                scrollOffset.snapTo(scrollOffset.value - (dragAmount / 100f))
                             }
                         },
                         onDragEnd = {
