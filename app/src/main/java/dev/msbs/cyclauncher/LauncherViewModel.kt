@@ -22,8 +22,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val actionsManager = AppActionsManager(application)
 
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
-    val apps: StateFlow<List<AppInfo>> = _apps
-
+    
     private val _selectedLetter = MutableStateFlow('A')
     val selectedLetter: StateFlow<Char> = _selectedLetter
 
@@ -45,21 +44,36 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _searchText = MutableStateFlow("")
     val searchText: StateFlow<String> = _searchText
 
-    val filteredApps: StateFlow<List<AppInfo>> = combine(_apps, _selectedLetter) { apps, letter ->
-        apps.filter { it.searchChar == letter }
+    val tags: StateFlow<List<Tag>> = actionsManager.tags
+    val appTags: StateFlow<Map<String, List<String>>> = actionsManager.appTags
+
+    val apps: StateFlow<List<AppInfo>> = combine(_apps, actionsManager.customLabels) { all, customLabels ->
+        all.map { app ->
+            val key = "${app.packageName}/${app.activityName}"
+            val customLabel = customLabels[key]
+            if (customLabel != null) {
+                app.copy(label = customLabel, searchChar = mapToSearchChar(customLabel.firstOrNull() ?: ' '))
+            } else {
+                app
+            }
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val historyApps: StateFlow<List<AppInfo>> = combine(_apps, actionsManager.history) { all, ids ->
+    val filteredApps: StateFlow<List<AppInfo>> = combine(apps, _selectedLetter) { all, letter ->
+        all.filter { it.searchChar == letter }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val historyApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.history) { all, ids ->
         ids.mapNotNull { id -> all.find { "${it.packageName}/${it.activityName}" == id } }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val favoriteApps: StateFlow<List<AppInfo>> = combine(_apps, actionsManager.favorites) { all, ids ->
+    val favoriteApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.favorites) { all, ids ->
         ids.mapNotNull { id -> all.find { "${it.packageName}/${it.activityName}" == id } }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val textFilteredApps: StateFlow<List<AppInfo>> = combine(_apps, _searchText) { apps, query ->
-        if (query.isEmpty()) apps
-        else apps.filter { it.label.contains(query, ignoreCase = true) }
+    val textFilteredApps: StateFlow<List<AppInfo>> = combine(apps, _searchText) { all, query ->
+        if (query.isEmpty()) all
+        else all.filter { it.label.contains(query, ignoreCase = true) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
@@ -70,15 +84,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val savedColor = prefs.getString("accent_color", AccentColor.CYAN.name) ?: AccentColor.CYAN.name
         _accentColor.value = AccentColor.fromName(savedColor)
         
-        // Auto-detect shadow need based on wallpaper if not explicitly set
         if (!prefs.contains("show_shadows")) {
-            _showShadows.value = true // Default to on for safety
+            _showShadows.value = true 
         } else {
             _showShadows.value = prefs.getBoolean("show_shadows", true)
         }
 
         loadInstalledApps()
-        // Initialize alignment based on default handSide
         _searchListAlignment.value = if (_handSide.value == HandSide.LEFT) TextAlign.End else TextAlign.Start
     }
 
@@ -124,7 +136,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     
     fun removeFromHistory(componentKey: String) {
         actionsManager.removeFromHistory(componentKey)
-     }
+    }
+
+    fun renameApp(componentKey: String, newLabel: String) {
+        actionsManager.renameApp(componentKey, newLabel)
+    }
+
+    fun createTag(tag: Tag) = actionsManager.createTag(tag)
+    fun updateTag(tag: Tag) = actionsManager.updateTag(tag)
+    fun deleteTag(tagId: String) = actionsManager.deleteTag(tagId)
+    fun toggleTagForApp(componentKey: String, tagId: String) = actionsManager.toggleTagForApp(componentKey, tagId)
 
     fun refreshApps() {
         loadInstalledApps()
@@ -181,6 +202,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         getApplication<Application>().startActivity(intent)
     }
 
+    fun exportLabels() = actionsManager.exportCustomLabels()
+    
+    fun saveLabelsToUri(uri: Uri) = actionsManager.saveLabelsToUri(uri)
+    
+    fun importLabels(uri: Uri) = actionsManager.importCustomLabels(uri)
+
     private fun mapToSearchChar(char: Char): Char {
         val mapped = when (char.uppercaseChar()) {
             'А' -> 'A'; 'Б' -> 'B'; 'В' -> 'V'; 'Г' -> 'G'; 'Д' -> 'D'
@@ -233,7 +260,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             
             _apps.value = appList
             
-            // Cleanup: remove uninstalled apps from actionsManager
             val validKeys = appList.map { "${it.packageName}/${it.activityName}" }.toSet()
             actionsManager.cleanupInvalidApps(validKeys)
         }

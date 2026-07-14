@@ -1,6 +1,8 @@
 package dev.msbs.cyclauncher
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -8,6 +10,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +40,10 @@ fun SettingsScreen(
     
     var showDefaultLauncherDialog by remember { mutableStateOf(false) }
     var currentIsDefault by remember { mutableStateOf(viewModel.isDefaultLauncher()) }
+
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let { viewModel.importLabels(it) }
+    }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -84,17 +93,7 @@ fun SettingsScreen(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 // Handside Selector
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        "Preferred Hand:", 
-                        color = Color.White, 
-                        style = TextStyle(shadow = shadow, fontSize = 16.sp)
-                    )
-                    
+                SettingsRow(label = "Preferred Hand:", shadow = shadow) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         HandOption("Left", handSide == HandSide.LEFT, accentColor, showShadows) {
                             viewModel.setHandSide(HandSide.LEFT)
@@ -109,24 +108,14 @@ fun SettingsScreen(
                 HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
                 // Accent Color Selector
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Theme Accent:", color = Color.White, style = TextStyle(shadow = shadow, fontSize = 16.sp))
+                SettingsRow(label = "Theme Accent:", shadow = shadow) {
                     AccentColorDropdown(accentColor) { viewModel.setAccentColor(it) }
                 }
 
                 HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
                 // Adaptive Shadows Toggle
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Adaptive Shadows:", color = Color.White, style = TextStyle(shadow = shadow, fontSize = 16.sp))
+                SettingsRow(label = "Adaptive Shadows:", shadow = shadow) {
                     Switch(
                         checked = showShadows,
                         onCheckedChange = { viewModel.setShowShadows(it) },
@@ -139,16 +128,30 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Default Launcher Selector
-                DefaultLauncherSelector(
-                    isDefault = currentIsDefault,
-                    accentColor = accentColor,
-                    showShadows = showShadows,
-                    onClick = { 
-                        viewModel.openDefaultLauncherSettings()
-                        showDefaultLauncherDialog = true
+                // Labels Backup
+                SettingsRow(label = "Labels Backup:", shadow = shadow) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Export/Save Button
+                        val saveLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+                            uri?.let { viewModel.saveLabelsToUri(it) }
+                        }
+                        
+                        IconButton(onClick = { saveLauncher.launch("cyclauncher_labels.json") }) {
+                            Icon(Icons.Outlined.Upload, null, tint = accentColor.color)
+                        }
+                        IconButton(onClick = { importLauncher.launch("application/json") }) {
+                            Icon(Icons.Outlined.Download, null, tint = accentColor.color)
+                        }
                     }
-                )
+                }
+
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
+
+                // Default Launcher Selector
+                DefaultLauncherSelector(currentIsDefault, accentColor, showShadows) {
+                    viewModel.openDefaultLauncherSettings()
+                    showDefaultLauncherDialog = true
+                }
 
                 HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
@@ -200,6 +203,18 @@ fun SettingsScreen(
             containerColor = Color(0xFF1E1E1E),
             textContentColor = Color.White
         )
+    }
+}
+
+@Composable
+private fun SettingsRow(label: String, shadow: Shadow?, content: @Composable () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, color = Color.White, style = TextStyle(shadow = shadow, fontSize = 16.sp))
+        content()
     }
 }
 

@@ -16,7 +16,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.VerticalPager
@@ -79,12 +78,17 @@ class MainActivity : ComponentActivity() {
                 }
 
                 var showActionMenuFor by remember { mutableStateOf<AppInfo?>(null) }
+                var showRenameDialogFor by remember { mutableStateOf<AppInfo?>(null) }
+                var showTagDialogFor by remember { mutableStateOf<AppInfo?>(null) }
+                
                 var menuSource by remember { mutableStateOf("none") }
                 var menuOffset by remember { mutableStateOf(Offset.Zero) }
+                
                 val haptic = LocalHapticFeedback.current
                 val handSide by viewModel.handSide.collectAsState()
                 val accentColor by viewModel.accentColor.collectAsState()
-                val screenWidth = LocalConfiguration.current.screenWidthDp
+                val allTags by viewModel.tags.collectAsState()
+                val appTagsMap by viewModel.appTags.collectAsState()
 
                 LaunchedEffect(verticalPagerState.currentPage, horizontalPagerState.currentPage) {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -143,7 +147,7 @@ class MainActivity : ComponentActivity() {
                                                         val isBackGesture = if (handSide == HandSide.LEFT) {
                                                             dragAmount < -30
                                                         } else {
-                                                            dragAmount > 30
+                                                            dragAmount > 30 
                                                         }
 
                                                         if (isBackGesture) {
@@ -189,6 +193,35 @@ class MainActivity : ComponentActivity() {
                                 onToggleFavorite = { viewModel.toggleFavorite(componentKey) },
                                 onUninstall = { uninstallApp(app.packageName) },
                                 onRemoveFromHistory = { viewModel.removeFromHistory(componentKey) },
+                                onRename = { showRenameDialogFor = app },
+                                onTagsClick = { showTagDialogFor = app },
+                                accentColor = accentColor
+                            )
+                        }
+
+                        showRenameDialogFor?.let { app ->
+                            RenameDialog(
+                                initialValue = app.label,
+                                accentColor = accentColor,
+                                onDismiss = { showRenameDialogFor = null },
+                                onConfirm = { newName ->
+                                    viewModel.renameApp("${app.packageName}/${app.activityName}", newName)
+                                    showRenameDialogFor = null
+                                }
+                            )
+                        }
+
+                        showTagDialogFor?.let { app ->
+                            val key = "${app.packageName}/${app.activityName}"
+                            TagSelectionDialog(
+                                app = app,
+                                allTags = allTags,
+                                assignedTagIds = appTagsMap[key] ?: emptyList(),
+                                onToggleTag = { tagId -> viewModel.toggleTagForApp(key, tagId) },
+                                onCreateTag = { name, color -> viewModel.createTag(Tag(name = name, color = color)) },
+                                onUpdateTag = { tag -> viewModel.updateTag(tag) },
+                                onDeleteTag = { tagId -> viewModel.deleteTag(tagId) },
+                                onDismiss = { showTagDialogFor = null },
                                 accentColor = accentColor
                             )
                         }
