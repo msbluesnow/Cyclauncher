@@ -32,10 +32,8 @@ A modern, minimalist Android launcher built with **Jetpack Compose**. Fast and i
 
 - **Rectangular Alphabet Wheel**: Fast app access via a custom interactive wheel, optimized for high-performance scrolling and rendering.
 - **Dynamic Favorites**: Organize your top apps with intuitive drag-and-drop reordering (long-press star to enter) and quick-removal tools.
-- **AI-Powered Organization**: Categorize your apps efficiently with an AI-assisted tagging workflow (Export → AI Prompt → Import) and full tag backup support.
-- **Optimized UX**: Smooth gesture handling across all screens, auto-scrolling launch history, and screen-adaptive UI elements.
+- **AI-Powered Organization**: Categorize your apps efficiently with an AI-assisted tagging workflow (Export → Process via External AI Prompt → Import) and full tag backup support. *Note: AI processing is performed externally using your preferred provider.*
 - **Flexible Data Management**: Robust import/export support for app names and tags in both JSON and plain text formats.
-- **Modern Interface**: Experience a redesigned search UI and a streamlined, vertically scrollable settings menu.
 - **Customizable Themes**: Personalize your launcher with selectable accent colors.
 
 ## 🤝 Community & Support
