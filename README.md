@@ -30,12 +30,13 @@ A modern, minimalist Android launcher built with **Jetpack Compose**. Fast and i
 
 ## ✨ Key Features
 
-- **Unique Navigation**: Fast app access is facilitated by a custom rectangular alphabet wheel.
-- **Minimalist Design**: A clutter-free environment is maintained, focused on productivity and speed.
-- **One-Handed Optimized**: Dynamic layout adjustments are supported for left or right-handed use.
-- **Intelligent Lists**: A history of recent launches and a customizable favorites section are included.
-- **Adaptive UI**: Elements are automatically scaled based on device screen size for a consistent experience.
-- **Theme Accents**: Preferred accent colors can be selected to match user style.
+- **Rectangular Alphabet Wheel**: Fast app access via a custom interactive wheel, optimized for high-performance scrolling and rendering.
+- **Dynamic Favorites**: Organize your top apps with intuitive drag-and-drop reordering (long-press star to enter) and quick-removal tools.
+- **AI-Powered Organization**: Categorize your apps efficiently with an AI-assisted tagging workflow (Export → AI Prompt → Import) and full tag backup support.
+- **Optimized UX**: Smooth gesture handling across all screens, auto-scrolling launch history, and screen-adaptive UI elements.
+- **Flexible Data Management**: Robust import/export support for app names and tags in both JSON and plain text formats.
+- **Modern Interface**: Experience a redesigned search UI and a streamlined, vertically scrollable settings menu.
+- **Customizable Themes**: Personalize your launcher with selectable accent colors.
 
 ## 🤝 Community & Support
 
@@ -47,7 +48,8 @@ A modern, minimalist Android launcher built with **Jetpack Compose**. Fast and i
 - **Language**: [Kotlin](https://kotlinlang.org/)
 - **UI Framework**: [Jetpack Compose](https://developer.android.com/jetpack/compose)
 - **Architecture**: MVVM with StateFlow
-- **Graphics**: High-performance animations are powered by the low-level Canvas API.
+- **Graphics**: High-performance animations powered by the low-level Canvas API.
+- **Documentation**: Enriched with comprehensive inline KDoc for improved maintainability.
 
 ## 🚀 Getting Started
 
@@ -66,7 +68,7 @@ chmod +x gradlew
 
 ## 📈 Project Status
 
-Continuous optimization of code, performance improvements, and the integration of new customization options are prioritized. Both this `README.md` and the application itself are updated frequently as progress is made toward a stable release.
+Continuous optimization of code structure, performance improvements, and the integration of new customization options are prioritized. The project has recently undergone a major refactor for better scalability. Both this `README.md` and the application itself are updated frequently as progress is made toward a stable release.
 
 ## 📜 License
 
