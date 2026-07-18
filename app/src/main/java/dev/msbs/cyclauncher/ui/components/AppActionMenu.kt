@@ -1,4 +1,8 @@
-package dev.msbs.cyclauncher
+package dev.msbs.cyclauncher.ui.components
+
+import dev.msbs.cyclauncher.model.AppInfo
+import dev.msbs.cyclauncher.model.Tag
+import dev.msbs.cyclauncher.ui.theme.AccentColor
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -25,6 +29,22 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import kotlin.math.roundToInt
 
+/**
+ * A popup context menu offering actions for a specific application (e.g. favorite toggle, uninstall, tag management).
+ * Correctly repositions itself to avoid screen boundary clipping.
+ *
+ * @param app The application metadata info.
+ * @param isFavorite Current favorite status of the application.
+ * @param showRemoveFromHistory True if "Remove from History" option should be shown.
+ * @param offset The touch input position where the menu was triggered.
+ * @param onDismiss Callback to close the menu.
+ * @param onToggleFavorite Callback when the user toggles favorite status.
+ * @param onUninstall Callback when the user requests to uninstall the application.
+ * @param onRemoveFromHistory Callback when the user requests to remove the application from history.
+ * @param onRename Callback when the user requests to rename the application.
+ * @param onTagsClick Callback when the user requests to manage application tags.
+ * @param accentColor The active theme accent color.
+ */
 @Composable
 fun AppActionMenu(
     app: AppInfo,
@@ -139,6 +159,9 @@ fun AppActionMenu(
     }
 }
 
+/**
+ * A standard menu item used within the AppActionMenu popup.
+ */
 @Composable
 private fun MenuItem(
     text: String,
@@ -168,6 +191,19 @@ private fun MenuItem(
     }
 }
 
+/**
+ * A dialog allowing the user to view, edit, select, or create tags for a specific application.
+ *
+ * @param app The target application info.
+ * @param allTags The list of all created tags.
+ * @param assignedTagIds The list of tag IDs currently assigned to this app.
+ * @param onToggleTag Callback triggered when toggling a tag's assignment.
+ * @param onCreateTag Callback triggered when a new tag is created.
+ * @param onUpdateTag Callback triggered when a tag is edited.
+ * @param onDeleteTag Callback triggered when a tag is deleted.
+ * @param onDismiss Callback to close the dialog.
+ * @param accentColor The active UI accent color.
+ */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun TagSelectionDialog(
@@ -282,6 +318,16 @@ fun TagSelectionDialog(
     }
 }
 
+/**
+ * A dialog allowing the user to create a new tag or modify/delete an existing one.
+ * Includes a text field for name input and a color selection grid.
+ *
+ * @param tag The tag instance being edited, or null if creating a new tag.
+ * @param onDismiss Callback to close the dialog.
+ * @param onConfirm Callback when saving or creating a tag (supplying name and color).
+ * @param onDelete Callback when deleting this tag.
+ * @param accentColor The active UI accent color.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TagEditDialog(
@@ -373,6 +419,14 @@ fun TagEditDialog(
     )
 }
 
+/**
+ * A dialog displaying a single text field to rename an application.
+ *
+ * @param initialValue The original/current name of the application.
+ * @param accentColor The active UI accent color.
+ * @param onDismiss Callback to close the dialog.
+ * @param onConfirm Callback when confirming the new name.
+ */
 @Composable
 fun RenameDialog(
     initialValue: String,

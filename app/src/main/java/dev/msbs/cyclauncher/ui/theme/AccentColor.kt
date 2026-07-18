@@ -1,7 +1,11 @@
-package dev.msbs.cyclauncher
+package dev.msbs.cyclauncher.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+/**
+ * Defines the available theme accent colors for the application.
+ * Each accent color has a display name, a primary color, and a glow/shadow overlay color.
+ */
 enum class AccentColor(
     val displayName: String,
     val color: Color,
@@ -18,6 +22,13 @@ enum class AccentColor(
     WHITE("White", Color(0xFFFFFFFF), Color(0x33FFFFFF));
 
     companion object {
+        /**
+         * Resolves the [AccentColor] enum element corresponding to the given string name.
+         * Falls back to [CYAN] if no match is found.
+         *
+         * @param name The name of the accent color to lookup.
+         * @return The resolved AccentColor instance.
+         */
         fun fromName(name: String): AccentColor {
             return try {
                 valueOf(name)

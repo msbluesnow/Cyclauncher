@@ -1,5 +1,17 @@
 package dev.msbs.cyclauncher
 
+import dev.msbs.cyclauncher.data.AutoTagsPreview
+import dev.msbs.cyclauncher.data.TagsBackupPreview
+import dev.msbs.cyclauncher.model.AppInfo
+import dev.msbs.cyclauncher.model.Tag
+import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.components.AppActionMenu
+import dev.msbs.cyclauncher.ui.components.RenameDialog
+import dev.msbs.cyclauncher.ui.components.TagSelectionDialog
+import dev.msbs.cyclauncher.ui.screens.MainMenuScreen
+import dev.msbs.cyclauncher.ui.screens.SearchScreen
+import dev.msbs.cyclauncher.ui.screens.SettingsScreen
+
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -14,28 +26,46 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
+/**
+ * The main activity of Cyclauncher, handling launcher setups, edge-to-edge layout,
+ * broadcast receivers for package changes, and managing user interface navigation paths (horizontal/vertical pagers).
+ */
 class MainActivity : ComponentActivity() {
 
     private val viewModel: LauncherViewModel by viewModels()
     
+    /**
+     * BroadcastReceiver to dynamically refresh the app list when applications are installed,
+     * uninstalled, or updated.
+     */
     private val packageReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             viewModel.refreshApps()
@@ -51,7 +81,11 @@ class MainActivity : ComponentActivity() {
             addAction(Intent.ACTION_PACKAGE_REPLACED)
             addDataScheme("package")
         }
-        registerReceiver(packageReceiver, filter)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(packageReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(packageReceiver, filter)
+        }
         
         window.setFlags(
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
@@ -89,9 +123,25 @@ class MainActivity : ComponentActivity() {
                 val accentColor by viewModel.accentColor.collectAsState()
                 val allTags by viewModel.tags.collectAsState()
                 val appTagsMap by viewModel.appTags.collectAsState()
+                val autoTagsPreview by viewModel.autoTagsPreview.collectAsState()
+                val tagsBackupPreview by viewModel.tagsBackupPreview.collectAsState()
 
                 LaunchedEffect(verticalPagerState.currentPage, horizontalPagerState.currentPage) {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                }
+
+                // True only when the Main screen is the settled/active page of both pagers.
+                // Used as a key for gesture pointerInputs so any in-progress gesture is
+                // cancelled (its coroutine is disposed) the moment we navigate away —
+                // preventing e.g. a long-press-into-settings from leaking a swipe-down
+                // into the notification panel.
+                val isOnMainScreen by remember {
+                    derivedStateOf {
+                        horizontalPagerState.currentPage == 0 &&
+                        verticalPagerState.currentPage == 0 &&
+                        horizontalPagerState.targetPage == 0 &&
+                        verticalPagerState.targetPage == 0
+                    }
                 }
 
                 Surface(
@@ -115,6 +165,7 @@ class MainActivity : ComponentActivity() {
                                     if (vIndex == 0) {
                                         MainMenuScreen(
                                             viewModel = viewModel,
+                                            isActive = isOnMainScreen,
                                             onAppClick = ::openApp,
                                             onAppLongClick = { app, offset -> 
                                                 showActionMenuFor = app
@@ -143,19 +194,26 @@ class MainActivity : ComponentActivity() {
                                                     )
                                                 }
                                                 .pointerInput(handSide) {
-                                                    detectHorizontalDragGestures { _, dragAmount ->
-                                                        val isBackGesture = if (handSide == HandSide.LEFT) {
-                                                            dragAmount < -30
-                                                        } else {
-                                                            dragAmount > 30 
-                                                        }
+                                                    var navigated = false
+                                                    detectHorizontalDragGestures(
+                                                        onDragStart = { navigated = false },
+                                                        onHorizontalDrag = { _, dragAmount ->
+                                                            if (!navigated) {
+                                                                val isBackGesture = if (handSide == HandSide.LEFT) {
+                                                                    dragAmount < -30
+                                                                } else {
+                                                                    dragAmount > 30 
+                                                                }
 
-                                                        if (isBackGesture) {
-                                                            scope.launch {
-                                                                verticalPagerState.animateScrollToPage(0)
+                                                                if (isBackGesture) {
+                                                                    navigated = true
+                                                                    scope.launch {
+                                                                        verticalPagerState.animateScrollToPage(0)
+                                                                    }
+                                                                }
                                                             }
                                                         }
-                                                    }
+                                                    )
                                                 }
                                         ) {
                                             SearchScreen(
@@ -225,6 +283,26 @@ class MainActivity : ComponentActivity() {
                                 accentColor = accentColor
                             )
                         }
+
+                        autoTagsPreview?.let { preview ->
+                            AutoTagsConfirmDialog(
+                                preview = preview,
+                                accentColor = accentColor,
+                                showShadows = viewModel.showShadows.collectAsState().value,
+                                onConfirm = { viewModel.applyAutoTags() },
+                                onDismiss = { viewModel.dismissAutoTagsPreview() }
+                            )
+                        }
+
+                        tagsBackupPreview?.let { preview ->
+                            TagsBackupConfirmDialog(
+                                preview = preview,
+                                accentColor = accentColor,
+                                showShadows = viewModel.showShadows.collectAsState().value,
+                                onConfirm = { viewModel.applyTagsBackup() },
+                                onDismiss = { viewModel.dismissTagsBackupPreview() }
+                            )
+                        }
                     }
                 }
             }
@@ -236,6 +314,13 @@ class MainActivity : ComponentActivity() {
         unregisterReceiver(packageReceiver)
     }
 
+    /**
+     * Attempts to open the application represented by the given component key.
+     * Uses a specific class-name-based intent if possible, falling back to a package-launch intent.
+     * Logs the application launch event inside the view model.
+     *
+     * @param componentKey The component key (formatted as "packageName/activityName" or package name).
+     */
     private fun openApp(componentKey: String) {
         val parts = componentKey.split("/")
         if (parts.size == 2) {
@@ -262,6 +347,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Launches the system delete package intent to uninstall the specified application.
+     *
+     * @param packageName The application package name to uninstall.
+     */
     private fun uninstallApp(packageName: String) {
         try {
             val uninstallIntent = Intent(Intent.ACTION_DELETE).apply {
@@ -274,6 +364,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Expands the system notification panel reflection-style (requires EXPAND_STATUS_BAR permission).
+     */
     @SuppressLint("WrongConstant")
     private fun openNotifications() {
         try {
@@ -287,7 +380,177 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Custom MaterialTheme theme wrapper for Cyclauncher.
+ */
 @Composable
 private fun CyclauncherTheme(content: @Composable () -> Unit) {
     MaterialTheme { content() }
+}
+
+/**
+ * Dialog prompting confirmation before applying automatic AI tags configuration.
+ */
+@Composable
+private fun AutoTagsConfirmDialog(
+    preview: AutoTagsPreview,
+    accentColor: AccentColor,
+    showShadows: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val shadow = if (showShadows) {
+        androidx.compose.ui.graphics.Shadow(
+            color = Color.Black.copy(alpha = 0.6f),
+            offset = androidx.compose.ui.geometry.Offset(2f, 2f),
+            blurRadius = 4f
+        )
+    } else null
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                "Apply Auto Tags?",
+                color = accentColor.color,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    "${preview.matchedAppsCount} apps will be tagged into ${preview.tags.size} categories:",
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontSize = 14.sp
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                preview.tags.forEach { tagInfo ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .clip(CircleShape)
+                                .background(tagInfo.color)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            tagInfo.name,
+                            color = Color.White,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+                if (preview.unmatchedAppPackages.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "${preview.unmatchedAppPackages.size} apps not found on device",
+                        color = Color.White.copy(alpha = 0.5f),
+                        fontSize = 11.sp
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Apply", color = accentColor.color, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.Gray)
+            }
+        },
+        containerColor = Color(0xFF1E1E1E),
+        textContentColor = Color.White
+    )
+}
+
+/**
+ * Dialog prompting confirmation before restoring tag configurations from backup.
+ */
+@Composable
+private fun TagsBackupConfirmDialog(
+    preview: TagsBackupPreview,
+    accentColor: AccentColor,
+    showShadows: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val shadow = if (showShadows) {
+        androidx.compose.ui.graphics.Shadow(
+            color = Color.Black.copy(alpha = 0.6f),
+            offset = androidx.compose.ui.geometry.Offset(2f, 2f),
+            blurRadius = 4f
+        )
+    } else null
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                "Import Tags?",
+                color = accentColor.color,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    buildString {
+                        append("New tags to create: ${preview.newTags.size}")
+                        append("\nExisting tags kept: ${preview.existingTagCount}")
+                        append("\nTag assignments: ${preview.assignmentCount}")
+                    },
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontSize = 14.sp,
+                    style = androidx.compose.ui.text.TextStyle(shadow = shadow)
+                )
+                if (preview.newTags.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    preview.newTags.take(12).forEach { tagInfo ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .clip(CircleShape)
+                                    .background(tagInfo.color)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                tagInfo.name,
+                                color = Color.White,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                    if (preview.newTags.size > 12) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "… and ${preview.newTags.size - 12} more",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Import", color = accentColor.color, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.Gray)
+            }
+        },
+        containerColor = Color(0xFF1E1E1E),
+        textContentColor = Color.White
+    )
 }
