@@ -1,4 +1,11 @@
-package dev.msbs.cyclauncher
+package dev.msbs.cyclauncher.ui.screens
+
+import dev.msbs.cyclauncher.LauncherViewModel
+import dev.msbs.cyclauncher.HandSide
+import dev.msbs.cyclauncher.model.AppInfo
+import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.components.AppListItem
+import dev.msbs.cyclauncher.ui.components.RectangularAlphabetWheel
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -21,6 +28,14 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
+/**
+ * The search screen Composable. Automatically decides between the alphabet wheel search
+ * or the keyboard-based text search interface depending on the view model state.
+ *
+ * @param viewModel The view model supplying state data.
+ * @param onAppClick Callback when an application is clicked/opened.
+ * @param onAppLongClick Callback when an application is long-pressed (provides coordinates).
+ */
 @Composable
 fun SearchScreen(
     viewModel: LauncherViewModel,
@@ -46,6 +61,15 @@ fun SearchScreen(
     }
 }
 
+/**
+ * Layout presenting the rectangular alphabet wheel search mechanism.
+ * Uses vertical drag gestures to scroll through letters and display filtered apps.
+ *
+ * @param viewModel The view model supplying state data.
+ * @param handSide User preferred hand side layout.
+ * @param onAppClick Callback when an application is clicked.
+ * @param onAppLongClick Callback when an application is long-pressed.
+ */
 @Composable
 fun WheelSearchLayout(
     viewModel: LauncherViewModel,
@@ -68,7 +92,7 @@ fun WheelSearchLayout(
         verticalArrangement = Arrangement.Bottom,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Upper section with App List and Side Scroll Area
+        // Upper section containing the app list on one side and the drag-scroll interception area on the other side.
         Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
             val scrollModifier = Modifier
                 .fillMaxHeight()
@@ -108,7 +132,7 @@ fun WheelSearchLayout(
             }
         }
 
-        // Alphabet Wheel
+        // The custom rectangular alphabet wheel component.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -129,11 +153,21 @@ fun WheelSearchLayout(
             )
         }
 
-        // Bottom Bar
+        // Bottom toggle bar allowing users to switch to the keyboard search interface.
         SearchToggleBar(handSide, accentColor, showShadows) { viewModel.toggleTextSearchMode() }
     }
 }
 
+/**
+ * Renders a column list of application items matching the selected search criteria.
+ * Limits the list to the top 15 results to optimize rendering performance.
+ *
+ * @param apps Filtered list of applications.
+ * @param alignment Text alignment configuration.
+ * @param showShadows Whether to apply drop shadows to item texts.
+ * @param onAppClick Callback when an app item is clicked.
+ * @param onAppLongClick Callback when an app item is long-pressed.
+ */
 @Composable
 private fun AppListContent(
     apps: List<AppInfo>,
@@ -159,6 +193,15 @@ private fun AppListContent(
     }
 }
 
+/**
+ * Bottom toggle bar that displays a button to switch between the rectangular
+ * alphabet wheel search mode and the full text search interface.
+ *
+ * @param handSide Layout orientation side (left/right hand side alignment).
+ * @param accentColor Theme accent color.
+ * @param showShadows Whether to apply drop shadows.
+ * @param onToggle Callback triggered when clicking the search mode toggle button.
+ */
 @Composable
 private fun SearchToggleBar(
     handSide: HandSide, 

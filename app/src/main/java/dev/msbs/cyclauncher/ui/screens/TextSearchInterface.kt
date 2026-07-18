@@ -1,4 +1,10 @@
-package dev.msbs.cyclauncher
+package dev.msbs.cyclauncher.ui.screens
+
+import dev.msbs.cyclauncher.LauncherViewModel
+import dev.msbs.cyclauncher.HandSide
+import dev.msbs.cyclauncher.model.AppInfo
+import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.components.AppListItemWithIcon
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,6 +21,14 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
+/**
+ * Layout representing the full-text keyboard-based search screen.
+ * Displays a search text field and a dynamic scrollable list of matched applications.
+ *
+ * @param viewModel The view model supplying state data.
+ * @param onAppClick Callback when an application is clicked.
+ * @param onAppLongClick Callback when an application is long-pressed.
+ */
 @Composable
 fun TextSearchInterface(
     viewModel: LauncherViewModel,
@@ -75,10 +89,13 @@ fun TextSearchInterface(
             }
         }
         
-        CloseSearchButton(showShadows) { viewModel.toggleTextSearchMode() }
+        CloseSearchButton(accentColor, showShadows) { viewModel.toggleTextSearchMode() }
     }
 }
 
+/**
+ * Text field for entering search queries. Focuses automatically on launch.
+ */
 @Composable
 private fun SearchTextField(
     value: String,
@@ -126,8 +143,11 @@ private fun SearchTextField(
     )
 }
 
+/**
+ * Button to close the text search interface.
+ */
 @Composable
-private fun CloseSearchButton(showShadows: Boolean, onClick: () -> Unit) {
+private fun CloseSearchButton(accentColor: AccentColor, showShadows: Boolean, onClick: () -> Unit) {
     val shadow = if (showShadows) {
         Shadow(
             color = Color.Black.copy(alpha = 0.6f),
@@ -141,8 +161,8 @@ private fun CloseSearchButton(showShadows: Boolean, onClick: () -> Unit) {
         modifier = Modifier.padding(bottom = 16.dp)
     ) {
         Text(
-            "✕", 
-            color = Color.White, 
+            "✕",
+            color = accentColor.color,
             style = MaterialTheme.typography.headlineMedium.copy(shadow = shadow)
         )
     }

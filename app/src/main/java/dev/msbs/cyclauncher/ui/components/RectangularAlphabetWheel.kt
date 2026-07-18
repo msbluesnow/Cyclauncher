@@ -1,4 +1,7 @@
-package dev.msbs.cyclauncher
+package dev.msbs.cyclauncher.ui.components
+
+import dev.msbs.cyclauncher.model.AppInfo
+import dev.msbs.cyclauncher.ui.theme.AccentColor
 
 import android.graphics.Paint
 import androidx.compose.animation.core.*
@@ -16,9 +19,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -35,6 +40,19 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+/**
+ * A custom interactive alphabet wheel arranged in a rectangular path around the screen.
+ * Displays letters from A to Z and '#', allowing drag gestures to choose active letters
+ * and selecting applications starting with that letter.
+ *
+ * @param scrollOffset The animating scroll position value of the wheel.
+ * @param onLetterSelected Callback when a new letter becomes active.
+ * @param apps The list of applications that match the active letter.
+ * @param onAppClick Callback when an application icon inside the wheel is tapped.
+ * @param onAppLongClick Callback when an application icon is long-pressed (provides coordinates).
+ * @param accentColor The active UI accent color.
+ * @param modifier Modifier for configuration.
+ */
 @Composable
 fun RectangularAlphabetWheel(
     scrollOffset: Animatable<Float, AnimationVector1D>,
@@ -49,6 +67,8 @@ fun RectangularAlphabetWheel(
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
+    
+    val currentOnLetterSelected by rememberUpdatedState(onLetterSelected)
     
     var wheelPosition by remember { mutableStateOf(Offset.Zero) }
 
@@ -75,7 +95,7 @@ fun RectangularAlphabetWheel(
         }
 
         LaunchedEffect(activeIndex) {
-            onLetterSelected(alphabet[activeIndex])
+            currentOnLetterSelected(alphabet[activeIndex])
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         }
 
@@ -251,49 +271,15 @@ fun RectangularAlphabetWheel(
             ) {
                 // Letter rendering
                 alphabet.forEachIndexed { index, letter ->
-                    val pos = getRectPosition(index)
-                    val dist = abs(floatIndex - index).let { if (it > 13.5) 27 - it else it }.toFloat()
-                    
-                    val scale = (1.5f - (dist * 0.4f)).coerceIn(1.0f, 1.5f)
-                    val alpha = (1.0f - (dist * 0.2f)).coerceIn(0.4f, 1.0f)
-                    val isExact = dist < 0.5f
-                    val glowAlpha = (1f - dist * 2f).coerceIn(0f, 1f)
-
-                    Box(
-                        modifier = Modifier
-                            .size(stepSize)
-                            .graphicsLayer {
-                                translationX = pos.x
-                                translationY = pos.y
-                                scaleX = scale
-                                scaleY = scale
-                                this.alpha = alpha
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (glowAlpha > 0f) {
-                            Box(
-                                modifier = Modifier
-                                    .size(stepSize * 0.85f)
-                                    .align(Alignment.Center)
-                                    .background(
-                                        color = accentColor.glowColor.copy(alpha = accentColor.glowColor.alpha * glowAlpha),
-                                        shape = CircleShape
-                                    )
-                                    .border(
-                                        width = 1.dp,
-                                        color = accentColor.color.copy(alpha = 0.25f * glowAlpha),
-                                        shape = CircleShape
-                                    )
-                            )
-                        }
-                        Text(
-                            text = letter.toString(),
-                            fontSize = fontSize,
-                            fontWeight = if (isExact) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isExact) accentColor.color else Color.White
-                        )
-                    }
+                    AlphabetLetterItem(
+                        letter = letter,
+                        index = index,
+                        floatIndexProvider = { floatIndex },
+                        stepSize = stepSize,
+                        fontSize = fontSize,
+                        accentColor = accentColor,
+                        pos = getRectPosition(index)
+                    )
                 }
 
                 AppsGrid(
@@ -311,6 +297,20 @@ fun RectangularAlphabetWheel(
     }
 }
 
+/**
+ * Renders the grid of application icons centered inside the rectangular alphabet wheel.
+ * Dynamically adjusts icon size and column count based on the number of apps to display.
+ *
+ * @param apps The list of applications matching the selected letter.
+ * @param s The step size in pixels corresponding to the path structure.
+ * @param density Context density provider.
+ * @param wheelPosition The absolute root offset coordinate of the alphabet wheel.
+ * @param stepSize The step size in Dp unit.
+ * @param onAppClick Callback when an application icon is tapped.
+ * @param onAppLongClick Callback when an application icon is long-pressed (provides coordinates).
+ * @param scaleFactor Dynamic scaling factor calculated from screen size.
+ */
+
 @Composable
 fun AppsGrid(
     apps: List<AppInfo>,
@@ -324,6 +324,9 @@ fun AppsGrid(
 ) {
     val displayApps = apps.take(20)
     if (displayApps.isEmpty()) return
+
+    val currentOnAppClick by rememberUpdatedState(onAppClick)
+    val currentOnAppLongClick by rememberUpdatedState(onAppLongClick)
 
     val dynamicSize = (when {
         displayApps.size <= 4 -> 48.dp
@@ -372,17 +375,85 @@ fun AppsGrid(
                 )
                 .pointerInput("${app.packageName}/${app.activityName}") {
                     detectTapGestures(
-                        onTap = { onAppClick("${app.packageName}/${app.activityName}") },
+                        onTap = { currentOnAppClick("${app.packageName}/${app.activityName}") },
                         onLongPress = { offset ->
                             val outerWidthPx = with(density) { (stepSize * 10).toPx() }
                             val outerHeightPx = with(density) { (stepSize * 5).toPx() }
                             val paddingXPx = (outerWidthPx - 9 * s) / 2f
                             val paddingYPx = (outerHeightPx - 4 * s) / 2f
                             
-                            onAppLongClick("${app.packageName}/${app.activityName}", wheelPosition + Offset(paddingXPx + x + offset.x, paddingYPx + y + offset.y))
+                            currentOnAppLongClick("${app.packageName}/${app.activityName}", wheelPosition + Offset(paddingXPx + x + offset.x, paddingYPx + y + offset.y))
                         }
                     )
                 }
+        )
+    }
+}
+
+/**
+ * Individual alphabet letter item rendered on the path, featuring dynamic sizing
+ * and glowing animations when closest to the active scroll index.
+ */
+@Composable
+private fun AlphabetLetterItem(
+    letter: Char,
+    index: Int,
+    floatIndexProvider: () -> Float,
+    stepSize: Dp,
+    fontSize: androidx.compose.ui.unit.TextUnit,
+    accentColor: AccentColor,
+    pos: Offset,
+    modifier: Modifier = Modifier
+) {
+    val isExactState = remember {
+        derivedStateOf {
+            val floatIndex = floatIndexProvider()
+            val dist = abs(floatIndex - index).let { if (it > 13.5) 27 - it else it }
+            dist < 0.5f
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .size(stepSize)
+            .graphicsLayer {
+                val floatIndex = floatIndexProvider()
+                val dist = abs(floatIndex - index).let { if (it > 13.5) 27 - it else it }.toFloat()
+                val scale = (1.5f - (dist * 0.4f)).coerceIn(1.0f, 1.5f)
+                val alpha = (1.0f - (dist * 0.2f)).coerceIn(0.4f, 1.0f)
+                
+                translationX = pos.x
+                translationY = pos.y
+                scaleX = scale
+                scaleY = scale
+                this.alpha = alpha
+            }
+            .drawBehind {
+                val floatIndex = floatIndexProvider()
+                val dist = abs(floatIndex - index).let { if (it > 13.5) 27 - it else it }.toFloat()
+                val glowAlpha = (1f - dist * 2f).coerceIn(0f, 1f)
+                
+                if (glowAlpha > 0f) {
+                    val radius = (stepSize * 0.85f).toPx() / 2f
+                    drawCircle(
+                        color = accentColor.glowColor.copy(alpha = accentColor.glowColor.alpha * glowAlpha),
+                        radius = radius
+                    )
+                    drawCircle(
+                        color = accentColor.color.copy(alpha = 0.25f * glowAlpha),
+                        radius = radius,
+                        style = Stroke(width = 1.dp.toPx())
+                    )
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        val isExact by isExactState
+        Text(
+            text = letter.toString(),
+            fontSize = fontSize,
+            fontWeight = if (isExact) FontWeight.Bold else FontWeight.Normal,
+            color = if (isExact) accentColor.color else Color.White
         )
     }
 }

@@ -1,5 +1,10 @@
-package dev.msbs.cyclauncher
+package dev.msbs.cyclauncher.ui.screens
 
+import dev.msbs.cyclauncher.LauncherViewModel
+import dev.msbs.cyclauncher.HandSide
+import dev.msbs.cyclauncher.ui.theme.AccentColor
+
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -8,8 +13,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -21,6 +28,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -29,6 +37,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
+/**
+ * The settings screen of the launcher, presenting preferences for UI alignment (hand orientation),
+ * color theme, adaptive drop shadow toggles, default launcher selection, backup actions, and support links.
+ *
+ * @param viewModel The view model supplying state data.
+ * @param onBack Callback when pressing back or exiting settings.
+ */
 @Composable
 fun SettingsScreen(
     viewModel: LauncherViewModel,
@@ -37,13 +52,35 @@ fun SettingsScreen(
     val handSide by viewModel.handSide.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
-    
+    val context = LocalContext.current
+
     var showDefaultLauncherDialog by remember { mutableStateOf(false) }
+    var showAutoTagsScreen by remember { mutableStateOf(false) }
     var currentIsDefault by remember { mutableStateOf(viewModel.isDefaultLauncher()) }
 
-    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { viewModel.importLabels(it) }
+    // Unified App List export / import (JSON), used by both Settings and AutoTags
+    val exportAppListLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri -> uri?.let { viewModel.exportAppNamesJson(it) } }
+
+    val importAppListLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            viewModel.importAppNamesPreview(it) { count ->
+                Toast.makeText(context, "Imported $count app labels", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
+
+    // Unified Tags backup export / import (JSON)
+    val exportTagsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri -> uri?.let { viewModel.exportTagsBackup(it) } }
+
+    val importTagsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri -> uri?.let { viewModel.loadTagsBackupPreview(it) } }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -66,11 +103,20 @@ fun SettingsScreen(
 
     BackHandler(onBack = onBack)
 
+    if (showAutoTagsScreen) {
+        AutoTagsScreen(
+            viewModel = viewModel,
+            onBack = { showAutoTagsScreen = false }
+        )
+        return
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -128,18 +174,31 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Labels Backup
-                SettingsRow(label = "Labels Backup:", shadow = shadow) {
+                // App List — unified export/import of the installed app list (JSON).
+                // Same method used by the AutoTags screen.
+                SettingsRow(label = "App List:", shadow = shadow) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Export/Save Button
-                        val saveLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-                            uri?.let { viewModel.saveLabelsToUri(it) }
-                        }
-                        
-                        IconButton(onClick = { saveLauncher.launch("cyclauncher_labels.json") }) {
+                        IconButton(onClick = { exportAppListLauncher.launch("cyclauncher_apps.json") }) {
                             Icon(Icons.Outlined.Upload, null, tint = accentColor.color)
                         }
-                        IconButton(onClick = { importLauncher.launch("application/json") }) {
+                        IconButton(onClick = { importAppListLauncher.launch("application/json") }) {
+                            Icon(Icons.Outlined.Download, null, tint = accentColor.color)
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
+
+                // Tags — open the AutoTags page + unified tags backup export/import.
+                SettingsRow(label = "Tags:", shadow = shadow) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconButton(onClick = { showAutoTagsScreen = true }) {
+                            Icon(Icons.Outlined.AutoAwesome, null, tint = accentColor.color)
+                        }
+                        IconButton(onClick = { exportTagsLauncher.launch("cyclauncher_tags.json") }) {
+                            Icon(Icons.Outlined.Upload, null, tint = accentColor.color)
+                        }
+                        IconButton(onClick = { importTagsLauncher.launch("application/json") }) {
                             Icon(Icons.Outlined.Download, null, tint = accentColor.color)
                         }
                     }
@@ -176,17 +235,8 @@ fun SettingsScreen(
                 }
             }
         }
-        
-        Spacer(modifier = Modifier.weight(1f))
-        
-        Button(
-            onClick = onBack,
-            colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
-            shape = RoundedCornerShape(24.dp),
-            modifier = Modifier.fillMaxWidth().height(48.dp)
-        ) {
-            Text("Back to Home", color = Color.Black, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
-        }
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 
     if (showDefaultLauncherDialog) {
@@ -206,6 +256,9 @@ fun SettingsScreen(
     }
 }
 
+/**
+ * A layout row presenting a label and a custom configuration content side-by-side.
+ */
 @Composable
 private fun SettingsRow(label: String, shadow: Shadow?, content: @Composable () -> Unit) {
     Row(
@@ -218,6 +271,9 @@ private fun SettingsRow(label: String, shadow: Shadow?, content: @Composable () 
     }
 }
 
+/**
+ * Dropdown selector for picking the theme accent color.
+ */
 @Composable
 private fun AccentColorDropdown(selectedColor: AccentColor, onSelect: (AccentColor) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
@@ -238,6 +294,9 @@ private fun AccentColorDropdown(selectedColor: AccentColor, onSelect: (AccentCol
     }
 }
 
+/**
+ * Section block representing default launcher preferences and selection options.
+ */
 @Composable
 private fun DefaultLauncherSelector(isDefault: Boolean, accentColor: AccentColor, showShadows: Boolean, onClick: () -> Unit) {
     val shadow = if (showShadows) Shadow(color = Color.Black.copy(alpha = 0.6f), offset = Offset(2f, 2f), blurRadius = 4f) else null
@@ -251,6 +310,9 @@ private fun DefaultLauncherSelector(isDefault: Boolean, accentColor: AccentColor
     }
 }
 
+/**
+ * Radio button option representing hand orientation choice (LEFT or RIGHT).
+ */
 @Composable
 private fun HandOption(label: String, isSelected: Boolean, accentColor: AccentColor, showShadows: Boolean, onClick: () -> Unit) {
     val shadow = if (showShadows) Shadow(color = Color.Black.copy(alpha = 0.6f), offset = Offset(2f, 2f), blurRadius = 4f) else null
