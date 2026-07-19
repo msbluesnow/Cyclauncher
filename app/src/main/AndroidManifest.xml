@@ -12,6 +12,7 @@
     </queries>
 
     <application
+        android:name=".CyclauncherApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="Cyclauncher"

@@ -354,13 +354,19 @@ fun AppsGrid(
         val itemsInThisRow = if (row < rowsNeeded - 1) maxCols else displayApps.size - (row * maxCols)
         val currentRowWidthPx = itemsInThisRow * dynamicSizePx + (itemsInThisRow - 1) * spacingPx
         val rowStartXPx = (10 * s - currentRowWidthPx) / 2f
-        
+
         val x = rowStartXPx + col * (dynamicSizePx + spacingPx)
         val y = startYPx + row * (dynamicSizePx + spacingPx)
 
+        // Coil-backed icon. We always reserve the cell (no early return), so the grid layout
+        // stays stable while the painter asynchronously resolves from memory/disk cache.
+        val iconSizeDp = dynamicSize.value.toInt()
+        val painter = rememberAppIconPainter(app.iconKey, iconSizeDp)
+
         Image(
-            bitmap = app.icon ?: return@forEachIndexed,
+            painter = painter,
             contentDescription = app.label,
+            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
             modifier = Modifier
                 .size(dynamicSize)
                 .graphicsLayer {
@@ -373,16 +379,16 @@ fun AppsGrid(
                     color = Color.White.copy(alpha = 0.15f),
                     shape = CircleShape
                 )
-                .pointerInput("${app.packageName}/${app.activityName}") {
+                .pointerInput(app.componentKey) {
                     detectTapGestures(
-                        onTap = { currentOnAppClick("${app.packageName}/${app.activityName}") },
+                        onTap = { currentOnAppClick(app.componentKey) },
                         onLongPress = { offset ->
                             val outerWidthPx = with(density) { (stepSize * 10).toPx() }
                             val outerHeightPx = with(density) { (stepSize * 5).toPx() }
                             val paddingXPx = (outerWidthPx - 9 * s) / 2f
                             val paddingYPx = (outerHeightPx - 4 * s) / 2f
-                            
-                            currentOnAppLongClick("${app.packageName}/${app.activityName}", wheelPosition + Offset(paddingXPx + x + offset.x, paddingYPx + y + offset.y))
+
+                            currentOnAppLongClick(app.componentKey, wheelPosition + Offset(paddingXPx + x + offset.x, paddingYPx + y + offset.y))
                         }
                     )
                 }
