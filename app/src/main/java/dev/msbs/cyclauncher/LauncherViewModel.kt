@@ -11,11 +11,9 @@ import android.app.Application
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -79,8 +77,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** List of all installed applications, enriched with user-defined custom labels. */
     val apps: StateFlow<List<AppInfo>> = combine(_apps, actionsManager.customLabels) { all, customLabels ->
         all.map { app ->
-            val key = "${app.packageName}/${app.activityName}"
-            val customLabel = customLabels[key]
+            val customLabel = customLabels[app.componentKey]
             if (customLabel != null) {
                 app.copy(label = customLabel, searchChar = mapToSearchChar(customLabel.firstOrNull() ?: ' '))
             } else {
@@ -96,12 +93,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     /** List of recently opened applications in historical order. */
     val historyApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.history) { all, ids ->
-        ids.mapNotNull { id -> all.find { "${it.packageName}/${it.activityName}" == id } }
+        ids.mapNotNull { id -> all.find { it.componentKey == id } }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /** List of applications marked as favorites. */
     val favoriteApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.favorites) { all, ids ->
-        ids.mapNotNull { id -> all.find { "${it.packageName}/${it.activityName}" == id } }
+        ids.mapNotNull { id -> all.find { it.componentKey == id } }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /** List of installed applications matching the active keyboard search query. */
@@ -424,12 +421,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     /**
      * Loads installed launchable applications asynchronously, resolving their display labels,
-     * package names, activity names, icons, and starting index characters.
+     * package names, activity names, and starting index characters. Icons are intentionally
+     * not loaded here — they are fetched on demand by Coil in the UI layer, which keeps this
+     * list lightweight and lets the OS evict bitmaps under memory pressure.
      */
     private fun loadInstalledApps() {
         viewModelScope.launch(Dispatchers.IO) {
             val pm = getApplication<Application>().packageManager
-            val defaultIcon = pm.defaultActivityIcon
             val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
             val resolvedInfos = pm.queryIntentActivities(mainIntent, 0)
             val appList = resolvedInfos.map { info ->
@@ -447,22 +445,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                             info.activityInfo.packageName
                         }
                         val firstChar = label.firstOrNull() ?: ' '
-                        val iconBitmap = try {
-                            val iconDrawable = info.loadIcon(pm) ?: defaultIcon
-                            iconDrawable.toBitmap(width = 120, height = 120).asImageBitmap()
-                        } catch (e: Exception) {
-                            try {
-                                defaultIcon.toBitmap(width = 120, height = 120).asImageBitmap()
-                            } catch (ex: Exception) {
-                                null
-                            }
-                        }
-                        
                         AppInfo(
                             label = label,
                             packageName = info.activityInfo.packageName,
                             activityName = info.activityInfo.name,
-                            icon = iconBitmap,
+                            iconKey = "${info.activityInfo.packageName}/${info.activityInfo.name}",
                             searchChar = mapToSearchChar(firstChar)
                         )
                     } catch (e: Exception) {
@@ -470,16 +457,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                             label = info.activityInfo?.packageName ?: "Unknown",
                             packageName = info.activityInfo?.packageName ?: "",
                             activityName = info.activityInfo?.name ?: "",
-                            icon = null,
+                            iconKey = info.activityInfo?.let { "${it.packageName}/${it.name}" }.orEmpty(),
                             searchChar = '#'
                         )
                     }
                 }
             }.awaitAll().sortedBy { it.label.lowercase() }
-            
+
             _apps.value = appList
-            
-            val validKeys = appList.map { "${it.packageName}/${it.activityName}" }.toSet()
+
+            val validKeys = appList.map { it.componentKey }.toSet()
             actionsManager.cleanupInvalidApps(validKeys)
         }
     }

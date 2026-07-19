@@ -16,14 +16,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.graphics.drawable.toBitmap
+import coil3.compose.rememberAsyncImagePainter
+import coil3.request.ImageRequest
 
 /**
  * A custom text component that automatically scales down its font size to prevent visual horizontal overflow.
@@ -74,8 +78,34 @@ fun AutoResizingText(
 }
 
 /**
+ * Resolves an app icon as a Coil-backed [Painter]. Modelled on [AppIconKey] so Coil always
+ * routes to [dev.msbs.cyclauncher.coil.AppIconFetcher] and never tries the network fetcher.
+ *
+ * [sizeDp] is promoted to px and passed to the request so Coil decodes at the right resolution
+ * instead of always rasterizing the full-density source drawable.
+ */
+@Composable
+fun rememberAppIconPainter(iconKey: String, sizeDp: Int = 48): Painter {
+    val context = LocalContext.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    return rememberAsyncImagePainter(
+        model = remember(iconKey, sizeDp, density) {
+            val px = with(density) { sizeDp.dp.roundToPx() }.coerceAtLeast(1)
+            ImageRequest.Builder(context)
+                .data(dev.msbs.cyclauncher.coil.AppIconKey(iconKey))
+                .size(px)
+                .build()
+        }
+    )
+}
+
+/**
  * A circular image icon representation of an application package.
  * Supports basic tap and long-press haptic gestures.
+ *
+ * The icon is loaded asynchronously by Coil from [AppInfo.iconKey] (a `"pkg/activity"` string).
+ * Coil owns the memory + disk cache, so decoded bitmaps live only while visible and are evicted
+ * under memory pressure — they no longer pin process memory for the launcher's lifetime.
  *
  * @param app The application info.
  * @param size The size of the icon in dp.
@@ -84,31 +114,34 @@ fun AutoResizingText(
  */
 @Composable
 fun AppIconItem(
-    app: AppInfo, 
-    size: Int = 48, 
+    app: AppInfo,
+    size: Int = 48,
     onClick: () -> Unit,
     onLongClick: (Offset) -> Unit = {}
 ) {
     var itemPosition by remember { mutableStateOf(Offset.Zero) }
     val currentOnClick by rememberUpdatedState(onClick)
     val currentOnLongClick by rememberUpdatedState(onLongClick)
-    
-    app.icon?.let { bitmap ->
-        Image(
-            bitmap = bitmap,
-            contentDescription = app.label,
-            modifier = Modifier
-                .size(size.dp)
-                .clip(CircleShape)
-                .onGloballyPositioned { itemPosition = it.positionInRoot() }
-                .pointerInput("${app.packageName}/${app.activityName}") {
-                    detectTapGestures(
-                        onTap = { currentOnClick() },
-                        onLongPress = { currentOnLongClick(itemPosition + it) }
-                    )
-                }
-        )
-    }
+
+    val painter: Painter = rememberAppIconPainter(app.iconKey, size)
+
+    // Always reserve the icon cell so tap targets and layout are stable even while the
+    // bitmap is still being decoded/loaded from cache.
+    Image(
+        painter = painter,
+        contentDescription = app.label,
+        contentScale = ContentScale.Fit,
+        modifier = Modifier
+            .size(size.dp)
+            .clip(CircleShape)
+            .onGloballyPositioned { itemPosition = it.positionInRoot() }
+            .pointerInput(app.componentKey) {
+                detectTapGestures(
+                    onTap = { currentOnClick() },
+                    onLongPress = { currentOnLongClick(itemPosition + it) }
+                )
+            }
+    )
 }
 
 /**
