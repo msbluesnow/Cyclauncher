@@ -22,8 +22,10 @@ import okio.Path.Companion.toOkioPath
  */
 class CyclauncherApp : Application(), SingletonImageLoader.Factory {
 
+    private var imageLoader: ImageLoader? = null
+
     override fun newImageLoader(context: Context): ImageLoader {
-        return ImageLoader.Builder(context)
+        val loader = ImageLoader.Builder(context)
             .components {
                 add(AppIconFetcher.Factory(context))
             }
@@ -40,6 +42,25 @@ class CyclauncherApp : Application(), SingletonImageLoader.Factory {
             }
             .crossfade(false)
             .build()
+        imageLoader = loader
+        return loader
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        // If the UI is hidden (app goes to background) or memory is critical, clear the memory cache.
+        if (level >= TRIM_MEMORY_UI_HIDDEN) {
+            imageLoader?.memoryCache?.clear()
+            // Force the Garbage Collector to run immediately, reclaiming all memory allocated 
+            // by native bitmaps and wrapper objects, dropping background PSS footprint instantly.
+            System.gc()
+        }
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        imageLoader?.memoryCache?.clear()
+        System.gc()
     }
 
     private companion object {
