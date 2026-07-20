@@ -2,21 +2,18 @@ package dev.msbs.cyclauncher.coil
 
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import android.os.Build
-import androidx.core.graphics.drawable.toBitmap
 import coil3.ImageLoader
+import coil3.asImage
 import coil3.decode.DataSource
-import coil3.decode.ImageSource
 import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
-import coil3.fetch.SourceFetchResult
+import coil3.fetch.ImageFetchResult
 import coil3.request.Options
 import coil3.toUri
-import okio.Buffer
-import okio.FileSystem
-import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Marker data type Coil keys on. Using a dedicated wrapper (instead of a raw String) ensures
@@ -29,22 +26,19 @@ data class AppIconKey(val componentKey: String)
 
 /**
  * A Coil [Fetcher] that resolves an installed app's icon via [PackageManager] and pipes the
- * rasterized bytes back through Coil's normal decode pipeline. This lets Coil own all memory
+ * resolved Drawable back through Coil's normal pipeline as an Image. This lets Coil own all memory
  * caching (LRU + eviction on trim) and disk caching, so the ViewModel never has to hold
- * decoded [Bitmap]s in long-lived flows.
- *
- * Flow: `AppIconKey` → resolve [Drawable] via PackageManager → encode to PNG → [SourceFetchResult]
- * → Coil decodes, scales to the request size, caches it.
+ * decoded Bitmaps in long-lived flows, while avoiding expensive on-the-fly PNG rasterization.
  */
 internal class AppIconFetcher private constructor(
     private val context: Context,
     private val key: AppIconKey,
 ) : Fetcher {
 
-    override suspend fun fetch(): FetchResult? {
+    override suspend fun fetch(): FetchResult? = withContext(Dispatchers.IO) {
         val pm = context.packageManager
         val parts = key.componentKey.split("/", limit = 2)
-        if (parts.size != 2) return null
+        if (parts.size != 2) return@withContext null
         val (pkg, activity) = parts
 
         val drawable: Drawable = try {
@@ -54,16 +48,9 @@ internal class AppIconFetcher private constructor(
             pm.defaultActivityIcon
         }
 
-        // Rasterize to PNG so Coil can run its standard decode path (size, config, etc.).
-        val pngBytes = encodePng(drawable) ?: return null
-        val source = ImageSource(
-            source = Buffer().write(pngBytes),
-            fileSystem = FileSystem.SYSTEM,
-        )
-
-        return SourceFetchResult(
-            source = source,
-            mimeType = MIME_PNG,
+        ImageFetchResult(
+            image = drawable.asImage(),
+            isSampled = false,
             dataSource = DataSource.DISK,
         )
     }
@@ -77,20 +64,6 @@ internal class AppIconFetcher private constructor(
             pm.getActivityInfo(component, 0)
         }
         return info.loadIcon(pm)
-    }
-
-    private fun encodePng(drawable: Drawable): ByteArray? {
-        val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else DEFAULT_PX
-        val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else DEFAULT_PX
-        val bitmap = try {
-            drawable.toBitmap(width, height)
-        } catch (e: Exception) {
-            return null
-        }
-        return ByteArrayOutputStream(BUFFER_HINT).use { out ->
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-            out.toByteArray()
-        }
     }
 
     /**
@@ -113,10 +86,5 @@ internal class AppIconFetcher private constructor(
             return AppIconFetcher(context.applicationContext, key)
         }
     }
-
-    private companion object {
-        const val MIME_PNG = "image/png"
-        const val DEFAULT_PX = 96
-        const val BUFFER_HINT = 8 * 1024
-    }
 }
+

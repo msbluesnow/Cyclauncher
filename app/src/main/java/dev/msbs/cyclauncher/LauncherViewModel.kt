@@ -15,8 +15,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -431,38 +429,36 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
             val resolvedInfos = pm.queryIntentActivities(mainIntent, 0)
             val appList = resolvedInfos.map { info ->
-                async {
-                    try {
-                        val label = try {
-                            info.loadLabel(pm).toString().trim().ifEmpty {
-                                info.activityInfo.applicationInfo.loadLabel(pm).toString().trim().ifEmpty {
-                                    info.activityInfo.name.split(".").last().ifEmpty {
-                                        info.activityInfo.packageName
-                                    }
+                try {
+                    val label = try {
+                        info.loadLabel(pm).toString().trim().ifEmpty {
+                            info.activityInfo.applicationInfo.loadLabel(pm).toString().trim().ifEmpty {
+                                info.activityInfo.name.split(".").last().ifEmpty {
+                                    info.activityInfo.packageName
                                 }
                             }
-                        } catch (e: Exception) {
-                            info.activityInfo.packageName
                         }
-                        val firstChar = label.firstOrNull() ?: ' '
-                        AppInfo(
-                            label = label,
-                            packageName = info.activityInfo.packageName,
-                            activityName = info.activityInfo.name,
-                            iconKey = "${info.activityInfo.packageName}/${info.activityInfo.name}",
-                            searchChar = mapToSearchChar(firstChar)
-                        )
                     } catch (e: Exception) {
-                        AppInfo(
-                            label = info.activityInfo?.packageName ?: "Unknown",
-                            packageName = info.activityInfo?.packageName ?: "",
-                            activityName = info.activityInfo?.name ?: "",
-                            iconKey = info.activityInfo?.let { "${it.packageName}/${it.name}" }.orEmpty(),
-                            searchChar = '#'
-                        )
+                        info.activityInfo.packageName
                     }
+                    val firstChar = label.firstOrNull() ?: ' '
+                    AppInfo(
+                        label = label,
+                        packageName = info.activityInfo.packageName,
+                        activityName = info.activityInfo.name,
+                        iconKey = "${info.activityInfo.packageName}/${info.activityInfo.name}",
+                        searchChar = mapToSearchChar(firstChar)
+                    )
+                } catch (e: Exception) {
+                    AppInfo(
+                        label = info.activityInfo?.packageName ?: "Unknown",
+                        packageName = info.activityInfo?.packageName ?: "",
+                        activityName = info.activityInfo?.name ?: "",
+                        iconKey = info.activityInfo?.let { "${it.packageName}/${it.name}" }.orEmpty(),
+                        searchChar = '#'
+                    )
                 }
-            }.awaitAll().sortedBy { it.label.lowercase() }
+            }.sortedBy { it.label.lowercase() }
 
             _apps.value = appList
 
