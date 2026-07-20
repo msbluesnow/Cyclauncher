@@ -1,4 +1,4 @@
-# Cyclauncher 🎡
+<h1 align="center">Cyclauncher</h1>
 
 <p align="center">
   <img src="assets/logo.png" width="128" height="128" alt="Cyclauncher Logo">
@@ -64,9 +64,19 @@ chmod +x gradlew
 ./gradlew assembleRelease
 ```
 
-## 📈 Project Status
+## 🗺️ Roadmap
 
-Continuous optimization of code structure, performance improvements, and the integration of new customization options are prioritized. The project has recently undergone a major refactor for better scalability. Both this `README.md` and the application itself are updated frequently as progress is made toward a stable release.
+A continuous, unified timeline of completed milestones and planned updates.
+
+<kbd>&nbsp;✓&nbsp;</kbd> <b>Letter-Based Scroll Wheel</b> — Interactive rectangular scroll wheel for high-performance app retrieval.<br>
+<kbd>&nbsp;✓&nbsp;</kbd> <b>Application Tag System</b> — Grouping apps with an AI-assisted tagging workflow and full JSON backup options.<br>
+<kbd>&nbsp;✓&nbsp;</kbd> <b>Dynamic Theme Accents</b> — Modern glassmorphic styling with selectable accent palettes.<br>
+<kbd>&nbsp;✓&nbsp;</kbd> <b>Performance Tuning</b> — Asynchronous Coil icon prefetching and sequential package manager querying to prevent system UI freezes under Battery Saver mode.<br>
+<kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>App Shortcuts</i> — Quick-launch actions like dialing specific contacts or opening deep-linked settings.<br>
+<kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>Widgets Integration</i> — Full support for configuring and pinning dynamic Android widgets on the home layout.<br>
+<kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>Localization</i> — Native translation support for multiple popular world languages.<br>
+<kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>3D Hex Search Grid</i> — Immersive 3D application navigation styled as a rotatable hexagonal prism.<br>
+
 
 ## 📜 License
 
