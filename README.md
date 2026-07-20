@@ -18,7 +18,7 @@ A modern, minimalist Android launcher built with **Jetpack Compose**. Fast and i
       <video src="https://github.com/user-attachments/assets/d769d4b5-c7e7-4843-abf8-8f19cb0b5ae6" width="100%" autoplay loop muted playsinline></video>
     </td>
     <td align="center" style="border: none; width: 33%;">
-      <b>Add and remove from favorites</b><br><br>
+      <b>Remove apps from history</b><br><br>
       <video src="https://github.com/user-attachments/assets/ff1584bd-d147-4c3f-97f9-5dbdfd1145b9" width="100%" autoplay loop muted playsinline></video>
     </td>
     <td align="center" style="border: none; width: 33%;">
