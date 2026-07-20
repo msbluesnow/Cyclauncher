@@ -179,13 +179,23 @@ fun SettingsScreen(
                 SettingsRow(label = "App List:", shadow = shadow) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         IconButton(onClick = { exportAppListLauncher.launch("cyclauncher_apps.json") }) {
-                            Icon(Icons.Outlined.Upload, null, tint = accentColor.color)
+                            Box(contentAlignment = Alignment.Center) {
+                                if (showShadows) {
+                                    Icon(Icons.Outlined.Upload, null, tint = Color.Black.copy(alpha = 0.25f), modifier = Modifier.offset(1.dp, 1.dp))
+                                }
+                                Icon(Icons.Outlined.Upload, null, tint = accentColor.color)
+                            }
                         }
                         IconButton(onClick = { importAppListLauncher.launch("application/json") }) {
-                            Icon(Icons.Outlined.Download, null, tint = accentColor.color)
-                        }
-                    }
-                }
+                            Box(contentAlignment = Alignment.Center) {
+                                if (showShadows) {
+                                    Icon(Icons.Outlined.Download, null, tint = Color.Black.copy(alpha = 0.25f), modifier = Modifier.offset(1.dp, 1.dp))
+                                }
+                                Icon(Icons.Outlined.Download, null, tint = accentColor.color)
+                             }
+                         }
+                     }
+                 }
 
                 HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
@@ -193,13 +203,28 @@ fun SettingsScreen(
                 SettingsRow(label = "Tags:", shadow = shadow) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         IconButton(onClick = { showAutoTagsScreen = true }) {
-                            Icon(Icons.Outlined.AutoAwesome, null, tint = accentColor.color)
+                            Box(contentAlignment = Alignment.Center) {
+                                if (showShadows) {
+                                    Icon(Icons.Outlined.AutoAwesome, null, tint = Color.Black.copy(alpha = 0.25f), modifier = Modifier.offset(1.dp, 1.dp))
+                                }
+                                Icon(Icons.Outlined.AutoAwesome, null, tint = accentColor.color)
+                            }
                         }
                         IconButton(onClick = { exportTagsLauncher.launch("cyclauncher_tags.json") }) {
-                            Icon(Icons.Outlined.Upload, null, tint = accentColor.color)
+                            Box(contentAlignment = Alignment.Center) {
+                                if (showShadows) {
+                                    Icon(Icons.Outlined.Upload, null, tint = Color.Black.copy(alpha = 0.25f), modifier = Modifier.offset(1.dp, 1.dp))
+                                }
+                                Icon(Icons.Outlined.Upload, null, tint = accentColor.color)
+                            }
                         }
                         IconButton(onClick = { importTagsLauncher.launch("application/json") }) {
-                            Icon(Icons.Outlined.Download, null, tint = accentColor.color)
+                            Box(contentAlignment = Alignment.Center) {
+                                if (showShadows) {
+                                    Icon(Icons.Outlined.Download, null, tint = Color.Black.copy(alpha = 0.25f), modifier = Modifier.offset(1.dp, 1.dp))
+                                }
+                                Icon(Icons.Outlined.Download, null, tint = accentColor.color)
+                            }
                         }
                     }
                 }
@@ -233,8 +258,32 @@ fun SettingsScreen(
                         }
                     }
                 }
+
             }
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // App Version Section (outside Card)
+        val versionName = remember {
+            try {
+                val pm = context.packageManager
+                val pi = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    pm.getPackageInfo(context.packageName, android.content.pm.PackageManager.PackageInfoFlags.of(0L))
+                } else {
+                    @Suppress("DEPRECATION")
+                    pm.getPackageInfo(context.packageName, 0)
+                }
+                pi.versionName ?: "1.0"
+            } catch (e: Exception) {
+                "1.0"
+            }
+        }
+        Text(
+            text = "Version $versionName",
+            color = Color.White.copy(alpha = 0.4f),
+            style = TextStyle(shadow = shadow, fontSize = 14.sp)
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
     }

@@ -88,8 +88,49 @@ fun TextSearchInterface(
                 )
             }
         }
-        
-        CloseSearchButton(accentColor, showShadows) { viewModel.toggleTextSearchMode() }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        CloseSearchButton(
+            handSide = handSide,
+            accentColor = accentColor,
+            showShadows = showShadows,
+            onClick = { viewModel.toggleTextSearchMode() }
+        )
+    }
+}
+
+/**
+ * Button to close the text search interface, aligned left or right depending on preferred hand.
+ */
+@Composable
+private fun CloseSearchButton(
+    handSide: HandSide,
+    accentColor: AccentColor,
+    showShadows: Boolean,
+    onClick: () -> Unit
+) {
+    val shadow = if (showShadows) {
+        Shadow(
+            color = Color.Black.copy(alpha = 0.6f),
+            offset = Offset(2f, 2f),
+            blurRadius = 4f
+        )
+    } else null
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp, start = 8.dp, end = 8.dp),
+        horizontalArrangement = if (handSide == HandSide.LEFT) Arrangement.Start else Arrangement.End
+    ) {
+        IconButton(onClick = onClick) {
+            Text(
+                "✕",
+                color = accentColor.color,
+                style = MaterialTheme.typography.headlineMedium.copy(shadow = shadow)
+            )
+        }
     }
 }
 
@@ -143,27 +184,3 @@ private fun SearchTextField(
     )
 }
 
-/**
- * Button to close the text search interface.
- */
-@Composable
-private fun CloseSearchButton(accentColor: AccentColor, showShadows: Boolean, onClick: () -> Unit) {
-    val shadow = if (showShadows) {
-        Shadow(
-            color = Color.Black.copy(alpha = 0.6f),
-            offset = Offset(2f, 2f),
-            blurRadius = 4f
-        )
-    } else null
-
-    IconButton(
-        onClick = onClick,
-        modifier = Modifier.padding(bottom = 16.dp)
-    ) {
-        Text(
-            "✕",
-            color = accentColor.color,
-            style = MaterialTheme.typography.headlineMedium.copy(shadow = shadow)
-        )
-    }
-}

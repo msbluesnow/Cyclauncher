@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Upload
@@ -96,235 +97,256 @@ fun AutoTagsScreen(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .navigationBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .navigationBarsPadding(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "TAGS",
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.Bold,
-                shadow = shadow
-            ),
-            color = accentColor.color
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Use AI to automatically categorize your apps into tags",
-            color = Color.White.copy(alpha = 0.7f),
-            fontSize = 13.sp,
-            style = TextStyle(shadow = shadow)
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 12.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-
-                // Step 1: Export
-                StepHeader(1, "Export App List", accentColor, shadow)
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Export the list of your installed apps. Send this file to an AI model to categorize them. Choose JSON (for the AI) or TXT (human-readable).",
-                    color = Color.White.copy(alpha = 0.6f),
-                    fontSize = 13.sp
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Button(
-                    onClick = { showExportFormatDialog = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth().height(48.dp)
-                ) {
-                    Icon(Icons.Outlined.Upload, contentDescription = null, tint = Color.Black)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Export App List",
-                        color = Color.Black,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                HorizontalDivider(
-                    color = Color.White.copy(alpha = 0.08f),
-                    modifier = Modifier.padding(vertical = 16.dp)
-                )
-
-                // Step 2: Prompt
-                StepHeader(2, "Send to AI", accentColor, shadow)
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Copy the prompt below, paste it into any AI (ChatGPT, Claude, etc.) along with the exported app list.",
-                    color = Color.White.copy(alpha = 0.6f),
-                    fontSize = 13.sp
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Prompt box
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .border(
-                            1.dp,
-                            Color.White.copy(alpha = 0.15f),
-                            RoundedCornerShape(12.dp)
-                        )
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            text = AI_PROMPT,
-                            color = Color.White.copy(alpha = 0.85f),
-                            fontSize = 11.sp,
-                            fontFamily = FontFamily.Monospace,
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.align(Alignment.CenterStart)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    if (showShadows) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = null,
+                            tint = Color.Black.copy(alpha = 0.25f),
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState())
+                                .size(24.dp)
+                                .offset(1.dp, 1.dp)
                         )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            TextButton(
-                                onClick = {
-                                    copyToClipboard(context, AI_PROMPT)
-                                    copiedToClipboard = true
-                                    Toast
-                                        .makeText(context, "Prompt copied!", Toast.LENGTH_SHORT)
-                                        .show()
-                                }
-                            ) {
-                                Icon(
-                                    Icons.Outlined.ContentCopy,
-                                    contentDescription = null,
-                                    tint = accentColor.color,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    if (copiedToClipboard) "Copied!" else "Copy Prompt",
-                                    color = if (copiedToClipboard) Color.Green else accentColor.color,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
                     }
-                }
-
-                HorizontalDivider(
-                    color = Color.White.copy(alpha = 0.08f),
-                    modifier = Modifier.padding(vertical = 16.dp)
-                )
-
-                // Step 3: Import
-                StepHeader(3, "Import Tagged Apps", accentColor, shadow)
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "After the AI returns the tagged result, save it to a file and upload it here. Both JSON and TXT files are supported.",
-                    color = Color.White.copy(alpha = 0.6f),
-                    fontSize = 13.sp
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Button(
-                    onClick = { importTaggedLauncher.launch("application/*") },
-                    colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth().height(48.dp)
-                ) {
-                    Icon(Icons.Outlined.Download, contentDescription = null, tint = Color.Black)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Upload Tagged Result",
-                        color = Color.Black,
-                        fontWeight = FontWeight.Bold
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                        contentDescription = "Back to Settings",
+                        tint = accentColor.color,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
+            }
+            Text(
+                text = "TAGS",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    shadow = shadow
+                ),
+                color = accentColor.color
+            )
+        }
 
-                HorizontalDivider(
-                    color = Color.White.copy(alpha = 0.08f),
-                    modifier = Modifier.padding(vertical = 16.dp)
-                )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(4.dp))
 
-                // Tags backup — export/import saved tags (names, colors, assignments).
-                // Same unified method as in the main Settings → Tags section.
-                StepHeader(4, "Tags Backup", accentColor, shadow)
+            Text(
+                text = "Use AI to automatically categorize your apps into tags",
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 13.sp,
+                style = TextStyle(shadow = shadow)
+            )
 
-                Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-                Text(
-                    text = "Back up your existing tags and their app assignments, or restore them from a file.",
-                    color = Color.White.copy(alpha = 0.6f),
-                    fontSize = 13.sp
-                )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    // Step 1: Export
+                    StepHeader(1, "Export App List", accentColor, shadow)
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Export the list of your installed apps. Send this file to an AI model to categorize them. Choose JSON (for the AI) or TXT (human-readable).",
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 13.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     Button(
-                        onClick = { exportTagsLauncher.launch("cyclauncher_tags.json") },
+                        onClick = { showExportFormatDialog = true },
                         colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
                         shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1f).height(48.dp)
+                        modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
                         Icon(Icons.Outlined.Upload, contentDescription = null, tint = Color.Black)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Export", color = Color.Black, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Export App List",
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-                    Button(
-                        onClick = { importTagsLauncher.launch("application/json") },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.12f)),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1f).height(48.dp)
+
+                    HorizontalDivider(
+                        color = Color.White.copy(alpha = 0.08f),
+                        modifier = Modifier.padding(vertical = 16.dp)
+                    )
+
+                    // Step 2: Prompt
+                    StepHeader(2, "Send to AI", accentColor, shadow)
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Copy the prompt below, paste it into any AI (ChatGPT, Claude, etc.) along with the exported app list.",
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 13.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Prompt box
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White.copy(alpha = 0.08f))
+                            .border(
+                                1.dp,
+                                Color.White.copy(alpha = 0.15f),
+                                RoundedCornerShape(12.dp)
+                            )
                     ) {
-                        Icon(Icons.Outlined.Download, contentDescription = null, tint = accentColor.color)
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = AI_PROMPT,
+                                color = Color.White.copy(alpha = 0.85f),
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                TextButton(
+                                    onClick = {
+                                        copyToClipboard(context, AI_PROMPT)
+                                        copiedToClipboard = true
+                                        Toast
+                                            .makeText(context, "Prompt copied!", Toast.LENGTH_SHORT)
+                                            .show()
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.ContentCopy,
+                                        contentDescription = null,
+                                        tint = accentColor.color,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        if (copiedToClipboard) "Copied!" else "Copy Prompt",
+                                        color = if (copiedToClipboard) Color.Green else accentColor.color,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(
+                        color = Color.White.copy(alpha = 0.08f),
+                        modifier = Modifier.padding(vertical = 16.dp)
+                    )
+
+                    // Step 3: Import
+                    StepHeader(3, "Import Tagged Apps", accentColor, shadow)
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "After the AI returns the tagged result, save it to a file and upload it here. Both JSON and TXT files are supported.",
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 13.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Button(
+                        onClick = { importTaggedLauncher.launch("application/*") },
+                        colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                    ) {
+                        Icon(Icons.Outlined.Download, contentDescription = null, tint = Color.Black)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Import", color = accentColor.color, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Upload Tagged Result",
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    HorizontalDivider(
+                        color = Color.White.copy(alpha = 0.08f),
+                        modifier = Modifier.padding(vertical = 16.dp)
+                    )
+
+                    // Tags backup — export/import saved tags (names, colors, assignments).
+                    // Same unified method as in the main Settings → Tags section.
+                    StepHeader(4, "Tags Backup", accentColor, shadow)
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Back up your existing tags and their app assignments, or restore them from a file.",
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 13.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = { exportTagsLauncher.launch("cyclauncher_tags.json") },
+                            colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f).height(48.dp)
+                        ) {
+                            Icon(Icons.Outlined.Upload, contentDescription = null, tint = Color.Black)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Export", color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
+                        Button(
+                            onClick = { importTagsLauncher.launch("application/json") },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.12f)),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f).height(48.dp)
+                        ) {
+                            Icon(Icons.Outlined.Download, contentDescription = null, tint = accentColor.color)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Import", color = accentColor.color, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = onBack,
-            colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
-            shape = RoundedCornerShape(24.dp),
-            modifier = Modifier.fillMaxWidth().height(48.dp)
-        ) {
-            Text(
-                "Back to Settings",
-                color = Color.Black,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyLarge
-            )
         }
     }
 
