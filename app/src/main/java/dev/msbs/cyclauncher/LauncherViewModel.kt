@@ -1,6 +1,7 @@
 package dev.msbs.cyclauncher
 
 import dev.msbs.cyclauncher.data.AppActionsManager
+import dev.msbs.cyclauncher.utils.getSafeStorageContext
 import dev.msbs.cyclauncher.data.AutoTagsPreview
 import dev.msbs.cyclauncher.data.TagsBackupPreview
 import dev.msbs.cyclauncher.model.AppInfo
@@ -31,7 +32,8 @@ enum class HandSide { LEFT, RIGHT }
  */
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val actionsManager = AppActionsManager(application)
+    private val safeContext = application.getSafeStorageContext()
+    private val actionsManager = AppActionsManager(safeContext)
 
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
     
@@ -106,7 +108,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
-        val prefs = getApplication<Application>().getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         val savedHand = prefs.getString("hand_side", HandSide.LEFT.name) ?: HandSide.LEFT.name
         _handSide.value = try { HandSide.valueOf(savedHand) } catch (e: Exception) { HandSide.LEFT }
         
@@ -157,7 +159,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         } else {
             TextAlign.Start
         }
-        val prefs = getApplication<Application>().getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putString("hand_side", side.name).apply()
     }
 
@@ -168,7 +170,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      */
     fun setAccentColor(color: AccentColor) {
         _accentColor.value = color
-        val prefs = getApplication<Application>().getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putString("accent_color", color.name).apply()
     }
 
@@ -179,7 +181,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      */
     fun setShowShadows(enabled: Boolean) {
         _showShadows.value = enabled
-        val prefs = getApplication<Application>().getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putBoolean("show_shadows", enabled).apply()
     }
 
