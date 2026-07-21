@@ -11,20 +11,21 @@ enum class AccentColor(
     val color: Color,
     val glowColor: Color
 ) {
-    CYAN("Cyan", Color(0xFF00F2FE), Color(0x3300F2FE)),
-    VIOLET("Violet", Color(0xFFD946EF), Color(0x33D946EF)),
-    GREEN("Green", Color(0xFF10B981), Color(0x3310B981)),
-    PINK("Pink", Color(0xFFF43F5E), Color(0x33F43F5E)),
-    ORANGE("Orange", Color(0xFFF97316), Color(0x33F97316)),
-    BLUE("Blue", Color(0xFF3B82F6), Color(0x333B82F6)),
-    RED("Red", Color(0xFFEF4444), Color(0x33EF4444)),
-    YELLOW("Yellow", Color(0xFFEAB308), Color(0x33EAB308)),
-    WHITE("White", Color(0xFFFFFFFF), Color(0x33FFFFFF));
+    SKY("Sky Blue", Color(0xFF38BDF8), Color(0x3338BDF8)),
+    LAVENDER("Lavender", Color(0xFFA78BFA), Color(0x33A78BFA)),
+    MINT("Mint", Color(0xFF2DD4BF), Color(0x332DD4BF)),
+    ROSE("Rose", Color(0xFFFB7185), Color(0x33FB7185)),
+    PEACH("Peach", Color(0xFFFB923C), Color(0x33FB923C)),
+    AMBER("Amber", Color(0xFFFBBF24), Color(0x33FBBF24)),
+    LIME("Lime", Color(0xFFA3E635), Color(0x33A3E635)),
+    INDIGO("Indigo", Color(0xFF818CF8), Color(0x33818CF8)),
+    FUCHSIA("Fuchsia", Color(0xFFE879F9), Color(0x33E879F9)),
+    SNOW("Snow", Color(0xFFF1F5F9), Color(0x33F1F5F9));
 
     companion object {
         /**
          * Resolves the [AccentColor] enum element corresponding to the given string name.
-         * Falls back to [CYAN] if no match is found.
+         * Falls back to [SKY] if no match is found.
          *
          * @param name The name of the accent color to lookup.
          * @return The resolved AccentColor instance.
@@ -33,7 +34,7 @@ enum class AccentColor(
             return try {
                 valueOf(name)
             } catch (e: Exception) {
-                CYAN
+                SKY
             }
         }
     }
