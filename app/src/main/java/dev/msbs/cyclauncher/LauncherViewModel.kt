@@ -49,7 +49,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** The user's hand side layout preference. */
     val handSide: StateFlow<HandSide> = _handSide
 
-    private val _accentColor = MutableStateFlow(AccentColor.CYAN)
+    private val _accentColor = MutableStateFlow(AccentColor.SKY)
     /** The selected UI theme accent color. */
     val accentColor: StateFlow<AccentColor> = _accentColor
 
@@ -112,7 +112,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val savedHand = prefs.getString("hand_side", HandSide.LEFT.name) ?: HandSide.LEFT.name
         _handSide.value = try { HandSide.valueOf(savedHand) } catch (e: Exception) { HandSide.LEFT }
         
-        val savedColor = prefs.getString("accent_color", AccentColor.CYAN.name) ?: AccentColor.CYAN.name
+        val savedColor = prefs.getString("accent_color", AccentColor.SKY.name) ?: AccentColor.SKY.name
         _accentColor.value = AccentColor.fromName(savedColor)
         
         if (!prefs.contains("show_shadows")) {

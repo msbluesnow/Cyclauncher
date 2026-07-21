@@ -57,7 +57,7 @@ fun AppActionMenu(
     onRemoveFromHistory: () -> Unit = {},
     onRename: () -> Unit,
     onTagsClick: () -> Unit,
-    accentColor: AccentColor = AccentColor.CYAN
+    accentColor: AccentColor = AccentColor.SKY
 ) {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
@@ -215,7 +215,7 @@ fun TagSelectionDialog(
     onUpdateTag: (Tag) -> Unit,
     onDeleteTag: (String) -> Unit,
     onDismiss: () -> Unit,
-    accentColor: AccentColor = AccentColor.CYAN
+    accentColor: AccentColor = AccentColor.SKY
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
     var tagToEdit by remember { mutableStateOf<Tag?>(null) }

@@ -60,7 +60,7 @@ fun RectangularAlphabetWheel(
     apps: List<AppInfo>,
     onAppClick: (String) -> Unit,
     onAppLongClick: (String, Offset) -> Unit = { _, _ -> },
-    accentColor: AccentColor = AccentColor.CYAN,
+    accentColor: AccentColor = AccentColor.SKY,
     modifier: Modifier = Modifier
 ) {
     val alphabet = remember { ('A'..'Z').toList() + '#' }

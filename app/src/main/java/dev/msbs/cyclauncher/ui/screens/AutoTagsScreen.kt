@@ -199,8 +199,41 @@ fun AutoTagsScreen(
                         modifier = Modifier.padding(vertical = 16.dp)
                     )
 
-                    // Step 2: Prompt
-                    StepHeader(2, "Send to AI", accentColor, shadow)
+                    // Step 2: Backup Existing Tags
+                    StepHeader(2, "Backup Existing Tags", accentColor, shadow)
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Back up your existing tags and their app assignments to a file before applying AI-generated tags.",
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 13.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Button(
+                        onClick = { exportTagsLauncher.launch("cyclauncher_tags.json") },
+                        colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                    ) {
+                        Icon(Icons.Outlined.Upload, contentDescription = null, tint = Color.Black)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Export Tags Backup",
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    HorizontalDivider(
+                        color = Color.White.copy(alpha = 0.08f),
+                        modifier = Modifier.padding(vertical = 16.dp)
+                    )
+
+                    // Step 3: Send to AI
+                    StepHeader(3, "Send to AI", accentColor, shadow)
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -273,8 +306,8 @@ fun AutoTagsScreen(
                         modifier = Modifier.padding(vertical = 16.dp)
                     )
 
-                    // Step 3: Import
-                    StepHeader(3, "Import Tagged Apps", accentColor, shadow)
+                    // Step 4: Import Tagged Apps
+                    StepHeader(4, "Import Tagged Apps", accentColor, shadow)
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -299,51 +332,6 @@ fun AutoTagsScreen(
                             color = Color.Black,
                             fontWeight = FontWeight.Bold
                         )
-                    }
-
-                    HorizontalDivider(
-                        color = Color.White.copy(alpha = 0.08f),
-                        modifier = Modifier.padding(vertical = 16.dp)
-                    )
-
-                    // Tags backup — export/import saved tags (names, colors, assignments).
-                    // Same unified method as in the main Settings → Tags section.
-                    StepHeader(4, "Tags Backup", accentColor, shadow)
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "Back up your existing tags and their app assignments, or restore them from a file.",
-                        color = Color.White.copy(alpha = 0.6f),
-                        fontSize = 13.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Button(
-                            onClick = { exportTagsLauncher.launch("cyclauncher_tags.json") },
-                            colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.weight(1f).height(48.dp)
-                        ) {
-                            Icon(Icons.Outlined.Upload, contentDescription = null, tint = Color.Black)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Export", color = Color.Black, fontWeight = FontWeight.Bold)
-                        }
-                        Button(
-                            onClick = { importTagsLauncher.launch("application/json") },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.12f)),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.weight(1f).height(48.dp)
-                        ) {
-                            Icon(Icons.Outlined.Download, contentDescription = null, tint = accentColor.color)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Import", color = accentColor.color, fontWeight = FontWeight.Bold)
-                        }
                     }
                 }
             }
