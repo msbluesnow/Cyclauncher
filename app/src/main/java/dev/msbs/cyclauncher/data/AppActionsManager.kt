@@ -14,14 +14,17 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 
+import dev.msbs.cyclauncher.utils.getSafeStorageContext
+
 /**
  * Manages persisted user actions, including favorite apps, launch history, custom app labels,
  * and custom tags with their application assignments.
  *
  * @param context The application context used to load shared preferences and access resources.
  */
-class AppActionsManager(private val context: Context) {
-    private val prefs: SharedPreferences = context.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+class AppActionsManager(context: Context) {
+    private val context: Context = context.getSafeStorageContext()
+    private val prefs: SharedPreferences = this.context.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
 
     private val _favorites = MutableStateFlow<List<String>>(loadList("favorites"))
     /** Stream of favorite application component keys. */

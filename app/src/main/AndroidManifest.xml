@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    android:installLocation="internalOnly">
 
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
@@ -16,13 +17,15 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="Cyclauncher"
-        android:theme="@style/Theme.Cyclauncher.Transparent">
+        android:theme="@style/Theme.Cyclauncher.Transparent"
+        android:directBootAware="true">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleInstance"
             android:clearTaskOnLaunch="true"
+            android:directBootAware="true"
             android:stateNotNeeded="true"
             android:excludeFromRecents="true"
             android:screenOrientation="portrait"
