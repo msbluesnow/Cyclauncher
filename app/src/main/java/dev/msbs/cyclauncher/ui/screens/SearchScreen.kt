@@ -4,6 +4,7 @@ import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.components.AppListItem
 import dev.msbs.cyclauncher.ui.components.RectangularAlphabetWheel
 
@@ -80,6 +81,7 @@ fun WheelSearchLayout(
     val filteredApps by viewModel.filteredApps.collectAsState()
     val listAlignment by viewModel.searchListAlignment.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
+    val primaryTextColor by viewModel.primaryTextColor.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
     val scope = rememberCoroutineScope()
     val scrollOffset = remember { Animatable(0f) }
@@ -122,11 +124,11 @@ fun WheelSearchLayout(
             if (listAlignment == TextAlign.End) {
                 Box(modifier = scrollModifier)
                 Box(modifier = Modifier.weight(1f)) {
-                    AppListContent(filteredApps, listAlignment, showShadows, onAppClick, onAppLongClick)
+                    AppListContent(filteredApps, listAlignment, primaryTextColor, showShadows, onAppClick, onAppLongClick)
                 }
             } else {
                 Box(modifier = Modifier.weight(1f)) {
-                    AppListContent(filteredApps, listAlignment, showShadows, onAppClick, onAppLongClick)
+                    AppListContent(filteredApps, listAlignment, primaryTextColor, showShadows, onAppClick, onAppLongClick)
                 }
                 Box(modifier = scrollModifier)
             }
@@ -149,12 +151,13 @@ fun WheelSearchLayout(
                         onAppLongClick(app, offset)
                     }
                 },
-                accentColor = accentColor
+                accentColor = accentColor,
+                primaryTextColor = primaryTextColor
             )
         }
 
         // Bottom toggle bar allowing users to switch to the keyboard search interface.
-        SearchToggleBar(handSide, accentColor, showShadows) { viewModel.toggleTextSearchMode() }
+        SearchToggleBar(handSide, accentColor, primaryTextColor, showShadows) { viewModel.toggleTextSearchMode() }
     }
 }
 
@@ -172,6 +175,7 @@ fun WheelSearchLayout(
 private fun AppListContent(
     apps: List<AppInfo>,
     alignment: TextAlign,
+    primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit
@@ -187,6 +191,7 @@ private fun AppListContent(
                 onClick = { onAppClick("${app.packageName}/${app.activityName}") },
                 onLongClick = { offset -> onAppLongClick(app, offset) },
                 textAlign = alignment,
+                primaryTextColor = primaryTextColor,
                 showShadows = showShadows
             )
         }
@@ -199,6 +204,7 @@ private fun AppListContent(
  *
  * @param handSide Layout orientation side (left/right hand side alignment).
  * @param accentColor Theme accent color.
+ * @param primaryTextColor Primary text color option.
  * @param showShadows Whether to apply drop shadows.
  * @param onToggle Callback triggered when clicking the search mode toggle button.
  */
@@ -206,16 +212,11 @@ private fun AppListContent(
 private fun SearchToggleBar(
     handSide: HandSide, 
     accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
     onToggle: () -> Unit
 ) {
-    val shadow = if (showShadows) {
-        Shadow(
-            color = Color.Black.copy(alpha = 0.6f),
-            offset = Offset(2f, 2f),
-            blurRadius = 4f
-        )
-    } else null
+    val shadow = primaryTextColor.getShadow(showShadows)
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),

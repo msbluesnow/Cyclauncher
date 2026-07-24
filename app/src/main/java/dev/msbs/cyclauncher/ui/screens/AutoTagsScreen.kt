@@ -2,6 +2,7 @@ package dev.msbs.cyclauncher.ui.screens
 
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
 import android.content.ClipData
 import android.content.Context
@@ -51,16 +52,11 @@ fun AutoTagsScreen(
     onBack: () -> Unit
 ) {
     val accentColor by viewModel.accentColor.collectAsState()
+    val primaryTextColor by viewModel.primaryTextColor.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
     val context = LocalContext.current
 
-    val shadow = if (showShadows) {
-        Shadow(
-            color = Color.Black.copy(alpha = 0.6f),
-            offset = Offset(2f, 2f),
-            blurRadius = 4f
-        )
-    } else null
+    val shadow = primaryTextColor.getShadow(showShadows)
 
     var copiedToClipboard by remember { mutableStateOf(false) }
     var showExportFormatDialog by remember { mutableStateOf(false) }
@@ -151,7 +147,7 @@ fun AutoTagsScreen(
 
             Text(
                 text = "Use AI to automatically categorize your apps into tags",
-                color = Color.White.copy(alpha = 0.7f),
+                color = primaryTextColor.color.copy(alpha = 0.7f),
                 fontSize = 13.sp,
                 style = TextStyle(shadow = shadow)
             )
@@ -161,19 +157,19 @@ fun AutoTagsScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))
+                colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.05f)),
+                border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = 0.12f))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
 
                     // Step 1: Export
-                    StepHeader(1, "Export App List", accentColor, shadow)
+                    StepHeader(1, "Export App List", accentColor, primaryTextColor, shadow)
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
                         text = "Export the list of your installed apps. Send this file to an AI model to categorize them. Choose JSON (for the AI) or TXT (human-readable).",
-                        color = Color.White.copy(alpha = 0.6f),
+                        color = primaryTextColor.color.copy(alpha = 0.6f),
                         fontSize = 13.sp
                     )
 
@@ -195,18 +191,18 @@ fun AutoTagsScreen(
                     }
 
                     HorizontalDivider(
-                        color = Color.White.copy(alpha = 0.08f),
+                        color = primaryTextColor.color.copy(alpha = 0.08f),
                         modifier = Modifier.padding(vertical = 16.dp)
                     )
 
                     // Step 2: Backup Existing Tags
-                    StepHeader(2, "Backup Existing Tags", accentColor, shadow)
+                    StepHeader(2, "Backup Existing Tags", accentColor, primaryTextColor, shadow)
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
                         text = "Back up your existing tags and their app assignments to a file before applying AI-generated tags.",
-                        color = Color.White.copy(alpha = 0.6f),
+                        color = primaryTextColor.color.copy(alpha = 0.6f),
                         fontSize = 13.sp
                     )
 
@@ -228,18 +224,18 @@ fun AutoTagsScreen(
                     }
 
                     HorizontalDivider(
-                        color = Color.White.copy(alpha = 0.08f),
+                        color = primaryTextColor.color.copy(alpha = 0.08f),
                         modifier = Modifier.padding(vertical = 16.dp)
                     )
 
                     // Step 3: Send to AI
-                    StepHeader(3, "Send to AI", accentColor, shadow)
+                    StepHeader(3, "Send to AI", accentColor, primaryTextColor, shadow)
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
                         text = "Copy the prompt below, paste it into any AI (ChatGPT, Claude, etc.) along with the exported app list.",
-                        color = Color.White.copy(alpha = 0.6f),
+                        color = primaryTextColor.color.copy(alpha = 0.6f),
                         fontSize = 13.sp
                     )
 
@@ -250,17 +246,17 @@ fun AutoTagsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color.White.copy(alpha = 0.08f))
+                            .background(primaryTextColor.color.copy(alpha = 0.08f))
                             .border(
                                 1.dp,
-                                Color.White.copy(alpha = 0.15f),
+                                primaryTextColor.color.copy(alpha = 0.15f),
                                 RoundedCornerShape(12.dp)
                             )
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
                                 text = AI_PROMPT,
-                                color = Color.White.copy(alpha = 0.85f),
+                                color = primaryTextColor.color.copy(alpha = 0.85f),
                                 fontSize = 11.sp,
                                 fontFamily = FontFamily.Monospace,
                                 modifier = Modifier
@@ -302,18 +298,18 @@ fun AutoTagsScreen(
                     }
 
                     HorizontalDivider(
-                        color = Color.White.copy(alpha = 0.08f),
+                        color = primaryTextColor.color.copy(alpha = 0.08f),
                         modifier = Modifier.padding(vertical = 16.dp)
                     )
 
                     // Step 4: Import Tagged Apps
-                    StepHeader(4, "Import Tagged Apps", accentColor, shadow)
+                    StepHeader(4, "Import Tagged Apps", accentColor, primaryTextColor, shadow)
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
                         text = "After the AI returns the tagged result, save it to a file and upload it here. Both JSON and TXT files are supported.",
-                        color = Color.White.copy(alpha = 0.6f),
+                        color = primaryTextColor.color.copy(alpha = 0.6f),
                         fontSize = 13.sp
                     )
 
@@ -341,6 +337,7 @@ fun AutoTagsScreen(
     if (showExportFormatDialog) {
         ExportFormatDialog(
             accentColor = accentColor,
+            primaryTextColor = primaryTextColor,
             onDismiss = { showExportFormatDialog = false },
             onSelect = { format ->
                 showExportFormatDialog = false
@@ -361,6 +358,7 @@ private enum class ExportFormat { JSON, TXT }
 @Composable
 private fun ExportFormatDialog(
     accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     onDismiss: () -> Unit,
     onSelect: (ExportFormat) -> Unit
 ) {
@@ -371,7 +369,7 @@ private fun ExportFormatDialog(
             Column {
                 Text(
                     "Choose a format for the exported app list:",
-                    color = Color.White.copy(alpha = 0.85f),
+                    color = primaryTextColor.color.copy(alpha = 0.85f),
                     fontSize = 14.sp
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -389,7 +387,7 @@ private fun ExportFormatDialog(
                     }
                     Button(
                         onClick = { onSelect(ExportFormat.TXT) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.12f)),
+                        colors = ButtonDefaults.buttonColors(containerColor = primaryTextColor.color.copy(alpha = 0.12f)),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f).height(48.dp)
                     ) {
@@ -399,7 +397,7 @@ private fun ExportFormatDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     "JSON — for the AI workflow.   TXT — human-readable list.",
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = primaryTextColor.color.copy(alpha = 0.5f),
                     fontSize = 11.sp
                 )
             }
@@ -407,7 +405,7 @@ private fun ExportFormatDialog(
         confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = Color.Gray) } },
         containerColor = Color(0xFF1E1E1E),
-        textContentColor = Color.White
+        textContentColor = primaryTextColor.color
     )
 }
 
@@ -419,6 +417,7 @@ private fun StepHeader(
     stepNumber: Int,
     title: String,
     accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     shadow: Shadow?
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -440,7 +439,7 @@ private fun StepHeader(
         Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = title,
-            color = Color.White,
+            color = primaryTextColor.color,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
             style = TextStyle(shadow = shadow)
