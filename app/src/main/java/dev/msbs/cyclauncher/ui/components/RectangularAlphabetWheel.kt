@@ -33,6 +33,7 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -63,6 +64,7 @@ fun RectangularAlphabetWheel(
     onAppLongClick: (String, Offset) -> Unit = { _, _ -> },
     accentColor: AccentColor = AccentColor.SKY,
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    showShadows: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val alphabet = remember { ('A'..'Z').toList() + '#' }
@@ -297,6 +299,7 @@ fun RectangularAlphabetWheel(
                         fontSize = fontSize,
                         accentColor = accentColor,
                         primaryTextColor = primaryTextColor,
+                        showShadows = showShadows,
                         pos = getRectPosition(index)
                     )
                 }
@@ -428,6 +431,7 @@ private fun AlphabetLetterItem(
     fontSize: androidx.compose.ui.unit.TextUnit,
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    showShadows: Boolean = true,
     pos: Offset,
     modifier: Modifier = Modifier
 ) {
@@ -475,11 +479,26 @@ private fun AlphabetLetterItem(
         contentAlignment = Alignment.Center
     ) {
         val isExact by isExactState
+        val shadow = remember(primaryTextColor, showShadows) { primaryTextColor.getShadow(showShadows) }
+        
+        val activeStyle = remember(fontSize) {
+            TextStyle(
+                fontSize = fontSize,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        val inactiveStyle = remember(fontSize, shadow) {
+            TextStyle(
+                fontSize = fontSize,
+                fontWeight = FontWeight.Normal,
+                shadow = shadow
+            )
+        }
+
         Text(
             text = letter.toString(),
-            fontSize = fontSize,
-            fontWeight = if (isExact) FontWeight.Bold else FontWeight.Normal,
-            color = if (isExact) accentColor.color else primaryTextColor.color
+            color = if (isExact) accentColor.color else primaryTextColor.color,
+            style = if (isExact) activeStyle else inactiveStyle
         )
     }
 }

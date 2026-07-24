@@ -358,7 +358,12 @@ private fun AccentColorDropdown(selectedColor: AccentColor, primaryTextColor: Pr
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(selectedColor.color).border(1.dp, primaryTextColor.color.copy(alpha = 0.2f), CircleShape))
-            Text("▼", color = primaryTextColor.color.copy(alpha = 0.6f), fontSize = 10.sp)
+            Icon(
+                imageVector = Icons.Outlined.KeyboardArrowDown,
+                contentDescription = null,
+                tint = selectedColor.color,
+                modifier = Modifier.size(20.dp)
+            )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.width(60.dp).background(Color(0xFF2D2D2D))) {
             AccentColor.entries.forEach { color ->

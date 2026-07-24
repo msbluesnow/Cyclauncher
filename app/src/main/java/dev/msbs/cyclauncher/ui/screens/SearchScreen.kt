@@ -152,7 +152,8 @@ fun WheelSearchLayout(
                     }
                 },
                 accentColor = accentColor,
-                primaryTextColor = primaryTextColor
+                primaryTextColor = primaryTextColor,
+                showShadows = showShadows
             )
         }
 
