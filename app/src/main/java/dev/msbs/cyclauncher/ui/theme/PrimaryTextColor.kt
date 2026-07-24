@@ -24,11 +24,18 @@ enum class PrimaryTextColor(
      */
     fun getShadow(showShadows: Boolean): Shadow? {
         return if (showShadows) {
-            Shadow(
-                color = shadowColor,
-                offset = Offset(2f, 2f),
-                blurRadius = 4f
-            )
+            when (this) {
+                WHITE -> Shadow(
+                    color = shadowColor,
+                    offset = Offset.Zero,
+                    blurRadius = 4f
+                )
+                BLACK -> Shadow(
+                    color = Color.White.copy(alpha = 0.85f),
+                    offset = Offset.Zero,
+                    blurRadius = 1.8f
+                )
+            }
         } else null
     }
 
