@@ -198,9 +198,25 @@ fun RectangularAlphabetWheel(
                     detectVerticalDragGestures(
                         onVerticalDrag = { change, dragAmount ->
                             change.consume()
-                            val sensitivity = 1f + (abs(dragAmount) / 45f).coerceAtMost(2.5f)
+                            
+                            val currentPos = scrollOffset.value
+                            val distanceToNearest = abs(currentPos - currentPos.roundToInt().toFloat())
+                            val distanceFactor = (distanceToNearest / 0.5f).coerceIn(0f, 1f)
+                            
+                            // Determine how fast we are dragging to lessen friction during quick swipes
+                            val speedFactor = (abs(dragAmount) / 20f).coerceIn(0f, 1f)
+                            
+                            // Base sensitivity scaled by drag speed
+                            val baseSensitivity = 1f + (abs(dragAmount) / 45f).coerceAtMost(2.5f)
+                            
+                            // Intelligent friction: slows down when near an exact letter and moving slowly
+                            val dynamicFriction = 0.35f + 0.65f * distanceFactor
+                            val frictionMultiplier = dynamicFriction + (1f - dynamicFriction) * speedFactor
+                            
+                            val finalSensitivity = baseSensitivity * frictionMultiplier
+                            
                             scope.launch {
-                                scrollOffset.snapTo(scrollOffset.value - (dragAmount / 100f) * sensitivity)
+                                scrollOffset.snapTo(scrollOffset.value - (dragAmount / 100f) * finalSensitivity)
                             }
                         },
                         onDragEnd = {
