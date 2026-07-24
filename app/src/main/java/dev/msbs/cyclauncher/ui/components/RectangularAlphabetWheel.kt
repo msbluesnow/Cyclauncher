@@ -2,6 +2,7 @@ package dev.msbs.cyclauncher.ui.components
 
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
 import android.graphics.Paint
 import androidx.compose.animation.core.*
@@ -61,6 +62,7 @@ fun RectangularAlphabetWheel(
     onAppClick: (String) -> Unit,
     onAppLongClick: (String, Offset) -> Unit = { _, _ -> },
     accentColor: AccentColor = AccentColor.SKY,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     modifier: Modifier = Modifier
 ) {
     val alphabet = remember { ('A'..'Z').toList() + '#' }
@@ -294,6 +296,7 @@ fun RectangularAlphabetWheel(
                         stepSize = stepSize,
                         fontSize = fontSize,
                         accentColor = accentColor,
+                        primaryTextColor = primaryTextColor,
                         pos = getRectPosition(index)
                     )
                 }
@@ -424,6 +427,7 @@ private fun AlphabetLetterItem(
     stepSize: Dp,
     fontSize: androidx.compose.ui.unit.TextUnit,
     accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     pos: Offset,
     modifier: Modifier = Modifier
 ) {
@@ -475,7 +479,7 @@ private fun AlphabetLetterItem(
             text = letter.toString(),
             fontSize = fontSize,
             fontWeight = if (isExact) FontWeight.Bold else FontWeight.Normal,
-            color = if (isExact) accentColor.color else Color.White
+            color = if (isExact) accentColor.color else primaryTextColor.color
         )
     }
 }
