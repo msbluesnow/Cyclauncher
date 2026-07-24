@@ -4,6 +4,7 @@ import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.components.AppListItemWithIcon
 import dev.msbs.cyclauncher.ui.components.AppIconItem
 
@@ -70,6 +71,7 @@ fun MainMenuScreen(
     val handSide by viewModel.handSide.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
+    val primaryTextColor by viewModel.primaryTextColor.collectAsState()
 
     var isReorderMode by remember { mutableStateOf(false) }
 
@@ -88,6 +90,7 @@ fun MainMenuScreen(
                 Modifier.weight(favoritesWeight),
                 favorites,
                 accentColor,
+                primaryTextColor,
                 showShadows,
                 isReorderMode,
                 { isReorderMode = it },
@@ -101,14 +104,15 @@ fun MainMenuScreen(
                 isActive
             )
             Spacer(modifier = Modifier.width(16.dp))
-            HistorySection(Modifier.weight(historyWeight), history, handSide, showShadows, accentColor, onAppClick, onAppLongClick, onSettingsClick, isActive)
+            HistorySection(Modifier.weight(historyWeight), history, handSide, primaryTextColor, showShadows, accentColor, onAppClick, onAppLongClick, onSettingsClick, isActive)
         } else {
-            HistorySection(Modifier.weight(historyWeight), history, handSide, showShadows, accentColor, onAppClick, onAppLongClick, onSettingsClick, isActive)
+            HistorySection(Modifier.weight(historyWeight), history, handSide, primaryTextColor, showShadows, accentColor, onAppClick, onAppLongClick, onSettingsClick, isActive)
             Spacer(modifier = Modifier.width(16.dp))
             FavoritesSection(
                 Modifier.weight(favoritesWeight),
                 favorites,
                 accentColor,
+                primaryTextColor,
                 showShadows,
                 isReorderMode,
                 { isReorderMode = it },
@@ -131,6 +135,7 @@ fun MainMenuScreen(
  * @param modifier Modifier for UI configurations.
  * @param history The list of recently launched applications.
  * @param handSide Preferred layout orientation side.
+ * @param primaryTextColor User selected primary text color.
  * @param showShadows Whether to apply drop shadows.
  * @param accentColor Theme accent color.
  * @param onAppClick Callback when a history item is clicked.
@@ -143,6 +148,7 @@ private fun HistorySection(
     modifier: Modifier,
     history: List<AppInfo>,
     handSide: HandSide,
+    primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
     accentColor: AccentColor,
     onAppClick: (String) -> Unit,
@@ -150,13 +156,7 @@ private fun HistorySection(
     onSettingsClick: () -> Unit,
     isActive: Boolean
 ) {
-    val shadow = if (showShadows) {
-        Shadow(
-            color = Color.Black.copy(alpha = 0.6f),
-            offset = Offset(2f, 2f),
-            blurRadius = 4f
-        )
-    } else null
+    val shadow = primaryTextColor.getShadow(showShadows)
 
     val listState = rememberLazyListState()
     val currentOnSettingsClick by rememberUpdatedState(onSettingsClick)
@@ -211,6 +211,7 @@ private fun HistorySection(
                         fontSize = 20,
                         onClick = { onAppClick("${app.packageName}/${app.activityName}") },
                         onLongClick = { offset -> onAppLongClick(app, offset) },
+                        primaryTextColor = primaryTextColor,
                         showShadows = showShadows
                     )
                 }
@@ -243,6 +244,7 @@ private fun FavoritesSection(
     modifier: Modifier,
     favorites: List<AppInfo>,
     accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
     isReorderMode: Boolean,
     setReorderMode: (Boolean) -> Unit,
@@ -255,13 +257,7 @@ private fun FavoritesSection(
     onSettingsClick: () -> Unit,
     isActive: Boolean
 ) {
-    val shadow = if (showShadows) {
-        Shadow(
-            color = Color.Black.copy(alpha = 0.6f),
-            offset = Offset(2f, 2f),
-            blurRadius = 4f
-        )
-    } else null
+    val shadow = primaryTextColor.getShadow(showShadows)
 
     val haptic = LocalHapticFeedback.current
     var draggingAppKey by remember { mutableStateOf<String?>(null) }

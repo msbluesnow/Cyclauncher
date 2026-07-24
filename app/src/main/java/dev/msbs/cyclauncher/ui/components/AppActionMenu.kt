@@ -3,6 +3,7 @@ package dev.msbs.cyclauncher.ui.components
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -167,6 +168,7 @@ private fun MenuItem(
     text: String,
     icon: ImageVector,
     accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     onClick: () -> Unit
 ) {
     Row(
@@ -185,7 +187,7 @@ private fun MenuItem(
         Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = text,
-            color = Color.White,
+            color = primaryTextColor.color,
             style = MaterialTheme.typography.bodyLarge
         )
     }

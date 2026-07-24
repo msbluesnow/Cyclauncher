@@ -7,6 +7,7 @@ import dev.msbs.cyclauncher.data.TagsBackupPreview
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
 import android.app.Application
 import android.content.Intent
@@ -52,6 +53,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _accentColor = MutableStateFlow(AccentColor.SKY)
     /** The selected UI theme accent color. */
     val accentColor: StateFlow<AccentColor> = _accentColor
+
+    private val _primaryTextColor = MutableStateFlow(PrimaryTextColor.WHITE)
+    /** The selected primary (non-accent) text color theme. */
+    val primaryTextColor: StateFlow<PrimaryTextColor> = _primaryTextColor
 
     private val _showShadows = MutableStateFlow(true)
     /** Whether adaptive text/icon drop shadows are enabled. */
@@ -115,6 +120,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val savedColor = prefs.getString("accent_color", AccentColor.SKY.name) ?: AccentColor.SKY.name
         _accentColor.value = AccentColor.fromName(savedColor)
         
+        val savedTextColor = prefs.getString("primary_text_color", PrimaryTextColor.WHITE.name) ?: PrimaryTextColor.WHITE.name
+        _primaryTextColor.value = PrimaryTextColor.fromName(savedTextColor)
+        
         if (!prefs.contains("show_shadows")) {
             _showShadows.value = true 
         } else {
@@ -172,6 +180,17 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _accentColor.value = color
         val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putString("accent_color", color.name).apply()
+    }
+
+    /**
+     * Sets the primary text color preference (White or Black) and persists it.
+     *
+     * @param color The chosen [PrimaryTextColor] instance.
+     */
+    fun setPrimaryTextColor(color: PrimaryTextColor) {
+        _primaryTextColor.value = color
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putString("primary_text_color", color.name).apply()
     }
 
     /**

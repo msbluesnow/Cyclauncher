@@ -2,6 +2,7 @@ package dev.msbs.cyclauncher.ui.components
 
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.HandSide
+import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -44,22 +45,17 @@ fun AutoResizingText(
     targetFontSize: Int,
     textAlign: TextAlign,
     modifier: Modifier = Modifier,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     showShadows: Boolean = false
 ) {
     var fontSize by remember(text) { mutableStateOf(targetFontSize.sp) }
     var readyToDraw by remember(text) { mutableStateOf(false) }
 
-    val shadow = if (showShadows) {
-        Shadow(
-            color = Color.Black.copy(alpha = 0.6f),
-            offset = Offset(2f, 2f),
-            blurRadius = 4f
-        )
-    } else null
+    val shadow = primaryTextColor.getShadow(showShadows)
 
     Text(
         text = text,
-        color = if (readyToDraw) Color.White else Color.Transparent,
+        color = if (readyToDraw) primaryTextColor.color else Color.Transparent,
         modifier = modifier,
         textAlign = textAlign,
         fontSize = fontSize,
@@ -160,6 +156,7 @@ fun AppListItem(
     onClick: () -> Unit,
     onLongClick: (Offset) -> Unit = {},
     textAlign: TextAlign = TextAlign.Center,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     showShadows: Boolean = false
 ) {
     var itemPosition by remember { mutableStateOf(Offset.Zero) }
@@ -187,6 +184,7 @@ fun AppListItem(
             text = app.label,
             targetFontSize = 20,
             textAlign = textAlign,
+            primaryTextColor = primaryTextColor,
             showShadows = showShadows
         )
     }
@@ -202,6 +200,7 @@ fun AppListItem(
  * @param iconSize Preferred icon size in dp.
  * @param onClick Triggered on item tap.
  * @param onLongClick Triggered on item long-press (provides absolute coordinate Offset).
+ * @param primaryTextColor User selectable primary text color setting.
  * @param showShadows True to show text drop shadows.
  */
 @Composable
@@ -212,6 +211,7 @@ fun AppListItemWithIcon(
     iconSize: Int = 40,
     onClick: () -> Unit,
     onLongClick: (Offset) -> Unit = {},
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     showShadows: Boolean = false
 ) {
     var itemPosition by remember { mutableStateOf(Offset.Zero) }
@@ -240,6 +240,7 @@ fun AppListItemWithIcon(
                 targetFontSize = fontSize,
                 textAlign = TextAlign.Start,
                 modifier = Modifier.weight(1f),
+                primaryTextColor = primaryTextColor,
                 showShadows = showShadows
             )
         } else {
@@ -248,6 +249,7 @@ fun AppListItemWithIcon(
                 targetFontSize = fontSize,
                 textAlign = TextAlign.End,
                 modifier = Modifier.weight(1f),
+                primaryTextColor = primaryTextColor,
                 showShadows = showShadows
             )
             Spacer(modifier = Modifier.width(16.dp))

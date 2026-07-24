@@ -4,6 +4,7 @@ import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.components.AppListItemWithIcon
 
 import androidx.compose.foundation.layout.*
@@ -40,6 +41,7 @@ fun TextSearchInterface(
     val handSide by viewModel.handSide.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
+    val primaryTextColor by viewModel.primaryTextColor.collectAsState()
     
     val focusRequester = remember { FocusRequester() }
 
@@ -67,6 +69,7 @@ fun TextSearchInterface(
             onValueChange = { viewModel.setSearchText(it) },
             handSide = handSide,
             accentColor = accentColor,
+            primaryTextColor = primaryTextColor,
             showShadows = showShadows,
             modifier = Modifier.focusRequester(focusRequester)
         )
@@ -84,6 +87,7 @@ fun TextSearchInterface(
                     handSide = handSide,
                     onClick = { onAppClick("${app.packageName}/${app.activityName}") },
                     onLongClick = { offset -> onAppLongClick(app, offset) },
+                    primaryTextColor = primaryTextColor,
                     showShadows = showShadows
                 )
             }
@@ -94,6 +98,7 @@ fun TextSearchInterface(
         CloseSearchButton(
             handSide = handSide,
             accentColor = accentColor,
+            primaryTextColor = primaryTextColor,
             showShadows = showShadows,
             onClick = { viewModel.toggleTextSearchMode() }
         )
@@ -107,16 +112,11 @@ fun TextSearchInterface(
 private fun CloseSearchButton(
     handSide: HandSide,
     accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
     onClick: () -> Unit
 ) {
-    val shadow = if (showShadows) {
-        Shadow(
-            color = Color.Black.copy(alpha = 0.6f),
-            offset = Offset(2f, 2f),
-            blurRadius = 4f
-        )
-    } else null
+    val shadow = primaryTextColor.getShadow(showShadows)
 
     Row(
         modifier = Modifier
@@ -143,17 +143,12 @@ private fun SearchTextField(
     onValueChange: (String) -> Unit,
     handSide: HandSide,
     accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
     modifier: Modifier = Modifier
 ) {
     val alignment = if (handSide == HandSide.LEFT) TextAlign.Start else TextAlign.End
-    val shadow = if (showShadows) {
-        Shadow(
-            color = Color.Black.copy(alpha = 0.6f),
-            offset = Offset(2f, 2f),
-            blurRadius = 4f
-        )
-    } else null
+    val shadow = primaryTextColor.getShadow(showShadows)
 
     TextField(
         value = value,
@@ -162,7 +157,7 @@ private fun SearchTextField(
         placeholder = { 
             Text(
                 "Search apps...", 
-                color = Color.White.copy(alpha = 0.6f),
+                color = primaryTextColor.color.copy(alpha = 0.6f),
                 textAlign = alignment,
                 modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.bodyLarge.copy(shadow = shadow)
@@ -175,12 +170,11 @@ private fun SearchTextField(
         colors = TextFieldDefaults.colors(
             focusedContainerColor = Color.Transparent,
             unfocusedContainerColor = Color.Transparent,
-            focusedTextColor = Color.White,
-            unfocusedTextColor = Color.White,
+            focusedTextColor = primaryTextColor.color,
+            unfocusedTextColor = primaryTextColor.color,
             cursorColor = accentColor.color,
             focusedIndicatorColor = accentColor.color
         ),
         singleLine = true
     )
 }
-
