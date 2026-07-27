@@ -8,7 +8,20 @@ import android.content.Context
  * storage so they remain available during Direct Boot (before PIN/password entry).
  */
 fun Context.getSafeStorageContext(): Context {
-    val safeContext = this.createDeviceProtectedStorageContext()
-    safeContext.moveSharedPreferencesFrom(this, "launcher_prefs")
-    return safeContext
+    if (this.isDeviceProtectedStorage) {
+        return this
+    }
+    val deviceProtectedContext = this.createDeviceProtectedStorageContext()
+    try {
+        val targetPrefs = deviceProtectedContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+        if (!targetPrefs.contains("prefs_migrated_to_de")) {
+            val moved = deviceProtectedContext.moveSharedPreferencesFrom(this, "launcher_prefs")
+            if (moved || targetPrefs.all.isNotEmpty()) {
+                targetPrefs.edit().putBoolean("prefs_migrated_to_de", true).apply()
+            }
+        }
+    } catch (e: Exception) {
+        // Fallback gracefully if credential-protected storage is locked during Direct Boot
+    }
+    return deviceProtectedContext
 }

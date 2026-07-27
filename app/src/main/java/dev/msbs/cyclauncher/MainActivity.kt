@@ -68,6 +68,24 @@ class MainActivity : ComponentActivity() {
      */
     private val packageReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            val action = intent?.action
+            val packageName = intent?.data?.schemeSpecificPart
+            val isReplacing = intent?.getBooleanExtra(Intent.EXTRA_REPLACING, false) ?: false
+
+            if (action == Intent.ACTION_PACKAGE_REMOVED && !isReplacing && !packageName.isNullOrEmpty()) {
+                viewModel.onPackageRemoved(packageName)
+            } else {
+                viewModel.refreshApps()
+            }
+        }
+    }
+
+    /**
+     * BroadcastReceiver for system events such as Direct Boot unlock (ACTION_USER_UNLOCKED)
+     * and external storage app availability.
+     */
+    private val systemReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
             viewModel.refreshApps()
         }
     }
@@ -75,16 +93,28 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        val filter = IntentFilter().apply {
+        val packageFilter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
             addAction(Intent.ACTION_PACKAGE_REMOVED)
             addAction(Intent.ACTION_PACKAGE_REPLACED)
+            addAction(Intent.ACTION_PACKAGE_CHANGED)
             addDataScheme("package")
         }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(packageReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            registerReceiver(packageReceiver, packageFilter, Context.RECEIVER_NOT_EXPORTED)
         } else {
-            registerReceiver(packageReceiver, filter)
+            registerReceiver(packageReceiver, packageFilter)
+        }
+
+        val systemFilter = IntentFilter().apply {
+            addAction(Intent.ACTION_USER_UNLOCKED)
+            addAction(Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE)
+            addAction(Intent.ACTION_EXTERNAL_APPLICATIONS_UNAVAILABLE)
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(systemReceiver, systemFilter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(systemReceiver, systemFilter)
         }
         
         window.setFlags(
@@ -312,6 +342,7 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(packageReceiver)
+        unregisterReceiver(systemReceiver)
     }
 
     /**

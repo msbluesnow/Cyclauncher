@@ -205,30 +205,79 @@ class AppActionsManager(context: Context) {
     }
     
     /**
-     * Cleans up persistence data by removing any applications that are no longer installed on the device.
+     * Cleans up stored favorites, history, custom labels, and app tags for a specific package that was uninstalled.
      *
-     * @param validKeys The set of component keys for all currently installed applications.
+     * @param packageName The package name of the uninstalled application.
      */
-    fun cleanupInvalidApps(validKeys: Set<String>) {
-        val newFavorites = _favorites.value.filter { it in validKeys }
+    fun onPackageRemoved(packageName: String) {
+        val newFavorites = _favorites.value.filterNot { it.startsWith("$packageName/") || it == packageName }
         if (newFavorites.size != _favorites.value.size) {
             _favorites.value = newFavorites
             saveList("favorites", newFavorites)
         }
-        
-        val newHistory = _history.value.filter { it in validKeys }
+
+        val newHistory = _history.value.filterNot { it.startsWith("$packageName/") || it == packageName }
         if (newHistory.size != _history.value.size) {
             _history.value = newHistory
             saveList("history", newHistory)
         }
 
-        val newLabels = _customLabels.value.filter { it.key in validKeys }
+        val newLabels = _customLabels.value.filterKeys { !it.startsWith("$packageName/") && it != packageName }
         if (newLabels.size != _customLabels.value.size) {
             _customLabels.value = newLabels
             saveMap("custom_labels", newLabels)
         }
 
-        val newAppTags = _appTags.value.filter { it.key in validKeys }
+        val newAppTags = _appTags.value.filterKeys { !it.startsWith("$packageName/") && it != packageName }
+        if (newAppTags.size != _appTags.value.size) {
+            _appTags.value = newAppTags
+            saveAppTags(newAppTags)
+        }
+    }
+
+    /**
+     * Safely cleans up references to uninstalled apps by querying PackageManager for each package individually.
+     * This avoids accidentally wiping user data during system boot when bulk activity queries might be incomplete.
+     *
+     * @param pm The system PackageManager instance.
+     */
+    fun cleanupUninstalledApps(pm: android.content.pm.PackageManager) {
+        fun isPackageInstalled(key: String): Boolean {
+            val pkgName = key.split("/").firstOrNull() ?: return false
+            return try {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    pm.getPackageInfo(pkgName, android.content.pm.PackageManager.PackageInfoFlags.of(0))
+                } else {
+                    @Suppress("DEPRECATION")
+                    pm.getPackageInfo(pkgName, 0)
+                }
+                true
+            } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
+                false
+            } catch (e: Exception) {
+                true // Fallback: keep if status couldn't be definitively checked
+            }
+        }
+
+        val newFavorites = _favorites.value.filter { isPackageInstalled(it) }
+        if (newFavorites.size != _favorites.value.size) {
+            _favorites.value = newFavorites
+            saveList("favorites", newFavorites)
+        }
+
+        val newHistory = _history.value.filter { isPackageInstalled(it) }
+        if (newHistory.size != _history.value.size) {
+            _history.value = newHistory
+            saveList("history", newHistory)
+        }
+
+        val newLabels = _customLabels.value.filterKeys { isPackageInstalled(it) }
+        if (newLabels.size != _customLabels.value.size) {
+            _customLabels.value = newLabels
+            saveMap("custom_labels", newLabels)
+        }
+
+        val newAppTags = _appTags.value.filterKeys { isPackageInstalled(it) }
         if (newAppTags.size != _appTags.value.size) {
             _appTags.value = newAppTags
             saveAppTags(newAppTags)
