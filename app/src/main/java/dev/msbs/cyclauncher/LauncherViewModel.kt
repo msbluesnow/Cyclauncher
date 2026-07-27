@@ -439,6 +439,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
+     * Called when an application package is explicitly removed/uninstalled from the device.
+     *
+     * @param packageName The package name of the uninstalled app.
+     */
+    fun onPackageRemoved(packageName: String) {
+        actionsManager.onPackageRemoved(packageName)
+        refreshApps()
+    }
+
+    /**
      * Loads installed launchable applications asynchronously, resolving their display labels,
      * package names, activity names, and starting index characters. Icons are intentionally
      * not loaded here — they are fetched on demand by Coil in the UI layer, which keeps this
@@ -483,8 +493,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
             _apps.value = appList
 
-            val validKeys = appList.map { it.componentKey }.toSet()
-            actionsManager.cleanupInvalidApps(validKeys)
+            // Perform safe uninstalled app cleanup using PackageInfo validation only if user storage is unlocked
+            val userManager = getApplication<Application>().getSystemService(android.content.Context.USER_SERVICE) as? android.os.UserManager
+            if (userManager == null || userManager.isUserUnlocked) {
+                actionsManager.cleanupUninstalledApps(pm)
+            }
         }
     }
 }
