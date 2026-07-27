@@ -16,24 +16,26 @@ enum class PrimaryTextColor(
     val color: Color,
     val shadowColor: Color
 ) {
-    WHITE("White", Color.White, Color.Black.copy(alpha = 0.6f)),
-    BLACK("Black", Color.Black, Color.White.copy(alpha = 0.6f));
+    WHITE("White", Color.White, Color.Black.copy(alpha = 0.9f)),
+    BLACK("Black", Color.Black, Color.White.copy(alpha = 0.9f));
 
     /**
-     * Returns a [Shadow] instance if [showShadows] is true, or null if disabled.
+     * Returns a [Shadow] instance representing a thin text outline if [showShadows] is true, or null if disabled.
+     * When MainColor is WHITE, a black outline is applied.
+     * When MainColor is BLACK, a white outline is applied.
      */
     fun getShadow(showShadows: Boolean): Shadow? {
         return if (showShadows) {
             when (this) {
                 WHITE -> Shadow(
-                    color = shadowColor,
+                    color = Color.Black.copy(alpha = 0.9f),
                     offset = Offset.Zero,
-                    blurRadius = 4f
+                    blurRadius = 2.5f
                 )
                 BLACK -> Shadow(
-                    color = Color.White.copy(alpha = 0.85f),
+                    color = Color.White.copy(alpha = 0.9f),
                     offset = Offset.Zero,
-                    blurRadius = 1.8f
+                    blurRadius = 2.5f
                 )
             }
         } else null
