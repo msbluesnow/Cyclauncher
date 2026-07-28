@@ -207,11 +207,11 @@ fun RectangularAlphabetWheel(
                             val distanceToNearest = abs(currentPos - currentPos.roundToInt().toFloat())
                             val distanceFactor = (distanceToNearest / 0.5f).coerceIn(0f, 1f)
                             
-                            // Determine how fast we are dragging to lessen friction during quick swipes
-                            val speedFactor = (abs(dragAmount) / 20f).coerceIn(0f, 1f)
+                            // Determine how fast we are dragging to lessen friction during quick swipes (difficulty 2x higher)
+                            val speedFactor = (abs(dragAmount) / 40f).coerceIn(0f, 1f)
                             
-                            // Base sensitivity scaled by drag speed
-                            val baseSensitivity = 1f + (abs(dragAmount) / 45f).coerceAtMost(2.5f)
+                            // Base sensitivity scaled by drag speed (acceleration gain difficulty 2x higher)
+                            val baseSensitivity = 1f + (abs(dragAmount) / 90f).coerceAtMost(2.5f)
                             
                             // Intelligent friction: slows down when near an exact letter and moving slowly
                             val dynamicFriction = 0.35f + 0.65f * distanceFactor
