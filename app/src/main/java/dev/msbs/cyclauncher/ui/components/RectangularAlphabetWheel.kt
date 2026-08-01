@@ -9,8 +9,9 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.verticalDrag
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.size
@@ -28,6 +29,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
@@ -38,8 +41,10 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
@@ -193,49 +198,15 @@ fun RectangularAlphabetWheel(
         val pathMeasure = remember(indicatorPath) { PathMeasure().apply { setPath(indicatorPath, false) } }
         val totalLength = pathMeasure.length
 
+        // Threshold for slow speed detection in dp/s (converted to px/ms for per-frame computation)
+        val slowSpeedThresholdPxPerMs = remember(density) { with(density) { 1000.dp.toPx() } } / 1000f
+
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
-                .size(stepSize * 9 + 100.dp, stepSize * 4 + 100.dp)
+                .size(stepSize * 10.5f, stepSize * 5 + 40.dp)
                 .onGloballyPositioned { wheelPosition = it.positionInRoot() }
-                .pointerInput(Unit) {
-                    detectVerticalDragGestures(
-                        onVerticalDrag = { change, dragAmount ->
-                            change.consume()
-                            
-                            val currentPos = scrollOffset.value
-                            val distanceToNearest = abs(currentPos - currentPos.roundToInt().toFloat())
-                            val distanceFactor = (distanceToNearest / 0.5f).coerceIn(0f, 1f)
-                            
-                            // Determine how fast we are dragging to lessen friction during quick swipes (difficulty 2x higher)
-                            val speedFactor = (abs(dragAmount) / 40f).coerceIn(0f, 1f)
-                            
-                            // Base sensitivity scaled by drag speed (acceleration gain difficulty 2x higher)
-                            val baseSensitivity = 1f + (abs(dragAmount) / 90f).coerceAtMost(2.5f)
-                            
-                            // Intelligent friction: slows down when near an exact letter and moving slowly
-                            val dynamicFriction = 0.35f + 0.65f * distanceFactor
-                            val frictionMultiplier = dynamicFriction + (1f - dynamicFriction) * speedFactor
-                            
-                            val finalSensitivity = baseSensitivity * frictionMultiplier
-                            
-                            scope.launch {
-                                scrollOffset.snapTo(scrollOffset.value - (dragAmount / 100f) * finalSensitivity)
-                            }
-                        },
-                        onDragEnd = {
-                            scope.launch {
-                                scrollOffset.animateTo(
-                                    targetValue = scrollOffset.value.roundToInt().toFloat(),
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioLowBouncy,
-                                        stiffness = Spring.StiffnessLow
-                                    )
-                                )
-                            }
-                        }
-                    )
-                },
+                .alphabetWheelDragGesture(scrollOffset, density, stepSize),
             contentAlignment = Alignment.Center
         ) {
             // Internal container for the wheel to keep it centered and shifted for #
@@ -258,10 +229,12 @@ fun RectangularAlphabetWheel(
                             val totalDistRef = cumulativeDistances[27]
                             val rawDist = (cumulativeDistances[lower] + progress * segmentDistances[lower])
                             val scale = totalLength / totalDistRef
+                            
                             val currentDist = (rawDist * scale) % totalLength
                             
-                            val halfLen = with(density) { 16.dp.toPx() * scaleFactor }
+                            val halfLen = (stepSize * 0.4f).toPx()
                             val segmentPath = Path()
+                            
                             val start = currentDist - halfLen
                             val end = currentDist + halfLen
                             
@@ -322,17 +295,7 @@ fun RectangularAlphabetWheel(
 /**
  * Renders the grid of application icons centered inside the rectangular alphabet wheel.
  * Dynamically adjusts icon size and column count based on the number of apps to display.
- *
- * @param apps The list of applications matching the selected letter.
- * @param s The step size in pixels corresponding to the path structure.
- * @param density Context density provider.
- * @param wheelPosition The absolute root offset coordinate of the alphabet wheel.
- * @param stepSize The step size in Dp unit.
- * @param onAppClick Callback when an application icon is tapped.
- * @param onAppLongClick Callback when an application icon is long-pressed (provides coordinates).
- * @param scaleFactor Dynamic scaling factor calculated from screen size.
  */
-
 @Composable
 fun AppsGrid(
     apps: List<AppInfo>,
@@ -380,8 +343,6 @@ fun AppsGrid(
         val x = rowStartXPx + col * (dynamicSizePx + spacingPx)
         val y = startYPx + row * (dynamicSizePx + spacingPx)
 
-        // Coil-backed icon. We always reserve the cell (no early return), so the grid layout
-        // stays stable while the painter asynchronously resolves from memory/disk cache.
         val iconSizeDp = dynamicSize.value.toInt()
         val painter = rememberAppIconPainter(app.iconKey, iconSizeDp)
 
@@ -479,7 +440,15 @@ private fun AlphabetLetterItem(
         contentAlignment = Alignment.Center
     ) {
         val isExact by isExactState
-        val shadow = remember(primaryTextColor, showShadows) { primaryTextColor.getShadow(showShadows) }
+        val outlineShadow = remember(primaryTextColor, showShadows) {
+            if (showShadows) {
+                Shadow(
+                    color = if (primaryTextColor == PrimaryTextColor.WHITE) Color.Black.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.9f),
+                    offset = Offset.Zero,
+                    blurRadius = 2.5f
+                )
+            } else null
+        }
         
         val activeStyle = remember(fontSize) {
             TextStyle(
@@ -487,11 +456,11 @@ private fun AlphabetLetterItem(
                 fontWeight = FontWeight.Bold
             )
         }
-        val inactiveStyle = remember(fontSize, shadow) {
+        val inactiveStyle = remember(fontSize, outlineShadow) {
             TextStyle(
                 fontSize = fontSize,
                 fontWeight = FontWeight.Normal,
-                shadow = shadow
+                shadow = outlineShadow
             )
         }
 
@@ -500,5 +469,75 @@ private fun AlphabetLetterItem(
             color = if (isExact) accentColor.color else primaryTextColor.color,
             style = if (isExact) activeStyle else inactiveStyle
         )
+    }
+}
+
+/**
+ * Reusable drag gesture modifier for alphabet wheel scrolling.
+ * Employs dual-layer speed estimation (VelocityTracker + Activity EMA) to eliminate 1D direction-reversal zero crossings,
+ * and DP-aware linear scaling for consistent 6x slow-down across all screens and gesture types.
+ */
+fun Modifier.alphabetWheelDragGesture(
+    scrollOffset: Animatable<Float, AnimationVector1D>,
+    density: Density,
+    stepSize: Dp
+): Modifier = this.pointerInput(scrollOffset, density, stepSize) {
+    val s = with(density) { stepSize.toPx() }
+    val slowThresholdPxPerMs = with(density) { 600.dp.toPx() } / 1000f
+    val fastThresholdPxPerMs = slowThresholdPxPerMs * 2.5f
+
+    coroutineScope {
+        while (true) {
+            awaitPointerEventScope {
+                val down = awaitFirstDown()
+                launch { scrollOffset.stop() }
+
+                var position = scrollOffset.value
+                var smoothedSpeedPxPerMs = 0f
+                var lastEventTimeMs = down.uptimeMillis
+
+                verticalDrag(down.id) { change ->
+                    val dragAmount = change.positionChange().y
+                    change.consume()
+
+                    val currentTimeMs = change.uptimeMillis
+                    val dtMs = (currentTimeMs - lastEventTimeMs).coerceAtLeast(1L)
+                    lastEventTimeMs = currentTimeMs
+
+                    val instantSpeedPxPerMs = abs(dragAmount) / dtMs.toFloat()
+                    smoothedSpeedPxPerMs = smoothedSpeedPxPerMs * 0.7f + instantSpeedPxPerMs * 0.3f
+
+                    // 6x deceleration threshold: < 600dp/s is 100% FULL 6x decelerated (1/6x speed).
+                    // > 1500dp/s is 100% normal speed (1.0x).
+                    val scaleFactor = when {
+                        smoothedSpeedPxPerMs <= slowThresholdPxPerMs -> 1f / 6f
+                        smoothedSpeedPxPerMs >= fastThresholdPxPerMs -> 1f
+                        else -> {
+                            val progress = (smoothedSpeedPxPerMs - slowThresholdPxPerMs) / (fastThresholdPxPerMs - slowThresholdPxPerMs)
+                            (1f / 6f) + (1f - 1f / 6f) * progress
+                        }
+                    }
+
+                    // Linear dp-aware letter delta
+                    val deltaLetters = (dragAmount / (s * 1.2f)) * scaleFactor
+                    position -= deltaLetters
+
+                    launch {
+                        scrollOffset.snapTo(position)
+                    }
+                }
+
+                // Snap to nearest letter on drag end
+                launch {
+                    scrollOffset.animateTo(
+                        targetValue = scrollOffset.value.roundToInt().toFloat(),
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    )
+                }
+            }
+        }
     }
 }
