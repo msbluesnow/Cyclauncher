@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.RemoveCircle
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -180,14 +181,17 @@ private fun HistorySection(
         verticalArrangement = Arrangement.Bottom,
         horizontalAlignment = if (handSide == HandSide.LEFT) Alignment.End else Alignment.Start
     ) {
-        Text(
-            "HISTORY",
-            color = accentColor.color,
-            style = MaterialTheme.typography.titleSmall.copy(shadow = shadow),
-            fontWeight = FontWeight.Bold,
-            textAlign = if (handSide == HandSide.LEFT) TextAlign.End else TextAlign.Start,
-            modifier = Modifier.fillMaxWidth()
-        )
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = if (handSide == HandSide.LEFT) Alignment.CenterEnd else Alignment.CenterStart
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.History,
+                contentDescription = "History",
+                tint = accentColor.color,
+                modifier = Modifier.size(22.dp)
+            )
+        }
         Spacer(modifier = Modifier.height(16.dp))
         LazyColumn(
             state = listState,

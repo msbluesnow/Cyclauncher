@@ -11,7 +11,6 @@ import dev.msbs.cyclauncher.ui.components.RectangularAlphabetWheel
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -22,10 +21,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.msbs.cyclauncher.ui.components.alphabetWheelDragGesture
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -95,31 +96,16 @@ fun WheelSearchLayout(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Upper section containing the app list on one side and the drag-scroll interception area on the other side.
+        val density = LocalDensity.current
+        val configuration = LocalConfiguration.current
+        val scaleFactor = ((configuration.screenWidthDp.dp / 360.dp).coerceIn(0.7f, 1.2f)) * 0.93f
+        val stepSize = 34.dp * scaleFactor
+
         Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
             val scrollModifier = Modifier
                 .fillMaxHeight()
                 .weight(1f)
-                .pointerInput(Unit) {
-                    detectVerticalDragGestures(
-                        onVerticalDrag = { change, dragAmount ->
-                            change.consume()
-                            scope.launch {
-                                scrollOffset.snapTo(scrollOffset.value - (dragAmount / 100f))
-                            }
-                        },
-                        onDragEnd = {
-                            scope.launch {
-                                scrollOffset.animateTo(
-                                    targetValue = scrollOffset.value.roundToInt().toFloat(),
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioLowBouncy,
-                                        stiffness = Spring.StiffnessLow
-                                    )
-                                )
-                            }
-                        }
-                    )
-                }
+                .alphabetWheelDragGesture(scrollOffset, density, stepSize)
 
             if (listAlignment == TextAlign.End) {
                 Box(modifier = scrollModifier)

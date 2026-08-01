@@ -181,8 +181,8 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Adaptive Outline Toggle
-                SettingsRow(label = "Adaptive Outline:", textColor = primaryTextColor.color, shadow = shadow) {
+                // Adaptive Shadows Toggle
+                SettingsRow(label = "Adaptive Shadows:", textColor = primaryTextColor.color, shadow = shadow) {
                     Switch(
                         checked = showShadows,
                         onCheckedChange = { viewModel.setShowShadows(it) },
