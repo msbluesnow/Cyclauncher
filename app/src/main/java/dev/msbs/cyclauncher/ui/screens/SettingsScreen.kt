@@ -269,14 +269,14 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         TextButton(onClick = {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/msbluesnow/Cyclauncher")))
+                            viewModel.openGitHubPage()
                         }) {
-                            Text("GitHub ⭐", color = primaryTextColor.color.copy(alpha = 0.8f), fontSize = 13.sp)
+                            Text("GitHub ⭐", color = primaryTextColor.color.copy(alpha = 0.8f), style = TextStyle(shadow = shadow, fontSize = 13.sp))
                         }
                         TextButton(onClick = {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://discord.gg/yourserver")))
+                            viewModel.openDiscordPage()
                         }) {
-                            Text("Discord 💬", color = primaryTextColor.color.copy(alpha = 0.8f), fontSize = 13.sp)
+                            Text("Discord 💬", color = primaryTextColor.color.copy(alpha = 0.8f), style = TextStyle(shadow = shadow, fontSize = 13.sp))
                         }
                         TextButton(onClick = { viewModel.openSupportPage() }, modifier = Modifier.weight(1f)) {
                             Text("Tribute 💝", color = accentColor.color, fontWeight = FontWeight.Bold, fontSize = 13.sp)
@@ -306,7 +306,7 @@ fun SettingsScreen(
         }
         Text(
             text = "Version $versionName",
-            color = Color.White.copy(alpha = 0.4f),
+            color = primaryTextColor.color.copy(alpha = 0.4f),
             style = TextStyle(shadow = shadow, fontSize = 14.sp)
         )
 
@@ -450,15 +450,6 @@ private fun MainColorSelector(selectedColor: PrimaryTextColor, onSelect: (Primar
                                 size = Size(size.width + cornerRadius, size.height),
                                 cornerRadius = CornerRadius(cornerRadius, cornerRadius)
                             )
-                            
-                            // Draw border stroke (extends to the right)
-                            drawRoundRect(
-                                color = Color.White.copy(alpha = 0.62f),
-                                topLeft = Offset(borderPx / 2, borderPx / 2),
-                                size = Size(size.width + cornerRadius, size.height - borderPx),
-                                cornerRadius = CornerRadius(cornerRadius - borderPx / 2, cornerRadius - borderPx / 2),
-                                style = Stroke(width = borderPx)
-                            )
                         }
                 )
                 // Right half (White)
@@ -477,15 +468,6 @@ private fun MainColorSelector(selectedColor: PrimaryTextColor, onSelect: (Primar
                                 topLeft = Offset(-cornerRadius, 0f),
                                 size = Size(size.width + cornerRadius, size.height),
                                 cornerRadius = CornerRadius(cornerRadius, cornerRadius)
-                            )
-                            
-                            // Draw border stroke (extends to the left)
-                            drawRoundRect(
-                                color = Color.Black.copy(alpha = 0.62f),
-                                topLeft = Offset(-cornerRadius, borderPx / 2),
-                                size = Size(size.width + cornerRadius - borderPx / 2, size.height - borderPx),
-                                cornerRadius = CornerRadius(cornerRadius - borderPx / 2, cornerRadius - borderPx / 2),
-                                style = Stroke(width = borderPx)
                             )
                         }
                 )

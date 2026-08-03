@@ -28,6 +28,7 @@
             android:directBootAware="true"
             android:stateNotNeeded="true"
             android:excludeFromRecents="true"
+            android:taskAffinity=""
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustPan">
 

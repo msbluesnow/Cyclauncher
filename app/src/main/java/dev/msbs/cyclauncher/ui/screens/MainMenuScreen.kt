@@ -200,25 +200,16 @@ private fun HistorySection(
             reverseLayout = true
         ) {
             items(history, key = { "${it.packageName}/${it.activityName}" }) { app ->
-                Box(
-                    modifier = Modifier.pointerInput(isActive) {
-                        awaitEachGesture {
-                            val down = awaitFirstDown(requireUnconsumed = false)
-                            down.consume()
-                        }
-                    }
-                ) {
-                    AppListItemWithIcon(
-                        app = app,
-                        handSide = if (handSide == HandSide.LEFT) HandSide.RIGHT else HandSide.LEFT,
-                        iconSize = 44,
-                        fontSize = 20,
-                        onClick = { onAppClick("${app.packageName}/${app.activityName}") },
-                        onLongClick = { offset -> onAppLongClick(app, offset) },
-                        primaryTextColor = primaryTextColor,
-                        showShadows = showShadows
-                    )
-                }
+                AppListItemWithIcon(
+                    app = app,
+                    handSide = if (handSide == HandSide.LEFT) HandSide.RIGHT else HandSide.LEFT,
+                    iconSize = 44,
+                    fontSize = 20,
+                    onClick = { onAppClick("${app.packageName}/${app.activityName}") },
+                    onLongClick = { offset -> onAppLongClick(app, offset) },
+                    primaryTextColor = primaryTextColor,
+                    showShadows = showShadows
+                )
             }
         }
     }
@@ -375,7 +366,7 @@ private fun FavoritesSection(
                     }
 
                     Box(
-                        modifier = (if (isReorderMode) {
+                        modifier = if (isReorderMode) {
                             Modifier.pointerInput(appKey) {
                                 var accumulatedDragForSwap = 0f
                                 detectDragGestures(
@@ -413,12 +404,7 @@ private fun FavoritesSection(
                                     }
                                 )
                             }
-                        } else Modifier).pointerInput(Unit) {
-                            awaitEachGesture {
-                                val down = awaitFirstDown(requireUnconsumed = false)
-                                down.consume()
-                            }
-                        }
+                        } else Modifier
                     ) {
                         AppIconItem(
                             app = app,
