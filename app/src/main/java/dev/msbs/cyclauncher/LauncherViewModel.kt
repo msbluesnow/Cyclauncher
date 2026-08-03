@@ -79,6 +79,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Holds the preview state of the AI auto-tagging process before it is applied. */
     val autoTagsPreview: StateFlow<AutoTagsPreview?> = _autoTagsPreview
 
+    private val _resetRequest = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    /** Flow signaling that the UI should scroll back to the main home screen. */
+    val resetRequest = _resetRequest.asSharedFlow()
+
+    /** Requests the home screen UI to reset to the main cluster and page. */
+    fun requestReset() {
+        _resetRequest.tryEmit(Unit)
+    }
+
     /** List of all installed applications, enriched with user-defined custom labels. */
     val apps: StateFlow<List<AppInfo>> = combine(_apps, actionsManager.customLabels) { all, customLabels ->
         all.map { app ->

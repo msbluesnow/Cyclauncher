@@ -131,6 +131,19 @@ class MainActivity : ComponentActivity() {
                 val verticalPagerState = rememberPagerState { 2 } // [Main, Search]
                 val scope = rememberCoroutineScope()
                 
+                LaunchedEffect(Unit) {
+                    viewModel.resetRequest.collect {
+                        scope.launch {
+                            if (horizontalPagerState.currentPage != 0) {
+                                horizontalPagerState.animateScrollToPage(0)
+                            }
+                            if (verticalPagerState.currentPage != 0) {
+                                verticalPagerState.animateScrollToPage(0)
+                            }
+                        }
+                    }
+                }
+
                 BackHandler(enabled = horizontalPagerState.currentPage != 0 || verticalPagerState.currentPage != 0) {
                     scope.launch {
                         if (horizontalPagerState.currentPage != 0) {
@@ -345,6 +358,11 @@ class MainActivity : ComponentActivity() {
         unregisterReceiver(systemReceiver)
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        viewModel.requestReset()
+    }
+
     /**
      * Attempts to open the application represented by the given component key.
      * Uses a specific class-name-based intent if possible, falling back to a package-launch intent.
@@ -387,6 +405,7 @@ class MainActivity : ComponentActivity() {
         try {
             val uninstallIntent = Intent(Intent.ACTION_DELETE).apply {
                 data = Uri.fromParts("package", packageName, null)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             Toast.makeText(this, "Opening uninstaller...", Toast.LENGTH_SHORT).show()
             startActivity(uninstallIntent)
