@@ -23,11 +23,10 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleInstance"
+            android:launchMode="singleTask"
             android:clearTaskOnLaunch="true"
             android:directBootAware="true"
             android:stateNotNeeded="true"
-            android:excludeFromRecents="true"
             android:taskAffinity=""
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustPan">
