@@ -117,12 +117,6 @@ class MainActivity : ComponentActivity() {
             registerReceiver(systemReceiver, systemFilter)
         }
         
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-        )
-        window.setBackgroundDrawableResource(android.R.color.transparent)
-
         enableEdgeToEdge()
 
         setContent {
@@ -144,12 +138,16 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                BackHandler(enabled = horizontalPagerState.currentPage != 0 || verticalPagerState.currentPage != 0) {
+                BackHandler(enabled = true) {
                     scope.launch {
                         if (horizontalPagerState.currentPage != 0) {
                             horizontalPagerState.animateScrollToPage(0)
                         } else if (verticalPagerState.currentPage != 0) {
                             verticalPagerState.animateScrollToPage(0)
+                        } else {
+                            if (!viewModel.isDefaultLauncher()) {
+                                moveTaskToBack(true)
+                            }
                         }
                     }
                 }
