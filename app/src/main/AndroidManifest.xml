@@ -24,10 +24,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:clearTaskOnLaunch="true"
             android:directBootAware="true"
-            android:stateNotNeeded="true"
-            android:taskAffinity=""
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustPan">
 

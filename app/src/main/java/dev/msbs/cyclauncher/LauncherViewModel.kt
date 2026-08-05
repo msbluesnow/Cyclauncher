@@ -457,6 +457,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         refreshApps()
     }
 
+    private var loadAppsJob: kotlinx.coroutines.Job? = null
+
     /**
      * Loads installed launchable applications asynchronously, resolving their display labels,
      * package names, activity names, and starting index characters. Icons are intentionally
@@ -464,7 +466,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      * list lightweight and lets the OS evict bitmaps under memory pressure.
      */
     private fun loadInstalledApps() {
-        viewModelScope.launch(Dispatchers.IO) {
+        loadAppsJob?.cancel()
+        loadAppsJob = viewModelScope.launch(Dispatchers.IO) {
             val pm = getApplication<Application>().packageManager
             val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
             val resolvedInfos = pm.queryIntentActivities(mainIntent, 0)
