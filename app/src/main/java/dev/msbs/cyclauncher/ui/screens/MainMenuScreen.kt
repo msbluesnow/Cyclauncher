@@ -43,6 +43,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
 
 /**
@@ -257,6 +259,7 @@ private fun FavoritesSection(
     val haptic = LocalHapticFeedback.current
     var draggingAppKey by remember { mutableStateOf<String?>(null) }
     var dragVerticalOffset by remember { mutableStateOf(0f) }
+    var itemHeightPx by remember { mutableStateOf(0f) }
 
     val currentOnSettingsClick by rememberUpdatedState(onSettingsClick)
     val currentSetReorderMode by rememberUpdatedState(setReorderMode)
@@ -273,12 +276,9 @@ private fun FavoritesSection(
         }
     }
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxHeight()
-            // Intercept vertical swipes on Initial pass (parent-first).
-            // Runs BEFORE children (icons, LazyColumn) can consume events,
-            // so swipes work from anywhere — including the icon area.
             .pointerInput(isReorderMode, isActive) {
                 if (isReorderMode) return@pointerInput
                 val swipeThreshold = 40f
@@ -286,166 +286,181 @@ private fun FavoritesSection(
                 awaitEachGesture {
                     // Wait for first pointer down on Initial pass
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                    var totalDy = 0f
-                    var swipeHandled = false
+                    var totalDragY = 0f
+                    var isSwipeAction = false
 
                     while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
-
-                        if (change.isConsumed) break
-                        if (change.changedToUp()) break
-
-                        totalDy += change.positionChange().y
-
-                        if (kotlin.math.abs(totalDy) > swipeThreshold) {
-                            // Consume to prevent children from processing further
-                            event.changes.forEach { it.consume() }
-                            if (totalDy > 0) currentOnSwipeDown()
-                            else currentOnSwipeUp()
+                        val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                        val changes = event.changes
+                        if (changes.any { it.changedToUp() }) {
                             break
+                        }
+                        
+                        val dragAmount = changes.firstOrNull()?.positionChange()?.y ?: 0f
+                        totalDragY += dragAmount
+
+                        // If user has dragged past threshold, consume and handle
+                        if (kotlin.math.abs(totalDragY) > swipeThreshold) {
+                            isSwipeAction = true
+                            changes.forEach { it.consume() }
+                        }
+                    }
+
+                    if (isSwipeAction) {
+                        if (totalDragY < 0) {
+                            currentOnSwipeUp()
+                        } else {
+                            currentOnSwipeDown()
+                        }
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Bottom
+        ) {
+            LazyColumn(
+                modifier = Modifier.weight(1f, fill = false),
+                verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Bottom),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                reverseLayout = true
+            ) {
+                itemsIndexed(favorites, key = { _, app -> "${app.packageName}/${app.activityName}" }) { index, app ->
+                    val appKey = "${app.packageName}/${app.activityName}"
+                    val isDraggingThis = draggingAppKey == appKey
+                    
+                    // Track the current index and list size to avoid stale closures during drag
+                    val currentIndex by rememberUpdatedState(index)
+                    val currentSize by rememberUpdatedState(favorites.size)
+
+                    val scale by animateFloatAsState(if (isDraggingThis) 1.25f else 1.0f, label = "scale")
+                    val alpha by animateFloatAsState(if (isDraggingThis) 0.8f else 1.0f, label = "alpha")
+
+                    val density = LocalDensity.current
+                    val fallbackItemHeightPx = with(density) { 56.dp.toPx() }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .animateItem()
+                            .onGloballyPositioned { coordinates ->
+                                if (itemHeightPx == 0f && coordinates.size.height > 0) {
+                                    itemHeightPx = coordinates.size.height.toFloat()
+                                }
+                            }
+                            .graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                                this.alpha = alpha
+                                // Visual follow-finger offset
+                                if (isDraggingThis) {
+                                    translationY = dragVerticalOffset
+                                }
+                            }
+                    ) {
+                        if (isReorderMode) {
+                            IconButton(
+                                onClick = { onToggleFavorite(appKey) },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.RemoveCircle,
+                                    contentDescription = "Remove",
+                                    tint = Color.Red.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
+
+                        Box(
+                            modifier = if (isReorderMode) {
+                                Modifier.pointerInput(appKey, favorites.size) {
+                                    var accumulatedDragForSwap = 0f
+                                    detectDragGestures(
+                                        onDragStart = { 
+                                            accumulatedDragForSwap = 0f 
+                                            dragVerticalOffset = 0f
+                                            draggingAppKey = appKey
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        },
+                                        onDragEnd = { 
+                                            draggingAppKey = null 
+                                            dragVerticalOffset = 0f
+                                        },
+                                        onDragCancel = { 
+                                            draggingAppKey = null 
+                                            dragVerticalOffset = 0f
+                                        },
+                                        onDrag = { change, dragAmount ->
+                                            change.consume()
+                                            dragVerticalOffset += dragAmount.y
+                                            accumulatedDragForSwap += dragAmount.y
+                                            
+                                            val targetHeight = if (itemHeightPx > 0f) itemHeightPx else fallbackItemHeightPx
+                                            val swapThreshold = targetHeight * 0.5f
+
+                                            if (accumulatedDragForSwap < -swapThreshold && currentIndex < currentSize - 1) {
+                                                currentOnReorder(currentIndex, currentIndex + 1)
+                                                accumulatedDragForSwap = 0f
+                                                dragVerticalOffset += targetHeight
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            } else if (accumulatedDragForSwap > swapThreshold && currentIndex > 0) {
+                                                currentOnReorder(currentIndex, currentIndex - 1)
+                                                accumulatedDragForSwap = 0f
+                                                dragVerticalOffset -= targetHeight
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            }
+                                        }
+                                    )
+                                }
+                            } else Modifier
+                        ) {
+                            AppIconItem(
+                                app = app,
+                                onClick = { 
+                                    if (isReorderMode) setReorderMode(false)
+                                    else onAppClick(appKey)
+                                },
+                                onLongClick = { offset -> 
+                                    if (!isReorderMode) onAppLongClick(app, offset)
+                                }
+                            )
+                        }
+
+                        if (isReorderMode) {
+                            Spacer(modifier = Modifier.size(32.dp))
                         }
                     }
                 }
             }
-            // Handle tap and long-press on empty space only (Main pass, default).
-            // detectTapGestures uses requireUnconsumed=true by default, so it
-            // won't activate on icons — icons consume their own down events.
-            .pointerInput(isReorderMode, isActive) {
-                detectTapGestures(
-                    onLongPress = { if (!currentIsReorderMode) currentOnSettingsClick() },
-                    onTap = { if (currentIsReorderMode) currentSetReorderMode(false) }
-                )
-            },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Bottom
-    ) {
-        LazyColumn(
-            modifier = Modifier.weight(1f, fill = false),
-            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Bottom),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            reverseLayout = true
-        ) {
-            itemsIndexed(favorites, key = { _, app -> "${app.packageName}/${app.activityName}" }) { index, app ->
-                val appKey = "${app.packageName}/${app.activityName}"
-                val isDraggingThis = draggingAppKey == appKey
-                
-                // Track the current index and list size to avoid stale closures during drag
-                val currentIndex by rememberUpdatedState(index)
-                val currentSize by rememberUpdatedState(favorites.size)
 
-                val scale by animateFloatAsState(if (isDraggingThis) 1.25f else 1.0f, label = "scale")
-                val alpha by animateFloatAsState(if (isDraggingThis) 0.8f else 1.0f, label = "alpha")
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .graphicsLayer {
-                            scaleX = scale
-                            scaleY = scale
-                            this.alpha = alpha
-                            // Visual follow-finger offset
-                            if (isDraggingThis) {
-                                translationY = dragVerticalOffset
-                            }
-                        }
-                ) {
-                    if (isReorderMode) {
-                        IconButton(
-                            onClick = { onToggleFavorite(appKey) },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.RemoveCircle,
-                                contentDescription = "Remove",
-                                tint = Color.Red.copy(alpha = 0.8f)
-                            )
-                        }
-                    }
-
-                    Box(
-                        modifier = if (isReorderMode) {
-                            Modifier.pointerInput(appKey) {
-                                var accumulatedDragForSwap = 0f
-                                detectDragGestures(
-                                    onDragStart = { 
-                                        accumulatedDragForSwap = 0f 
-                                        dragVerticalOffset = 0f
-                                        draggingAppKey = appKey
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    },
-                                    onDragEnd = { 
-                                        draggingAppKey = null 
-                                        dragVerticalOffset = 0f
-                                    },
-                                    onDragCancel = { 
-                                        draggingAppKey = null 
-                                        dragVerticalOffset = 0f
-                                    },
-                                    onDrag = { change, dragAmount ->
-                                        change.consume()
-                                        dragVerticalOffset += dragAmount.y
-                                        accumulatedDragForSwap += dragAmount.y
-                                        
-                                        val threshold = 60f 
-                                        if (accumulatedDragForSwap < -threshold && currentIndex < currentSize - 1) {
-                                            currentOnReorder(currentIndex, currentIndex + 1)
-                                            accumulatedDragForSwap = 0f
-                                            dragVerticalOffset = 0f
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        } else if (accumulatedDragForSwap > threshold && currentIndex > 0) {
-                                            currentOnReorder(currentIndex, currentIndex - 1)
-                                            accumulatedDragForSwap = 0f
-                                            dragVerticalOffset = 0f
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        }
-                                    }
-                                )
-                            }
-                        } else Modifier
-                    ) {
-                        AppIconItem(
-                            app = app,
-                            onClick = { 
-                                if (isReorderMode) setReorderMode(false)
-                                else onAppClick(appKey)
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Box(
+                modifier = Modifier
+                    .pointerInput(isReorderMode) {
+                        detectTapGestures(
+                            onLongPress = {
+                                if (!isReorderMode) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    setReorderMode(true)
+                                }
                             },
-                            onLongClick = { offset -> 
-                                if (!isReorderMode) onAppLongClick(app, offset)
+                            onTap = { 
+                                if (isReorderMode) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    setReorderMode(false) 
+                                }
                             }
                         )
                     }
-
-                    if (isReorderMode) {
-                        Spacer(modifier = Modifier.size(32.dp))
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        Box(
-            modifier = Modifier
-                .pointerInput(isReorderMode) {
-                    detectTapGestures(
-                        onLongPress = {
-                            if (!isReorderMode) {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                setReorderMode(true)
-                            }
-                        },
-                        onTap = { 
-                            if (isReorderMode) {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                setReorderMode(false) 
-                            }
-                        }
-                    )
-                }
-        ) {
+            ) {
             if (isReorderMode) {
                 // Use a Box with shadow to match the text shadow
                 Box(contentAlignment = Alignment.Center) {
@@ -475,7 +490,8 @@ private fun FavoritesSection(
                     style = MaterialTheme.typography.bodyLarge.copy(shadow = shadow)
                 )
             }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
         }
-        Spacer(modifier = Modifier.height(4.dp))
     }
 }
