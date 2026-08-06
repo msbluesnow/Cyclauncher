@@ -187,6 +187,16 @@ private fun HistorySection(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = if (handSide == HandSide.LEFT) Alignment.CenterEnd else Alignment.CenterStart
         ) {
+            if (showShadows) {
+                Icon(
+                    imageVector = Icons.Outlined.History,
+                    contentDescription = null,
+                    tint = primaryTextColor.shadowColor,
+                    modifier = Modifier
+                        .size(22.dp)
+                        .offset(1.dp, 1.dp)
+                )
+            }
             Icon(
                 imageVector = Icons.Outlined.History,
                 contentDescription = "History",
