@@ -28,6 +28,7 @@ android {
             }
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -35,6 +36,16 @@ android {
 
     buildFeatures {
         compose = true
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        val versionName = variant.outputs.map { it.versionName.get() }.firstOrNull()
+            ?: android.defaultConfig.versionName
+        variant.outputs.forEach { output ->
+            output.outputFileName.set("Cyclauncher-v${versionName}.apk")
+        }
     }
 }
 
