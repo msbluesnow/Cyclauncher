@@ -254,7 +254,7 @@ fun SettingsScreen(
 
                 // Default Launcher Selector
                 DefaultLauncherSelector(currentIsDefault, accentColor, primaryTextColor, showShadows) {
-                    viewModel.openDefaultLauncherSettings()
+                    viewModel.openDefaultLauncherSettings(context)
                     showDefaultLauncherDialog = true
                 }
 
@@ -319,7 +319,7 @@ fun SettingsScreen(
             title = { Text("Default Launcher", color = accentColor.color) },
             text = { Text(if (currentIsDefault) "Cyclauncher is now your default launcher!" else "Cyclauncher is not set as default. Try again?", color = Color.White) },
             confirmButton = {
-                TextButton(onClick = { if (!currentIsDefault) viewModel.openDefaultLauncherSettings() else showDefaultLauncherDialog = false }) {
+                TextButton(onClick = { if (!currentIsDefault) viewModel.openDefaultLauncherSettings(context) else showDefaultLauncherDialog = false }) {
                     Text(if (currentIsDefault) "Great!" else "Set Default", color = accentColor.color)
                 }
             },

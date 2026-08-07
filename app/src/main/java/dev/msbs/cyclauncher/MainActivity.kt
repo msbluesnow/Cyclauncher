@@ -27,6 +27,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -125,30 +127,41 @@ class MainActivity : ComponentActivity() {
                 val horizontalPagerState = rememberPagerState { 2 } // [MainCluster, Settings]
                 val verticalPagerState = rememberPagerState { 2 } // [Main, Search]
                 val scope = rememberCoroutineScope()
+                val fastAnimSpec = remember { tween<Float>(durationMillis = 150, easing = FastOutSlowInEasing) }
                 
                 LaunchedEffect(Unit) {
                     viewModel.resetRequest.collect {
                         scope.launch {
                             if (horizontalPagerState.currentPage != 0) {
-                                horizontalPagerState.animateScrollToPage(0)
+                                horizontalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
                             }
                             if (verticalPagerState.currentPage != 0) {
-                                verticalPagerState.animateScrollToPage(0)
+                                verticalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
                             }
                         }
                     }
                 }
 
-                BackHandler(enabled = true) {
+                val isOnMainScreen by remember {
+                    derivedStateOf {
+                        horizontalPagerState.currentPage == 0 &&
+                        verticalPagerState.currentPage == 0 &&
+                        horizontalPagerState.targetPage == 0 &&
+                        verticalPagerState.targetPage == 0
+                    }
+                }
+
+                val isDefaultLauncher = viewModel.isDefaultLauncher()
+                val shouldEnableBack = !isOnMainScreen || !isDefaultLauncher
+
+                BackHandler(enabled = shouldEnableBack) {
                     scope.launch {
                         if (horizontalPagerState.currentPage != 0) {
-                            horizontalPagerState.animateScrollToPage(0)
+                            horizontalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
                         } else if (verticalPagerState.currentPage != 0) {
-                            verticalPagerState.animateScrollToPage(0)
-                        } else {
-                            if (!viewModel.isDefaultLauncher()) {
-                                moveTaskToBack(true)
-                            }
+                            verticalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
+                        } else if (!viewModel.isDefaultLauncher()) {
+                            finish()
                         }
                     }
                 }
@@ -170,20 +183,6 @@ class MainActivity : ComponentActivity() {
 
                 LaunchedEffect(verticalPagerState.currentPage, horizontalPagerState.currentPage) {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                }
-
-                // True only when the Main screen is the settled/active page of both pagers.
-                // Used as a key for gesture pointerInputs so any in-progress gesture is
-                // cancelled (its coroutine is disposed) the moment we navigate away —
-                // preventing e.g. a long-press-into-settings from leaking a swipe-down
-                // into the notification panel.
-                val isOnMainScreen by remember {
-                    derivedStateOf {
-                        horizontalPagerState.currentPage == 0 &&
-                        verticalPagerState.currentPage == 0 &&
-                        horizontalPagerState.targetPage == 0 &&
-                        verticalPagerState.targetPage == 0
-                    }
                 }
 
                 Surface(
@@ -215,11 +214,11 @@ class MainActivity : ComponentActivity() {
                                                 menuSource = "history_or_favorites" 
                                             },
                                             onSwipeUp = {
-                                                scope.launch { verticalPagerState.animateScrollToPage(1) }
+                                                scope.launch { verticalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec) }
                                             },
                                             onSwipeDown = ::openNotifications,
                                             onSettingsClick = {
-                                                scope.launch { horizontalPagerState.animateScrollToPage(1) }
+                                                scope.launch { horizontalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec) }
                                             }
                                         )
                                     } else {
@@ -230,7 +229,7 @@ class MainActivity : ComponentActivity() {
                                                     detectTapGestures(
                                                         onLongPress = {
                                                             scope.launch {
-                                                                horizontalPagerState.animateScrollToPage(1)
+                                                                horizontalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec)
                                                             }
                                                         }
                                                     )
@@ -250,7 +249,7 @@ class MainActivity : ComponentActivity() {
                                                                 if (isBackGesture) {
                                                                     navigated = true
                                                                     scope.launch {
-                                                                        verticalPagerState.animateScrollToPage(0)
+                                                                        verticalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
                                                                     }
                                                                 }
                                                             }
@@ -350,6 +349,26 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshApps()
+        viewModel.requestReset()
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (!viewModel.isDefaultLauncher()) {
+            finish()
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (!viewModel.isDefaultLauncher()) {
+            finish()
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(packageReceiver)
@@ -358,6 +377,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        if (intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_HOME)) {
+            if (!viewModel.isDefaultLauncher()) {
+                finish()
+                return
+            }
+        }
         viewModel.requestReset()
     }
 
