@@ -19,6 +19,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -286,12 +287,11 @@ class MainActivity : ComponentActivity() {
                             AppActionMenu(
                                 app = app,
                                 isFavorite = viewModel.isFavorite(componentKey),
-                                showRemoveFromHistory = menuSource == "history_or_favorites",
                                 offset = menuOffset,
                                 onDismiss = { showActionMenuFor = null },
                                 onToggleFavorite = { viewModel.toggleFavorite(componentKey) },
                                 onUninstall = { uninstallApp(app.packageName) },
-                                onRemoveFromHistory = { viewModel.removeFromHistory(componentKey) },
+                                onInfo = { openAppInfo(app.packageName) },
                                 onRename = { showRenameDialogFor = app },
                                 onTagsClick = { showTagDialogFor = app },
                                 accentColor = accentColor
@@ -409,6 +409,23 @@ class MainActivity : ComponentActivity() {
             startActivity(uninstallIntent)
         } catch (e: Exception) {
             Toast.makeText(this, "Could not open uninstaller", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Launches the system application details settings intent to open App Info for the specified package.
+     *
+     * @param packageName The application package name.
+     */
+    private fun openAppInfo(packageName: String) {
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", packageName, null)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Could not open app info", Toast.LENGTH_SHORT).show()
         }
     }
 
