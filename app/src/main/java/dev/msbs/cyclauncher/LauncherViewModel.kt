@@ -10,6 +10,7 @@ import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
 import android.app.Application
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -302,22 +303,130 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      * @return True if Cyclauncher is default, false otherwise.
      */
     fun isDefaultLauncher(): Boolean {
+        val context = getApplication<Application>()
         val intent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }
-        val resolveInfo = getApplication<Application>().packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
-        return resolveInfo?.activityInfo?.packageName == getApplication<Application>().packageName
+        val resolveInfo = context.packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+        if (resolveInfo?.activityInfo?.packageName == context.packageName) {
+            return true
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            val roleManager = context.getSystemService(android.app.role.RoleManager::class.java)
+            if (roleManager != null && roleManager.isRoleAvailable(android.app.role.RoleManager.ROLE_HOME)) {
+                if (roleManager.isRoleHeld(android.app.role.RoleManager.ROLE_HOME)) {
+                    return true
+                }
+            }
+        }
+        return false
     }
 
     /**
-     * Opens system settings to choose the default launcher application.
+     * Resolves the current default device launcher package name if it is not Cyclauncher.
      */
-    fun openDefaultLauncherSettings() {
-        val intent = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            Intent(android.provider.Settings.ACTION_HOME_SETTINGS)
-        } else {
-            Intent(android.provider.Settings.ACTION_SETTINGS)
+    fun getDefaultLauncherPackage(): String? {
+        val context = getApplication<Application>()
+        val intent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }
+        val resolveInfo = context.packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+        val pkg = resolveInfo?.activityInfo?.packageName
+        return if (pkg != context.packageName) pkg else null
+    }
+
+    /**
+     * Navigates out of Cyclauncher to the system default home launcher screen.
+     */
+    fun exitToSystemHome(context: Context) {
+        val defaultPkg = getDefaultLauncherPackage()
+        if (defaultPkg != null) {
+            val launchIntent = context.packageManager.getLaunchIntentForPackage(defaultPkg)
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                try {
+                    context.startActivity(launchIntent)
+                    return
+                } catch (e: Exception) {
+                    // fallback below
+                }
+            }
         }
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        getApplication<Application>().startActivity(intent)
+
+        // Generic HOME intent fallback
+        try {
+            val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_HOME)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(homeIntent)
+            return
+        } catch (e: Exception) {
+            // fallback below
+        }
+
+        val activity = context as? android.app.Activity
+        if (activity != null) {
+            if (!activity.moveTaskToBack(true)) {
+                activity.finish()
+            }
+        }
+    }
+
+    /**
+     * Opens system settings to choose the default home launcher application.
+     * Follows Lawnchair / AOSP Launcher3 standard intent resolution cascade.
+     */
+    fun openDefaultLauncherSettings(context: Context) {
+        val activity = context as? android.app.Activity
+
+        // 1. Primary standard: ACTION_HOME_SETTINGS (supported across Android 7 - 15)
+        val homeSettingsIntent = Intent(android.provider.Settings.ACTION_HOME_SETTINGS)
+        if (activity == null) {
+            homeSettingsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
+            if (activity != null) {
+                activity.startActivity(homeSettingsIntent)
+            } else {
+                context.startActivity(homeSettingsIntent)
+            }
+            return
+        } catch (e: Exception) {
+            // Fallback to RoleManager or generic settings if OEM overrides ACTION_HOME_SETTINGS
+        }
+
+        // 2. Secondary fallback: RoleManager (Android 10 - 12)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            try {
+                val roleManager = context.getSystemService(android.app.role.RoleManager::class.java)
+                if (roleManager != null && roleManager.isRoleAvailable(android.app.role.RoleManager.ROLE_HOME)) {
+                    val roleIntent = roleManager.createRequestRoleIntent(android.app.role.RoleManager.ROLE_HOME)
+                    if (activity == null) {
+                        roleIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    if (activity != null) {
+                        activity.startActivity(roleIntent)
+                    } else {
+                        context.startActivity(roleIntent)
+                    }
+                    return
+                }
+            } catch (e: Exception) {
+                // Fallback to generic Settings below
+            }
+        }
+
+        // 3. Ultimate fallback: System Settings
+        val fallbackIntent = Intent(android.provider.Settings.ACTION_SETTINGS)
+        if (activity == null) {
+            fallbackIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
+            if (activity != null) {
+                activity.startActivity(fallbackIntent)
+            } else {
+                context.startActivity(fallbackIntent)
+            }
+        } catch (e: Exception) {
+            // Ignore
+        }
     }
 
     /** Opens the external Tribute contribution/support page in a browser. */

@@ -13,6 +13,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.positionChange
@@ -79,6 +80,13 @@ fun MainMenuScreen(
     var isReorderMode by remember { mutableStateOf(false) }
     var isHistoryEditMode by remember { mutableStateOf(false) }
 
+    LaunchedEffect(isActive) {
+        if (!isActive) {
+            isReorderMode = false
+            isHistoryEditMode = false
+        }
+    }
+
     val isAnyEditMode = isReorderMode || isHistoryEditMode
     val currentOnSettingsClick by rememberUpdatedState(onSettingsClick)
     val currentOnSwipeUp by rememberUpdatedState(onSwipeUp)
@@ -89,53 +97,26 @@ fun MainMenuScreen(
             .fillMaxSize()
             .pointerInput(isActive, isAnyEditMode) {
                 if (!isActive || isAnyEditMode) return@pointerInput
-                val swipeThreshold = 40f
-
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = true, pass = PointerEventPass.Main)
-                    var totalDragY = 0f
-                    var isSwipeAction = false
-                    var longPressTriggered = false
-                    val downTime = System.currentTimeMillis()
-
-                    while (true) {
-                        val event = awaitPointerEvent(pass = PointerEventPass.Main)
-                        val changes = event.changes
-
-                        // If a child component (app icon, text, button) consumed the touch, cancel background gestures
-                        if (changes.any { it.isConsumed }) {
-                            return@awaitEachGesture
-                        }
-
-                        if (changes.any { it.changedToUp() }) {
-                            if (!isSwipeAction && !longPressTriggered && (System.currentTimeMillis() - downTime >= 500)) {
-                                currentOnSettingsClick()
-                            }
-                            break
-                        }
-
-                        val dragAmount = changes.firstOrNull()?.positionChange()?.y ?: 0f
-                        totalDragY += dragAmount
-
-                        if (kotlin.math.abs(totalDragY) > swipeThreshold) {
-                            isSwipeAction = true
-                            changes.forEach { it.consume() }
-                        }
-
-                        if (!isSwipeAction && !longPressTriggered && (System.currentTimeMillis() - downTime >= 500)) {
-                            longPressTriggered = true
-                            currentOnSettingsClick()
-                        }
-                    }
-
-                    if (isSwipeAction) {
-                        if (totalDragY < 0) {
+                detectTapGestures(
+                    onLongPress = { currentOnSettingsClick() }
+                )
+            }
+            .pointerInput(isActive, isAnyEditMode) {
+                if (!isActive || isAnyEditMode) return@pointerInput
+                var totalDragY = 0f
+                detectVerticalDragGestures(
+                    onDragStart = { totalDragY = 0f },
+                    onDragEnd = {
+                        if (totalDragY < -50f) {
                             currentOnSwipeUp()
-                        } else {
+                        } else if (totalDragY > 50f) {
                             currentOnSwipeDown()
                         }
+                    },
+                    onVerticalDrag = { _, dragAmount ->
+                        totalDragY += dragAmount
                     }
-                }
+                )
             }
     ) {
         Row(
@@ -341,7 +322,8 @@ private fun HistorySection(
             state = listState,
             verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.Bottom),
             modifier = Modifier.fillMaxWidth(),
-            reverseLayout = true
+            reverseLayout = true,
+            userScrollEnabled = isHistoryEditMode
         ) {
             items(history, key = { "${it.packageName}/${it.activityName}" }) { app ->
                 val appKey = "${app.packageName}/${app.activityName}"
@@ -462,7 +444,8 @@ private fun FavoritesSection(
                 modifier = Modifier.weight(1f, fill = false),
                 verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Bottom),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                reverseLayout = true
+                reverseLayout = true,
+                userScrollEnabled = isReorderMode
             ) {
                 itemsIndexed(favorites, key = { _, app -> "${app.packageName}/${app.activityName}" }) { index, app ->
                     val appKey = "${app.packageName}/${app.activityName}"
