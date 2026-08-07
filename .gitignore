@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Built application files
 *.apk
 *.ap_
@@ -42,3 +43,5 @@ signing.properties
 # OS generated files
 .DS_Store
 Thumbs.db
+=======
+>>>>>>> 56fc25e43ca540427b147c5e98a8fadc6a19ac49
