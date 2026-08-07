@@ -11,16 +11,21 @@ enum class AccentColor(
     val color: Color,
     val glowColor: Color
 ) {
-    SKY("Sky Blue", Color(0xFF38BDF8), Color(0x3338BDF8)),
-    LAVENDER("Lavender", Color(0xFFA78BFA), Color(0x33A78BFA)),
-    MINT("Mint", Color(0xFF2DD4BF), Color(0x332DD4BF)),
-    ROSE("Rose", Color(0xFFFB7185), Color(0x33FB7185)),
-    PEACH("Peach", Color(0xFFFB923C), Color(0x33FB923C)),
-    AMBER("Amber", Color(0xFFFBBF24), Color(0x33FBBF24)),
-    LIME("Lime", Color(0xFFA3E635), Color(0x33A3E635)),
-    INDIGO("Indigo", Color(0xFF818CF8), Color(0x33818CF8)),
-    FUCHSIA("Fuchsia", Color(0xFFE879F9), Color(0x33E879F9)),
-    SNOW("Snow", Color(0xFFF1F5F9), Color(0x33F1F5F9));
+    // Light Variants (Left column)
+    SKY("Sapphire", Color(0xFF74C7EC), Color(0x3374C7EC)),
+    LAVENDER("Lavender", Color(0xFFB4BEFE), Color(0x33B4BEFE)),
+    MINT("Emerald Mint", Color(0xFF94E2D5), Color(0x3394E2D5)),
+    ROSE("Flamingo", Color(0xFFF2CDCD), Color(0x33F2CDCD)),
+    PEACH("Peach", Color(0xFFFAB387), Color(0x33FAB387)),
+    SNOW("White", Color(0xFFFFFFFF), Color(0x33FFFFFF)),
+
+    // Dark Variants (Right column)
+    DARK_SKY("Royal Blue", Color(0xFF1E66F5), Color(0x331E66F5)),
+    DARK_LAVENDER("Deep Mauve", Color(0xFF8839EF), Color(0x338839EF)),
+    DARK_MINT("Nordic Teal", Color(0xFF179299), Color(0x33179299)),
+    DARK_ROSE("Maroon", Color(0xFFE64553), Color(0x33E64553)),
+    DARK_PEACH("Burnt Amber", Color(0xFFFE640B), Color(0x33FE640B)),
+    DARK_SLATE("Dark Slate", Color(0xFF18181B), Color(0x3318181B));
 
     companion object {
         /**

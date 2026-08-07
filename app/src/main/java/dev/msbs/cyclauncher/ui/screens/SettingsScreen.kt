@@ -351,13 +351,35 @@ private fun SettingsRow(label: String, textColor: Color = Color.White, shadow: S
 @Composable
 private fun AccentColorDropdown(selectedColor: AccentColor, primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE, onSelect: (AccentColor) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
+    val colorPairs = remember {
+        listOf(
+            AccentColor.SKY to AccentColor.DARK_SKY,
+            AccentColor.LAVENDER to AccentColor.DARK_LAVENDER,
+            AccentColor.MINT to AccentColor.DARK_MINT,
+            AccentColor.ROSE to AccentColor.DARK_ROSE,
+            AccentColor.PEACH to AccentColor.DARK_PEACH,
+            AccentColor.SNOW to AccentColor.DARK_SLATE,
+        )
+    }
+
     Box {
         Row(
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(primaryTextColor.color.copy(alpha = 0.1f)).clickable { expanded = true }.padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(primaryTextColor.color.copy(alpha = 0.1f))
+                .clickable { expanded = true }
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(selectedColor.color).border(1.dp, primaryTextColor.color.copy(alpha = 0.2f), CircleShape))
+            Box(
+                modifier = Modifier
+                    .size(20.dp)
+                    .clip(CircleShape)
+                    .background(selectedColor.color)
+                    .border(1.dp, primaryTextColor.color.copy(alpha = 0.2f), CircleShape)
+            )
             Icon(
                 imageVector = Icons.Outlined.KeyboardArrowDown,
                 contentDescription = null,
@@ -365,9 +387,52 @@ private fun AccentColorDropdown(selectedColor: AccentColor, primaryTextColor: Pr
                 modifier = Modifier.size(20.dp)
             )
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.width(60.dp).background(Color(0xFF2D2D2D))) {
-            AccentColor.entries.forEach { color ->
-                DropdownMenuItem(text = { Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(color.color)) }, onClick = { onSelect(color); expanded = false }, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp))
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.width(96.dp).background(Color(0xFF2D2D2D))
+        ) {
+            colorPairs.forEach { (light, dark) ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Light Variant (Left)
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(light.color)
+                            .border(
+                                width = if (selectedColor == light) 2.dp else 1.dp,
+                                color = if (selectedColor == light) Color.White else primaryTextColor.color.copy(alpha = 0.2f),
+                                shape = CircleShape
+                            )
+                            .clickable {
+                                onSelect(light)
+                                expanded = false
+                            }
+                    )
+                    // Dark Variant (Right)
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(dark.color)
+                            .border(
+                                width = if (selectedColor == dark) 2.dp else 1.dp,
+                                color = if (selectedColor == dark) Color.White else primaryTextColor.color.copy(alpha = 0.2f),
+                                shape = CircleShape
+                            )
+                            .clickable {
+                                onSelect(dark)
+                                expanded = false
+                            }
+                    )
+                }
             }
         }
     }
