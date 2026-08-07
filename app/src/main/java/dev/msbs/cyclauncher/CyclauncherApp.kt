@@ -46,14 +46,19 @@ class CyclauncherApp : Application(), SingletonImageLoader.Factory {
         return loader
     }
 
+    @Suppress("DEPRECATION")
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        // If the UI is hidden (app goes to background) or memory is critical, clear the memory cache.
-        if (level >= TRIM_MEMORY_UI_HIDDEN) {
+        // Clear memory cache only under severe memory pressure or system low memory.
+        // We preserve the memory cache when TRIM_MEMORY_UI_HIDDEN is received so returning to
+        // the launcher home screen renders cached app icons instantly without loading delays.
+        if (level >= TRIM_MEMORY_COMPLETE || level >= TRIM_MEMORY_RUNNING_CRITICAL) {
             imageLoader?.memoryCache?.clear()
-            // Force the Garbage Collector to run immediately, reclaiming all memory allocated 
-            // by native bitmaps and wrapper objects, dropping background PSS footprint instantly.
             System.gc()
+        } else if (level >= TRIM_MEMORY_MODERATE) {
+            imageLoader?.memoryCache?.let { cache ->
+                cache.trimToSize(cache.size / 2)
+            }
         }
     }
 
