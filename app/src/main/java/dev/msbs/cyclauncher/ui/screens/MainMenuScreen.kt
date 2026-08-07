@@ -92,15 +92,20 @@ fun MainMenuScreen(
                 val swipeThreshold = 40f
 
                 awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    val down = awaitFirstDown(requireUnconsumed = true, pass = PointerEventPass.Main)
                     var totalDragY = 0f
                     var isSwipeAction = false
                     var longPressTriggered = false
                     val downTime = System.currentTimeMillis()
 
                     while (true) {
-                        val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                        val event = awaitPointerEvent(pass = PointerEventPass.Main)
                         val changes = event.changes
+
+                        // If a child component (app icon, text, button) consumed the touch, cancel background gestures
+                        if (changes.any { it.isConsumed }) {
+                            return@awaitEachGesture
+                        }
 
                         if (changes.any { it.changedToUp() }) {
                             if (!isSwipeAction && !longPressTriggered && (System.currentTimeMillis() - downTime >= 500)) {
