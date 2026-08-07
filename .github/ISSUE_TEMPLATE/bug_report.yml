@@ -1,0 +1,38 @@
+name: Bug Report
+description: Create a report to help us improve Cyclauncher
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe the bug...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce this issue?
+      placeholder: |
+        1. Open Cyclauncher
+        2. Long-press an app...
+        3. See error
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device Model & OS
+      placeholder: e.g. Google Pixel 8, Android 14
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Screenshots
+      description: Paste any logcat stack traces or drag & drop screenshots here.
+    validations:
+      required: false
