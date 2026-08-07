@@ -48,29 +48,32 @@ fun AutoResizingText(
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     showShadows: Boolean = false
 ) {
-    var fontSize by remember(text) { mutableStateOf(targetFontSize.sp) }
-    var readyToDraw by remember(text) { mutableStateOf(false) }
-
     val shadow = primaryTextColor.getShadow(showShadows)
 
-    Text(
-        text = text,
-        color = if (readyToDraw) primaryTextColor.color else Color.Transparent,
-        modifier = modifier,
-        textAlign = textAlign,
-        fontSize = fontSize,
-        maxLines = 1,
-        overflow = TextOverflow.Clip,
-        softWrap = false,
-        onTextLayout = { textLayoutResult ->
-            if (textLayoutResult.hasVisualOverflow && fontSize.value > 8f) {
-                fontSize = (fontSize.value * 0.9f).sp
-            } else {
-                readyToDraw = true
-            }
-        },
-        style = MaterialTheme.typography.bodyLarge.copy(shadow = shadow)
-    )
+    BoxWithConstraints(modifier = modifier) {
+        val containerWidth = maxWidth
+        var fontSize by remember(text, targetFontSize, containerWidth) { mutableStateOf(targetFontSize.sp) }
+        var readyToDraw by remember(text, targetFontSize, containerWidth) { mutableStateOf(false) }
+
+        Text(
+            text = text,
+            color = if (readyToDraw) primaryTextColor.color else Color.Transparent,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = textAlign,
+            fontSize = fontSize,
+            maxLines = 1,
+            overflow = TextOverflow.Clip,
+            softWrap = false,
+            onTextLayout = { textLayoutResult ->
+                if (textLayoutResult.hasVisualOverflow && fontSize.value > 8f) {
+                    fontSize = (fontSize.value * 0.9f).sp
+                } else {
+                    readyToDraw = true
+                }
+            },
+            style = MaterialTheme.typography.bodyLarge.copy(shadow = shadow)
+        )
+    }
 }
 
 /**

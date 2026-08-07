@@ -31,17 +31,16 @@ import androidx.compose.ui.window.PopupProperties
 import kotlin.math.roundToInt
 
 /**
- * A popup context menu offering actions for a specific application (e.g. favorite toggle, uninstall, tag management).
+ * A popup context menu offering actions for a specific application (e.g. favorite toggle, uninstall, tag management, system info).
  * Correctly repositions itself to avoid screen boundary clipping.
  *
  * @param app The application metadata info.
  * @param isFavorite Current favorite status of the application.
- * @param showRemoveFromHistory True if "Remove from History" option should be shown.
  * @param offset The touch input position where the menu was triggered.
  * @param onDismiss Callback to close the menu.
  * @param onToggleFavorite Callback when the user toggles favorite status.
  * @param onUninstall Callback when the user requests to uninstall the application.
- * @param onRemoveFromHistory Callback when the user requests to remove the application from history.
+ * @param onInfo Callback when the user requests to view system app info.
  * @param onRename Callback when the user requests to rename the application.
  * @param onTagsClick Callback when the user requests to manage application tags.
  * @param accentColor The active theme accent color.
@@ -50,12 +49,11 @@ import kotlin.math.roundToInt
 fun AppActionMenu(
     app: AppInfo,
     isFavorite: Boolean,
-    showRemoveFromHistory: Boolean = false,
     offset: Offset,
     onDismiss: () -> Unit,
     onToggleFavorite: () -> Unit,
     onUninstall: () -> Unit,
-    onRemoveFromHistory: () -> Unit = {},
+    onInfo: () -> Unit,
     onRename: () -> Unit,
     onTagsClick: () -> Unit,
     accentColor: AccentColor = AccentColor.SKY
@@ -69,7 +67,7 @@ fun AppActionMenu(
     val menuWidth = 240.dp
     val menuWidthPx = with(density) { menuWidth.toPx() }
     
-    val itemsCount = if (showRemoveFromHistory) { 5 } else { 4 }
+    val itemsCount = 5
     val menuHeightPx = with(density) { (60 + itemsCount * 48).dp.toPx() }
     val borderPadding = with(density) { 16.dp.toPx() }
 
@@ -114,18 +112,6 @@ fun AppActionMenu(
                     }
                 )
 
-                if (showRemoveFromHistory) {
-                    MenuItem(
-                        text = "Remove from History",
-                        icon = Icons.Outlined.History,
-                        accentColor = accentColor,
-                        onClick = {
-                            onRemoveFromHistory()
-                            onDismiss()
-                        }
-                    )
-                }
-
                 MenuItem(
                     text = "Manage Tags",
                     icon = Icons.AutoMirrored.Outlined.Label,
@@ -137,7 +123,7 @@ fun AppActionMenu(
                 )
 
                 MenuItem(
-                    text = "Rename App",
+                    text = "Rename",
                     icon = Icons.Outlined.Edit,
                     accentColor = accentColor,
                     onClick = {
@@ -147,7 +133,17 @@ fun AppActionMenu(
                 )
 
                 MenuItem(
-                    text = "Uninstall App",
+                    text = "Info",
+                    icon = Icons.Outlined.Info,
+                    accentColor = accentColor,
+                    onClick = {
+                        onInfo()
+                        onDismiss()
+                    }
+                )
+
+                MenuItem(
+                    text = "Uninstall",
                     icon = Icons.Outlined.Delete,
                     accentColor = accentColor,
                     onClick = {

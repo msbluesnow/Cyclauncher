@@ -45,7 +45,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
-import kotlinx.coroutines.launch
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.outlined.Close
 
 /**
  * The default launcher home screen, hosting favorite application shortcuts and a scrollable recent launch history list.
@@ -75,65 +76,149 @@ fun MainMenuScreen(
     val showShadows by viewModel.showShadows.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
-
     var isReorderMode by remember { mutableStateOf(false) }
+    var isHistoryEditMode by remember { mutableStateOf(false) }
 
-    Row(
+    val isAnyEditMode = isReorderMode || isHistoryEditMode
+    val currentOnSettingsClick by rememberUpdatedState(onSettingsClick)
+    val currentOnSwipeUp by rememberUpdatedState(onSwipeUp)
+    val currentOnSwipeDown by rememberUpdatedState(onSwipeDown)
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(24.dp)
-    ) {
-        val favoritesWeight = 1f
-        val historyWeight = 1.2f
+            .pointerInput(isActive, isAnyEditMode) {
+                if (!isActive || isAnyEditMode) return@pointerInput
+                val swipeThreshold = 40f
 
-        if (handSide == HandSide.LEFT) {
-            FavoritesSection(
-                Modifier.weight(favoritesWeight),
-                favorites,
-                accentColor,
-                primaryTextColor,
-                showShadows,
-                isReorderMode,
-                { isReorderMode = it },
-                { from, to -> viewModel.reorderFavorites(from, to) },
-                { viewModel.toggleFavorite(it) },
-                onAppClick,
-                onAppLongClick,
-                onSwipeUp,
-                onSwipeDown,
-                onSettingsClick,
-                isActive
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            HistorySection(Modifier.weight(historyWeight), history, handSide, primaryTextColor, showShadows, accentColor, onAppClick, onAppLongClick, onSettingsClick, isActive)
-        } else {
-            HistorySection(Modifier.weight(historyWeight), history, handSide, primaryTextColor, showShadows, accentColor, onAppClick, onAppLongClick, onSettingsClick, isActive)
-            Spacer(modifier = Modifier.width(16.dp))
-            FavoritesSection(
-                Modifier.weight(favoritesWeight),
-                favorites,
-                accentColor,
-                primaryTextColor,
-                showShadows,
-                isReorderMode,
-                { isReorderMode = it },
-                { from, to -> viewModel.reorderFavorites(from, to) },
-                { viewModel.toggleFavorite(it) },
-                onAppClick,
-                onAppLongClick,
-                onSwipeUp,
-                onSwipeDown,
-                onSettingsClick,
-                isActive
-            )
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    var totalDragY = 0f
+                    var isSwipeAction = false
+                    var longPressTriggered = false
+                    val downTime = System.currentTimeMillis()
+
+                    while (true) {
+                        val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                        val changes = event.changes
+
+                        if (changes.any { it.changedToUp() }) {
+                            if (!isSwipeAction && !longPressTriggered && (System.currentTimeMillis() - downTime >= 500)) {
+                                currentOnSettingsClick()
+                            }
+                            break
+                        }
+
+                        val dragAmount = changes.firstOrNull()?.positionChange()?.y ?: 0f
+                        totalDragY += dragAmount
+
+                        if (kotlin.math.abs(totalDragY) > swipeThreshold) {
+                            isSwipeAction = true
+                            changes.forEach { it.consume() }
+                        }
+
+                        if (!isSwipeAction && !longPressTriggered && (System.currentTimeMillis() - downTime >= 500)) {
+                            longPressTriggered = true
+                            currentOnSettingsClick()
+                        }
+                    }
+
+                    if (isSwipeAction) {
+                        if (totalDragY < 0) {
+                            currentOnSwipeUp()
+                        } else {
+                            currentOnSwipeDown()
+                        }
+                    }
+                }
+            }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(24.dp)
+        ) {
+            val favoritesWeight = 1f
+            val historyWeight = 1.2f
+
+            if (handSide == HandSide.LEFT) {
+                FavoritesSection(
+                    Modifier.weight(favoritesWeight),
+                    favorites,
+                    accentColor,
+                    primaryTextColor,
+                    showShadows,
+                    isReorderMode,
+                    { isReorderMode = it },
+                    { from, to -> viewModel.reorderFavorites(from, to) },
+                    { viewModel.toggleFavorite(it) },
+                    onAppClick,
+                    onAppLongClick,
+                    onSwipeUp,
+                    onSwipeDown,
+                    onSettingsClick,
+                    isActive
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                HistorySection(
+                    Modifier.weight(historyWeight),
+                    history,
+                    handSide,
+                    primaryTextColor,
+                    showShadows,
+                    accentColor,
+                    isHistoryEditMode,
+                    { isHistoryEditMode = it },
+                    { viewModel.removeFromHistory(it) },
+                    onAppClick,
+                    onAppLongClick,
+                    onSettingsClick,
+                    isActive
+                )
+            } else {
+                HistorySection(
+                    Modifier.weight(historyWeight),
+                    history,
+                    handSide,
+                    primaryTextColor,
+                    showShadows,
+                    accentColor,
+                    isHistoryEditMode,
+                    { isHistoryEditMode = it },
+                    { viewModel.removeFromHistory(it) },
+                    onAppClick,
+                    onAppLongClick,
+                    onSettingsClick,
+                    isActive
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                FavoritesSection(
+                    Modifier.weight(favoritesWeight),
+                    favorites,
+                    accentColor,
+                    primaryTextColor,
+                    showShadows,
+                    isReorderMode,
+                    { isReorderMode = it },
+                    { from, to -> viewModel.reorderFavorites(from, to) },
+                    { viewModel.toggleFavorite(it) },
+                    onAppClick,
+                    onAppLongClick,
+                    onSwipeUp,
+                    onSwipeDown,
+                    onSettingsClick,
+                    isActive
+                )
+            }
         }
     }
 }
 
 /**
  * Renders the launch history list of applications. Displays recently used apps.
+ * Supports toggle edit mode via long-pressing the history icon to remove items from history.
  *
  * @param modifier Modifier for UI configurations.
  * @param history The list of recently launched applications.
@@ -141,6 +226,9 @@ fun MainMenuScreen(
  * @param primaryTextColor User selected primary text color.
  * @param showShadows Whether to apply drop shadows.
  * @param accentColor Theme accent color.
+ * @param isHistoryEditMode True if history edit mode is active.
+ * @param setHistoryEditMode Callback to toggle history edit mode.
+ * @param onRemoveFromHistory Callback when a history item is removed.
  * @param onAppClick Callback when a history item is clicked.
  * @param onAppLongClick Callback when a history item is long-pressed.
  * @param onSettingsClick Callback to transition to the Settings screen on empty space tap.
@@ -154,55 +242,94 @@ private fun HistorySection(
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
     accentColor: AccentColor,
+    isHistoryEditMode: Boolean,
+    setHistoryEditMode: (Boolean) -> Unit,
+    onRemoveFromHistory: (String) -> Unit,
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit,
     onSettingsClick: () -> Unit,
     isActive: Boolean
 ) {
+    val haptic = LocalHapticFeedback.current
     val shadow = primaryTextColor.getShadow(showShadows)
 
     val listState = rememberLazyListState()
     val currentOnSettingsClick by rememberUpdatedState(onSettingsClick)
 
-    // Whenever the Main screen becomes active again (e.g. the user navigated away
-    // and came back), scroll the history list back to the bottom so the most
-    // recently opened apps remain visible. With reverseLayout = true, index 0 is
-    // the newest app and sits at the bottom of the visible area.
+    // Reset history edit mode if user navigates away
     LaunchedEffect(isActive) {
-        if (isActive && history.isNotEmpty()) {
+        if (!isActive) {
+            setHistoryEditMode(false)
+        } else if (history.isNotEmpty()) {
             listState.scrollToItem(0)
         }
     }
 
     Column(
-        modifier = modifier
-            .fillMaxHeight()
-            .pointerInput(isActive) {
-                detectTapGestures(onLongPress = { currentOnSettingsClick() })
-            },
+        modifier = modifier.fillMaxHeight(),
         verticalArrangement = Arrangement.Bottom,
         horizontalAlignment = if (handSide == HandSide.LEFT) Alignment.End else Alignment.Start
     ) {
         Box(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .pointerInput(isHistoryEditMode) {
+                    detectTapGestures(
+                        onLongPress = {
+                            if (!isHistoryEditMode) {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                setHistoryEditMode(true)
+                            }
+                        },
+                        onTap = {
+                            if (isHistoryEditMode) {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                setHistoryEditMode(false)
+                            }
+                        }
+                    )
+                },
             contentAlignment = if (handSide == HandSide.LEFT) Alignment.CenterEnd else Alignment.CenterStart
         ) {
-            if (showShadows) {
-                Icon(
-                    imageVector = Icons.Outlined.History,
-                    contentDescription = null,
-                    tint = primaryTextColor.shadowColor,
-                    modifier = Modifier
-                        .size(22.dp)
-                        .offset(1.dp, 1.dp)
-                )
+            if (isHistoryEditMode) {
+                Box(contentAlignment = Alignment.Center) {
+                    if (showShadows) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null,
+                            tint = Color.Black.copy(alpha = 0.6f),
+                            modifier = Modifier
+                                .size(22.dp)
+                                .offset(1.dp, 1.dp)
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Exit History Edit Mode",
+                        tint = accentColor.color,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            } else {
+                Box(contentAlignment = Alignment.Center) {
+                    if (showShadows) {
+                        Icon(
+                            imageVector = Icons.Outlined.History,
+                            contentDescription = null,
+                            tint = primaryTextColor.shadowColor,
+                            modifier = Modifier
+                                .size(22.dp)
+                                .offset(1.dp, 1.dp)
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Outlined.History,
+                        contentDescription = "History",
+                        tint = accentColor.color,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
-            Icon(
-                imageVector = Icons.Outlined.History,
-                contentDescription = "History",
-                tint = accentColor.color,
-                modifier = Modifier.size(22.dp)
-            )
         }
         Spacer(modifier = Modifier.height(16.dp))
         LazyColumn(
@@ -212,16 +339,45 @@ private fun HistorySection(
             reverseLayout = true
         ) {
             items(history, key = { "${it.packageName}/${it.activityName}" }) { app ->
-                AppListItemWithIcon(
-                    app = app,
-                    handSide = if (handSide == HandSide.LEFT) HandSide.RIGHT else HandSide.LEFT,
-                    iconSize = 44,
-                    fontSize = 20,
-                    onClick = { onAppClick("${app.packageName}/${app.activityName}") },
-                    onLongClick = { offset -> onAppLongClick(app, offset) },
-                    primaryTextColor = primaryTextColor,
-                    showShadows = showShadows
-                )
+                val appKey = "${app.packageName}/${app.activityName}"
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = if (handSide == HandSide.LEFT) Arrangement.End else Arrangement.Start,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (isHistoryEditMode) {
+                        IconButton(
+                            onClick = { onRemoveFromHistory(appKey) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.RemoveCircle,
+                                contentDescription = "Remove from History",
+                                tint = Color.Red.copy(alpha = 0.8f)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+
+                    AppListItemWithIcon(
+                        app = app,
+                        handSide = if (handSide == HandSide.LEFT) HandSide.RIGHT else HandSide.LEFT,
+                        iconSize = 44,
+                        fontSize = 20,
+                        onClick = {
+                            if (!isHistoryEditMode) {
+                                onAppClick(appKey)
+                            }
+                        },
+                        onLongClick = { offset ->
+                            if (!isHistoryEditMode) {
+                                onAppLongClick(app, offset)
+                            }
+                        },
+                        primaryTextColor = primaryTextColor,
+                        showShadows = showShadows
+                    )
+                }
             }
         }
     }
@@ -287,44 +443,7 @@ private fun FavoritesSection(
     }
 
     Box(
-        modifier = modifier
-            .fillMaxHeight()
-            .pointerInput(isReorderMode, isActive) {
-                if (isReorderMode) return@pointerInput
-                val swipeThreshold = 40f
-
-                awaitEachGesture {
-                    // Wait for first pointer down on Initial pass
-                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                    var totalDragY = 0f
-                    var isSwipeAction = false
-
-                    while (true) {
-                        val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                        val changes = event.changes
-                        if (changes.any { it.changedToUp() }) {
-                            break
-                        }
-                        
-                        val dragAmount = changes.firstOrNull()?.positionChange()?.y ?: 0f
-                        totalDragY += dragAmount
-
-                        // If user has dragged past threshold, consume and handle
-                        if (kotlin.math.abs(totalDragY) > swipeThreshold) {
-                            isSwipeAction = true
-                            changes.forEach { it.consume() }
-                        }
-                    }
-
-                    if (isSwipeAction) {
-                        if (totalDragY < 0) {
-                            currentOnSwipeUp()
-                        } else {
-                            currentOnSwipeDown()
-                        }
-                    }
-                }
-            },
+        modifier = modifier.fillMaxHeight(),
         contentAlignment = Alignment.Center
     ) {
         Column(
