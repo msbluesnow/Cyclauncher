@@ -1,15 +1,44 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
+# Built application files
+*.apk
+*.ap_
+*.aab
+*.dex
+app/release/
+
+# Build artifacts
+*.class
 /build
+/app/build
+.gradle/
 /captures
 .externalNativeBuild
-.cxx
+.cxx/
+
+# Local configuration & environment
 local.properties
+signing.properties
+
+# Android Studio / IntelliJ IDEA
+*.iml
+.idea/caches
+.idea/libraries
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/deploymentTargetSelector.xml
+.idea/deviceManager.xml
+.idea/planningMode.xml
+.idea/studiobot.xml
+.idea/appInsightsSettings.xml
+.idea/shelf/
+.idea/tasks.xml
+
+# AI Assistants & Internal Scratch
+.zcode/
+.gemini/
+.antigravity/
+
+# OS generated files
+.DS_Store
+Thumbs.db
