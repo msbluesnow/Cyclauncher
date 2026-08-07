@@ -4,7 +4,7 @@
   <img src="assets/logo.png" width="128" height="128" alt="Cyclauncher Logo">
 </p>
 
-A modern, minimalist Android launcher built with **Jetpack Compose**. Fast and intuitive app navigation is provided via a unique rectangular alphabet wheel.
+Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**, it is focused on speed, effortless app accessibility, and seamless one-handed usability. New features and mechanics are continuously designed not just to be unique, but to deliver a genuinely convenient, ergonomic, and practical daily experience. Fast and intuitive navigation is provided via a custom rectangular alphabet wheel.
 
 > [!IMPORTANT]
 > **Alpha Version**: This project is currently in early development. Features are subject to change, and bugs may be encountered as the experience is refined.

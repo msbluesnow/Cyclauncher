@@ -1,1 +1,1 @@
-Minimalist launcher with a unique rectangular wheel navigation.
+Fast, accessible launcher focused on speed and one-handed use.
