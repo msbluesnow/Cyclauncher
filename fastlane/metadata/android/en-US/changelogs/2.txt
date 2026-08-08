@@ -1,0 +1,4 @@
+Initial alpha release with Jetpack Compose.
+- Unique rectangular alphabet wheel.
+- Left/Right hand optimization.
+- Support for dynamic accent colors.
