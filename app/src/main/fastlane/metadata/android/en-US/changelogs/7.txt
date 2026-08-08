@@ -1,0 +1,5 @@
+- Added History Edit Mode for quick app history management.
+- Resolved gesture conflicts with SystemUI on custom ROMs (crDroid, LineageOS).
+- Accelerated screen transition animations for instant navigation.
+- Enabled vertical swipe gestures directly over app icons.
+- Prepared Fastlane metadata for F-Droid repository submission.
