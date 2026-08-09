@@ -212,6 +212,7 @@ fun AppListItemWithIcon(
     handSide: HandSide,
     fontSize: Int = 18,
     iconSize: Int = 40,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
     onLongClick: (Offset) -> Unit = {},
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
@@ -222,7 +223,7 @@ fun AppListItemWithIcon(
     val currentOnLongClick by rememberUpdatedState(onLongClick)
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .onGloballyPositioned { itemPosition = it.positionInRoot() }
             .pointerInput("${app.packageName}/${app.activityName}") {
@@ -237,7 +238,7 @@ fun AppListItemWithIcon(
     ) {
         if (handSide == HandSide.LEFT) {
             AppIconItem(app = app, size = iconSize, onClick = onClick, onLongClick = onLongClick)
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(10.dp))
             AutoResizingText(
                 text = app.label,
                 targetFontSize = fontSize,
@@ -255,7 +256,7 @@ fun AppListItemWithIcon(
                 primaryTextColor = primaryTextColor,
                 showShadows = showShadows
             )
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(10.dp))
             AppIconItem(app = app, size = iconSize, onClick = onClick, onLongClick = onLongClick)
         }
     }
