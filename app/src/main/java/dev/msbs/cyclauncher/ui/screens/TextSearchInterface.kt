@@ -85,6 +85,7 @@ fun TextSearchInterface(
                 AppListItemWithIcon(
                     app = app,
                     handSide = handSide,
+                    modifier = Modifier.padding(vertical = 4.dp),
                     onClick = { onAppClick("${app.packageName}/${app.activityName}") },
                     onLongClick = { offset -> onAppLongClick(app, offset) },
                     primaryTextColor = primaryTextColor,

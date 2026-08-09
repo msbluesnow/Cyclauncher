@@ -232,7 +232,7 @@ fun AppListItemWithIcon(
                     onLongPress = { currentOnLongClick(itemPosition + it) }
                 )
             }
-            .padding(vertical = 8.dp, horizontal = 4.dp),
+            .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = if (handSide == HandSide.LEFT) Arrangement.Start else Arrangement.End
     ) {
