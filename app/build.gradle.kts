@@ -29,6 +29,12 @@ android {
         }
     }
 
+    dependenciesInfo {
+        // Disable dependency metadata in APK — required by F-Droid
+        includeInApk = false
+        includeInBundle = false
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -41,10 +47,10 @@ android {
 
 androidComponents {
     onVariants { variant ->
-        val versionName = variant.outputs.map { it.versionName.get() }.firstOrNull()
-            ?: android.defaultConfig.versionName
+        val versionCode = variant.outputs.map { it.versionCode.get() }.firstOrNull()
+            ?: android.defaultConfig.versionCode
         variant.outputs.forEach { output ->
-            output.outputFileName.set("Cyclauncher-v${versionName}.apk")
+            output.outputFileName.set("Cyclauncher-${versionCode}.apk")
         }
     }
 }
