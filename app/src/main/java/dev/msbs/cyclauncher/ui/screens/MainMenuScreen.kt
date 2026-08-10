@@ -283,10 +283,12 @@ private fun HistorySection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight()
-                    .pointerInput(Unit) {
+                    .pointerInput(isHistoryShiftedUp) {
                         detectVerticalDragGestures { change, dragAmount ->
-                            change.consume()
-                            isHistoryShiftedUp = false
+                            if (dragAmount > 10f || dragAmount < -10f) {
+                                change.consume()
+                                isHistoryShiftedUp = false
+                            }
                         }
                         detectTapGestures {
                             isHistoryShiftedUp = false
@@ -302,19 +304,15 @@ private fun HistorySection(
                         if (isHistoryShiftedUp) return@pointerInput
                         awaitEachGesture {
                             awaitFirstDown(pass = PointerEventPass.Initial)
-                            val startedAtBottom = !listState.canScrollBackward
+                            val startedAtBottom = (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) || !listState.canScrollBackward
                             var totalDragY = 0f
-                            var scrolledDownInThisGesture = false
                             do {
                                 val event = awaitPointerEvent(pass = PointerEventPass.Initial)
                                 val change = event.changes.firstOrNull() ?: break
                                 if (change.pressed) {
                                     val deltaY = change.positionChange().y
-                                    if (deltaY > 1f) {
-                                        scrolledDownInThisGesture = true
-                                    }
                                     totalDragY += deltaY
-                                    if (startedAtBottom && !scrolledDownInThisGesture && totalDragY < -15f) {
+                                    if (startedAtBottom && totalDragY < -18f) {
                                         isHistoryShiftedUp = true
                                         change.consume()
                                         break

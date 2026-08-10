@@ -122,6 +122,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         else all.filter { it.label.contains(query, ignoreCase = true) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /** Controls whether the interactive tutorial overlay is visible. */
+    private val _showTutorial = MutableStateFlow(false)
+    val showTutorial: StateFlow<Boolean> = _showTutorial
+
+    /** Current active step in the tutorial sequence (0..4). */
+    private val _tutorialStep = MutableStateFlow(0)
+    val tutorialStep: StateFlow<Int> = _tutorialStep
+
     init {
         val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         val savedHand = prefs.getString("hand_side", HandSide.LEFT.name) ?: HandSide.LEFT.name
@@ -139,8 +147,42 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             _showShadows.value = prefs.getBoolean("show_shadows", true)
         }
 
+        val isTutorialCompleted = prefs.getBoolean("is_tutorial_completed", false)
+        if (!isTutorialCompleted) {
+            _showTutorial.value = true
+            _tutorialStep.value = 0
+        }
+
         loadInstalledApps()
         _searchListAlignment.value = if (_handSide.value == HandSide.LEFT) TextAlign.End else TextAlign.Start
+    }
+
+    /** Starts or restarts the interactive tutorial from step 0. */
+    fun startTutorial() {
+        _tutorialStep.value = 0
+        _showTutorial.value = true
+    }
+
+    /** Sets the current step of the tutorial. */
+    fun setTutorialStep(step: Int) {
+        _tutorialStep.value = step.coerceIn(0, 5)
+    }
+
+    /** Advances to the next tutorial step, or completes if on the last step. */
+    fun nextTutorialStep() {
+        if (_tutorialStep.value < 5) {
+            _tutorialStep.value += 1
+        } else {
+            completeTutorial()
+        }
+    }
+
+    /** Marks the tutorial as completed and hides the overlay. */
+    fun completeTutorial() {
+        _showTutorial.value = false
+        _tutorialStep.value = 0
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("is_tutorial_completed", true).apply()
     }
 
     /**

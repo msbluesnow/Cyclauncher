@@ -252,10 +252,46 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Default Launcher Selector
-                DefaultLauncherSelector(currentIsDefault, accentColor, primaryTextColor, showShadows) {
-                    viewModel.openDefaultLauncherSettings(context)
-                    showDefaultLauncherDialog = true
+                // Default Launcher & Relaunch App Row (50/50 split)
+                DefaultLauncherAndRelaunchRow(
+                    isDefault = currentIsDefault,
+                    accentColor = accentColor,
+                    primaryTextColor = primaryTextColor,
+                    showShadows = showShadows,
+                    onDefaultClick = {
+                        viewModel.openDefaultLauncherSettings(context)
+                        showDefaultLauncherDialog = true
+                    },
+                    onRelaunchClick = {
+                        val pm = context.packageManager
+                        val intent = pm.getLaunchIntentForPackage(context.packageName)
+                        if (intent != null) {
+                            val mainIntent = Intent.makeRestartActivityTask(intent.component)
+                            context.startActivity(mainIntent)
+                            Runtime.getRuntime().exit(0)
+                        }
+                    }
+                )
+
+                HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
+
+                // Interactive Gesture Tutorial
+                SettingsRow(label = "Interactive Tutorial:", textColor = primaryTextColor.color, shadow = shadow) {
+                    Button(
+                        onClick = {
+                            viewModel.startTutorial()
+                            onBack()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "Start",
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
@@ -439,17 +475,87 @@ private fun AccentColorDropdown(selectedColor: AccentColor, primaryTextColor: Pr
 }
 
 /**
- * Section block representing default launcher preferences and selection options.
+ * Section block representing default launcher preferences and app relaunch options, split 50/50.
  */
 @Composable
-private fun DefaultLauncherSelector(isDefault: Boolean, accentColor: AccentColor, primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE, showShadows: Boolean, onClick: () -> Unit) {
+private fun DefaultLauncherAndRelaunchRow(
+    isDefault: Boolean,
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    showShadows: Boolean,
+    onDefaultClick: () -> Unit,
+    onRelaunchClick: () -> Unit
+) {
     val shadow = primaryTextColor.getShadow(showShadows)
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text("Default Launcher", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontWeight = FontWeight.Medium, fontSize = 18.sp))
-        Text(if (isDefault) "Currently set as default" else "Not set as default", color = if (isDefault) Color.Green else Color.Gray, fontSize = 12.sp, style = TextStyle(shadow = shadow))
-        Spacer(modifier = Modifier.height(12.dp))
-        Button(onClick = onClick, colors = ButtonDefaults.buttonColors(containerColor = if (isDefault) Color.Transparent else primaryTextColor.color.copy(alpha = 0.1f)), border = if (isDefault) BorderStroke(1.dp, Color.Green.copy(alpha = 0.5f)) else null, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(12.dp)) {
-            Text(if (isDefault) "Change Default" else "Set as Default", color = if (isDefault) Color.Green else primaryTextColor.color, style = TextStyle(shadow = shadow, fontWeight = FontWeight.Bold))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        // Left Column: Default Launcher (50% width)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                "Default Launcher",
+                color = primaryTextColor.color,
+                style = TextStyle(shadow = shadow, fontWeight = FontWeight.Medium, fontSize = 15.sp),
+                maxLines = 1
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                if (isDefault) "Set as default" else "Not set",
+                color = if (isDefault) Color.Green else Color.Gray,
+                fontSize = 12.sp,
+                style = TextStyle(shadow = shadow)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Button(
+                onClick = onDefaultClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isDefault) Color.Transparent else primaryTextColor.color.copy(alpha = 0.1f)
+                ),
+                border = if (isDefault) BorderStroke(1.dp, Color.Green.copy(alpha = 0.5f)) else null,
+                modifier = Modifier.fillMaxWidth().height(42.dp),
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp)
+            ) {
+                Text(
+                    if (isDefault) "Change" else "Set",
+                    color = if (isDefault) Color.Green else primaryTextColor.color,
+                    style = TextStyle(shadow = shadow, fontWeight = FontWeight.Bold)
+                )
+            }
+        }
+
+        // Right Column: Relaunch App (50% width)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                "Relaunch App",
+                color = primaryTextColor.color,
+                style = TextStyle(shadow = shadow, fontWeight = FontWeight.Medium, fontSize = 15.sp),
+                maxLines = 1
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                "May fix some issues",
+                color = Color.Gray,
+                fontSize = 12.sp,
+                style = TextStyle(shadow = shadow)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Button(
+                onClick = onRelaunchClick,
+                colors = ButtonDefaults.buttonColors(containerColor = accentColor.color.copy(alpha = 0.15f)),
+                border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth().height(42.dp),
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp)
+            ) {
+                Text(
+                    "Relaunch",
+                    color = accentColor.color,
+                    style = TextStyle(shadow = shadow, fontWeight = FontWeight.Bold)
+                )
+            }
         }
     }
 }

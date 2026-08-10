@@ -8,6 +8,7 @@ import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.components.AppActionMenu
 import dev.msbs.cyclauncher.ui.components.RenameDialog
 import dev.msbs.cyclauncher.ui.components.TagSelectionDialog
+import dev.msbs.cyclauncher.ui.components.TutorialOverlay
 import dev.msbs.cyclauncher.ui.screens.MainMenuScreen
 import dev.msbs.cyclauncher.ui.screens.SearchScreen
 import dev.msbs.cyclauncher.ui.screens.SettingsScreen
@@ -343,6 +344,16 @@ class MainActivity : ComponentActivity() {
                                 onDismiss = { viewModel.dismissTagsBackupPreview() }
                             )
                         }
+
+                        TutorialOverlay(
+                            viewModel = viewModel,
+                            onNavigateToSearch = {
+                                scope.launch { verticalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec) }
+                            },
+                            onNavigateToMain = {
+                                scope.launch { verticalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec) }
+                            }
+                        )
                     }
                 }
             }

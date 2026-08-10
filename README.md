@@ -31,6 +31,7 @@ Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**,
 ## ✨ Key Features
 
 - **Rectangular Alphabet Wheel**: Fast app access via a custom interactive wheel, optimized for high-performance scrolling and rendering.
+- **Interactive Gesture Tutorial**: Guided hands-on onboarding overlay teaching launcher gestures (search, notifications, favorites & history management, system navigation) with animated visualizers.
 - **Dynamic Favorites**: Organize your top apps with intuitive drag-and-drop reordering (long-press star to enter) and quick-removal tools.
 - **AI-Powered Organization**: Categorize your apps efficiently with an AI-assisted tagging workflow (Export → Process via External AI Prompt → Import) and full tag backup support. *Note: AI processing is performed externally using your preferred provider.*
 - **Flexible Data Management**: Robust import/export support for app names and tags in both JSON and plain text formats.
@@ -73,6 +74,7 @@ A continuous, unified timeline of completed milestones and planned updates.
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Application Tag System</b> — Grouping apps with an AI-assisted tagging workflow and full JSON backup options.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Adaptive Text & Theme Accents</b> — Selectable accent palettes, a custom Main Color (Black/White) switcher, and dynamic shadow inversion.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Performance Tuning</b> — Asynchronous Coil icon prefetching and sequential package manager querying to prevent system UI freezes under Battery Saver mode.<br>
+<kbd>&nbsp;✓&nbsp;</kbd> <b>Interactive Gesture Tutorial</b> — Guided onboarding overlay teaching launcher gestures with animated visualizers.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>Tag Map</i> — Interactive tag map showing connections between applications and implementing quick tag-based navigation.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>App Shortcuts</i> — Quick-launch actions like dialing specific contacts or opening deep-linked settings.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>Widgets Integration</i> — Full support for configuring and pinning dynamic Android widgets on the home layout.<br>
