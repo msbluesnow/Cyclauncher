@@ -304,15 +304,19 @@ private fun HistorySection(
                         if (isHistoryShiftedUp) return@pointerInput
                         awaitEachGesture {
                             awaitFirstDown(pass = PointerEventPass.Initial)
-                            val startedAtBottom = (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) || !listState.canScrollBackward
+                            val startedAtBottom = (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0)
                             var totalDragY = 0f
+                            var hasDraggedDown = false
                             do {
                                 val event = awaitPointerEvent(pass = PointerEventPass.Initial)
                                 val change = event.changes.firstOrNull() ?: break
                                 if (change.pressed) {
                                     val deltaY = change.positionChange().y
+                                    if (deltaY > 5f) {
+                                        hasDraggedDown = true
+                                    }
                                     totalDragY += deltaY
-                                    if (startedAtBottom && totalDragY < -18f) {
+                                    if (startedAtBottom && !hasDraggedDown && totalDragY < -18f) {
                                         isHistoryShiftedUp = true
                                         change.consume()
                                         break

@@ -195,56 +195,99 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // App List — unified export/import of the installed app list (JSON).
-                // Same method used by the AutoTags screen.
-                SettingsRow(label = "App List:", textColor = primaryTextColor.color, shadow = shadow) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        IconButton(onClick = { exportAppListLauncher.launch("cyclauncher_apps.json") }) {
+                // Combined App List & Tags Row in a single line with vertical separator
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left Side: App List (Export / Import)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(0.dp)
+                    ) {
+                        Text(
+                            text = "App List:",
+                            color = primaryTextColor.color,
+                            style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium),
+                            modifier = Modifier.padding(end = 2.dp)
+                        )
+                        IconButton(
+                            onClick = { exportAppListLauncher.launch("cyclauncher_apps.json") },
+                            modifier = Modifier.size(34.dp)
+                        ) {
                             Box(contentAlignment = Alignment.Center) {
                                 if (showShadows) {
-                                    Icon(Icons.Outlined.Upload, null, tint = primaryTextColor.shadowColor.copy(alpha = 0.25f), modifier = Modifier.offset(1.dp, 1.dp))
+                                    Icon(Icons.Outlined.Upload, null, tint = primaryTextColor.shadowColor.copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
                                 }
-                                Icon(Icons.Outlined.Upload, null, tint = accentColor.color)
+                                Icon(Icons.Outlined.Upload, null, tint = accentColor.color, modifier = Modifier.size(22.dp))
                             }
                         }
-                        IconButton(onClick = { importAppListLauncher.launch("application/json") }) {
+                        IconButton(
+                            onClick = { importAppListLauncher.launch("application/json") },
+                            modifier = Modifier.size(34.dp)
+                        ) {
                             Box(contentAlignment = Alignment.Center) {
                                 if (showShadows) {
-                                    Icon(Icons.Outlined.Download, null, tint = primaryTextColor.shadowColor.copy(alpha = 0.25f), modifier = Modifier.offset(1.dp, 1.dp))
+                                    Icon(Icons.Outlined.Download, null, tint = primaryTextColor.shadowColor.copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
                                 }
-                                Icon(Icons.Outlined.Download, null, tint = accentColor.color)
-                             }
-                         }
-                     }
-                 }
+                                Icon(Icons.Outlined.Download, null, tint = accentColor.color, modifier = Modifier.size(22.dp))
+                            }
+                        }
+                    }
 
-                HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
+                    // Vertical Separator Divider with margin to prevent overlapping Tags text
+                    VerticalDivider(
+                        modifier = Modifier
+                            .height(24.dp)
+                            .padding(horizontal = 6.dp),
+                        color = primaryTextColor.color.copy(alpha = 0.2f)
+                    )
 
-                // Tags — open the AutoTags page + unified tags backup export/import.
-                SettingsRow(label = "Tags:", textColor = primaryTextColor.color, shadow = shadow) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        IconButton(onClick = { showAutoTagsScreen = true }) {
+                    // Right Side: Tags (AutoTags / Export / Import)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(0.dp)
+                    ) {
+                        Text(
+                            text = "Tags:",
+                            color = primaryTextColor.color,
+                            style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium),
+                            modifier = Modifier.padding(end = 2.dp)
+                        )
+                        IconButton(
+                            onClick = { showAutoTagsScreen = true },
+                            modifier = Modifier.size(34.dp)
+                        ) {
                             Box(contentAlignment = Alignment.Center) {
                                 if (showShadows) {
-                                    Icon(Icons.Outlined.AutoAwesome, null, tint = primaryTextColor.shadowColor.copy(alpha = 0.25f), modifier = Modifier.offset(1.dp, 1.dp))
+                                    Icon(Icons.Outlined.AutoAwesome, null, tint = primaryTextColor.shadowColor.copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
                                 }
-                                Icon(Icons.Outlined.AutoAwesome, null, tint = accentColor.color)
+                                Icon(Icons.Outlined.AutoAwesome, null, tint = accentColor.color, modifier = Modifier.size(22.dp))
                             }
                         }
-                        IconButton(onClick = { exportTagsLauncher.launch("cyclauncher_tags.json") }) {
+                        IconButton(
+                            onClick = { exportTagsLauncher.launch("cyclauncher_tags.json") },
+                            modifier = Modifier.size(34.dp)
+                        ) {
                             Box(contentAlignment = Alignment.Center) {
                                 if (showShadows) {
-                                    Icon(Icons.Outlined.Upload, null, tint = primaryTextColor.shadowColor.copy(alpha = 0.25f), modifier = Modifier.offset(1.dp, 1.dp))
+                                    Icon(Icons.Outlined.Upload, null, tint = primaryTextColor.shadowColor.copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
                                 }
-                                Icon(Icons.Outlined.Upload, null, tint = accentColor.color)
+                                Icon(Icons.Outlined.Upload, null, tint = accentColor.color, modifier = Modifier.size(22.dp))
                             }
                         }
-                        IconButton(onClick = { importTagsLauncher.launch("application/json") }) {
+                        IconButton(
+                            onClick = { importTagsLauncher.launch("application/json") },
+                            modifier = Modifier.size(34.dp)
+                        ) {
                             Box(contentAlignment = Alignment.Center) {
                                 if (showShadows) {
-                                    Icon(Icons.Outlined.Download, null, tint = primaryTextColor.shadowColor.copy(alpha = 0.25f), modifier = Modifier.offset(1.dp, 1.dp))
+                                    Icon(Icons.Outlined.Download, null, tint = primaryTextColor.shadowColor.copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
                                 }
-                                Icon(Icons.Outlined.Download, null, tint = accentColor.color)
+                                Icon(Icons.Outlined.Download, null, tint = accentColor.color, modifier = Modifier.size(22.dp))
                             }
                         }
                     }
