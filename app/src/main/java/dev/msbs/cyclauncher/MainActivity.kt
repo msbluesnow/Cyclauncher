@@ -7,6 +7,7 @@ import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.components.AppActionMenu
 import dev.msbs.cyclauncher.ui.components.RenameDialog
+import dev.msbs.cyclauncher.ui.components.TagEditDialog
 import dev.msbs.cyclauncher.ui.components.TagSelectionDialog
 import dev.msbs.cyclauncher.ui.components.TutorialOverlay
 import dev.msbs.cyclauncher.ui.screens.MainMenuScreen
@@ -182,6 +183,7 @@ class MainActivity : ComponentActivity() {
                 var showActionMenuFor by remember { mutableStateOf<AppInfo?>(null) }
                 var showRenameDialogFor by remember { mutableStateOf<AppInfo?>(null) }
                 var showTagDialogFor by remember { mutableStateOf<AppInfo?>(null) }
+                var tagToEditForDialog by remember { mutableStateOf<Tag?>(null) }
                 
                 var menuSource by remember { mutableStateOf("none") }
                 var menuOffset by remember { mutableStateOf(Offset.Zero) }
@@ -232,7 +234,8 @@ class MainActivity : ComponentActivity() {
                                             onSwipeDown = ::openNotifications,
                                             onSettingsClick = {
                                                 scope.launch { horizontalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec) }
-                                            }
+                                            },
+                                            onEditTag = { tag -> tagToEditForDialog = tag }
                                         )
                                     } else {
                                         Box(
@@ -318,6 +321,22 @@ class MainActivity : ComponentActivity() {
                                 onUpdateTag = { tag -> viewModel.updateTag(tag) },
                                 onDeleteTag = { tagId -> viewModel.deleteTag(tagId) },
                                 onDismiss = { showTagDialogFor = null },
+                                accentColor = accentColor
+                            )
+                        }
+
+                        tagToEditForDialog?.let { tag ->
+                            TagEditDialog(
+                                tag = tag,
+                                onDismiss = { tagToEditForDialog = null },
+                                onConfirm = { name, color ->
+                                    viewModel.updateTag(tag.copy(name = name, color = color))
+                                    tagToEditForDialog = null
+                                },
+                                onDelete = {
+                                    viewModel.deleteTag(tag.id)
+                                    tagToEditForDialog = null
+                                },
                                 accentColor = accentColor
                             )
                         }

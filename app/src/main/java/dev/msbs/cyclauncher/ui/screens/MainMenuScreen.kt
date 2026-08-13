@@ -3,10 +3,13 @@ package dev.msbs.cyclauncher.ui.screens
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.model.AppInfo
+import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.components.AppListItemWithIcon
 import dev.msbs.cyclauncher.ui.components.AppIconItem
+import dev.msbs.cyclauncher.ui.components.TagFolderItem
+import dev.msbs.cyclauncher.ui.components.TagFolderPopup
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -17,7 +20,13 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -64,16 +73,33 @@ fun MainMenuScreen(
     onAppLongClick: (AppInfo, Offset) -> Unit,
     onSwipeUp: () -> Unit,
     onSwipeDown: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onEditTag: (Tag) -> Unit = {}
 ) {
     val favorites by viewModel.favoriteApps.collectAsState()
     val history by viewModel.historyApps.collectAsState()
+    val tags by viewModel.tags.collectAsState()
+    val appTags by viewModel.appTags.collectAsState()
+    val apps by viewModel.apps.collectAsState()
     val handSide by viewModel.handSide.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
     var isReorderMode by remember { mutableStateOf(false) }
     var isHistoryEditMode by remember { mutableStateOf(false) }
+    var selectedTagForPopup by remember { mutableStateOf<Triple<Tag, List<AppInfo>, Offset>?>(null) }
+    var isTagPopupEditMode by remember { mutableStateOf(false) }
+
+    val popularTagsWithApps = remember(tags, appTags, apps) {
+        tags.map { tag ->
+            val taggedApps = apps.filter { app ->
+                val tagIds = appTags[app.componentKey] ?: appTags[app.packageName] ?: emptyList()
+                tagIds.contains(tag.id)
+            }
+            tag to taggedApps
+        }
+        .sortedByDescending { it.second.size }
+    }
 
     LaunchedEffect(isActive) {
         if (!isActive) {
@@ -148,6 +174,7 @@ fun MainMenuScreen(
                 HistorySection(
                     Modifier.weight(historyWeight),
                     history,
+                    popularTagsWithApps,
                     handSide,
                     primaryTextColor,
                     showShadows,
@@ -157,6 +184,14 @@ fun MainMenuScreen(
                     { viewModel.removeFromHistory(it) },
                     onAppClick,
                     onAppLongClick,
+                    { tag, taggedApps, offset ->
+                        isTagPopupEditMode = false
+                        selectedTagForPopup = Triple(tag, taggedApps, offset)
+                    },
+                    { tag, taggedApps, offset ->
+                        isTagPopupEditMode = true
+                        selectedTagForPopup = Triple(tag, taggedApps, offset)
+                    },
                     onSettingsClick,
                     isActive
                 )
@@ -164,6 +199,7 @@ fun MainMenuScreen(
                 HistorySection(
                     Modifier.weight(historyWeight),
                     history,
+                    popularTagsWithApps,
                     handSide,
                     primaryTextColor,
                     showShadows,
@@ -173,6 +209,14 @@ fun MainMenuScreen(
                     { viewModel.removeFromHistory(it) },
                     onAppClick,
                     onAppLongClick,
+                    { tag, taggedApps, offset ->
+                        isTagPopupEditMode = false
+                        selectedTagForPopup = Triple(tag, taggedApps, offset)
+                    },
+                    { tag, taggedApps, offset ->
+                        isTagPopupEditMode = true
+                        selectedTagForPopup = Triple(tag, taggedApps, offset)
+                    },
                     onSettingsClick,
                     isActive
                 )
@@ -196,6 +240,35 @@ fun MainMenuScreen(
                     isActive
                 )
             }
+        }
+
+        selectedTagForPopup?.let { (tag, _, offset) ->
+            val currentTaggedApps = remember(tags, appTags, apps, tag.id) {
+                apps.filter { app ->
+                    val tagIds = appTags[app.componentKey] ?: appTags[app.packageName] ?: emptyList()
+                    tagIds.contains(tag.id)
+                }
+            }
+
+            TagFolderPopup(
+                tag = tag,
+                apps = currentTaggedApps,
+                offset = offset,
+                isEditMode = isTagPopupEditMode,
+                onAppClick = onAppClick,
+                onAppLongClick = onAppLongClick,
+                onRemoveAppFromTag = { tagId, componentKey ->
+                    viewModel.toggleTagForApp(componentKey, tagId)
+                },
+                onEditTag = { tagToEdit ->
+                    selectedTagForPopup = null
+                    onEditTag(tagToEdit)
+                },
+                onDismiss = { selectedTagForPopup = null },
+                primaryTextColor = primaryTextColor,
+                showShadows = showShadows,
+                accentColor = accentColor
+            )
         }
     }
 }
@@ -222,6 +295,7 @@ fun MainMenuScreen(
 private fun HistorySection(
     modifier: Modifier,
     history: List<AppInfo>,
+    popularTags: List<Pair<Tag, List<AppInfo>>>,
     handSide: HandSide,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
@@ -231,6 +305,8 @@ private fun HistorySection(
     onRemoveFromHistory: (String) -> Unit,
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit,
+    onTagFolderClick: (Tag, List<AppInfo>, Offset) -> Unit,
+    onTagFolderLongClick: (Tag, List<AppInfo>, Offset) -> Unit,
     onSettingsClick: () -> Unit,
     isActive: Boolean
 ) {
@@ -238,6 +314,7 @@ private fun HistorySection(
     val shadow = primaryTextColor.getShadow(showShadows)
 
     val listState = rememberLazyListState()
+    val tagGridState = rememberLazyGridState()
     val currentOnSettingsClick by rememberUpdatedState(onSettingsClick)
     var isHistoryShiftedUp by remember { mutableStateOf(false) }
 
@@ -253,14 +330,35 @@ private fun HistorySection(
 
     Column(
         modifier = modifier.fillMaxHeight(),
-        verticalArrangement = if (isHistoryShiftedUp) Arrangement.Top else Arrangement.Bottom,
+        verticalArrangement = Arrangement.SpaceBetween,
         horizontalAlignment = if (handSide == HandSide.LEFT) Alignment.End else Alignment.Start
     ) {
         if (isHistoryShiftedUp) {
             Column(
                 modifier = Modifier
                     .fillMaxHeight(0.5f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .pointerInput(isHistoryShiftedUp) {
+                        if (!isHistoryShiftedUp) return@pointerInput
+                        awaitEachGesture {
+                            awaitFirstDown(pass = PointerEventPass.Initial)
+                            val startedAtEdge = (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0)
+                            var totalDragY = 0f
+                            do {
+                                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                val change = event.changes.firstOrNull() ?: break
+                                if (change.pressed) {
+                                    val deltaY = change.positionChange().y
+                                    totalDragY += deltaY
+                                    if (startedAtEdge && totalDragY > 18f) {
+                                        isHistoryShiftedUp = false
+                                        change.consume()
+                                        break
+                                    }
+                                }
+                            } while (event.changes.any { it.pressed })
+                        }
+                    },
                 verticalArrangement = Arrangement.Top,
                 horizontalAlignment = if (handSide == HandSide.LEFT) Alignment.End else Alignment.Start
             ) {
@@ -279,26 +377,96 @@ private fun HistorySection(
                 )
             }
 
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight()
                     .pointerInput(isHistoryShiftedUp) {
-                        detectVerticalDragGestures { change, dragAmount ->
-                            if (dragAmount > 10f || dragAmount < -10f) {
-                                change.consume()
-                                isHistoryShiftedUp = false
-                            }
+                        if (!isHistoryShiftedUp) return@pointerInput
+                        awaitEachGesture {
+                            awaitFirstDown(pass = PointerEventPass.Initial)
+                            val startedAtEdge = (tagGridState.firstVisibleItemIndex == 0 && tagGridState.firstVisibleItemScrollOffset == 0)
+                            var totalDragY = 0f
+                            var hasDraggedDown = false
+                            do {
+                                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                val change = event.changes.firstOrNull() ?: break
+                                if (change.pressed) {
+                                    val deltaY = change.positionChange().y
+                                    if (deltaY > 5f) {
+                                        hasDraggedDown = true
+                                    }
+                                    totalDragY += deltaY
+                                    if (startedAtEdge && !hasDraggedDown && totalDragY < -18f) {
+                                        isHistoryShiftedUp = false
+                                        change.consume()
+                                        break
+                                    }
+                                    if (hasDraggedDown && totalDragY > 18f) {
+                                        isHistoryShiftedUp = false
+                                        change.consume()
+                                        break
+                                    }
+                                }
+                            } while (event.changes.any { it.pressed })
                         }
-                        detectTapGestures {
-                            isHistoryShiftedUp = false
-                        }
-                    }
-            )
+                    },
+                verticalArrangement = Arrangement.Bottom,
+                horizontalAlignment = if (handSide == HandSide.LEFT) Alignment.End else Alignment.Start
+            ) {
+                TagsContentBlock(
+                    gridState = tagGridState,
+                    popularTags = popularTags,
+                    handSide = handSide,
+                    primaryTextColor = primaryTextColor,
+                    showShadows = showShadows,
+                    onTagFolderClick = onTagFolderClick,
+                    onTagFolderLongClick = onTagFolderLongClick
+                )
+            }
         } else {
             Column(
                 modifier = Modifier
                     .fillMaxHeight(0.5f)
+                    .fillMaxWidth()
+                    .pointerInput(isHistoryShiftedUp) {
+                        if (isHistoryShiftedUp) return@pointerInput
+                        awaitEachGesture {
+                            awaitFirstDown(pass = PointerEventPass.Initial)
+                            val startedAtEdge = (tagGridState.firstVisibleItemIndex == 0 && tagGridState.firstVisibleItemScrollOffset == 0)
+                            var totalDragY = 0f
+                            do {
+                                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                val change = event.changes.firstOrNull() ?: break
+                                if (change.pressed) {
+                                    val deltaY = change.positionChange().y
+                                    totalDragY += deltaY
+                                    if (startedAtEdge && totalDragY < -18f) {
+                                        isHistoryShiftedUp = true
+                                        change.consume()
+                                        break
+                                    }
+                                }
+                            } while (event.changes.any { it.pressed })
+                        }
+                    },
+                verticalArrangement = Arrangement.Bottom,
+                horizontalAlignment = if (handSide == HandSide.LEFT) Alignment.End else Alignment.Start
+            ) {
+                TagsContentBlock(
+                    gridState = tagGridState,
+                    popularTags = popularTags,
+                    handSide = handSide,
+                    primaryTextColor = primaryTextColor,
+                    showShadows = showShadows,
+                    onTagFolderClick = onTagFolderClick,
+                    onTagFolderLongClick = onTagFolderLongClick
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight()
                     .fillMaxWidth()
                     .pointerInput(isHistoryShiftedUp) {
                         if (isHistoryShiftedUp) return@pointerInput
@@ -340,6 +508,47 @@ private fun HistorySection(
                     onRemoveFromHistory = onRemoveFromHistory,
                     onAppClick = onAppClick,
                     onAppLongClick = onAppLongClick
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ColumnScope.TagsContentBlock(
+    gridState: LazyGridState,
+    popularTags: List<Pair<Tag, List<AppInfo>>>,
+    handSide: HandSide,
+    primaryTextColor: PrimaryTextColor,
+    showShadows: Boolean,
+    onTagFolderClick: (Tag, List<AppInfo>, Offset) -> Unit,
+    onTagFolderLongClick: (Tag, List<AppInfo>, Offset) -> Unit
+) {
+    if (popularTags.isEmpty()) return
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .weight(1f, fill = false)
+            .padding(bottom = 8.dp),
+        contentAlignment = if (handSide == HandSide.LEFT) Alignment.BottomEnd else Alignment.BottomStart
+    ) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
+            state = gridState,
+            verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Bottom),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, if (handSide == HandSide.LEFT) Alignment.End else Alignment.Start),
+            modifier = Modifier.fillMaxWidth(),
+            reverseLayout = true
+        ) {
+            items(popularTags, key = { it.first.id }) { (tag, taggedApps) ->
+                TagFolderItem(
+                    tag = tag,
+                    apps = taggedApps,
+                    onClick = { offset -> onTagFolderClick(tag, taggedApps, offset) },
+                    onLongClick = { offset -> onTagFolderLongClick(tag, taggedApps, offset) },
+                    primaryTextColor = primaryTextColor,
+                    showShadows = showShadows
                 )
             }
         }

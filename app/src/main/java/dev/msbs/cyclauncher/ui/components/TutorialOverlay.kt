@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.*
@@ -109,16 +110,16 @@ fun TutorialOverlay(
                 hintText = "Press and hold on the screen!"
             ),
             TutorialStepInfo(
-                title = "Favorites & History Management",
-                description = "Press and hold a Favorite app or History item icon to edit, reorder, or remove it.",
+                title = "Favorites, History & Tags",
+                description = "Press and hold a Favorite or History item to edit, reorder, or remove it. Tap a Tag folder (rounded rectangle) to open apps, or long-press a Tag folder to remove apps from folder.",
                 gestureType = GestureType.FAVORITES_HISTORY,
-                hintText = "Long-press a Favorite or History icon!"
+                hintText = "Long-press Favorite/History or tap/long-press Tag!"
             ),
             TutorialStepInfo(
                 title = "History Position Shift",
-                description = "Swipe UP on the History list when it is at the bottom to shift it to the top section of the screen. Swipe DOWN on the empty area when history is at the top to move it back down.",
+                description = "Swipe UP on the History list when it is at the bottom to shift it to the top section of the screen. Swipe DOWN on the Tags area when history is at the top to swap their positions.",
                 gestureType = GestureType.HISTORY_POSITION_TOGGLE,
-                hintText = "Swipe UP on History or DOWN on empty area!"
+                hintText = "Swipe UP on History or DOWN on Tags area!"
             )
         )
     }
@@ -636,6 +637,33 @@ private fun GestureAnimationCanvas(
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "History",
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                // Tag Folder Card (Rounded Rectangle with Tag Icon in Center)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .shadow(12.dp, RoundedCornerShape(16.dp))
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFF1C1C1E))
+                            .border(2.dp, accentColor.copy(alpha = 0.8f), RoundedCornerShape(16.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.Label,
+                            contentDescription = "Tag Folder",
+                            tint = accentColor,
+                            modifier = Modifier.size(30.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Tags",
                         color = Color.White.copy(alpha = 0.8f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
