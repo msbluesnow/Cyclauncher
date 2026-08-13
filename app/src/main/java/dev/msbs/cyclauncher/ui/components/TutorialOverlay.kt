@@ -86,25 +86,21 @@ fun TutorialOverlay(
         listOf(
             TutorialStepInfo(
                 title = "Swipe Up — App Search",
-                description = "Swipe upwards from anywhere on the Home Screen to open the alphabet wheel and application search.",
+                description = "Swipe upwards over the Favorites icons area on the Home Screen to open application search.",
                 gestureType = GestureType.SWIPE_UP,
-                hintText = "Swipe up anywhere on the screen!"
+                hintText = "Swipe up over the Favorites icons area!"
             ),
             TutorialStepInfo(
-                title = "Side Drag — Return to Home",
-                description = if (handSide == HandSide.LEFT) {
-                    "From the Search screen, swipe LEFT to return to the Home Screen."
-                } else {
-                    "From the Search screen, swipe RIGHT to return to the Home Screen."
-                },
+                title = "System Back — Return to Home",
+                description = "Use your device's native Back gesture (swipe from edge) or press the system Back button to return to the Home Screen from Search or Settings.",
                 gestureType = GestureType.SIDE_BACK,
-                hintText = if (handSide == HandSide.LEFT) "Swipe LEFT to go back!" else "Swipe RIGHT to go back!"
+                hintText = "Use the native Back gesture or Back button!"
             ),
             TutorialStepInfo(
                 title = "Swipe Down — Notifications",
-                description = "Swipe downwards from anywhere on the Home Screen to pull down the device notification shade.",
+                description = "Swipe downwards over the Favorites icons area on the Home Screen to pull down the notification shade.",
                 gestureType = GestureType.SWIPE_DOWN,
-                hintText = "Swipe down anywhere on the screen!"
+                hintText = "Swipe down over the Favorites icons area!"
             ),
             TutorialStepInfo(
                 title = "Long Press — Menu & Settings",

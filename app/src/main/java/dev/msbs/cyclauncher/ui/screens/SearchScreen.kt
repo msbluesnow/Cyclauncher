@@ -30,36 +30,64 @@ import dev.msbs.cyclauncher.ui.components.alphabetWheelDragGesture
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
+import androidx.activity.compose.BackHandler
+import dev.msbs.cyclauncher.SearchMethod
+import dev.msbs.cyclauncher.ui.components.SideAlphabetSearchLayout
+
 /**
- * The search screen Composable. Automatically decides between the alphabet wheel search
- * or the keyboard-based text search interface depending on the view model state.
+ * The search screen Composable. Automatically decides between the alphabet wheel search,
+ * the one-handed side alphabet grid, or the keyboard-based text search interface.
  *
  * @param viewModel The view model supplying state data.
+ * @param onBackToMain Callback to navigate back to the main screen on system back gesture.
  * @param onAppClick Callback when an application is clicked/opened.
  * @param onAppLongClick Callback when an application is long-pressed (provides coordinates).
  */
 @Composable
 fun SearchScreen(
     viewModel: LauncherViewModel,
+    enabled: Boolean = true,
+    onBackToMain: () -> Unit = {},
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit
 ) {
     val isTextSearchMode by viewModel.isTextSearchMode.collectAsState()
+
+    BackHandler(enabled = enabled) {
+        if (isTextSearchMode) {
+            viewModel.toggleTextSearchMode()
+        } else {
+            onBackToMain()
+        }
+    }
+
+    val searchMethod by viewModel.searchMethod.collectAsState()
     val handSide by viewModel.handSide.collectAsState()
 
-    if (isTextSearchMode) {
-        TextSearchInterface(
-            viewModel = viewModel,
-            onAppClick = onAppClick,
-            onAppLongClick = onAppLongClick
-        )
-    } else {
-        WheelSearchLayout(
-            viewModel = viewModel,
-            handSide = handSide,
-            onAppClick = onAppClick,
-            onAppLongClick = onAppLongClick
-        )
+    when (searchMethod) {
+        SearchMethod.TEXT -> {
+            TextSearchInterface(
+                viewModel = viewModel,
+                onAppClick = onAppClick,
+                onAppLongClick = onAppLongClick
+            )
+        }
+        SearchMethod.SIDE_ALPHABET -> {
+            SideAlphabetSearchLayout(
+                viewModel = viewModel,
+                handSide = handSide,
+                onAppClick = onAppClick,
+                onAppLongClick = onAppLongClick
+            )
+        }
+        SearchMethod.WHEEL -> {
+            WheelSearchLayout(
+                viewModel = viewModel,
+                handSide = handSide,
+                onAppClick = onAppClick,
+                onAppLongClick = onAppLongClick
+            )
+        }
     }
 }
 

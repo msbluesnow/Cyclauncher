@@ -72,7 +72,7 @@ fun RectangularAlphabetWheel(
     showShadows: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    val alphabet = remember { ('A'..'Z').toList() + '#' }
+    val alphabet = remember { listOf('#') + ('A'..'Z').toList() }
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()

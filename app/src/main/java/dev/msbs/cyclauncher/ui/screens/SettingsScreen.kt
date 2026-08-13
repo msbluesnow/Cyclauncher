@@ -2,6 +2,7 @@ package dev.msbs.cyclauncher.ui.screens
 
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.HandSide
+import dev.msbs.cyclauncher.SearchMethod
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
@@ -59,9 +60,11 @@ import androidx.lifecycle.LifecycleEventObserver
 @Composable
 fun SettingsScreen(
     viewModel: LauncherViewModel,
+    enabled: Boolean = true,
     onBack: () -> Unit
 ) {
     val handSide by viewModel.handSide.collectAsState()
+    val searchMethod by viewModel.searchMethod.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
@@ -108,7 +111,7 @@ fun SettingsScreen(
 
     val shadow = primaryTextColor.getShadow(showShadows)
 
-    BackHandler(onBack = onBack)
+    BackHandler(enabled = enabled, onBack = onBack)
 
     if (showAutoTagsScreen) {
         AutoTagsScreen(
@@ -155,6 +158,34 @@ fun SettingsScreen(
                         HandOption("Right", handSide == HandSide.RIGHT, accentColor, shadow) {
                             viewModel.setHandSide(HandSide.RIGHT)
                         }
+                    }
+                }
+
+                HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
+
+                // Search Method Selector (single compact line with icons)
+                SettingsRow(label = "Search Method:", textColor = primaryTextColor.color, shadow = shadow) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Horizontal rectangle icon for WHEEL (width > height)
+                        SearchMethodIconOption(
+                            isHorizontal = true,
+                            isSelected = searchMethod == SearchMethod.WHEEL,
+                            accentColor = accentColor,
+                            primaryTextColor = primaryTextColor,
+                            onClick = { viewModel.setSearchMethod(SearchMethod.WHEEL) }
+                        )
+
+                        // Vertical rectangle icon for SIDE_ALPHABET (height > width)
+                        SearchMethodIconOption(
+                            isHorizontal = false,
+                            isSelected = searchMethod == SearchMethod.SIDE_ALPHABET,
+                            accentColor = accentColor,
+                            primaryTextColor = primaryTextColor,
+                            onClick = { viewModel.setSearchMethod(SearchMethod.SIDE_ALPHABET) }
+                        )
                     }
                 }
 
@@ -611,6 +642,61 @@ private fun HandOption(label: String, isSelected: Boolean, accentColor: AccentCo
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onClick() }) {
         RadioButton(selected = isSelected, onClick = onClick, colors = RadioButtonDefaults.colors(selectedColor = accentColor.color, unselectedColor = accentColor.color.copy(alpha = 0.3f)))
         Text(label, color = if (isSelected) accentColor.color else accentColor.color.copy(alpha = 0.4f), style = TextStyle(shadow = shadow))
+    }
+}
+
+/**
+ * Compact icon button representing search method layout choice.
+ * Horizontal rectangle (width > height) for Wheel layout.
+ * Vertical rectangle (height > width) for Side Alphabet Grid layout.
+ */
+@Composable
+private fun SearchMethodIconOption(
+    isHorizontal: Boolean,
+    isSelected: Boolean,
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    onClick: () -> Unit
+) {
+    val boxWidth = if (isHorizontal) 36.dp else 22.dp
+    val boxHeight = if (isHorizontal) 22.dp else 36.dp
+
+    val bgColor = if (isSelected) accentColor.color.copy(alpha = 0.25f) else primaryTextColor.color.copy(alpha = 0.05f)
+    val borderColor = if (isSelected) accentColor.color else primaryTextColor.color.copy(alpha = 0.20f)
+
+    Box(
+        modifier = Modifier
+            .size(width = boxWidth, height = boxHeight)
+            .clip(RoundedCornerShape(6.dp))
+            .background(bgColor)
+            .border(if (isSelected) 1.5.dp else 1.dp, borderColor, RoundedCornerShape(6.dp))
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        if (isHorizontal) {
+            // Horizontal bar inside horizontal rectangle (Wheel icon)
+            Box(
+                modifier = Modifier
+                    .width(20.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(if (isSelected) accentColor.color else primaryTextColor.color.copy(alpha = 0.6f))
+            )
+        } else {
+            // Vertical side bar inside vertical rectangle (Side grid icon)
+            Row(
+                modifier = Modifier.fillMaxSize().padding(3.dp),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(if (isSelected) accentColor.color else primaryTextColor.color.copy(alpha = 0.6f))
+                )
+            }
+        }
     }
 }
 

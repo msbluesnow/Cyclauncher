@@ -27,6 +27,11 @@ import kotlinx.coroutines.launch
 enum class HandSide { LEFT, RIGHT }
 
 /**
+ * Represents the application search layout/method preference.
+ */
+enum class SearchMethod { WHEEL, SIDE_ALPHABET, TEXT }
+
+/**
  * The main ViewModel for the launcher, providing application state, user preferences,
  * search queries, custom tag assignments, and backup actions to the UI.
  *
@@ -63,6 +68,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Whether adaptive text/icon drop shadows are enabled. */
     val showShadows: StateFlow<Boolean> = _showShadows
 
+    private val _searchMethod = MutableStateFlow(SearchMethod.WHEEL)
+    /** The active application search layout method. */
+    val searchMethod: StateFlow<SearchMethod> = _searchMethod
+
+    private var lastAlphabetSearchMethod: SearchMethod = SearchMethod.WHEEL
+
     private val _isTextSearchMode = MutableStateFlow(false)
     /** Whether keyboard-based text search mode is active. */
     val isTextSearchMode: StateFlow<Boolean> = _isTextSearchMode
@@ -84,8 +95,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Flow signaling that the UI should scroll back to the main home screen. */
     val resetRequest = _resetRequest.asSharedFlow()
 
-    /** Requests the home screen UI to reset to the main cluster and page. */
+    /** Requests the home screen UI to reset to the main cluster and page, exiting text search mode if active. */
     fun requestReset() {
+        if (_isTextSearchMode.value) {
+            _isTextSearchMode.value = false
+            _searchText.value = ""
+            _searchMethod.value = lastAlphabetSearchMethod
+        }
         _resetRequest.tryEmit(Unit)
     }
 
@@ -147,6 +163,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             _showShadows.value = prefs.getBoolean("show_shadows", true)
         }
 
+        val savedSearchMethod = prefs.getString("search_method", SearchMethod.WHEEL.name) ?: SearchMethod.WHEEL.name
+        val initialMethod = try { SearchMethod.valueOf(savedSearchMethod) } catch (e: Exception) { SearchMethod.WHEEL }
+        _searchMethod.value = initialMethod
+        _isTextSearchMode.value = (initialMethod == SearchMethod.TEXT)
+
+        val savedLastAlphabet = prefs.getString("last_alphabet_search_method", SearchMethod.WHEEL.name) ?: SearchMethod.WHEEL.name
+        val initialLastAlphabet = try { SearchMethod.valueOf(savedLastAlphabet) } catch (e: Exception) { SearchMethod.WHEEL }
+        lastAlphabetSearchMethod = if (initialLastAlphabet == SearchMethod.TEXT) SearchMethod.WHEEL else initialLastAlphabet
+
         val isTutorialCompleted = prefs.getBoolean("is_tutorial_completed", false)
         if (!isTutorialCompleted) {
             _showTutorial.value = true
@@ -193,11 +218,36 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun setSelectedLetter(letter: Char) { _selectedLetter.value = letter }
 
     /**
-     * Toggles the keyboard text search mode on/off and resets the active search query.
+     * Sets the active search layout method and persists the preference.
+     *
+     * @param method The selected [SearchMethod].
+     */
+    fun setSearchMethod(method: SearchMethod) {
+        _searchMethod.value = method
+        if (method != SearchMethod.TEXT) {
+            lastAlphabetSearchMethod = method
+        }
+        _isTextSearchMode.value = (method == SearchMethod.TEXT)
+        if (method != SearchMethod.TEXT) {
+            _searchText.value = ""
+        }
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString("search_method", method.name)
+            .putString("last_alphabet_search_method", lastAlphabetSearchMethod.name)
+            .apply()
+    }
+
+    /**
+     * Toggles the keyboard text search mode on/off and persists the active search layout state.
      */
     fun toggleTextSearchMode() {
-        _isTextSearchMode.value = !_isTextSearchMode.value
-        if (!_isTextSearchMode.value) _searchText.value = ""
+        val nextMethod = if (_searchMethod.value == SearchMethod.TEXT) {
+            lastAlphabetSearchMethod
+        } else {
+            SearchMethod.TEXT
+        }
+        setSearchMethod(nextMethod)
     }
 
     /**

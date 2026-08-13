@@ -65,7 +65,7 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     private val viewModel: LauncherViewModel by viewModels()
-    
+
     /**
      * BroadcastReceiver to dynamically refresh the app list when applications are installed,
      * uninstalled, or updated.
@@ -96,6 +96,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        val onBackPressedCallback = object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (!viewModel.isDefaultLauncher()) {
+                    finish()
+                }
+            }
+        }
+        onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
         
         val packageFilter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
@@ -143,6 +152,15 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                val showTutorial by viewModel.showTutorial.collectAsState()
+
+                LaunchedEffect(showTutorial) {
+                    if (showTutorial) {
+                        horizontalPagerState.scrollToPage(0)
+                        verticalPagerState.scrollToPage(0)
+                    }
+                }
+
                 val isOnMainScreen by remember {
                     derivedStateOf {
                         horizontalPagerState.currentPage == 0 &&
@@ -152,19 +170,13 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                val isDefaultLauncher = viewModel.isDefaultLauncher()
-                val shouldEnableBack = !isOnMainScreen || !isDefaultLauncher
 
-                BackHandler(enabled = shouldEnableBack) {
-                    scope.launch {
-                        if (horizontalPagerState.currentPage != 0) {
-                            horizontalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
-                        } else if (verticalPagerState.currentPage != 0) {
-                            verticalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
-                        } else if (!viewModel.isDefaultLauncher()) {
-                            finish()
-                        }
-                    }
+
+                val isSettingsActive by remember {
+                    derivedStateOf { horizontalPagerState.currentPage == 1 }
+                }
+                val isSearchActive by remember {
+                    derivedStateOf { horizontalPagerState.currentPage == 0 && verticalPagerState.currentPage == 1 }
                 }
 
                 var showActionMenuFor by remember { mutableStateOf<AppInfo?>(null) }
@@ -235,31 +247,15 @@ class MainActivity : ComponentActivity() {
                                                         }
                                                     )
                                                 }
-                                                .pointerInput(handSide) {
-                                                    var navigated = false
-                                                    detectHorizontalDragGestures(
-                                                        onDragStart = { navigated = false },
-                                                        onHorizontalDrag = { _, dragAmount ->
-                                                            if (!navigated) {
-                                                                val isBackGesture = if (handSide == HandSide.LEFT) {
-                                                                    dragAmount < -30
-                                                                } else {
-                                                                    dragAmount > 30 
-                                                                }
-
-                                                                if (isBackGesture) {
-                                                                    navigated = true
-                                                                    scope.launch {
-                                                                        verticalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    )
-                                                }
                                         ) {
                                             SearchScreen(
                                                 viewModel = viewModel,
+                                                enabled = isSearchActive,
+                                                onBackToMain = {
+                                                    scope.launch {
+                                                        verticalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
+                                                    }
+                                                },
                                                 onAppClick = ::openApp,
                                                 onAppLongClick = { app, offset -> 
                                                     showActionMenuFor = app
@@ -273,6 +269,7 @@ class MainActivity : ComponentActivity() {
                             } else {
                                 SettingsScreen(
                                     viewModel = viewModel,
+                                    enabled = isSettingsActive,
                                     onBack = {
                                         scope.launch {
                                             horizontalPagerState.animateScrollToPage(0)
