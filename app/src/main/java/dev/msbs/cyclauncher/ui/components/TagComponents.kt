@@ -310,7 +310,7 @@ fun TagFolderPopup(
                                 },
                                 onLongClick = { appOffset ->
                                     onDismiss()
-                                    onAppLongClick(app, appOffset)
+                                    onAppLongClick(app, Offset(x, y) + appOffset)
                                 },
                                 onRemoveAppFromTag = onRemoveAppFromTag,
                                 tagId = tag.id,
@@ -368,7 +368,7 @@ private fun TagFolderAppItem(
                 onClick = {
                     if (isEditMode) currentOnRemoveApp(tagId, appKey) else currentOnClick()
                 },
-                onLongClick = { currentOnLongClick(itemPosition + it) }
+                onLongClick = { currentOnLongClick(it) }
             )
 
             // Minus icon overlay in center with 38% opacity when in edit mode

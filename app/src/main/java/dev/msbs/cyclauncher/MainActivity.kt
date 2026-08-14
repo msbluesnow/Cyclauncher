@@ -140,8 +140,20 @@ class MainActivity : ComponentActivity() {
                 val scope = rememberCoroutineScope()
                 val fastAnimSpec = remember { tween<Float>(durationMillis = 150, easing = FastOutSlowInEasing) }
                 
+                var showActionMenuFor by remember { mutableStateOf<AppInfo?>(null) }
+                var showRenameDialogFor by remember { mutableStateOf<AppInfo?>(null) }
+                var showTagDialogFor by remember { mutableStateOf<AppInfo?>(null) }
+                var tagToEditForDialog by remember { mutableStateOf<Tag?>(null) }
+                
+                var menuSource by remember { mutableStateOf("none") }
+                var menuOffset by remember { mutableStateOf(Offset.Zero) }
+
                 LaunchedEffect(Unit) {
                     viewModel.resetRequest.collect {
+                        showActionMenuFor = null
+                        showRenameDialogFor = null
+                        showTagDialogFor = null
+                        tagToEditForDialog = null
                         scope.launch {
                             if (horizontalPagerState.currentPage != 0) {
                                 horizontalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
@@ -171,22 +183,12 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-
-
                 val isSettingsActive by remember {
                     derivedStateOf { horizontalPagerState.currentPage == 1 }
                 }
                 val isSearchActive by remember {
                     derivedStateOf { horizontalPagerState.currentPage == 0 && verticalPagerState.currentPage == 1 }
                 }
-
-                var showActionMenuFor by remember { mutableStateOf<AppInfo?>(null) }
-                var showRenameDialogFor by remember { mutableStateOf<AppInfo?>(null) }
-                var showTagDialogFor by remember { mutableStateOf<AppInfo?>(null) }
-                var tagToEditForDialog by remember { mutableStateOf<Tag?>(null) }
-                
-                var menuSource by remember { mutableStateOf("none") }
-                var menuOffset by remember { mutableStateOf(Offset.Zero) }
                 
                 val haptic = LocalHapticFeedback.current
                 val handSide by viewModel.handSide.collectAsState()

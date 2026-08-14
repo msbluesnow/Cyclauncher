@@ -105,10 +105,21 @@ fun MainMenuScreen(
         if (!isActive) {
             isReorderMode = false
             isHistoryEditMode = false
+            selectedTagForPopup = null
+            isTagPopupEditMode = false
         }
     }
 
-    val isAnyEditMode = isReorderMode || isHistoryEditMode
+    LaunchedEffect(Unit) {
+        viewModel.resetRequest.collect {
+            isReorderMode = false
+            isHistoryEditMode = false
+            selectedTagForPopup = null
+            isTagPopupEditMode = false
+        }
+    }
+
+    val isAnyEditMode = isReorderMode || isHistoryEditMode || selectedTagForPopup != null
     val currentOnSettingsClick by rememberUpdatedState(onSettingsClick)
     val currentOnSwipeUp by rememberUpdatedState(onSwipeUp)
     val currentOnSwipeDown by rememberUpdatedState(onSwipeDown)
@@ -133,6 +144,10 @@ fun MainMenuScreen(
                         } else if (totalDragY > 50f) {
                             currentOnSwipeDown()
                         }
+                        totalDragY = 0f
+                    },
+                    onDragCancel = {
+                        totalDragY = 0f
                     },
                     onVerticalDrag = { _, dragAmount ->
                         totalDragY += dragAmount

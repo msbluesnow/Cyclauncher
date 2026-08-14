@@ -115,28 +115,28 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 app
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /** List of installed applications that match the currently selected alphabet wheel letter. */
     val filteredApps: StateFlow<List<AppInfo>> = combine(apps, _selectedLetter) { all, letter ->
         all.filter { it.searchChar == letter }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /** List of recently opened applications in historical order. */
     val historyApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.history) { all, ids ->
         ids.mapNotNull { id -> all.find { it.componentKey == id } }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /** List of applications marked as favorites. */
     val favoriteApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.favorites) { all, ids ->
         ids.mapNotNull { id -> all.find { it.componentKey == id } }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /** List of installed applications matching the active keyboard search query. */
     val textFilteredApps: StateFlow<List<AppInfo>> = combine(apps, _searchText) { all, query ->
         if (query.isEmpty()) all
         else all.filter { it.label.contains(query, ignoreCase = true) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /** Controls whether the interactive tutorial overlay is visible. */
     private val _showTutorial = MutableStateFlow(false)
