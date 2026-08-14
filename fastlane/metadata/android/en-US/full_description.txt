@@ -1,7 +1,9 @@
 Cyclauncher is not just yet another bicycle. Built with Jetpack Compose, it is focused on speed, effortless app accessibility, and seamless one-handed usability. New features and mechanics are continuously designed not just to be unique, but to deliver a genuinely convenient and ergonomic daily user experience.
 
 Key Features:
-- Unique rectangular alphabet wheel for rapid app navigation.
-- Ergonomic one-handed optimization (Left/Right hand support).
-- Dynamic accent colors and adaptive shadow inversion.
+- Tag Folder System: On-screen interactive tag folders with live icon previews and quick-access popups.
+- Versatile Search Modes: Rectangular alphabet wheel, ergonomic side alphabet index strip, and instant text filtering.
+- Ergonomic one-handed optimization with full Left/Right hand layout support.
+- Dynamic accent colors, customizable main text color, and adaptive shadow inversion.
+- Dynamic favorites with drag-and-drop reordering and launch history tracking.
 - Fast, minimalist, and battery-efficient.

@@ -66,6 +66,8 @@ fun TagFolderItem(
 ) {
     val previewApps = remember(apps) { apps.take(4) }
     var itemPosition by remember { mutableStateOf(Offset.Zero) }
+    val currentOnClick by rememberUpdatedState(onClick)
+    val currentOnLongClick by rememberUpdatedState(onLongClick)
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -74,8 +76,8 @@ fun TagFolderItem(
             .onGloballyPositioned { itemPosition = it.positionInRoot() }
             .pointerInput(tag.id) {
                 detectTapGestures(
-                    onTap = { onClick(itemPosition) },
-                    onLongPress = { onLongClick(itemPosition) }
+                    onTap = { currentOnClick(itemPosition + it) },
+                    onLongPress = { currentOnLongClick(itemPosition + it) }
                 )
             }
             .padding(vertical = 4.dp, horizontal = 2.dp)
@@ -208,22 +210,13 @@ fun TagFolderPopup(
     val popupWidth = 260.dp
     val popupWidthPx = with(density) { popupWidth.toPx() }
 
-    val folderWidthPx = with(density) { 52.dp.toPx() }
-    val folderHeightPx = with(density) { 68.dp.toPx() }
-
-    val maxPopupHeight = 360.dp
-    val popupHeightPx = with(density) { maxPopupHeight.toPx() }
+    val rows = if (apps.isEmpty()) 1 else ((apps.size + 2) / 3).coerceIn(1, 4)
+    val estimatedHeight = if (apps.isEmpty()) 110.dp else (76 + rows * 80).dp
+    val popupHeightPx = with(density) { estimatedHeight.toPx() }
     val borderPadding = with(density) { 16.dp.toPx() }
 
-    // Center popup horizontally relative to tag folder item
-    var x = offset.x + (folderWidthPx / 2f) - (popupWidthPx / 2f)
-    // Position popup above tag folder item by default
-    var y = offset.y - popupHeightPx - with(density) { 8.dp.toPx() }
-
-    // If positioning above overflows top screen edge, place below tag folder item
-    if (y < borderPadding) {
-        y = offset.y + folderHeightPx + with(density) { 8.dp.toPx() }
-    }
+    var x = offset.x
+    var y = offset.y
 
     if (x + popupWidthPx > screenWidthPx - borderPadding) x = screenWidthPx - popupWidthPx - borderPadding
     if (x < borderPadding) x = borderPadding
@@ -238,7 +231,7 @@ fun TagFolderPopup(
         Box(
             modifier = Modifier
                 .width(popupWidth)
-                .heightIn(max = maxPopupHeight)
+                .heightIn(max = 360.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color.Black.copy(alpha = 0.90f))
                 .border(1.dp, tag.color.copy(alpha = 0.7f), RoundedCornerShape(16.dp))
@@ -315,14 +308,12 @@ fun TagFolderPopup(
                                     onAppClick("${app.packageName}/${app.activityName}")
                                     onDismiss()
                                 },
-                                onLongClick = { _ ->
+                                onLongClick = { appOffset ->
                                     onDismiss()
-                                    onAppLongClick(app, offset)
+                                    onAppLongClick(app, appOffset)
                                 },
-                                onRemoveClick = {
-                                    val key = "${app.packageName}/${app.activityName}"
-                                    onRemoveAppFromTag(tag.id, key)
-                                },
+                                onRemoveAppFromTag = onRemoveAppFromTag,
+                                tagId = tag.id,
                                 primaryTextColor = primaryTextColor,
                                 showShadows = showShadows
                             )
@@ -340,27 +331,32 @@ private fun TagFolderAppItem(
     isEditMode: Boolean,
     onClick: () -> Unit,
     onLongClick: (Offset) -> Unit,
-    onRemoveClick: () -> Unit,
+    onRemoveAppFromTag: (String, String) -> Unit,
+    tagId: String,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean
 ) {
     var itemPosition by remember { mutableStateOf(Offset.Zero) }
+    val currentOnClick by rememberUpdatedState(onClick)
+    val currentOnLongClick by rememberUpdatedState(onLongClick)
+    val currentOnRemoveApp by rememberUpdatedState(onRemoveAppFromTag)
+    val appKey = "${app.packageName}/${app.activityName}"
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
             .onGloballyPositioned { itemPosition = it.positionInRoot() }
-            .pointerInput("${app.packageName}/${app.activityName}") {
+            .pointerInput(appKey) {
                 detectTapGestures(
                     onTap = {
                         if (isEditMode) {
-                            onRemoveClick()
+                            currentOnRemoveApp(tagId, appKey)
                         } else {
-                            onClick()
+                            currentOnClick()
                         }
                     },
-                    onLongPress = { onLongClick(itemPosition + it) }
+                    onLongPress = { currentOnLongClick(itemPosition + it) }
                 )
             }
             .padding(4.dp)
@@ -370,9 +366,9 @@ private fun TagFolderAppItem(
                 app = app,
                 size = 48,
                 onClick = {
-                    if (isEditMode) onRemoveClick() else onClick()
+                    if (isEditMode) currentOnRemoveApp(tagId, appKey) else currentOnClick()
                 },
-                onLongClick = { onLongClick(itemPosition + it) }
+                onLongClick = { currentOnLongClick(itemPosition + it) }
             )
 
             // Minus icon overlay in center with 38% opacity when in edit mode
@@ -383,7 +379,7 @@ private fun TagFolderAppItem(
                         .clip(CircleShape)
                         .background(Color.Black.copy(alpha = 0.65f))
                         .border(1.dp, Color.Red.copy(alpha = 0.6f), CircleShape)
-                        .clickable { onRemoveClick() },
+                        .clickable { currentOnRemoveApp(tagId, appKey) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -408,3 +404,4 @@ private fun TagFolderAppItem(
         )
     }
 }
+

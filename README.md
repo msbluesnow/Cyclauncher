@@ -4,7 +4,7 @@
   <img src="assets/logo.png" width="128" height="128" alt="Cyclauncher Logo">
 </p>
 
-Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**, it is focused on speed, effortless app accessibility, and seamless one-handed usability. New features and mechanics are continuously designed not just to be unique, but to deliver a genuinely convenient, ergonomic, and practical daily experience. Fast and intuitive navigation is provided via a custom rectangular alphabet wheel.
+Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**, it is focused on speed, effortless app accessibility, and seamless one-handed usability. New features and mechanics are continuously designed not just to be unique, but to deliver a genuinely convenient, ergonomic, and practical daily experience. Fast and intuitive navigation is provided via versatile search methods including a custom rectangular alphabet wheel, an ergonomic side alphabet index strip, and instant text filtering.
 
 > [!IMPORTANT]
 > **Alpha Version**: This project is currently in early development. Features are subject to change, and bugs may be encountered as the experience is refined.
@@ -30,7 +30,8 @@ Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**,
 
 ## ✨ Key Features
 
-- **Rectangular Alphabet Wheel**: Fast app access via a custom interactive wheel, optimized for high-performance scrolling and rendering.
+- **Tag Folder System**: Interactive tag folders on the main screen with color accents, 2x2 live icon previews, and proximity-aware popup menus for seamless category management and launching.
+- **Versatile Search Modes**: Fast app access via a custom **Rectangular Alphabet Wheel**, an ergonomic **Side Alphabet Index** strip for rapid thumb scrubbing, or instant **Text Search**.
 - **Interactive Gesture Tutorial**: Guided hands-on onboarding overlay teaching launcher gestures (search, notifications, favorites & history management, system navigation) with animated visualizers.
 - **Dynamic Favorites**: Organize your top apps with intuitive drag-and-drop reordering (long-press star to enter) and quick-removal tools.
 - **AI-Powered Organization**: Categorize your apps efficiently with an AI-assisted tagging workflow (Export → Process via External AI Prompt → Import) and full tag backup support. *Note: AI processing is performed externally using your preferred provider.*
@@ -71,6 +72,8 @@ chmod +x gradlew
 A continuous, unified timeline of completed milestones and planned updates.
 
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Letter-Based Scroll Wheel</b> — Interactive rectangular scroll wheel for high-performance app retrieval.<br>
+<kbd>&nbsp;✓&nbsp;</kbd> <b>Side Alphabet Search Mode</b> — Ergonomic alphabet index strip for swift one-handed scrubbing and app indexing.<br>
+<kbd>&nbsp;✓&nbsp;</kbd> <b>Tag Folder System</b> — On-screen tag folders with multi-app previews, quick popups, and full management.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Application Tag System</b> — Grouping apps with an AI-assisted tagging workflow and full JSON backup options.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Adaptive Text & Theme Accents</b> — Selectable accent palettes, a custom Main Color (Black/White) switcher, and dynamic shadow inversion.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Performance Tuning</b> — Asynchronous Coil icon prefetching and sequential package manager querying to prevent system UI freezes under Battery Saver mode.<br>
