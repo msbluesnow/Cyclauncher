@@ -1,0 +1,6 @@
+- Tag Folder System: interactive on-screen folders with 2x2 live app previews, proximity-aware popups, in-place tag editing, and app removal mode.
+- Side Alphabet Search: ergonomic vertical alphabet strip for rapid one-handed letter scrubbing and app filtering.
+- Interactive Gesture Tutorial: step-by-step visual onboarding covering search, favorites, history, tags, and navigation gestures.
+- Swappable History & Tags layout: seamless drag gestures to swap vertical sections on the home screen.
+- Redesigned Settings: added search method picker (Wheel / Side Alphabet / Text) and streamlined options.
+- Navigation & Performance: improved back gesture handling, smoother animations, and bug fixes.
