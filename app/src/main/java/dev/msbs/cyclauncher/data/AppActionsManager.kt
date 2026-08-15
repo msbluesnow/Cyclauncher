@@ -8,6 +8,7 @@ import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONArray
@@ -672,7 +673,7 @@ class AppActionsManager(context: Context) {
     }
 
     private fun colorToHex(color: Color): String {
-        val argb = color.value.toInt()
+        val argb = color.toArgb()
         return String.format("#%06X", 0xFFFFFF and argb)
     }
 }

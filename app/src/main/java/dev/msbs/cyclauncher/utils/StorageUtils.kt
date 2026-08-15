@@ -3,9 +3,8 @@ package dev.msbs.cyclauncher.utils
 import android.content.Context
 
 /**
- * Returns a device-protected storage context. If SharedPreferences under the name "launcher_prefs"
- * exist in the default credential-protected storage, they are migrated to the device-protected
- * storage so they remain available during Direct Boot (before PIN/password entry).
+ * Возвращает device-protected storage context для работы в Direct Boot.
+ * Мигрирует SharedPreferences из credential-protected storage при первом вызове.
  */
 fun Context.getSafeStorageContext(): Context {
     if (this.isDeviceProtectedStorage) {
@@ -20,8 +19,8 @@ fun Context.getSafeStorageContext(): Context {
                 targetPrefs.edit().putBoolean("prefs_migrated_to_de", true).apply()
             }
         }
-    } catch (e: Exception) {
-        // Fallback gracefully if credential-protected storage is locked during Direct Boot
+    } catch (_: Exception) {
+        // Credential-protected storage может быть заблокирован во время Direct Boot
     }
     return deviceProtectedContext
 }

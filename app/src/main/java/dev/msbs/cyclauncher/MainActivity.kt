@@ -156,10 +156,10 @@ class MainActivity : ComponentActivity() {
                         tagToEditForDialog = null
                         scope.launch {
                             if (horizontalPagerState.currentPage != 0) {
-                                horizontalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
+                                horizontalPagerState.scrollToPage(0)
                             }
                             if (verticalPagerState.currentPage != 0) {
-                                verticalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
+                                verticalPagerState.scrollToPage(0)
                             }
                         }
                     }
@@ -190,17 +190,12 @@ class MainActivity : ComponentActivity() {
                     derivedStateOf { horizontalPagerState.currentPage == 0 && verticalPagerState.currentPage == 1 }
                 }
                 
-                val haptic = LocalHapticFeedback.current
                 val handSide by viewModel.handSide.collectAsState()
                 val accentColor by viewModel.accentColor.collectAsState()
                 val allTags by viewModel.tags.collectAsState()
                 val appTagsMap by viewModel.appTags.collectAsState()
                 val autoTagsPreview by viewModel.autoTagsPreview.collectAsState()
                 val tagsBackupPreview by viewModel.tagsBackupPreview.collectAsState()
-
-                LaunchedEffect(verticalPagerState.currentPage, horizontalPagerState.currentPage) {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                }
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -507,9 +502,7 @@ private fun CyclauncherTheme(content: @Composable () -> Unit) {
     MaterialTheme { content() }
 }
 
-/**
- * Dialog prompting confirmation before applying automatic AI tags configuration.
- */
+// Диалог подтверждения применения автоматических тегов
 @Composable
 private fun AutoTagsConfirmDialog(
     preview: AutoTagsPreview,
@@ -540,7 +533,8 @@ private fun AutoTagsConfirmDialog(
                 Text(
                     "${preview.matchedAppsCount} apps will be tagged into ${preview.tags.size} categories:",
                     color = Color.White.copy(alpha = 0.85f),
-                    fontSize = 14.sp
+                    fontSize = 14.sp,
+                    style = androidx.compose.ui.text.TextStyle(shadow = shadow)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 preview.tags.forEach { tagInfo ->

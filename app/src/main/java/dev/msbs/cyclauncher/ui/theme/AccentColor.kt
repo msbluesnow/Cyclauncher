@@ -2,16 +2,12 @@ package dev.msbs.cyclauncher.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-/**
- * Defines the available theme accent colors for the application.
- * Each accent color has a display name, a primary color, and a glow/shadow overlay color.
- */
+/** Доступные акцентные цвета темы. */
 enum class AccentColor(
     val displayName: String,
     val color: Color,
     val glowColor: Color
 ) {
-    // Light Variants (Left column)
     SKY("Sapphire", Color(0xFF74C7EC), Color(0x3374C7EC)),
     LAVENDER("Lavender", Color(0xFFB4BEFE), Color(0x33B4BEFE)),
     MINT("Emerald Mint", Color(0xFF94E2D5), Color(0x3394E2D5)),
@@ -19,7 +15,6 @@ enum class AccentColor(
     PEACH("Peach", Color(0xFFFAB387), Color(0x33FAB387)),
     SNOW("White", Color(0xFFFFFFFF), Color(0x33FFFFFF)),
 
-    // Dark Variants (Right column)
     DARK_SKY("Royal Blue", Color(0xFF1E66F5), Color(0x331E66F5)),
     DARK_LAVENDER("Deep Mauve", Color(0xFF8839EF), Color(0x338839EF)),
     DARK_MINT("Nordic Teal", Color(0xFF179299), Color(0x33179299)),
@@ -28,19 +23,8 @@ enum class AccentColor(
     DARK_SLATE("Dark Slate", Color(0xFF18181B), Color(0x3318181B));
 
     companion object {
-        /**
-         * Resolves the [AccentColor] enum element corresponding to the given string name.
-         * Falls back to [SKY] if no match is found.
-         *
-         * @param name The name of the accent color to lookup.
-         * @return The resolved AccentColor instance.
-         */
         fun fromName(name: String): AccentColor {
-            return try {
-                valueOf(name)
-            } catch (e: Exception) {
-                SKY
-            }
+            return try { valueOf(name) } catch (_: Exception) { SKY }
         }
     }
 }

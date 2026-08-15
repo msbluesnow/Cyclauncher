@@ -105,7 +105,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _resetRequest.tryEmit(Unit)
     }
 
-    /** List of all installed applications, enriched with user-defined custom labels. */
+    // Список всех установленных приложений с пользовательскими названиями
     val apps: StateFlow<List<AppInfo>> = combine(_apps, actionsManager.customLabels) { all, customLabels ->
         all.map { app ->
             val customLabel = customLabels[app.componentKey]
@@ -115,28 +115,30 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 app
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** List of installed applications that match the currently selected alphabet wheel letter. */
+    // Приложения для выбранной буквы алфавита
     val filteredApps: StateFlow<List<AppInfo>> = combine(apps, _selectedLetter) { all, letter ->
         all.filter { it.searchChar == letter }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** List of recently opened applications in historical order. */
+    // Недавние приложения (быстрый O(1) поиск по ключу)
     val historyApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.history) { all, ids ->
-        ids.mapNotNull { id -> all.find { it.componentKey == id } }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        val appMap = all.associateBy { it.componentKey }
+        ids.mapNotNull { id -> appMap[id] }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** List of applications marked as favorites. */
+    // Избранные приложения (быстрый O(1) поиск по ключу)
     val favoriteApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.favorites) { all, ids ->
-        ids.mapNotNull { id -> all.find { it.componentKey == id } }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        val appMap = all.associateBy { it.componentKey }
+        ids.mapNotNull { id -> appMap[id] }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** List of installed applications matching the active keyboard search query. */
+    // Результаты текстового поиска
     val textFilteredApps: StateFlow<List<AppInfo>> = combine(apps, _searchText) { all, query ->
         if (query.isEmpty()) all
         else all.filter { it.label.contains(query, ignoreCase = true) }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Controls whether the interactive tutorial overlay is visible. */
     private val _showTutorial = MutableStateFlow(false)
