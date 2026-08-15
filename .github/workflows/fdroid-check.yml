@@ -1,0 +1,25 @@
+name: F-Droid status check
+
+on:
+  schedule:
+    - cron: "0 * * * *"  # every hour
+  workflow_dispatch: {}   # allows manual run from the Actions tab
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore saved status
+        uses: actions/cache@v4
+        with:
+          path: scripts/fdroid_state.json
+          key: fdroid-state
+          restore-keys: fdroid-state
+
+      - name: Check F-Droid status
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scripts/fdroid_status.py --notify

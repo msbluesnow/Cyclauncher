@@ -45,3 +45,6 @@ signing.properties
 Thumbs.db
 =======
 >>>>>>> 56fc25e43ca540427b147c5e98a8fadc6a19ac49
+
+# F-Droid status script state
+scripts/fdroid_state.json
