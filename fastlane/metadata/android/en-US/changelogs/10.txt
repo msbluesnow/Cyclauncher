@@ -1,0 +1,7 @@
+- Stability: fixed launcher freeze/UI deadlock after long idle, device unlock, or returning to the app.
+- Fixed phantom haptic vibration triggered on pager state recalculations.
+- Fixed AppActionMenu popup offset inside tag folders.
+- Performance: optimized app, history, and favorites state flows to activate only while the UI is subscribed.
+- Performance: faster history/favorites resolution via O(1) lookups; removed forced GC calls to reduce jank.
+- Fixed accent color hex conversion bug.
+- Slimmed the app by removing unused dependencies and switching to the native Android theme.
