@@ -4,6 +4,23 @@
   <img src="assets/logo.png" width="128" height="128" alt="Cyclauncher Logo">
 </p>
 
+<p align="center">
+  <a href="https://f-droid.org/packages/dev.msbs.cyclauncher/">
+    <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
+      alt="Get it on F-Droid"
+      height="80">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://f-droid.org/packages/dev.msbs.cyclauncher/">
+    <img src="https://img.shields.io/f-droid/v/dev.msbs.cyclauncher?style=for-the-badge&logo=f-droid&logoColor=white&label=F-Droid" alt="F-Droid Version">
+  </a>
+  <a href="https://github.com/msbluesnow/Cyclauncher/actions/workflows/fdroid-check.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/msbluesnow/Cyclauncher/fdroid-check.yml?style=for-the-badge&label=F-Droid%20Check&logo=github" alt="F-Droid Status Check">
+  </a>
+</p>
+
 Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**, it is focused on speed, effortless app accessibility, and seamless one-handed usability. New features and mechanics are continuously designed not just to be unique, but to deliver a genuinely convenient, ergonomic, and practical daily experience. Fast and intuitive navigation is provided via versatile search methods including a custom rectangular alphabet wheel, an ergonomic side alphabet index strip, and instant text filtering.
 
 > [!IMPORTANT]
