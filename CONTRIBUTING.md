@@ -49,9 +49,12 @@ app/src/main/java/dev/msbs/cyclauncher/
 │
 ├── ui/                            # User Interface
 │   ├── components/
-│   │   ├── RectangularAlphabetWheel.kt  # Custom Canvas-rendered wheel with deceleration physics
 │   │   ├── AppActionMenu.kt             # Context menu (Favorites, Edit Label, Tags, Uninstall)
-│   │   └── AppUiComponents.kt           # Shared UI elements (AppIconPainter, AppListItemWithIcon)
+│   │   ├── AppUiComponents.kt           # Shared UI elements (AppIconPainter, AppListItemWithIcon)
+│   │   ├── RectangularAlphabetWheel.kt  # Custom Canvas-rendered wheel with deceleration physics
+│   │   ├── SideAlphabetSearchLayout.kt  # Side index strip for rapid thumb-scrubbing app retrieval
+│   │   ├── TagComponents.kt             # Components for tag folders, chips, and selection dialogs
+│   │   └── TutorialOverlay.kt           # Interactive onboarding tutorial overlay demonstrating gestures
 │   ├── screens/
 │   │   ├── MainMenuScreen.kt            # Main screen (Favorites drag & drop, History with adaptive shadows)
 │   │   ├── SearchScreen.kt              # Letter-filtered app list view

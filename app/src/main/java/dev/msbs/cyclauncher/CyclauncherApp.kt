@@ -4,11 +4,9 @@ import android.app.Application
 import android.content.Context
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
-import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import dev.msbs.cyclauncher.coil.AppIconFetcher
-import okio.Path.Companion.toOkioPath
 
 /**
  * Application entry point. Sets up Coil's singleton [ImageLoader] with:
@@ -32,12 +30,6 @@ class CyclauncherApp : Application(), SingletonImageLoader.Factory {
             .memoryCache {
                 MemoryCache.Builder()
                     .maxSizeBytes(MAX_MEMORY_BYTES)
-                    .build()
-            }
-            .diskCache {
-                DiskCache.Builder()
-                    .directory(cacheDir.resolve("app_icons").toOkioPath())
-                    .maxSizeBytes(MAX_DISK_BYTES)
                     .build()
             }
             .crossfade(false)
@@ -68,8 +60,5 @@ class CyclauncherApp : Application(), SingletonImageLoader.Factory {
         // 96–144 px). Beyond this Coil evicts least-recently-used entries — exactly the
         // behavior the old in-memory `ImageBitmap` field lacked.
         const val MAX_MEMORY_BYTES = 24L * 1024L * 1024L
-        // 64 MiB on disk is enough for thousands of 96 px PNGs and still leaves the rest of
-        // the app's cache budget untouched.
-        const val MAX_DISK_BYTES = 64L * 1024L * 1024L
     }
 }

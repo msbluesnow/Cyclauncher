@@ -59,6 +59,7 @@ internal class AppIconFetcher private constructor(
             val key = when (data) {
                 is AppIconKey -> data
                 is String -> {
+                    if (data.startsWith("/")) return null
                     val uri = data.toUri()
                     if (uri.scheme != null) return null
                     if (!data.contains('/')) return null

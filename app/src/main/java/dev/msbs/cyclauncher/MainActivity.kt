@@ -67,6 +67,8 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: LauncherViewModel by viewModels()
 
+    private var isDefaultLauncherCached = false
+
     /**
      * BroadcastReceiver to dynamically refresh the app list when applications are installed,
      * uninstalled, or updated.
@@ -100,7 +102,7 @@ class MainActivity : ComponentActivity() {
         
         val onBackPressedCallback = object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (!viewModel.isDefaultLauncher()) {
+                if (!isDefaultLauncherCached) {
                     finish()
                 }
             }
@@ -375,20 +377,21 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        isDefaultLauncherCached = viewModel.isDefaultLauncher()
         viewModel.refreshApps()
         viewModel.requestReset()
     }
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        if (!viewModel.isDefaultLauncher()) {
+        if (!isDefaultLauncherCached) {
             finish()
         }
     }
 
     override fun onStop() {
         super.onStop()
-        if (!viewModel.isDefaultLauncher()) {
+        if (!isDefaultLauncherCached) {
             finish()
         }
     }
@@ -401,8 +404,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        isDefaultLauncherCached = viewModel.isDefaultLauncher()
         if (intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_HOME)) {
-            if (!viewModel.isDefaultLauncher()) {
+            if (!isDefaultLauncherCached) {
                 finish()
                 return
             }
