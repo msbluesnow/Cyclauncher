@@ -3,8 +3,9 @@
 
 Checks:
   1. f-droid.org API  — which versions are published in the store
-  2. monitor.f-droid.org  — current build queue (running / waiting)
-  3. monitor.f-droid.org build logs  — completed build logs per version
+  2. gitlab.com fdroiddata MRs — bot update MRs (checkupdates-bot) & CI pipeline status
+  3. monitor.f-droid.org  — current build queue (running / waiting)
+  4. monitor.f-droid.org build logs  — completed build logs per version
 
 Usage:
   python fdroid_status.py                    # one-shot check
@@ -31,6 +32,7 @@ PACKAGE = "dev.msbs.cyclauncher"
 API_URL = f"https://f-droid.org/api/v1/packages/{PACKAGE}"
 MONITOR_BASE = "https://monitor.f-droid.org"
 LOGS_URL = f"{MONITOR_BASE}/buildlogs/{PACKAGE}/"
+GITLAB_API_BASE = "https://gitlab.com/api/v4/projects/fdroid%2Ffdroiddata"
 
 
 def fetch(url: str) -> str:
@@ -42,6 +44,71 @@ def fetch(url: str) -> str:
 def published_versions() -> list[dict]:
     data = json.loads(fetch(API_URL))
     return data.get("packages", [])
+
+
+def gitlab_mr_status() -> list[dict]:
+    """Fetch Merge Requests in fdroid/fdroiddata matching the package, including bot updates and CI pipeline state."""
+    mrs_by_iid = {}
+    urls_to_try = [
+        f"{GITLAB_API_BASE}/merge_requests?search={urllib.parse.quote(PACKAGE)}&per_page=10",
+        f"{GITLAB_API_BASE}/merge_requests?source_branch={urllib.parse.quote(PACKAGE)}&per_page=10",
+    ]
+    for url in urls_to_try:
+        try:
+            raw = fetch(url)
+            items = json.loads(raw)
+            if isinstance(items, list):
+                for item in items:
+                    iid = item.get("iid")
+                    if iid and iid not in mrs_by_iid:
+                        mrs_by_iid[iid] = item
+        except Exception:
+            continue
+
+    sorted_mrs = sorted(
+        mrs_by_iid.values(),
+        key=lambda x: x.get("updated_at", ""),
+        reverse=True
+    )
+
+    results = []
+    for mr in sorted_mrs[:5]:
+        iid = mr.get("iid")
+        title = mr.get("title", "")
+        state = mr.get("state", "")
+        author = mr.get("author", {}).get("username", "") if isinstance(mr.get("author"), dict) else ""
+        web_url = mr.get("web_url", "")
+        created_at = mr.get("created_at", "")
+        updated_at = mr.get("updated_at", "")
+        merged_at = mr.get("merged_at", "")
+        labels = mr.get("labels", [])
+
+        pipeline_status = None
+        pipeline_url = None
+        try:
+            pipelines_raw = fetch(f"{GITLAB_API_BASE}/merge_requests/{iid}/pipelines")
+            pipelines = json.loads(pipelines_raw)
+            if isinstance(pipelines, list) and len(pipelines) > 0:
+                latest_p = pipelines[0]
+                pipeline_status = latest_p.get("status")
+                pipeline_url = latest_p.get("web_url")
+        except Exception:
+            pass
+
+        results.append({
+            "iid": iid,
+            "title": title,
+            "state": state,
+            "author": author,
+            "web_url": web_url,
+            "created_at": created_at,
+            "updated_at": updated_at,
+            "merged_at": merged_at,
+            "labels": labels,
+            "pipeline_status": pipeline_status,
+            "pipeline_url": pipeline_url,
+        })
+    return results
 
 
 def queue_status() -> list[str]:
@@ -86,6 +153,22 @@ def report() -> None:
         print(f"[Store] failed to query f-droid.org API: {e}")
 
     try:
+        mrs = gitlab_mr_status()
+        print("\n[GitLab] fdroiddata merge requests (bot & community updates):")
+        for mr in mrs:
+            pipeline_info = f" | Pipeline CI: {mr['pipeline_status']}" if mr.get("pipeline_status") else ""
+            print(f"  - !{mr['iid']}: \"{mr['title']}\" [{mr['state']}]{pipeline_info}")
+            if mr.get("author"):
+                print(f"    Author: @{mr['author']} | Labels: {', '.join(mr.get('labels', [])) or '(none)'}")
+            if mr.get("pipeline_url"):
+                print(f"    Pipeline: {mr['pipeline_url']}")
+            print(f"    URL: {mr['web_url']}")
+        if not mrs:
+            print("  (no merge requests found)")
+    except Exception as e:
+        print(f"\n[GitLab] failed to query GitLab merge requests: {e}")
+
+    try:
         logs = build_logs()
         print("\n[Monitor] build logs on server:")
         for name in logs:
@@ -113,11 +196,24 @@ def report() -> None:
 
 def collect_status() -> dict:
     """Gather the current status snapshot (never raises on network errors)."""
-    status = {"store": [], "logs": [], "queue": []}
+    status = {"store": [], "gitlab_mrs": [], "logs": [], "queue": []}
     try:
         status["store"] = [
             {"versionName": v.get("versionName"), "versionCode": v.get("versionCode")}
             for v in published_versions()
+        ]
+    except Exception:
+        pass
+    try:
+        status["gitlab_mrs"] = [
+            {
+                "iid": mr.get("iid"),
+                "title": mr.get("title"),
+                "state": mr.get("state"),
+                "pipeline_status": mr.get("pipeline_status"),
+                "updated_at": mr.get("updated_at"),
+            }
+            for mr in gitlab_mr_status()
         ]
     except Exception:
         pass
@@ -139,6 +235,14 @@ def format_status(status: dict) -> str:
         lines.append(f"  {v['versionName']} (code {v['versionCode']})")
     if not status["store"]:
         lines.append("  (none)")
+
+    lines.append("GitLab MRs:")
+    for mr in status.get("gitlab_mrs", []):
+        p_stat = f" (CI: {mr['pipeline_status']})" if mr.get("pipeline_status") else ""
+        lines.append(f"  !{mr['iid']}: \"{mr['title']}\" [{mr['state']}]{p_stat}")
+    if not status.get("gitlab_mrs"):
+        lines.append("  (none)")
+
     lines.append("Build logs:")
     lines += [f"  {n}" for n in status["logs"]] or ["  (none)"]
     lines.append("Queue:")
