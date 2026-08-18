@@ -380,6 +380,7 @@ class MainActivity : ComponentActivity() {
         isDefaultLauncherCached = viewModel.isDefaultLauncher()
         viewModel.refreshApps()
         viewModel.requestReset()
+        viewModel.requestHistoryScrollToBottom()
     }
 
     override fun onUserLeaveHint() {
@@ -412,6 +413,7 @@ class MainActivity : ComponentActivity() {
             }
         }
         viewModel.requestReset()
+        viewModel.requestHistoryScrollToBottom()
     }
 
     /**
@@ -433,6 +435,7 @@ class MainActivity : ComponentActivity() {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
                 }
                 viewModel.logAppLaunch(componentKey)
+                viewModel.requestHistoryScrollToBottom()
                 startActivity(intent)
             } catch (e: Exception) {
                 packageManager.getLaunchIntentForPackage(packageName)?.let { intent ->
@@ -442,6 +445,7 @@ class MainActivity : ComponentActivity() {
         } else {
             packageManager.getLaunchIntentForPackage(componentKey)?.let { intent ->
                 viewModel.logAppLaunch(componentKey)
+                viewModel.requestHistoryScrollToBottom()
                 startActivity(intent)
             }
         }

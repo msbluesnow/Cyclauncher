@@ -68,11 +68,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Whether adaptive text/icon drop shadows are enabled. */
     val showShadows: StateFlow<Boolean> = _showShadows
 
-    private val _searchMethod = MutableStateFlow(SearchMethod.WHEEL)
+    private val _searchMethod = MutableStateFlow(SearchMethod.SIDE_ALPHABET)
     /** The active application search layout method. */
     val searchMethod: StateFlow<SearchMethod> = _searchMethod
 
-    private var lastAlphabetSearchMethod: SearchMethod = SearchMethod.WHEEL
+    private var lastAlphabetSearchMethod: SearchMethod = SearchMethod.SIDE_ALPHABET
+
+    private val _sideAlphabetButtonYRatio = MutableStateFlow(0.23f)
+    /** Vertical screen position ratio for the side alphabet grid toggle button (0.05f..0.85f). */
+    val sideAlphabetButtonYRatio: StateFlow<Float> = _sideAlphabetButtonYRatio
 
     private val _isTextSearchMode = MutableStateFlow(false)
     /** Whether keyboard-based text search mode is active. */
@@ -95,6 +99,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Flow signaling that the UI should scroll back to the main home screen. */
     val resetRequest = _resetRequest.asSharedFlow()
 
+    private val _historyScrollToBottomTrigger = MutableStateFlow(0L)
+    /** Trigger signaling that the recent history list should scroll to the bottom. */
+    val historyScrollToBottomTrigger: StateFlow<Long> = _historyScrollToBottomTrigger
+
     /** Requests the home screen UI to reset to the main cluster and page, exiting text search mode if active. */
     fun requestReset() {
         if (_isTextSearchMode.value) {
@@ -102,7 +110,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             _searchText.value = ""
             _searchMethod.value = lastAlphabetSearchMethod
         }
+        _historyScrollToBottomTrigger.value = System.currentTimeMillis()
         _resetRequest.tryEmit(Unit)
+    }
+
+    /** Requests the recent history list to scroll to the bottom. */
+    fun requestHistoryScrollToBottom() {
+        _historyScrollToBottomTrigger.value = System.currentTimeMillis()
     }
 
     // Список всех установленных приложений с пользовательскими названиями
@@ -126,7 +140,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val historyApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.history) { all, ids ->
         val appMap = all.associateBy { it.componentKey }
         ids.mapNotNull { id -> appMap[id] }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     // Избранные приложения (быстрый O(1) поиск по ключу)
     val favoriteApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.favorites) { all, ids ->
@@ -165,14 +179,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             _showShadows.value = prefs.getBoolean("show_shadows", true)
         }
 
-        val savedSearchMethod = prefs.getString("search_method", SearchMethod.WHEEL.name) ?: SearchMethod.WHEEL.name
-        val initialMethod = try { SearchMethod.valueOf(savedSearchMethod) } catch (e: Exception) { SearchMethod.WHEEL }
+        val savedSearchMethod = prefs.getString("search_method", SearchMethod.SIDE_ALPHABET.name) ?: SearchMethod.SIDE_ALPHABET.name
+        val initialMethod = try { SearchMethod.valueOf(savedSearchMethod) } catch (e: Exception) { SearchMethod.SIDE_ALPHABET }
         _searchMethod.value = initialMethod
         _isTextSearchMode.value = (initialMethod == SearchMethod.TEXT)
 
-        val savedLastAlphabet = prefs.getString("last_alphabet_search_method", SearchMethod.WHEEL.name) ?: SearchMethod.WHEEL.name
-        val initialLastAlphabet = try { SearchMethod.valueOf(savedLastAlphabet) } catch (e: Exception) { SearchMethod.WHEEL }
-        lastAlphabetSearchMethod = if (initialLastAlphabet == SearchMethod.TEXT) SearchMethod.WHEEL else initialLastAlphabet
+        val savedLastAlphabet = prefs.getString("last_alphabet_search_method", SearchMethod.SIDE_ALPHABET.name) ?: SearchMethod.SIDE_ALPHABET.name
+        val initialLastAlphabet = try { SearchMethod.valueOf(savedLastAlphabet) } catch (e: Exception) { SearchMethod.SIDE_ALPHABET }
+        lastAlphabetSearchMethod = if (initialLastAlphabet == SearchMethod.TEXT) SearchMethod.SIDE_ALPHABET else initialLastAlphabet
+
+        _sideAlphabetButtonYRatio.value = prefs.getFloat("side_alphabet_button_y_ratio", 0.23f).coerceIn(0.05f, 0.85f)
 
         val isTutorialCompleted = prefs.getBoolean("is_tutorial_completed", false)
         if (!isTutorialCompleted) {
@@ -218,6 +234,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      * @param letter The character chosen by the user.
      */
     fun setSelectedLetter(letter: Char) { _selectedLetter.value = letter }
+
+    /**
+     * Sets the vertical position ratio for the side alphabet grid toggle button and persists it.
+     *
+     * @param ratio Vertical position ratio between 0.05f and 0.85f.
+     */
+    fun setSideAlphabetButtonYRatio(ratio: Float) {
+        val clamped = ratio.coerceIn(0.05f, 0.85f)
+        _sideAlphabetButtonYRatio.value = clamped
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putFloat("side_alphabet_button_y_ratio", clamped).apply()
+    }
 
     /**
      * Sets the active search layout method and persists the preference.

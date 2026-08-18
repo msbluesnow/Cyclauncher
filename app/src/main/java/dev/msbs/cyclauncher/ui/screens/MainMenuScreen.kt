@@ -187,53 +187,55 @@ fun MainMenuScreen(
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 HistorySection(
-                    Modifier.weight(historyWeight),
-                    history,
-                    popularTagsWithApps,
-                    handSide,
-                    primaryTextColor,
-                    showShadows,
-                    accentColor,
-                    isHistoryEditMode,
-                    { isHistoryEditMode = it },
-                    { viewModel.removeFromHistory(it) },
-                    onAppClick,
-                    onAppLongClick,
-                    { tag, taggedApps, offset ->
+                    viewModel = viewModel,
+                    modifier = Modifier.weight(historyWeight),
+                    history = history,
+                    popularTags = popularTagsWithApps,
+                    handSide = handSide,
+                    primaryTextColor = primaryTextColor,
+                    showShadows = showShadows,
+                    accentColor = accentColor,
+                    isHistoryEditMode = isHistoryEditMode,
+                    setHistoryEditMode = { isHistoryEditMode = it },
+                    onRemoveFromHistory = { viewModel.removeFromHistory(it) },
+                    onAppClick = onAppClick,
+                    onAppLongClick = onAppLongClick,
+                    onTagFolderClick = { tag, taggedApps, offset ->
                         isTagPopupEditMode = false
                         selectedTagForPopup = Triple(tag, taggedApps, offset)
                     },
-                    { tag, taggedApps, offset ->
+                    onTagFolderLongClick = { tag, taggedApps, offset ->
                         isTagPopupEditMode = true
                         selectedTagForPopup = Triple(tag, taggedApps, offset)
                     },
-                    onSettingsClick,
-                    isActive
+                    onSettingsClick = onSettingsClick,
+                    isActive = isActive
                 )
             } else {
                 HistorySection(
-                    Modifier.weight(historyWeight),
-                    history,
-                    popularTagsWithApps,
-                    handSide,
-                    primaryTextColor,
-                    showShadows,
-                    accentColor,
-                    isHistoryEditMode,
-                    { isHistoryEditMode = it },
-                    { viewModel.removeFromHistory(it) },
-                    onAppClick,
-                    onAppLongClick,
-                    { tag, taggedApps, offset ->
+                    viewModel = viewModel,
+                    modifier = Modifier.weight(historyWeight),
+                    history = history,
+                    popularTags = popularTagsWithApps,
+                    handSide = handSide,
+                    primaryTextColor = primaryTextColor,
+                    showShadows = showShadows,
+                    accentColor = accentColor,
+                    isHistoryEditMode = isHistoryEditMode,
+                    setHistoryEditMode = { isHistoryEditMode = it },
+                    onRemoveFromHistory = { viewModel.removeFromHistory(it) },
+                    onAppClick = onAppClick,
+                    onAppLongClick = onAppLongClick,
+                    onTagFolderClick = { tag, taggedApps, offset ->
                         isTagPopupEditMode = false
                         selectedTagForPopup = Triple(tag, taggedApps, offset)
                     },
-                    { tag, taggedApps, offset ->
+                    onTagFolderLongClick = { tag, taggedApps, offset ->
                         isTagPopupEditMode = true
                         selectedTagForPopup = Triple(tag, taggedApps, offset)
                     },
-                    onSettingsClick,
-                    isActive
+                    onSettingsClick = onSettingsClick,
+                    isActive = isActive
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 FavoritesSection(
@@ -292,6 +294,7 @@ fun MainMenuScreen(
  * Renders the launch history list of applications. Displays recently used apps.
  * Supports toggle edit mode via long-pressing the history icon to remove items from history.
  *
+ * @param viewModel The view model supplying state data and reset notifications.
  * @param modifier Modifier for UI configurations.
  * @param history The list of recently launched applications.
  * @param handSide Preferred layout orientation side.
@@ -308,6 +311,7 @@ fun MainMenuScreen(
  */
 @Composable
 private fun HistorySection(
+    viewModel: LauncherViewModel,
     modifier: Modifier,
     history: List<AppInfo>,
     popularTags: List<Pair<Tag, List<AppInfo>>>,
@@ -332,13 +336,26 @@ private fun HistorySection(
     val tagGridState = rememberLazyGridState()
     val currentOnSettingsClick by rememberUpdatedState(onSettingsClick)
     var isHistoryShiftedUp by remember { mutableStateOf(false) }
+    val scrollTrigger by viewModel.historyScrollToBottomTrigger.collectAsState()
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
-    // Reset history edit mode if user navigates away
-    LaunchedEffect(isActive) {
-        if (!isActive) {
-            setHistoryEditMode(false)
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.requestHistoryScrollToBottom()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    // Reset history edit mode and scroll to bottom whenever scrollTrigger changes, history updates, or screen becomes active
+    LaunchedEffect(scrollTrigger, history, isActive) {
+        if (isActive && history.isNotEmpty()) {
             isHistoryShiftedUp = false
-        } else if (history.isNotEmpty()) {
+            setHistoryEditMode(false)
             listState.scrollToItem(0)
         }
     }

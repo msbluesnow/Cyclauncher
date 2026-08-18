@@ -9,6 +9,8 @@ import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -26,7 +28,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -57,12 +61,15 @@ fun SideAlphabetSearchLayout(
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
     val shadow = primaryTextColor.getShadow(showShadows)
+    val savedYRatio by viewModel.sideAlphabetButtonYRatio.collectAsState()
+    var localYRatio by remember(savedYRatio) { mutableStateOf(savedYRatio) }
 
     // Temporary local layout swap state (resets automatically when exiting SearchScreen)
     var isLayoutSwapped by remember { mutableStateOf(false) }
 
     val alphabet = remember { listOf('#') + ('A'..'Z').toList() }
     val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
 
     val currentSelectedLetter by rememberUpdatedState(selectedLetter)
     val currentOnLetterSelected by rememberUpdatedState { char: Char ->
@@ -195,7 +202,7 @@ fun SideAlphabetSearchLayout(
             Box(
                 modifier = Modifier
                     .align(if (handSide == HandSide.LEFT) Alignment.BottomStart else Alignment.BottomEnd)
-                    .padding(bottom = totalHeight * 0.23f)
+                    .padding(bottom = totalHeight * localYRatio)
             ) {
                 SwapSemiCircleButton(
                     handSide = handSide,
@@ -205,6 +212,16 @@ fun SideAlphabetSearchLayout(
                     onClick = {
                         isLayoutSwapped = !isLayoutSwapped
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    },
+                    onVerticalDrag = { deltaPx ->
+                        val totalHeightPx = with(density) { totalHeight.toPx() }
+                        if (totalHeightPx > 0f) {
+                            val deltaRatio = -deltaPx / totalHeightPx
+                            localYRatio = (localYRatio + deltaRatio).coerceIn(0.05f, 0.85f)
+                        }
+                    },
+                    onDragEnd = {
+                        viewModel.setSideAlphabetButtonYRatio(localYRatio)
                     }
                 )
             }
@@ -214,6 +231,7 @@ fun SideAlphabetSearchLayout(
 
 /**
  * Semi-circle swap button attached to the screen edge matching handSide.
+ * Supports tap to swap layout orientation and vertical drag gesture to move the button along the Y axis.
  */
 @Composable
 private fun SwapSemiCircleButton(
@@ -221,8 +239,11 @@ private fun SwapSemiCircleButton(
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onVerticalDrag: (Float) -> Unit,
+    onDragEnd: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     val shadow = primaryTextColor.getShadow(showShadows)
     val shape = if (handSide == HandSide.LEFT) {
         RoundedCornerShape(topEnd = 27.dp, bottomEnd = 27.dp, topStart = 0.dp, bottomStart = 0.dp)
@@ -230,18 +251,67 @@ private fun SwapSemiCircleButton(
         RoundedCornerShape(topStart = 27.dp, bottomStart = 27.dp, topEnd = 0.dp, bottomEnd = 0.dp)
     }
 
+    val currentOnClick by rememberUpdatedState(onClick)
+    val currentOnVerticalDrag by rememberUpdatedState(onVerticalDrag)
+    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
+    var isBeingDragged by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .width(36.dp)
             .height(54.dp)
             .clip(shape)
-            .background(primaryTextColor.color.copy(alpha = 0.14f))
+            .background(
+                if (isBeingDragged) {
+                    accentColor.color.copy(alpha = 0.28f)
+                } else {
+                    primaryTextColor.color.copy(alpha = 0.14f)
+                }
+            )
             .border(
                 1.dp,
-                primaryTextColor.color.copy(alpha = 0.22f),
+                if (isBeingDragged) {
+                    accentColor.color.copy(alpha = 0.6f)
+                } else {
+                    primaryTextColor.color.copy(alpha = 0.22f)
+                },
                 shape
             )
-            .clickable { onClick() },
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    var isDrag = false
+                    var totalDragY = 0f
+
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) {
+                            if (!isDrag) {
+                                currentOnClick()
+                            } else {
+                                isBeingDragged = false
+                                currentOnDragEnd()
+                            }
+                            break
+                        }
+
+                        val deltaY = change.positionChange().y
+                        totalDragY += deltaY
+
+                        if (!isDrag && kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop) {
+                            isDrag = true
+                            isBeingDragged = true
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        }
+
+                        if (isDrag) {
+                            change.consume()
+                            currentOnVerticalDrag(deltaY)
+                        }
+                    }
+                }
+            },
         contentAlignment = Alignment.Center
     ) {
         Text(
