@@ -194,46 +194,149 @@ def report() -> None:
               f"A new build appears here once F-Droid publishes it.")
 
 
-def collect_status() -> dict:
-    """Gather the current status snapshot (never raises on network errors)."""
-    status = {"store": [], "gitlab_mrs": [], "logs": [], "queue": []}
+def normalize_status(state: dict | None) -> dict | None:
+    """Standardize state representation so comparisons are 100% deterministic."""
+    if not state or not isinstance(state, dict):
+        return None
+
+    store_list = [
+        {"versionName": v.get("versionName"), "versionCode": v.get("versionCode")}
+        for v in state.get("store", [])
+        if isinstance(v, dict) and v.get("versionCode") is not None
+    ]
+    store_list = sorted(store_list, key=lambda x: x.get("versionCode", 0))
+
+    mr_list = [
+        {
+            "iid": mr.get("iid"),
+            "title": mr.get("title"),
+            "state": mr.get("state"),
+            "pipeline_status": mr.get("pipeline_status"),
+        }
+        for mr in state.get("gitlab_mrs", [])
+        if isinstance(mr, dict) and mr.get("iid") is not None
+    ]
+    mr_list = sorted(mr_list, key=lambda x: str(x.get("iid", "")))
+
+    logs_list = sorted(list(set(state.get("logs", []))))
+    queue_list = sorted(list(set(state.get("queue", []))))
+
+    return {
+        "store": store_list,
+        "gitlab_mrs": mr_list,
+        "logs": logs_list,
+        "queue": queue_list,
+    }
+
+
+def collect_status(previous_state: dict | None = None) -> tuple[dict, bool]:
+    """Gather current status. On network failures, preserves previous state to prevent false diffs."""
+    status = {}
+    had_error = False
+
     try:
+        versions = published_versions()
         status["store"] = [
             {"versionName": v.get("versionName"), "versionCode": v.get("versionCode")}
-            for v in published_versions()
+            for v in versions
         ]
-    except Exception:
-        pass
+    except Exception as e:
+        had_error = True
+        print(f"Error fetching store versions: {e}", file=sys.stderr)
+        if previous_state and "store" in previous_state:
+            status["store"] = previous_state["store"]
+        else:
+            status["store"] = []
+
     try:
+        mrs = gitlab_mr_status()
         status["gitlab_mrs"] = [
             {
                 "iid": mr.get("iid"),
                 "title": mr.get("title"),
                 "state": mr.get("state"),
                 "pipeline_status": mr.get("pipeline_status"),
-                "updated_at": mr.get("updated_at"),
             }
-            for mr in gitlab_mr_status()
+            for mr in mrs
         ]
-    except Exception:
-        pass
+    except Exception as e:
+        had_error = True
+        print(f"Error fetching GitLab MRs: {e}", file=sys.stderr)
+        if previous_state and "gitlab_mrs" in previous_state:
+            status["gitlab_mrs"] = previous_state["gitlab_mrs"]
+        else:
+            status["gitlab_mrs"] = []
+
     try:
         status["logs"] = build_logs()
-    except Exception:
-        pass
+    except Exception as e:
+        had_error = True
+        print(f"Error fetching build logs: {e}", file=sys.stderr)
+        if previous_state and "logs" in previous_state:
+            status["logs"] = previous_state["logs"]
+        else:
+            status["logs"] = []
+
     try:
         status["queue"] = queue_status()
-    except Exception:
-        pass
-    return status
+    except Exception as e:
+        had_error = True
+        print(f"Error fetching queue status: {e}", file=sys.stderr)
+        if previous_state and "queue" in previous_state:
+            status["queue"] = previous_state["queue"]
+        else:
+            status["queue"] = []
+
+    return status, had_error
+
+
+def compute_changes(old: dict, new: dict) -> list[str]:
+    """Return human-readable list of semantic changes between old and new state."""
+    changes = []
+
+    # Store changes
+    old_store_codes = {v.get("versionCode") for v in old.get("store", [])}
+    new_store_versions = [v for v in new.get("store", []) if v.get("versionCode") not in old_store_codes]
+    for v in new_store_versions:
+        changes.append(f"🎉 New version in F-Droid Store: {v.get('versionName')} (code {v.get('versionCode')})")
+
+    # GitLab MR changes
+    old_mrs = {mr.get("iid"): mr for mr in old.get("gitlab_mrs", [])}
+    new_mrs = {mr.get("iid"): mr for mr in new.get("gitlab_mrs", [])}
+    for iid, new_mr in new_mrs.items():
+        if iid not in old_mrs:
+            changes.append(f"📋 New GitLab MR !{iid}: \"{new_mr.get('title')}\" [{new_mr.get('state')}]")
+        else:
+            old_mr = old_mrs[iid]
+            if old_mr.get("state") != new_mr.get("state"):
+                changes.append(f"🔄 GitLab MR !{iid} state: {old_mr.get('state')} ➔ {new_mr.get('state')}")
+            if old_mr.get("pipeline_status") != new_mr.get("pipeline_status") and new_mr.get("pipeline_status"):
+                changes.append(f"⚙️ GitLab MR !{iid} CI pipeline: {old_mr.get('pipeline_status')} ➔ {new_mr.get('pipeline_status')}")
+
+    # Build logs changes
+    old_logs = set(old.get("logs", []))
+    new_logs = [l for l in new.get("logs", []) if l not in old_logs]
+    for log in new_logs:
+        changes.append(f"📝 New build log on monitor: {log}")
+
+    # Queue changes
+    old_queue = set(old.get("queue", []))
+    new_queue = set(new.get("queue", []))
+    if old_queue != new_queue:
+        if new_queue:
+            changes.append(f"⏳ Build queue updated: {', '.join(new.get('queue', []))}")
+        elif old_queue:
+            changes.append("✅ Package left the build queue")
+
+    return changes
 
 
 def format_status(status: dict) -> str:
     lines = [f"F-Droid status for {PACKAGE}:", ""]
     lines.append("Store:")
-    for v in status["store"]:
+    for v in status.get("store", []):
         lines.append(f"  {v['versionName']} (code {v['versionCode']})")
-    if not status["store"]:
+    if not status.get("store"):
         lines.append("  (none)")
 
     lines.append("GitLab MRs:")
@@ -244,9 +347,9 @@ def format_status(status: dict) -> str:
         lines.append("  (none)")
 
     lines.append("Build logs:")
-    lines += [f"  {n}" for n in status["logs"]] or ["  (none)"]
+    lines += [f"  {n}" for n in status.get("logs", [])] or ["  (none)"]
     lines.append("Queue:")
-    lines += [f"  {h}" for h in status["queue"]] or ["  (not in queue)"]
+    lines += [f"  {h}" for h in status.get("queue", [])] or ["  (not in queue)"]
     return "\n".join(lines)
 
 
@@ -275,30 +378,49 @@ STATE_FILE = os.environ.get(
 
 def notify_if_changed() -> None:
     """Compare current status with the saved state, notify on change, update state."""
-    status = collect_status()
-    report_extra = format_status(status)
-    print(report_extra)
-
-    old = None
+    old_raw = None
     if os.path.exists(STATE_FILE):
         try:
             with open(STATE_FILE, encoding="utf-8") as f:
-                old = json.load(f)
-        except Exception:
-            pass
+                old_raw = json.load(f)
+        except Exception as e:
+            print(f"Failed to read state file: {e}", file=sys.stderr)
 
-    if old != status:
+    old = normalize_status(old_raw)
+    status_raw, had_error = collect_status(previous_state=old)
+    current = normalize_status(status_raw)
+
+    report_extra = format_status(current)
+    print(report_extra)
+
+    if old is None:
+        # First run / baseline creation
         with open(STATE_FILE, "w", encoding="utf-8") as f:
-            json.dump(status, f, ensure_ascii=False, indent=2)
-        if old is not None:
-            # First run just records the baseline, no notification.
-            lines = ["F-Droid status changed!", "" + report_extra]
-            send_telegram("\n".join(lines))
-            print("Status changed, Telegram notification sent")
-        else:
-            print("Baseline saved, no notification on first run")
+            json.dump(current, f, ensure_ascii=False, indent=2)
+        print("\nBaseline saved, no notification on first run.")
+        return
+
+    changes = compute_changes(old, current)
+    if changes:
+        with open(STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(current, f, ensure_ascii=False, indent=2)
+
+        change_summary = "\n".join(changes)
+        lines = [
+            "🔔 F-Droid status changed!",
+            "",
+            change_summary,
+            "",
+            "────────────────────────",
+            report_extra
+        ]
+        send_telegram("\n".join(lines))
+        print("\nStatus changed, Telegram notification sent:\n" + change_summary)
     else:
-        print("No changes")
+        # Always re-save normalized state
+        with open(STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(current, f, ensure_ascii=False, indent=2)
+        print("\nNo changes.")
 
 
 def main() -> None:
