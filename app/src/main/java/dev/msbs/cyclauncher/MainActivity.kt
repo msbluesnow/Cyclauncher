@@ -218,9 +218,11 @@ class MainActivity : ComponentActivity() {
                                     userScrollEnabled = false 
                                 ) { vIndex ->
                                     if (vIndex == 0) {
+                                        val isActionMenuOpen = showActionMenuFor != null || showRenameDialogFor != null || showTagDialogFor != null || tagToEditForDialog != null
                                         MainMenuScreen(
                                             viewModel = viewModel,
                                             isActive = isOnMainScreen,
+                                            isActionMenuOpen = isActionMenuOpen,
                                             onAppClick = ::openApp,
                                             onAppLongClick = { app, offset -> 
                                                 showActionMenuFor = app

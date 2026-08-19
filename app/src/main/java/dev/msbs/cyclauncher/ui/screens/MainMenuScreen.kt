@@ -3,11 +3,14 @@ package dev.msbs.cyclauncher.ui.screens
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.model.AppInfo
+import dev.msbs.cyclauncher.model.FavoriteItem
 import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.components.AppListItemWithIcon
 import dev.msbs.cyclauncher.ui.components.AppIconItem
+import dev.msbs.cyclauncher.ui.components.TagFolderIcon
+import dev.msbs.cyclauncher.ui.components.TagFolderActionMenu
 import dev.msbs.cyclauncher.ui.components.TagFolderItem
 import dev.msbs.cyclauncher.ui.components.TagFolderPopup
 
@@ -51,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 
 /**
@@ -69,6 +73,7 @@ import androidx.compose.ui.platform.LocalDensity
 fun MainMenuScreen(
     viewModel: LauncherViewModel,
     isActive: Boolean,
+    isActionMenuOpen: Boolean = false,
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit,
     onSwipeUp: () -> Unit,
@@ -76,7 +81,7 @@ fun MainMenuScreen(
     onSettingsClick: () -> Unit,
     onEditTag: (Tag) -> Unit = {}
 ) {
-    val favorites by viewModel.favoriteApps.collectAsState()
+    val favoriteItems by viewModel.favoriteItems.collectAsState()
     val history by viewModel.historyApps.collectAsState()
     val tags by viewModel.tags.collectAsState()
     val appTags by viewModel.appTags.collectAsState()
@@ -88,17 +93,21 @@ fun MainMenuScreen(
     var isReorderMode by remember { mutableStateOf(false) }
     var isHistoryEditMode by remember { mutableStateOf(false) }
     var selectedTagForPopup by remember { mutableStateOf<Triple<Tag, List<AppInfo>, Offset>?>(null) }
+    var selectedTagForMenu by remember { mutableStateOf<Triple<Tag, List<AppInfo>, Offset>?>(null) }
     var isTagPopupEditMode by remember { mutableStateOf(false) }
 
-    val popularTagsWithApps = remember(tags, appTags, apps) {
-        tags.map { tag ->
-            val taggedApps = apps.filter { app ->
-                val tagIds = appTags[app.componentKey] ?: appTags[app.packageName] ?: emptyList()
-                tagIds.contains(tag.id)
+    val popularTagsWithApps = remember(tags, appTags, apps, favoriteItems) {
+        val favoritedTagIds = favoriteItems.mapNotNull { (it as? FavoriteItem.TagFolder)?.tag?.id }.toSet()
+        tags
+            .filter { tag -> tag.id !in favoritedTagIds }
+            .map { tag ->
+                val taggedApps = apps.filter { app ->
+                    val tagIds = appTags[app.componentKey] ?: appTags[app.packageName] ?: emptyList()
+                    tagIds.contains(tag.id)
+                }
+                tag to taggedApps
             }
-            tag to taggedApps
-        }
-        .sortedByDescending { it.second.size }
+            .sortedByDescending { it.second.size }
     }
 
     LaunchedEffect(isActive) {
@@ -106,7 +115,41 @@ fun MainMenuScreen(
             isReorderMode = false
             isHistoryEditMode = false
             selectedTagForPopup = null
+            selectedTagForMenu = null
             isTagPopupEditMode = false
+        }
+    }
+
+    LaunchedEffect(isActionMenuOpen) {
+        if (isActionMenuOpen) {
+            isReorderMode = false
+            isHistoryEditMode = false
+            selectedTagForPopup = null
+            selectedTagForMenu = null
+            isTagPopupEditMode = false
+        }
+    }
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE ||
+                event == androidx.lifecycle.Lifecycle.Event.ON_STOP ||
+                event == androidx.lifecycle.Lifecycle.Event.ON_RESUME
+            ) {
+                isReorderMode = false
+                isHistoryEditMode = false
+                selectedTagForPopup = null
+                selectedTagForMenu = null
+                isTagPopupEditMode = false
+            }
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.requestHistoryScrollToBottom()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -115,11 +158,21 @@ fun MainMenuScreen(
             isReorderMode = false
             isHistoryEditMode = false
             selectedTagForPopup = null
+            selectedTagForMenu = null
             isTagPopupEditMode = false
         }
     }
 
-    val isAnyEditMode = isReorderMode || isHistoryEditMode || selectedTagForPopup != null
+    val handleAppLongClick: (AppInfo, Offset) -> Unit = { app, offset ->
+        isReorderMode = false
+        isHistoryEditMode = false
+        selectedTagForPopup = null
+        selectedTagForMenu = null
+        isTagPopupEditMode = false
+        onAppLongClick(app, offset)
+    }
+
+    val isAnyEditMode = isReorderMode || isHistoryEditMode || selectedTagForPopup != null || selectedTagForMenu != null
     val currentOnSettingsClick by rememberUpdatedState(onSettingsClick)
     val currentOnSwipeUp by rememberUpdatedState(onSwipeUp)
     val currentOnSwipeDown by rememberUpdatedState(onSwipeDown)
@@ -169,7 +222,7 @@ fun MainMenuScreen(
             if (handSide == HandSide.LEFT) {
                 FavoritesSection(
                     Modifier.weight(favoritesWeight),
-                    favorites,
+                    favoriteItems,
                     handSide,
                     accentColor,
                     primaryTextColor,
@@ -179,7 +232,16 @@ fun MainMenuScreen(
                     { from, to -> viewModel.reorderFavorites(from, to) },
                     { viewModel.toggleFavorite(it) },
                     onAppClick,
-                    onAppLongClick,
+                    handleAppLongClick,
+                    onTagFolderClick = { tag, taggedApps, offset ->
+                        isTagPopupEditMode = false
+                        selectedTagForPopup = Triple(tag, taggedApps, offset)
+                    },
+                    onTagFolderLongClick = { tag, taggedApps, offset ->
+                        isReorderMode = false
+                        isHistoryEditMode = false
+                        selectedTagForMenu = Triple(tag, taggedApps, offset)
+                    },
                     onSwipeUp,
                     onSwipeDown,
                     onSettingsClick,
@@ -199,14 +261,15 @@ fun MainMenuScreen(
                     setHistoryEditMode = { isHistoryEditMode = it },
                     onRemoveFromHistory = { viewModel.removeFromHistory(it) },
                     onAppClick = onAppClick,
-                    onAppLongClick = onAppLongClick,
+                    onAppLongClick = handleAppLongClick,
                     onTagFolderClick = { tag, taggedApps, offset ->
                         isTagPopupEditMode = false
                         selectedTagForPopup = Triple(tag, taggedApps, offset)
                     },
                     onTagFolderLongClick = { tag, taggedApps, offset ->
-                        isTagPopupEditMode = true
-                        selectedTagForPopup = Triple(tag, taggedApps, offset)
+                        isReorderMode = false
+                        isHistoryEditMode = false
+                        selectedTagForMenu = Triple(tag, taggedApps, offset)
                     },
                     onSettingsClick = onSettingsClick,
                     isActive = isActive
@@ -225,14 +288,15 @@ fun MainMenuScreen(
                     setHistoryEditMode = { isHistoryEditMode = it },
                     onRemoveFromHistory = { viewModel.removeFromHistory(it) },
                     onAppClick = onAppClick,
-                    onAppLongClick = onAppLongClick,
+                    onAppLongClick = handleAppLongClick,
                     onTagFolderClick = { tag, taggedApps, offset ->
                         isTagPopupEditMode = false
                         selectedTagForPopup = Triple(tag, taggedApps, offset)
                     },
                     onTagFolderLongClick = { tag, taggedApps, offset ->
-                        isTagPopupEditMode = true
-                        selectedTagForPopup = Triple(tag, taggedApps, offset)
+                        isReorderMode = false
+                        isHistoryEditMode = false
+                        selectedTagForMenu = Triple(tag, taggedApps, offset)
                     },
                     onSettingsClick = onSettingsClick,
                     isActive = isActive
@@ -240,7 +304,7 @@ fun MainMenuScreen(
                 Spacer(modifier = Modifier.width(16.dp))
                 FavoritesSection(
                     Modifier.weight(favoritesWeight),
-                    favorites,
+                    favoriteItems,
                     handSide,
                     accentColor,
                     primaryTextColor,
@@ -250,13 +314,42 @@ fun MainMenuScreen(
                     { from, to -> viewModel.reorderFavorites(from, to) },
                     { viewModel.toggleFavorite(it) },
                     onAppClick,
-                    onAppLongClick,
+                    handleAppLongClick,
+                    onTagFolderClick = { tag, taggedApps, offset ->
+                        isTagPopupEditMode = false
+                        selectedTagForPopup = Triple(tag, taggedApps, offset)
+                    },
+                    onTagFolderLongClick = { tag, taggedApps, offset ->
+                        isReorderMode = false
+                        isHistoryEditMode = false
+                        selectedTagForMenu = Triple(tag, taggedApps, offset)
+                    },
                     onSwipeUp,
                     onSwipeDown,
                     onSettingsClick,
                     isActive
                 )
             }
+        }
+
+        selectedTagForMenu?.let { (tag, taggedApps, offset) ->
+            TagFolderActionMenu(
+                tag = tag,
+                isFavorite = viewModel.isFavorite("tag:${tag.id}"),
+                offset = offset,
+                onDismiss = { selectedTagForMenu = null },
+                onEditGroup = {
+                    selectedTagForMenu = null
+                    isTagPopupEditMode = true
+                    selectedTagForPopup = Triple(tag, taggedApps, offset)
+                },
+                onToggleFavorite = {
+                    selectedTagForMenu = null
+                    viewModel.toggleFavorite("tag:${tag.id}")
+                },
+                accentColor = accentColor,
+                primaryTextColor = primaryTextColor
+            )
         }
 
         selectedTagForPopup?.let { (tag, _, offset) ->
@@ -800,7 +893,7 @@ private fun ColumnScope.HistoryContentBlock(
 @Composable
 private fun FavoritesSection(
     modifier: Modifier,
-    favorites: List<AppInfo>,
+    favorites: List<FavoriteItem>,
     handSide: HandSide,
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
@@ -811,6 +904,8 @@ private fun FavoritesSection(
     onToggleFavorite: (String) -> Unit,
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit,
+    onTagFolderClick: (Tag, List<AppInfo>, Offset) -> Unit,
+    onTagFolderLongClick: (Tag, List<AppInfo>, Offset) -> Unit,
     onSwipeUp: () -> Unit,
     onSwipeDown: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -819,7 +914,7 @@ private fun FavoritesSection(
     val shadow = primaryTextColor.getShadow(showShadows)
 
     val haptic = LocalHapticFeedback.current
-    var draggingAppKey by remember { mutableStateOf<String?>(null) }
+    var draggingKey by remember { mutableStateOf<String?>(null) }
     var dragVerticalOffset by remember { mutableStateOf(0f) }
     var itemHeightPx by remember { mutableStateOf(0f) }
 
@@ -833,7 +928,7 @@ private fun FavoritesSection(
     // Reset dragging state if reorder mode is exited
     LaunchedEffect(isReorderMode) {
         if (!isReorderMode) {
-            draggingAppKey = null
+            draggingKey = null
             dragVerticalOffset = 0f
         }
     }
@@ -856,9 +951,9 @@ private fun FavoritesSection(
                 reverseLayout = true,
                 userScrollEnabled = isReorderMode
             ) {
-                itemsIndexed(favorites, key = { _, app -> "${app.packageName}/${app.activityName}" }) { index, app ->
-                    val appKey = "${app.packageName}/${app.activityName}"
-                    val isDraggingThis = draggingAppKey == appKey
+                itemsIndexed(favorites, key = { _, item -> item.key }) { index, item ->
+                    val itemKey = item.key
+                    val isDraggingThis = draggingKey == itemKey
                     
                     // Track the current index and list size to avoid stale closures during drag
                     val currentIndex by rememberUpdatedState(index)
@@ -891,21 +986,21 @@ private fun FavoritesSection(
                     ) {
                         Box(
                             modifier = if (isReorderMode) {
-                                Modifier.pointerInput(appKey, favorites.size) {
+                                Modifier.pointerInput(itemKey, favorites.size) {
                                     var accumulatedDragForSwap = 0f
                                     detectDragGestures(
                                         onDragStart = { 
                                             accumulatedDragForSwap = 0f 
                                             dragVerticalOffset = 0f
-                                            draggingAppKey = appKey
+                                            draggingKey = itemKey
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                         },
                                         onDragEnd = { 
-                                            draggingAppKey = null 
+                                            draggingKey = null 
                                             dragVerticalOffset = 0f
                                         },
                                         onDragCancel = { 
-                                            draggingAppKey = null 
+                                            draggingKey = null 
                                             dragVerticalOffset = 0f
                                         },
                                         onDrag = { change, dragAmount ->
@@ -933,16 +1028,47 @@ private fun FavoritesSection(
                             } else Modifier,
                             contentAlignment = Alignment.Center
                         ) {
-                            AppIconItem(
-                                app = app,
-                                onClick = { 
-                                    if (isReorderMode) setReorderMode(false)
-                                    else onAppClick(appKey)
-                                },
-                                onLongClick = { offset -> 
-                                    if (!isReorderMode) onAppLongClick(app, offset)
+                            when (item) {
+                                is FavoriteItem.App -> {
+                                    AppIconItem(
+                                        app = item.appInfo,
+                                        onClick = { 
+                                            if (isReorderMode) setReorderMode(false)
+                                            else onAppClick(itemKey)
+                                        },
+                                        onLongClick = { offset -> 
+                                            if (!isReorderMode) onAppLongClick(item.appInfo, offset)
+                                        }
+                                    )
                                 }
-                            )
+                                is FavoriteItem.TagFolder -> {
+                                    var folderPosition by remember { mutableStateOf(Offset.Zero) }
+                                    val currentOnTagFolderClick by rememberUpdatedState(onTagFolderClick)
+                                    val currentOnTagFolderLongClick by rememberUpdatedState(onTagFolderLongClick)
+                                    val currentIsReorderMode by rememberUpdatedState(isReorderMode)
+                                    val currentSetReorderMode by rememberUpdatedState(setReorderMode)
+
+                                    TagFolderIcon(
+                                        tag = item.tag,
+                                        apps = item.apps,
+                                        modifier = Modifier
+                                            .onGloballyPositioned { folderPosition = it.positionInRoot() }
+                                            .pointerInput(itemKey, isReorderMode) {
+                                                detectTapGestures(
+                                                    onTap = {
+                                                        if (currentIsReorderMode) currentSetReorderMode(false)
+                                                        else currentOnTagFolderClick(item.tag, item.apps, folderPosition + it)
+                                                    },
+                                                    onLongPress = {
+                                                        if (!currentIsReorderMode) {
+                                                            currentOnTagFolderLongClick(item.tag, item.apps, folderPosition + it)
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                    )
+                                }
+                            }
                         }
 
                         val showMinusOnLeft = handSide == HandSide.LEFT
@@ -951,7 +1077,7 @@ private fun FavoritesSection(
                         if (isReorderMode) {
                             val minusOffset = if (showMinusOnLeft) (-48).dp else 48.dp
                             IconButton(
-                                onClick = { onToggleFavorite(appKey) },
+                                onClick = { onToggleFavorite(itemKey) },
                                 modifier = Modifier
                                     .offset(x = minusOffset)
                                     .size(32.dp)

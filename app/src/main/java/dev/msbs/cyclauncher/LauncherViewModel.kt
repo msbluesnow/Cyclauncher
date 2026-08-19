@@ -5,6 +5,7 @@ import dev.msbs.cyclauncher.utils.getSafeStorageContext
 import dev.msbs.cyclauncher.data.AutoTagsPreview
 import dev.msbs.cyclauncher.data.TagsBackupPreview
 import dev.msbs.cyclauncher.model.AppInfo
+import dev.msbs.cyclauncher.model.FavoriteItem
 import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
@@ -136,16 +137,43 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         all.filter { it.searchChar == letter }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** List of all favorite keys (app component keys and "tag:$tagId" entries). */
+    val favorites: StateFlow<List<String>> = actionsManager.favorites
+
     // Недавние приложения (быстрый O(1) поиск по ключу)
     val historyApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.history) { all, ids ->
         val appMap = all.associateBy { it.componentKey }
         ids.mapNotNull { id -> appMap[id] }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    // Избранные приложения (быстрый O(1) поиск по ключу)
-    val favoriteApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.favorites) { all, ids ->
-        val appMap = all.associateBy { it.componentKey }
-        ids.mapNotNull { id -> appMap[id] }
+    // Избранные элементы (приложения и папки тегов с сохранением порядка)
+    val favoriteItems: StateFlow<List<FavoriteItem>> = combine(
+        apps,
+        tags,
+        appTags,
+        actionsManager.favorites
+    ) { allApps, allTags, allAppTags, ids ->
+        val appMap = allApps.associateBy { it.componentKey }
+        val tagMap = allTags.associateBy { it.id }
+        ids.mapNotNull { id ->
+            if (id.startsWith("tag:")) {
+                val tagId = id.removePrefix("tag:")
+                val tag = tagMap[tagId] ?: return@mapNotNull null
+                val taggedApps = allApps.filter { app ->
+                    val tagIds = allAppTags[app.componentKey] ?: allAppTags[app.packageName] ?: emptyList()
+                    tagIds.contains(tag.id)
+                }
+                FavoriteItem.TagFolder(tag, taggedApps)
+            } else {
+                val app = appMap[id] ?: return@mapNotNull null
+                FavoriteItem.App(app)
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    // Избранные приложения (для обратной совместимости)
+    val favoriteApps: StateFlow<List<AppInfo>> = favoriteItems.map { items ->
+        items.mapNotNull { (it as? FavoriteItem.App)?.appInfo }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     // Результаты текстового поиска

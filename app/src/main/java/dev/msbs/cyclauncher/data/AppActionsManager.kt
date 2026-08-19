@@ -48,14 +48,20 @@ class AppActionsManager(context: Context) {
     val appTags: StateFlow<Map<String, List<String>>> = _appTags
 
     /**
-     * Toggles the favorite status of the specified application.
+     * Toggles the favorite status of the specified application or tag folder.
      * Shows a confirmation toast and updates persistence.
      *
-     * @param componentKey The unique application key (formatted as "packageName/activityName").
+     * @param componentKey The unique application key (formatted as "packageName/activityName") or tag key ("tag:$tagId").
      */
     fun toggleFavorite(componentKey: String) {
         val current = _favorites.value.toMutableList()
-        val label = componentKey.split("/").first().split(".").last().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        val isTag = componentKey.startsWith("tag:")
+        val label = if (isTag) {
+            val tagId = componentKey.removePrefix("tag:")
+            _tags.value.find { it.id == tagId }?.name ?: "Tag"
+        } else {
+            componentKey.split("/").first().split(".").last().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        }
         
         if (current.contains(componentKey)) {
             current.remove(componentKey)
@@ -175,6 +181,14 @@ class AppActionsManager(context: Context) {
         _tags.value = currentTags
         saveTags(currentTags)
 
+        // Also remove from favorites if favorited
+        val tagKey = "tag:$tagId"
+        if (_favorites.value.contains(tagKey)) {
+            val currentFavorites = _favorites.value.filter { it != tagKey }
+            _favorites.value = currentFavorites
+            saveList("favorites", currentFavorites)
+        }
+
         // Also remove assignments
         val currentAppTags = _appTags.value.toMutableMap()
         currentAppTags.forEach { (key, list) ->
@@ -260,7 +274,14 @@ class AppActionsManager(context: Context) {
             }
         }
 
-        val newFavorites = _favorites.value.filter { isPackageInstalled(it) }
+        val newFavorites = _favorites.value.filter { key ->
+            if (key.startsWith("tag:")) {
+                val tagId = key.removePrefix("tag:")
+                _tags.value.any { it.id == tagId }
+            } else {
+                isPackageInstalled(key)
+            }
+        }
         if (newFavorites.size != _favorites.value.size) {
             _favorites.value = newFavorites
             saveList("favorites", newFavorites)

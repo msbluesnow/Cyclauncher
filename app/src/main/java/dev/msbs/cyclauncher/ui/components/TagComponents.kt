@@ -15,6 +15,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -404,4 +406,208 @@ private fun TagFolderAppItem(
         )
     }
 }
+
+/**
+ * A compact folder-styled preview icon representing a custom tag folder in the Favorites section.
+ *
+ * @param tag The tag instance.
+ * @param apps The list of applications assigned to this tag.
+ * @param size The size of the icon in dp (defaults to 48dp to match AppIconItem).
+ * @param modifier Modifier for UI configurations and gestures.
+ */
+@Composable
+fun TagFolderIcon(
+    tag: Tag,
+    apps: List<AppInfo>,
+    size: Int = 48,
+    modifier: Modifier = Modifier
+) {
+    val previewApps = remember(apps) { apps.take(4) }
+    Box(
+        modifier = modifier
+            .size(size.dp)
+            .clip(RoundedCornerShape(13.dp))
+            .background(Color.Black.copy(alpha = 0.45f))
+            .background(tag.color.copy(alpha = 0.12f))
+            .border(BorderStroke(1.5.dp, tag.color), shape = RoundedCornerShape(13.dp))
+            .padding(3.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            verticalArrangement = Arrangement.SpaceEvenly,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Row 1 (up to 2 icons)
+            Row(
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                if (previewApps.isNotEmpty()) {
+                    MiniAppIconPreview(app = previewApps[0])
+                }
+                if (previewApps.size > 1) {
+                    MiniAppIconPreview(app = previewApps[1])
+                } else if (previewApps.size == 1) {
+                    Spacer(modifier = Modifier.size(14.dp))
+                }
+            }
+            // Row 2 (up to 2 icons)
+            if (previewApps.size > 2) {
+                Row(
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+                    MiniAppIconPreview(app = previewApps[2])
+                    if (previewApps.size > 3) {
+                        MiniAppIconPreview(app = previewApps[3])
+                    } else {
+                        Spacer(modifier = Modifier.size(14.dp))
+                    }
+                }
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+/**
+ * Context action menu for a tag folder, offering options to edit the group
+ * (remove items) or toggle its favorite status.
+ *
+ * @param tag The tag instance.
+ * @param isFavorite Current favorite status of the tag folder.
+ * @param offset The touch input position where the menu was triggered.
+ * @param onDismiss Callback to close the menu.
+ * @param onEditGroup Callback when the user selects to edit the group.
+ * @param onToggleFavorite Callback when the user toggles favorite status.
+ * @param accentColor The active UI accent color.
+ * @param primaryTextColor The primary text color.
+ */
+@Composable
+fun TagFolderActionMenu(
+    tag: Tag,
+    isFavorite: Boolean,
+    offset: Offset,
+    onDismiss: () -> Unit,
+    onEditGroup: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    accentColor: AccentColor = AccentColor.SKY,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE
+) {
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
+
+    val menuWidth = 240.dp
+    val menuWidthPx = with(density) { menuWidth.toPx() }
+
+    val itemsCount = 2
+    val menuHeightPx = with(density) { (60 + itemsCount * 48).dp.toPx() }
+    val borderPadding = with(density) { 16.dp.toPx() }
+
+    var x = offset.x
+    var y = offset.y
+
+    if (x + menuWidthPx > screenWidthPx) x = screenWidthPx - menuWidthPx - borderPadding
+    if (x < borderPadding) x = borderPadding
+    if (y + menuHeightPx > screenHeightPx) y = screenHeightPx - menuHeightPx - borderPadding
+    if (y < borderPadding) y = borderPadding
+
+    Popup(
+        offset = IntOffset(x.roundToInt(), y.roundToInt()),
+        onDismissRequest = onDismiss,
+        properties = PopupProperties(focusable = true)
+    ) {
+        Box(
+            modifier = Modifier
+                .width(menuWidth)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.Black.copy(alpha = 0.85f))
+                .border(1.dp, tag.color.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                .padding(vertical = 8.dp)
+        ) {
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(tag.color)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = tag.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onDismiss()
+                            onEditGroup()
+                        }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = null,
+                        tint = accentColor.color,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Edit Group",
+                        color = primaryTextColor.color,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onDismiss()
+                            onToggleFavorite()
+                        }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Outlined.Star else Icons.Outlined.StarOutline,
+                        contentDescription = null,
+                        tint = accentColor.color,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
+                        color = primaryTextColor.color,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
+        }
+    }
+}
+
 

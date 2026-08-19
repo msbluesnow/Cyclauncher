@@ -111,9 +111,9 @@ fun TutorialOverlay(
             ),
             TutorialStepInfo(
                 title = "Favorites, History & Tags",
-                description = "Press and hold a Favorite or History item to edit, reorder, or remove it. Tap a Tag folder (rounded rectangle) to open apps, or long-press a Tag folder to remove apps from folder.",
+                description = "Press and hold a Favorite or History item to edit, reorder, or remove it. Tap a Tag folder (rounded rectangle) to open apps, or long-press a Tag folder to edit the group or add/remove it from Favorites.",
                 gestureType = GestureType.FAVORITES_HISTORY,
-                hintText = "Long-press Favorite/History or tap/long-press Tag!"
+                hintText = "Long-press Favorite/History or tap/long-press Tag folder!"
             ),
             TutorialStepInfo(
                 title = "History Position Shift",
