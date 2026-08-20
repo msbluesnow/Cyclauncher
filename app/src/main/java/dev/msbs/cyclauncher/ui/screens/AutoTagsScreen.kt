@@ -316,7 +316,7 @@ fun AutoTagsScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Button(
-                        onClick = { importTaggedLauncher.launch("application/*") },
+                        onClick = { importTaggedLauncher.launch("*/*") },
                         colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(48.dp)

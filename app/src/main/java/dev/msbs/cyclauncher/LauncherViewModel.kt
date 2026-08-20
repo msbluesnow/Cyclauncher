@@ -676,7 +676,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Applies the currently loaded tags backup configuration. */
     fun applyTagsBackup() {
         _tagsBackupPreview.value?.let { preview ->
-            actionsManager.applyTagsBackup(preview)
+            actionsManager.applyTagsBackup(preview, _apps.value)
             _tagsBackupPreview.value = null
         }
     }

@@ -362,7 +362,8 @@ class AppActionsManager(context: Context) {
     }
 
     /**
-     * Imports custom app labels from a JSON file at the given URI.
+     * Imports custom app labels from a JSON or text file at the given URI.
+     * Supports multiple JSON structures (arrays, key-value maps, nested objects) and plain text.
      *
      * @param uri The source URI.
      * @param currentApps The current list of installed applications.
@@ -371,17 +372,104 @@ class AppActionsManager(context: Context) {
     fun importAppNamesFromUri(uri: Uri, currentApps: List<dev.msbs.cyclauncher.model.AppInfo>): Map<String, String> {
         val jsonString = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
             ?: throw IllegalArgumentException("Cannot read file")
-        val array = JSONArray(jsonString)
-        val packageNameToApps = currentApps.groupBy { it.packageName }
+        val trimmed = jsonString.trim()
+        val packageToApps = currentApps.groupBy { it.packageName }
         val imported = mutableMapOf<String, String>()
-        for (i in 0 until array.length()) {
-            val obj = array.getJSONObject(i)
-            val pkg = obj.optString("package")
-            val label = obj.optString("label")
-            if (pkg.isNotEmpty() && label.isNotEmpty()) {
-                packageNameToApps[pkg]?.forEach { app ->
-                    val key = "${app.packageName}/${app.activityName}"
-                    imported[key] = label
+
+        if (trimmed.startsWith("[")) {
+            val array = JSONArray(trimmed)
+            for (i in 0 until array.length()) {
+                val item = array.opt(i)
+                if (item is JSONObject) {
+                    val pkg = item.optString("package").ifEmpty { item.optString("packageName").ifEmpty { item.optString("app") } }.trim()
+                    val component = item.optString("component").ifEmpty { item.optString("componentKey") }.trim()
+                    val label = item.optString("label").ifEmpty { item.optString("name").ifEmpty { item.optString("customLabel") } }.trim()
+
+                    if (label.isNotEmpty()) {
+                        if (component.isNotEmpty()) {
+                            imported[component] = label
+                        } else if (pkg.isNotEmpty()) {
+                            val matchingApps = packageToApps[pkg]
+                            if (!matchingApps.isNullOrEmpty()) {
+                                matchingApps.forEach { app -> imported[app.componentKey] = label }
+                            } else {
+                                imported[pkg] = label
+                            }
+                        }
+                    }
+                }
+            }
+        } else if (trimmed.startsWith("{")) {
+            val root = JSONObject(trimmed)
+            val nestedArray = root.optJSONArray("apps") ?: root.optJSONArray("labels") ?: root.optJSONArray("custom_labels")
+            val nestedObj = root.optJSONObject("custom_labels") ?: root.optJSONObject("labels") ?: root.optJSONObject("apps")
+
+            if (nestedArray != null) {
+                for (i in 0 until nestedArray.length()) {
+                    val item = nestedArray.optJSONObject(i) ?: continue
+                    val pkg = item.optString("package").ifEmpty { item.optString("packageName").ifEmpty { item.optString("app") } }.trim()
+                    val component = item.optString("component").ifEmpty { item.optString("componentKey") }.trim()
+                    val label = item.optString("label").ifEmpty { item.optString("name").ifEmpty { item.optString("customLabel") } }.trim()
+                    if (label.isNotEmpty()) {
+                        if (component.isNotEmpty()) {
+                            imported[component] = label
+                        } else if (pkg.isNotEmpty()) {
+                            val matchingApps = packageToApps[pkg]
+                            if (!matchingApps.isNullOrEmpty()) {
+                                matchingApps.forEach { app -> imported[app.componentKey] = label }
+                            } else {
+                                imported[pkg] = label
+                            }
+                        }
+                    }
+                }
+            } else {
+                val targetObj = nestedObj ?: root
+                targetObj.keys().forEach { key ->
+                    val label = targetObj.optString(key).trim()
+                    if (label.isNotEmpty()) {
+                        if (key.contains("/")) {
+                            imported[key] = label
+                        } else {
+                            val matchingApps = packageToApps[key]
+                            if (!matchingApps.isNullOrEmpty()) {
+                                matchingApps.forEach { app -> imported[app.componentKey] = label }
+                            } else {
+                                imported[key] = label
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // Plain text lines format ("Label — package" or "package: Label" or "package = Label")
+            trimmed.lines().forEach { line ->
+                val l = line.trim()
+                if (l.contains("—")) {
+                    val parts = l.split("—", limit = 2).map { it.trim() }
+                    if (parts.size == 2 && parts[0].isNotEmpty() && parts[1].isNotEmpty()) {
+                        val label = parts[0]
+                        val pkg = parts[1]
+                        val matchingApps = packageToApps[pkg]
+                        if (!matchingApps.isNullOrEmpty()) {
+                            matchingApps.forEach { app -> imported[app.componentKey] = label }
+                        } else {
+                            imported[pkg] = label
+                        }
+                    }
+                } else if (l.contains(":") || l.contains("=")) {
+                    val delimiter = if (l.contains(":")) ":" else "="
+                    val parts = l.split(delimiter, limit = 2).map { it.trim() }
+                    if (parts.size == 2 && parts[0].isNotEmpty() && parts[1].isNotEmpty()) {
+                        val pkg = parts[0]
+                        val label = parts[1]
+                        val matchingApps = packageToApps[pkg]
+                        if (!matchingApps.isNullOrEmpty()) {
+                            matchingApps.forEach { app -> imported[app.componentKey] = label }
+                        } else {
+                            imported[pkg] = label
+                        }
+                    }
                 }
             }
         }
@@ -389,13 +477,15 @@ class AppActionsManager(context: Context) {
     }
 
     /**
-     * Applies a map of custom labels to the database and updates flows.
+     * Merges a map of custom labels into the database and updates flows.
      *
      * @param map The map containing customized application labels.
      */
     fun applyAppLabels(map: Map<String, String>) {
-        _customLabels.value = map
-        saveMap("custom_labels", map)
+        val current = _customLabels.value.toMutableMap()
+        current.putAll(map)
+        _customLabels.value = current
+        saveMap("custom_labels", current)
     }
 
     // Tags backup export / import (tags + assignments). Unified across the app.
@@ -442,6 +532,7 @@ class AppActionsManager(context: Context) {
 
     /**
      * Parses a tags-backup JSON into a preview without applying anything.
+     * Supports unified backup format, AutoTags format, and tag dictionary format.
      *
      * @param uri The source URI of the backup file.
      * @return A [TagsBackupPreview] containing parsed data.
@@ -449,33 +540,115 @@ class AppActionsManager(context: Context) {
     fun parseTagsBackup(uri: Uri): TagsBackupPreview {
         val jsonString = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
             ?: throw IllegalArgumentException("Cannot read file")
-        val root = JSONObject(jsonString)
+        val trimmed = jsonString.trim()
 
-        val existingNames = _tags.value.map { it.name.lowercase() }.toMutableSet()
+        val existingNames = _tags.value.map { it.name.lowercase().trim() }.toMutableSet()
         val tagsToCreate = mutableListOf<TagsBackupPreview.TagInfo>()
+        val createdNamesSet = mutableSetOf<String>()
+        val assignments = mutableListOf<TagsBackupPreview.AssignmentInfo>()
 
-        root.optJSONArray("tags")?.let { array ->
+        if (trimmed.startsWith("[")) {
+            // AutoTags array format: [{"package": "...", "tag": "...", "color": "..."}]
+            val array = JSONArray(trimmed)
+            val packageToTagNames = mutableMapOf<String, MutableList<String>>()
+            val tagColors = mutableMapOf<String, Color>()
+
             for (i in 0 until array.length()) {
-                val obj = array.getJSONObject(i)
-                val name = obj.optString("name").trim()
-                val colorHex = obj.optString("color")
-                if (name.isEmpty()) continue
-                if (name.lowercase() !in existingNames) {
-                    tagsToCreate.add(TagsBackupPreview.TagInfo(name = name, color = parseHexColor(colorHex)))
+                val obj = array.optJSONObject(i) ?: continue
+                val pkg = obj.optString("package").ifEmpty { obj.optString("packageName") }.trim()
+                val colorHex = obj.optString("color").trim()
+                val color = if (colorHex.isNotEmpty()) parseHexColor(colorHex) else Color.Unspecified
+
+                val tagNames = mutableListOf<String>()
+                val singleTag = obj.optString("tag").ifEmpty { obj.optString("name") }.trim()
+                if (singleTag.isNotEmpty()) tagNames.add(singleTag)
+                obj.optJSONArray("tags")?.let { tagsArr ->
+                    for (j in 0 until tagsArr.length()) {
+                        tagsArr.optString(j).trim().takeIf { it.isNotEmpty() }?.let { tagNames.add(it) }
+                    }
+                }
+
+                tagNames.forEach { tagName ->
+                    val lower = tagName.lowercase().trim()
+                    if (color != Color.Unspecified && !tagColors.containsKey(lower)) {
+                        tagColors[lower] = color
+                    }
+                    if (lower !in existingNames && lower !in createdNamesSet) {
+                        val resolvedColor = tagColors[lower] ?: generateTagColor(tagName)
+                        tagsToCreate.add(TagsBackupPreview.TagInfo(name = tagName, color = resolvedColor))
+                        createdNamesSet.add(lower)
+                    }
+                    if (pkg.isNotEmpty()) {
+                        packageToTagNames.getOrPut(pkg) { mutableListOf() }.apply {
+                            if (!contains(tagName)) add(tagName)
+                        }
+                    }
                 }
             }
-        }
 
-        val assignments = mutableListOf<TagsBackupPreview.AssignmentInfo>()
-        root.optJSONObject("assignments")?.let { obj ->
-            obj.keys().forEach { componentKey ->
-                val arr = obj.getJSONArray(componentKey)
-                val names = mutableListOf<String>()
-                for (idx in 0 until arr.length()) {
-                    arr.optString(idx).takeIf { it.isNotBlank() }?.let { names.add(it) }
+            packageToTagNames.forEach { (pkg, names) ->
+                assignments.add(TagsBackupPreview.AssignmentInfo(pkg, names))
+            }
+        } else if (trimmed.startsWith("{")) {
+            val root = JSONObject(trimmed)
+            val tagsArray = root.optJSONArray("tags")
+            val assignmentsObj = root.optJSONObject("assignments")
+
+            if (tagsArray != null || assignmentsObj != null) {
+                tagsArray?.let { array ->
+                    for (i in 0 until array.length()) {
+                        val obj = array.optJSONObject(i) ?: continue
+                        val name = obj.optString("name").trim()
+                        val colorHex = obj.optString("color").trim()
+                        if (name.isEmpty()) continue
+                        val lower = name.lowercase().trim()
+                        if (lower !in existingNames && lower !in createdNamesSet) {
+                            val resolvedColor = if (colorHex.isNotEmpty()) parseHexColor(colorHex) else generateTagColor(name)
+                            tagsToCreate.add(TagsBackupPreview.TagInfo(name = name, color = resolvedColor))
+                            createdNamesSet.add(lower)
+                        }
+                    }
                 }
-                if (names.isNotEmpty()) {
-                    assignments.add(TagsBackupPreview.AssignmentInfo(componentKey, names))
+
+                assignmentsObj?.let { obj ->
+                    obj.keys().forEach { componentKey ->
+                        val arr = obj.optJSONArray(componentKey)
+                        val names = mutableListOf<String>()
+                        if (arr != null) {
+                            for (idx in 0 until arr.length()) {
+                                arr.optString(idx).trim().takeIf { it.isNotBlank() }?.let { names.add(it) }
+                            }
+                        } else {
+                            obj.optString(componentKey).trim().takeIf { it.isNotBlank() }?.let { names.add(it) }
+                        }
+                        if (names.isNotEmpty()) {
+                            assignments.add(TagsBackupPreview.AssignmentInfo(componentKey, names))
+                        }
+                    }
+                }
+            } else {
+                // Dictionary format {"TagName": ["pkg1", "pkg2"]}
+                val packageToTagNames = mutableMapOf<String, MutableList<String>>()
+                root.keys().forEach { tagName ->
+                    val lower = tagName.lowercase().trim()
+                    if (lower !in existingNames && lower !in createdNamesSet) {
+                        tagsToCreate.add(TagsBackupPreview.TagInfo(name = tagName, color = generateTagColor(tagName)))
+                        createdNamesSet.add(lower)
+                    }
+                    val arr = root.optJSONArray(tagName)
+                    if (arr != null) {
+                        for (idx in 0 until arr.length()) {
+                            val pkg = arr.optString(idx).trim()
+                            if (pkg.isNotEmpty()) {
+                                packageToTagNames.getOrPut(pkg) { mutableListOf() }.apply {
+                                    if (!contains(tagName)) add(tagName)
+                                }
+                            }
+                        }
+                    }
+                }
+                packageToTagNames.forEach { (pkg, names) ->
+                    assignments.add(TagsBackupPreview.AssignmentInfo(pkg, names))
                 }
             }
         }
@@ -490,33 +663,53 @@ class AppActionsManager(context: Context) {
 
     /**
      * Applies a previously-parsed [TagsBackupPreview]: creates missing tags and
-     * wires up every assignment (matched by tag name), preserving any tags/apps
-     * that already existed.
+     * wires up every assignment (matched by tag name), resolving package names to installed apps.
      */
-    fun applyTagsBackup(preview: TagsBackupPreview) {
+    fun applyTagsBackup(preview: TagsBackupPreview, installedApps: List<dev.msbs.cyclauncher.model.AppInfo> = emptyList()) {
         val currentTags = _tags.value.toMutableList()
-        val nameToId = currentTags.associate { it.name.lowercase() to it.id }.toMutableMap()
+        val nameToId = currentTags.associate { it.name.lowercase().trim() to it.id }.toMutableMap()
 
         preview.newTags.forEach { info ->
-            val newTag = Tag(
-                id = UUID.randomUUID().toString(),
-                name = info.name,
-                color = info.color
-            )
-            currentTags.add(newTag)
-            nameToId[info.name.lowercase()] = newTag.id
+            val lower = info.name.lowercase().trim()
+            if (lower !in nameToId) {
+                val newTag = Tag(
+                    id = UUID.randomUUID().toString(),
+                    name = info.name,
+                    color = info.color
+                )
+                currentTags.add(newTag)
+                nameToId[lower] = newTag.id
+            }
         }
         _tags.value = currentTags
         saveTags(currentTags)
 
+        val packageToApps = installedApps.groupBy { it.packageName }
         val currentAppTags = _appTags.value.toMutableMap()
-        preview.parsedAssignments.forEach { (componentKey, tagNames) ->
-            val list = currentAppTags[componentKey]?.toMutableList() ?: mutableListOf()
-            tagNames.forEach { name ->
-                val id = nameToId[name.lowercase()]
-                if (id != null && id !in list) list.add(id)
+
+        preview.parsedAssignments.forEach { (targetKey, tagNames) ->
+            val resolvedIds = tagNames.mapNotNull { nameToId[it.lowercase().trim()] }
+            if (resolvedIds.isEmpty()) return@forEach
+
+            if (targetKey.contains("/")) {
+                val list = currentAppTags[targetKey]?.toMutableList() ?: mutableListOf()
+                resolvedIds.forEach { id -> if (id !in list) list.add(id) }
+                currentAppTags[targetKey] = list
+            } else {
+                val matchingApps = packageToApps[targetKey]
+                if (!matchingApps.isNullOrEmpty()) {
+                    matchingApps.forEach { app ->
+                        val key = app.componentKey
+                        val list = currentAppTags[key]?.toMutableList() ?: mutableListOf()
+                        resolvedIds.forEach { id -> if (id !in list) list.add(id) }
+                        currentAppTags[key] = list
+                    }
+                } else {
+                    val list = currentAppTags[targetKey]?.toMutableList() ?: mutableListOf()
+                    resolvedIds.forEach { id -> if (id !in list) list.add(id) }
+                    currentAppTags[targetKey] = list
+                }
             }
-            currentAppTags[componentKey] = list
         }
         _appTags.value = currentAppTags
         saveAppTags(currentAppTags)
@@ -586,6 +779,7 @@ class AppActionsManager(context: Context) {
 
     /**
      * Parses an AI-generated tagged application JSON file to create a preview mapping.
+     * Supports both array and unified backup JSON structures.
      *
      * @param uri The URI of the JSON file containing the tagged results.
      * @param apps The current list of installed apps to match against.
@@ -595,20 +789,54 @@ class AppActionsManager(context: Context) {
         val inputStream = context.contentResolver.openInputStream(uri)
         val jsonString = inputStream?.bufferedReader()?.use { it.readText() }
             ?: throw IllegalArgumentException("Cannot read file")
+        val trimmed = jsonString.trim()
 
-        val array = JSONArray(jsonString)
         val uniqueTags = mutableMapOf<String, Color>()
         val packageToTag = mutableMapOf<String, String>()
 
-        for (i in 0 until array.length()) {
-            val obj = array.getJSONObject(i)
-            val pkg = obj.getString("package")
-            val tagName = obj.getString("tag")
-            val colorHex = obj.getString("color")
-            val color = parseHexColor(colorHex)
+        if (trimmed.startsWith("[")) {
+            val array = JSONArray(trimmed)
+            for (i in 0 until array.length()) {
+                val obj = array.optJSONObject(i) ?: continue
+                val pkg = obj.optString("package").ifEmpty { obj.optString("packageName") }.trim()
+                val tagName = obj.optString("tag").ifEmpty { obj.optString("name") }.trim()
+                val colorHex = obj.optString("color").trim()
+                val color = if (colorHex.isNotEmpty()) parseHexColor(colorHex) else generateTagColor(tagName)
 
-            uniqueTags[tagName] = color
-            packageToTag[pkg] = tagName
+                if (tagName.isNotEmpty() && pkg.isNotEmpty()) {
+                    uniqueTags[tagName] = color
+                    packageToTag[pkg] = tagName
+                }
+            }
+        } else if (trimmed.startsWith("{")) {
+            val root = JSONObject(trimmed)
+            val tagsArray = root.optJSONArray("tags")
+            val assignmentsObj = root.optJSONObject("assignments")
+
+            if (tagsArray != null) {
+                for (i in 0 until tagsArray.length()) {
+                    val obj = tagsArray.optJSONObject(i) ?: continue
+                    val name = obj.optString("name").trim()
+                    val colorHex = obj.optString("color").trim()
+                    if (name.isNotEmpty()) {
+                        uniqueTags[name] = if (colorHex.isNotEmpty()) parseHexColor(colorHex) else generateTagColor(name)
+                    }
+                }
+            }
+
+            if (assignmentsObj != null) {
+                assignmentsObj.keys().forEach { key ->
+                    val arr = assignmentsObj.optJSONArray(key)
+                    val firstTag = if (arr != null && arr.length() > 0) arr.optString(0) else assignmentsObj.optString(key)
+                    if (firstTag.isNotBlank()) {
+                        val pkg = key.split("/").first()
+                        packageToTag[pkg] = firstTag.trim()
+                        if (!uniqueTags.containsKey(firstTag.trim())) {
+                            uniqueTags[firstTag.trim()] = generateTagColor(firstTag.trim())
+                        }
+                    }
+                }
+            }
         }
 
         // Build componentKey -> tagName mapping for apps that exist on device
@@ -616,7 +844,7 @@ class AppActionsManager(context: Context) {
         val matchedPackages = mutableSetOf<String>()
         apps.forEach { app ->
             if (app.packageName in packageToTag) {
-                val componentKey = "${app.packageName}/${app.activityName}"
+                val componentKey = app.componentKey
                 componentTagMap[componentKey] = packageToTag[app.packageName]!!
                 matchedPackages.add(app.packageName)
             }
@@ -641,33 +869,32 @@ class AppActionsManager(context: Context) {
      * @param preview The auto-tags preview to apply.
      */
     fun applyAutoTags(preview: AutoTagsPreview) {
-        // Create tags that don't exist yet
         val currentTags = _tags.value.toMutableList()
         val tagNameToId = mutableMapOf<String, String>()
 
         currentTags.forEach { tag ->
-            tagNameToId[tag.name] = tag.id
+            tagNameToId[tag.name.lowercase().trim()] = tag.id
         }
 
         preview.tags.forEach { autoTag ->
-            if (autoTag.name !in tagNameToId) {
+            val lower = autoTag.name.lowercase().trim()
+            if (lower !in tagNameToId) {
                 val newTag = Tag(
                     id = UUID.randomUUID().toString(),
                     name = autoTag.name,
                     color = autoTag.color
                 )
                 currentTags.add(newTag)
-                tagNameToId[autoTag.name] = newTag.id
+                tagNameToId[lower] = newTag.id
             }
         }
         _tags.value = currentTags
         saveTags(currentTags)
 
-        // Assign tags to apps
         val currentAppTags = _appTags.value.toMutableMap()
 
         preview.componentTagMap.forEach { (componentKey, tagName) ->
-            val tagId = tagNameToId[tagName]
+            val tagId = tagNameToId[tagName.lowercase().trim()]
             if (tagId != null) {
                 val list = currentAppTags[componentKey]?.toMutableList() ?: mutableListOf()
                 if (tagId !in list) {
@@ -683,8 +910,21 @@ class AppActionsManager(context: Context) {
         Toast.makeText(context, "Applied ${preview.tags.size} tags to ${preview.matchedAppsCount} apps", Toast.LENGTH_SHORT).show()
     }
 
+    private fun generateTagColor(name: String): Color {
+        val palette = listOf(
+            Color(0xFFE53935), Color(0xFFD81B60), Color(0xFF8E24AA),
+            Color(0xFF5E35B1), Color(0xFF3949AB), Color(0xFF1E88E5),
+            Color(0xFF039BE5), Color(0xFF00ACC1), Color(0xFF00897B),
+            Color(0xFF43A047), Color(0xFF7CB342), Color(0xFFFB8C00),
+            Color(0xFFF4511E), Color(0xFF6D4C41), Color(0xFF546E7A)
+        )
+        val index = kotlin.math.abs(name.hashCode()) % palette.size
+        return palette[index]
+    }
+
     private fun parseHexColor(hex: String): Color {
-        val cleaned = hex.removePrefix("#")
+        val cleaned = hex.removePrefix("#").trim()
+        if (cleaned.isEmpty()) return Color(0xFF888888.toInt())
         val argb = try {
             AndroidColor.parseColor("#$cleaned")
         } catch (e: Exception) {

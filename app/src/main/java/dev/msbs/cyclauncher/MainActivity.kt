@@ -316,7 +316,7 @@ class MainActivity : ComponentActivity() {
                             TagSelectionDialog(
                                 app = app,
                                 allTags = allTags,
-                                assignedTagIds = appTagsMap[key] ?: emptyList(),
+                                assignedTagIds = appTagsMap[key] ?: appTagsMap[app.packageName] ?: emptyList(),
                                 onToggleTag = { tagId -> viewModel.toggleTagForApp(key, tagId) },
                                 onCreateTag = { name, color -> viewModel.createTag(Tag(name = name, color = color)) },
                                 onUpdateTag = { tag -> viewModel.updateTag(tag) },

@@ -257,7 +257,7 @@ fun SettingsScreen(
                             }
                         }
                         IconButton(
-                            onClick = { importAppListLauncher.launch("application/json") },
+                            onClick = { importAppListLauncher.launch("*/*") },
                             modifier = Modifier.size(34.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
@@ -311,7 +311,7 @@ fun SettingsScreen(
                             }
                         }
                         IconButton(
-                            onClick = { importTagsLauncher.launch("application/json") },
+                            onClick = { importTagsLauncher.launch("*/*") },
                             modifier = Modifier.size(34.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
