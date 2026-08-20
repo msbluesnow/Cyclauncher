@@ -2,6 +2,9 @@ package dev.msbs.cyclauncher.coil
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build
 import coil3.ImageLoader
@@ -22,6 +25,7 @@ data class AppIconKey(val componentKey: String)
 internal class AppIconFetcher private constructor(
     private val context: Context,
     private val key: AppIconKey,
+    private val options: Options,
 ) : Fetcher {
 
     override suspend fun fetch(): FetchResult? = withContext(Dispatchers.IO) {
@@ -36,11 +40,41 @@ internal class AppIconFetcher private constructor(
             pm.defaultActivityIcon
         }
 
+        val targetSize = resolveTargetSize(drawable, options)
+        val bitmap = drawableToBitmap(drawable, targetSize)
+
         ImageFetchResult(
-            image = drawable.asImage(),
+            image = bitmap.asImage(),
             isSampled = false,
             dataSource = DataSource.DISK,
         )
+    }
+
+    private fun resolveTargetSize(drawable: Drawable, options: Options): Int {
+        val reqPx = (options.size.width as? coil3.size.Dimension.Pixels)?.px
+        if (reqPx != null && reqPx > 0) {
+            return reqPx.coerceIn(32, 288)
+        }
+        val intrinsic = drawable.intrinsicWidth
+        return if (intrinsic > 0) intrinsic.coerceIn(48, 192) else 144
+    }
+
+    private fun drawableToBitmap(drawable: Drawable, size: Int): Bitmap {
+        if (drawable is BitmapDrawable && drawable.bitmap != null) {
+            val src = drawable.bitmap
+            if (src.width == size && src.height == size) {
+                return src
+            }
+            if (src.width > 0 && src.height > 0) {
+                return Bitmap.createScaledBitmap(src, size, size, true)
+            }
+        }
+        val safeSize = size.coerceAtLeast(1)
+        val bitmap = Bitmap.createBitmap(safeSize, safeSize, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, safeSize, safeSize)
+        drawable.draw(canvas)
+        return bitmap
     }
 
     private fun resolveIcon(pm: PackageManager, pkg: String, activity: String): Drawable {
@@ -67,7 +101,7 @@ internal class AppIconFetcher private constructor(
                 }
                 else -> return null
             }
-            return AppIconFetcher(context.applicationContext, key)
+            return AppIconFetcher(context.applicationContext, key, options)
         }
     }
 }

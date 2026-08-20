@@ -53,7 +53,7 @@ fun AutoResizingText(
     BoxWithConstraints(modifier = modifier) {
         val containerWidth = maxWidth
         var fontSize by remember(text, targetFontSize, containerWidth) { mutableStateOf(targetFontSize.sp) }
-        var readyToDraw by remember(text, targetFontSize, containerWidth) { mutableStateOf(false) }
+        var readyToDraw by remember(text, targetFontSize, containerWidth) { mutableStateOf(text.length <= 14) }
 
         Text(
             text = text,
@@ -62,11 +62,11 @@ fun AutoResizingText(
             textAlign = textAlign,
             fontSize = fontSize,
             maxLines = 1,
-            overflow = TextOverflow.Clip,
+            overflow = TextOverflow.Ellipsis,
             softWrap = false,
             onTextLayout = { textLayoutResult ->
-                if (textLayoutResult.hasVisualOverflow && fontSize.value > 8f) {
-                    fontSize = (fontSize.value * 0.9f).sp
+                if (textLayoutResult.hasVisualOverflow && fontSize.value > 10f) {
+                    fontSize = (fontSize.value * 0.85f).sp
                 } else {
                     readyToDraw = true
                 }
@@ -221,6 +221,7 @@ fun AppListItemWithIcon(
     var itemPosition by remember { mutableStateOf(Offset.Zero) }
     val currentOnClick by rememberUpdatedState(onClick)
     val currentOnLongClick by rememberUpdatedState(onLongClick)
+    val painter: Painter = rememberAppIconPainter(app.iconKey, iconSize)
 
     Row(
         modifier = modifier
@@ -237,7 +238,14 @@ fun AppListItemWithIcon(
         horizontalArrangement = if (handSide == HandSide.LEFT) Arrangement.Start else Arrangement.End
     ) {
         if (handSide == HandSide.LEFT) {
-            AppIconItem(app = app, size = iconSize, onClick = onClick, onLongClick = onLongClick)
+            Image(
+                painter = painter,
+                contentDescription = app.label,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .size(iconSize.dp)
+                    .clip(CircleShape)
+            )
             Spacer(modifier = Modifier.width(10.dp))
             AutoResizingText(
                 text = app.label,
@@ -257,7 +265,14 @@ fun AppListItemWithIcon(
                 showShadows = showShadows
             )
             Spacer(modifier = Modifier.width(10.dp))
-            AppIconItem(app = app, size = iconSize, onClick = onClick, onLongClick = onLongClick)
+            Image(
+                painter = painter,
+                contentDescription = app.label,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .size(iconSize.dp)
+                    .clip(CircleShape)
+            )
         }
     }
 }

@@ -444,12 +444,19 @@ private fun HistorySection(
         }
     }
 
-    // Reset history edit mode and scroll to bottom whenever scrollTrigger changes, history updates, or screen becomes active
-    LaunchedEffect(scrollTrigger, history, isActive) {
+    // Reset history edit mode and scroll to bottom whenever scrollTrigger changes or screen becomes active
+    LaunchedEffect(scrollTrigger, isActive) {
         if (isActive && history.isNotEmpty()) {
             isHistoryShiftedUp = false
             setHistoryEditMode(false)
             listState.scrollToItem(0)
+        }
+    }
+
+    // Automatically exit history edit mode if all history items were removed
+    LaunchedEffect(history.isEmpty()) {
+        if (history.isEmpty()) {
+            setHistoryEditMode(false)
         }
     }
 
