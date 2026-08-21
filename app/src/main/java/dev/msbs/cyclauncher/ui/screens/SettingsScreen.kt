@@ -67,6 +67,7 @@ fun SettingsScreen(
     val searchMethod by viewModel.searchMethod.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
+    val buttonTextColor by viewModel.buttonTextColor.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
     val context = LocalContext.current
 
@@ -212,16 +213,38 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Adaptive Shadows Toggle
-                SettingsRow(label = "Adaptive Shadows:", textColor = primaryTextColor.color, shadow = shadow) {
-                    Switch(
-                        checked = showShadows,
-                        onCheckedChange = { viewModel.setShowShadows(it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = accentColor.color,
-                            checkedTrackColor = accentColor.color.copy(alpha = 0.5f)
-                        )
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Adaptive Shadows Toggle
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Adaptive Shadows:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 16.sp))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(36.dp),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            Switch(
+                                checked = showShadows,
+                                onCheckedChange = { viewModel.setShowShadows(it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = accentColor.color,
+                                    checkedTrackColor = accentColor.color.copy(alpha = 0.5f)
+                                )
+                            )
+                        }
+                    }
+
+                    // Button Text Color Selector
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Button Text:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 16.sp))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        MainColorSelector(buttonTextColor) { viewModel.setButtonTextColor(it) }
+                    }
                 }
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
@@ -349,23 +372,31 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Interactive Gesture Tutorial
-                SettingsRow(label = "Interactive Tutorial:", textColor = primaryTextColor.color, shadow = shadow) {
-                    Button(
-                        onClick = {
-                            viewModel.startTutorial()
-                            onBack()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = "Start",
-                            color = Color.Black,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
-                        )
-                    }
+                // Tutorial Button
+                Button(
+                    onClick = {
+                        viewModel.startTutorial()
+                        onBack()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(46.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.School,
+                        contentDescription = null,
+                        tint = buttonTextColor.color,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Tutorial",
+                        color = buttonTextColor.color,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
                 }
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))

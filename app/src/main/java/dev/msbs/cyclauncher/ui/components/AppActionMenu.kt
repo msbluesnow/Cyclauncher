@@ -157,6 +157,137 @@ fun AppActionMenu(
 }
 
 /**
+ * Context action menu for the history section, offering options to edit the history list
+ * (remove items) or toggle whether history recording is paused.
+ *
+ * @param isHistoryPaused Current paused status of history recording.
+ * @param hasHistoryItems True if there is at least one item in history.
+ * @param offset The touch input position where the menu was triggered.
+ * @param onDismiss Callback to close the menu.
+ * @param onEditHistory Callback when the user selects to edit history.
+ * @param onTogglePause Callback when the user toggles history recording pause status.
+ * @param onClearHistory Callback when the user selects to clear all history items.
+ * @param accentColor The active UI accent color.
+ * @param primaryTextColor The primary text color.
+ */
+@Composable
+fun HistoryActionMenu(
+    isHistoryPaused: Boolean,
+    hasHistoryItems: Boolean,
+    offset: Offset,
+    onDismiss: () -> Unit,
+    onEditHistory: () -> Unit,
+    onTogglePause: () -> Unit,
+    onClearHistory: (() -> Unit)? = null,
+    accentColor: AccentColor = AccentColor.SKY,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE
+) {
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
+
+    val menuWidth = 250.dp
+    val menuWidthPx = with(density) { menuWidth.toPx() }
+
+    val itemsCount = if (hasHistoryItems && onClearHistory != null) 3 else 2
+    val menuHeightPx = with(density) { (60 + itemsCount * 48).dp.toPx() }
+    val borderPadding = with(density) { 16.dp.toPx() }
+
+    var x = offset.x
+    var y = offset.y
+
+    if (x + menuWidthPx > screenWidthPx) x = screenWidthPx - menuWidthPx - borderPadding
+    if (x < borderPadding) x = borderPadding
+    if (y + menuHeightPx > screenHeightPx) y = screenHeightPx - menuHeightPx - borderPadding
+    if (y < borderPadding) y = borderPadding
+
+    Popup(
+        offset = IntOffset(x.roundToInt(), y.roundToInt()),
+        onDismissRequest = onDismiss,
+        properties = PopupProperties(focusable = true)
+    ) {
+        Box(
+            modifier = Modifier
+                .width(menuWidth)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.Black.copy(alpha = 0.85f))
+                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                .padding(vertical = 8.dp)
+        ) {
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.History,
+                        contentDescription = null,
+                        tint = accentColor.color,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "History",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (isHistoryPaused) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "(Paused)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.Gray
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                if (hasHistoryItems) {
+                    MenuItem(
+                        text = "Edit History",
+                        icon = Icons.Outlined.Edit,
+                        accentColor = accentColor,
+                        primaryTextColor = primaryTextColor,
+                        onClick = {
+                            onDismiss()
+                            onEditHistory()
+                        }
+                    )
+                }
+
+                MenuItem(
+                    text = if (isHistoryPaused) "Resume Recording" else "Pause Recording",
+                    icon = if (isHistoryPaused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
+                    accentColor = accentColor,
+                    primaryTextColor = primaryTextColor,
+                    onClick = {
+                        onDismiss()
+                        onTogglePause()
+                    }
+                )
+
+                if (hasHistoryItems && onClearHistory != null) {
+                    MenuItem(
+                        text = "Clear History",
+                        icon = Icons.Outlined.Delete,
+                        accentColor = accentColor,
+                        primaryTextColor = primaryTextColor,
+                        onClick = {
+                            onDismiss()
+                            onClearHistory()
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
  * A standard menu item used within the AppActionMenu popup.
  */
 @Composable

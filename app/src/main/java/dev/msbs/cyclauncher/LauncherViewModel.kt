@@ -65,6 +65,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** The selected primary (non-accent) text color theme. */
     val primaryTextColor: StateFlow<PrimaryTextColor> = _primaryTextColor
 
+    private val _buttonTextColor = MutableStateFlow(PrimaryTextColor.BLACK)
+    /** The selected button text color (White or Black). */
+    val buttonTextColor: StateFlow<PrimaryTextColor> = _buttonTextColor
+
     private val _showShadows = MutableStateFlow(true)
     /** Whether adaptive text/icon drop shadows are enabled. */
     val showShadows: StateFlow<Boolean> = _showShadows
@@ -200,6 +204,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         
         val savedTextColor = prefs.getString("primary_text_color", PrimaryTextColor.WHITE.name) ?: PrimaryTextColor.WHITE.name
         _primaryTextColor.value = PrimaryTextColor.fromName(savedTextColor)
+
+        val savedButtonTextColor = prefs.getString("button_text_color", PrimaryTextColor.BLACK.name) ?: PrimaryTextColor.BLACK.name
+        _buttonTextColor.value = PrimaryTextColor.fromName(savedButtonTextColor)
         
         if (!prefs.contains("show_shadows")) {
             _showShadows.value = true 
@@ -354,6 +361,17 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
+     * Sets the button text color preference (White or Black) and persists it.
+     *
+     * @param color The chosen [PrimaryTextColor] instance.
+     */
+    fun setButtonTextColor(color: PrimaryTextColor) {
+        _buttonTextColor.value = color
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putString("button_text_color", color.name).apply()
+    }
+
+    /**
      * Sets the visibility preference for drop shadows on text/icons and persists it.
      *
      * @param enabled True to show shadows, false to hide.
@@ -392,6 +410,19 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         actionsManager.reorderFavorites(fromIndex, toIndex)
     }
     
+    /** Stream indicating whether recording app launches to history is paused. */
+    val isHistoryPaused: StateFlow<Boolean> = actionsManager.isHistoryPaused
+
+    /** Toggles whether recording application launches to history is paused. */
+    fun toggleHistoryPaused() {
+        actionsManager.toggleHistoryPaused()
+    }
+
+    /** Clears all entries from the launch history. */
+    fun clearHistory() {
+        actionsManager.clearHistory()
+    }
+
     /**
      * Removes an application from the launch history.
      *

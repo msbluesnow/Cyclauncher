@@ -100,13 +100,37 @@ class AppActionsManager(context: Context) {
         return _favorites.value.contains(componentKey)
     }
 
+    private val _isHistoryPaused = MutableStateFlow<Boolean>(prefs.getBoolean("is_history_paused", false))
+    /** Stream indicating whether recording app launches to history is paused. */
+    val isHistoryPaused: StateFlow<Boolean> = _isHistoryPaused
+
+    /**
+     * Toggles whether recording application launches to history is paused.
+     * Shows a confirmation toast and updates persistence.
+     *
+     * @return The new paused state (true if paused, false if active).
+     */
+    fun toggleHistoryPaused(): Boolean {
+        val newVal = !_isHistoryPaused.value
+        _isHistoryPaused.value = newVal
+        prefs.edit().putBoolean("is_history_paused", newVal).apply()
+        Toast.makeText(
+            context,
+            if (newVal) "History recording paused" else "History recording resumed",
+            Toast.LENGTH_SHORT
+        ).show()
+        return newVal
+    }
+
     /**
      * Logs an application launch event. Updates the recent history list,
      * placing the app at the top and maintaining a size limit of 15.
+     * Ignored if history recording is currently paused.
      *
      * @param componentKey The application key.
      */
     fun logAppLaunch(componentKey: String) {
+        if (_isHistoryPaused.value) return
         val current = _history.value.toMutableList()
         current.remove(componentKey)
         current.add(0, componentKey)
@@ -128,6 +152,16 @@ class AppActionsManager(context: Context) {
         saveList("history", current)
         val label = componentKey.split("/").first().split(".").last().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
         Toast.makeText(context, "Removed \"$label\" from History", Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * Clears all entries from the launch history.
+     * Shows a confirmation toast and updates persistence.
+     */
+    fun clearHistory() {
+        _history.value = emptyList()
+        saveList("history", emptyList())
+        Toast.makeText(context, "History cleared", Toast.LENGTH_SHORT).show()
     }
 
     /**

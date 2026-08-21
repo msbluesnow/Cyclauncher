@@ -78,6 +78,7 @@ fun TutorialOverlay(
     val stepIndex by viewModel.tutorialStep.collectAsState()
     val handSide by viewModel.handSide.collectAsState()
     val accentColorEnum by viewModel.accentColor.collectAsState()
+    val buttonTextColor by viewModel.buttonTextColor.collectAsState()
 
     val accentColor = accentColorEnum.color
     val haptic = LocalHapticFeedback.current
@@ -111,9 +112,9 @@ fun TutorialOverlay(
             ),
             TutorialStepInfo(
                 title = "Favorites, History & Tags",
-                description = "Press and hold a Favorite or History item to edit, reorder, or remove it. Tap a Tag folder (rounded rectangle) to open apps, or long-press a Tag folder to edit the group or add/remove it from Favorites.",
+                description = "Press and hold a Favorite item to reorder or remove it. Tap the History icon to open the menu (edit list, pause/resume recording, or clear history). Tap a Tag folder to open apps, or long-press it to edit the group or add/remove from Favorites.",
                 gestureType = GestureType.FAVORITES_HISTORY,
-                hintText = "Long-press Favorite/History or tap/long-press Tag folder!"
+                hintText = "Hold Favorite, tap History icon, or tap/hold Tag folder!"
             ),
             TutorialStepInfo(
                 title = "History Position Shift",
@@ -355,14 +356,14 @@ fun TutorialOverlay(
                         ) {
                             Text(
                                 text = if (stepIndex == steps.lastIndex) "Finish" else "Next",
-                                color = Color.Black,
+                                color = buttonTextColor.color,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                 contentDescription = "Next",
-                                tint = Color.Black,
+                                tint = buttonTextColor.color,
                                 modifier = Modifier.size(16.dp)
                             )
                         }

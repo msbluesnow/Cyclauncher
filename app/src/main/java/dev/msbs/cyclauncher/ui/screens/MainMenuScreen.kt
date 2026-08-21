@@ -13,6 +13,7 @@ import dev.msbs.cyclauncher.ui.components.TagFolderIcon
 import dev.msbs.cyclauncher.ui.components.TagFolderActionMenu
 import dev.msbs.cyclauncher.ui.components.TagFolderItem
 import dev.msbs.cyclauncher.ui.components.TagFolderPopup
+import dev.msbs.cyclauncher.ui.components.HistoryActionMenu
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.RemoveCircle
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.HistoryToggleOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -90,10 +92,12 @@ fun MainMenuScreen(
     val showShadows by viewModel.showShadows.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
+    val isHistoryPaused by viewModel.isHistoryPaused.collectAsState()
     var isReorderMode by remember { mutableStateOf(false) }
     var isHistoryEditMode by remember { mutableStateOf(false) }
     var selectedTagForPopup by remember { mutableStateOf<Triple<Tag, List<AppInfo>, Offset>?>(null) }
     var selectedTagForMenu by remember { mutableStateOf<Triple<Tag, List<AppInfo>, Offset>?>(null) }
+    var selectedHistoryMenuOffset by remember { mutableStateOf<Offset?>(null) }
     var isTagPopupEditMode by remember { mutableStateOf(false) }
 
     val popularTagsWithApps = remember(tags, appTags, apps, favoriteItems) {
@@ -116,6 +120,7 @@ fun MainMenuScreen(
             isHistoryEditMode = false
             selectedTagForPopup = null
             selectedTagForMenu = null
+            selectedHistoryMenuOffset = null
             isTagPopupEditMode = false
         }
     }
@@ -126,6 +131,7 @@ fun MainMenuScreen(
             isHistoryEditMode = false
             selectedTagForPopup = null
             selectedTagForMenu = null
+            selectedHistoryMenuOffset = null
             isTagPopupEditMode = false
         }
     }
@@ -141,6 +147,7 @@ fun MainMenuScreen(
                 isHistoryEditMode = false
                 selectedTagForPopup = null
                 selectedTagForMenu = null
+                selectedHistoryMenuOffset = null
                 isTagPopupEditMode = false
             }
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
@@ -159,6 +166,7 @@ fun MainMenuScreen(
             isHistoryEditMode = false
             selectedTagForPopup = null
             selectedTagForMenu = null
+            selectedHistoryMenuOffset = null
             isTagPopupEditMode = false
         }
     }
@@ -168,11 +176,12 @@ fun MainMenuScreen(
         isHistoryEditMode = false
         selectedTagForPopup = null
         selectedTagForMenu = null
+        selectedHistoryMenuOffset = null
         isTagPopupEditMode = false
         onAppLongClick(app, offset)
     }
 
-    val isAnyEditMode = isReorderMode || isHistoryEditMode || selectedTagForPopup != null || selectedTagForMenu != null
+    val isAnyEditMode = isReorderMode || isHistoryEditMode || selectedTagForPopup != null || selectedTagForMenu != null || selectedHistoryMenuOffset != null
     val currentOnSettingsClick by rememberUpdatedState(onSettingsClick)
     val currentOnSwipeUp by rememberUpdatedState(onSwipeUp)
     val currentOnSwipeDown by rememberUpdatedState(onSwipeDown)
@@ -248,7 +257,7 @@ fun MainMenuScreen(
                     isActive
                 )
                 Spacer(modifier = Modifier.width(16.dp))
-                HistorySection(
+                    HistorySection(
                     viewModel = viewModel,
                     modifier = Modifier.weight(historyWeight),
                     history = history,
@@ -257,9 +266,15 @@ fun MainMenuScreen(
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
                     accentColor = accentColor,
+                    isHistoryPaused = isHistoryPaused,
                     isHistoryEditMode = isHistoryEditMode,
                     setHistoryEditMode = { isHistoryEditMode = it },
                     onRemoveFromHistory = { viewModel.removeFromHistory(it) },
+                    onHistoryIconClick = { offset ->
+                        selectedTagForMenu = null
+                        selectedTagForPopup = null
+                        selectedHistoryMenuOffset = offset
+                    },
                     onAppClick = onAppClick,
                     onAppLongClick = handleAppLongClick,
                     onTagFolderClick = { tag, taggedApps, offset ->
@@ -269,6 +284,7 @@ fun MainMenuScreen(
                     onTagFolderLongClick = { tag, taggedApps, offset ->
                         isReorderMode = false
                         isHistoryEditMode = false
+                        selectedHistoryMenuOffset = null
                         selectedTagForMenu = Triple(tag, taggedApps, offset)
                     },
                     onSettingsClick = onSettingsClick,
@@ -284,9 +300,15 @@ fun MainMenuScreen(
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
                     accentColor = accentColor,
+                    isHistoryPaused = isHistoryPaused,
                     isHistoryEditMode = isHistoryEditMode,
                     setHistoryEditMode = { isHistoryEditMode = it },
                     onRemoveFromHistory = { viewModel.removeFromHistory(it) },
+                    onHistoryIconClick = { offset ->
+                        selectedTagForMenu = null
+                        selectedTagForPopup = null
+                        selectedHistoryMenuOffset = offset
+                    },
                     onAppClick = onAppClick,
                     onAppLongClick = handleAppLongClick,
                     onTagFolderClick = { tag, taggedApps, offset ->
@@ -296,6 +318,7 @@ fun MainMenuScreen(
                     onTagFolderLongClick = { tag, taggedApps, offset ->
                         isReorderMode = false
                         isHistoryEditMode = false
+                        selectedHistoryMenuOffset = null
                         selectedTagForMenu = Triple(tag, taggedApps, offset)
                     },
                     onSettingsClick = onSettingsClick,
@@ -322,6 +345,7 @@ fun MainMenuScreen(
                     onTagFolderLongClick = { tag, taggedApps, offset ->
                         isReorderMode = false
                         isHistoryEditMode = false
+                        selectedHistoryMenuOffset = null
                         selectedTagForMenu = Triple(tag, taggedApps, offset)
                     },
                     onSwipeUp,
@@ -330,6 +354,29 @@ fun MainMenuScreen(
                     isActive
                 )
             }
+        }
+
+        selectedHistoryMenuOffset?.let { offset ->
+            HistoryActionMenu(
+                isHistoryPaused = isHistoryPaused,
+                hasHistoryItems = history.isNotEmpty(),
+                offset = offset,
+                onDismiss = { selectedHistoryMenuOffset = null },
+                onEditHistory = {
+                    selectedHistoryMenuOffset = null
+                    isHistoryEditMode = true
+                },
+                onTogglePause = {
+                    selectedHistoryMenuOffset = null
+                    viewModel.toggleHistoryPaused()
+                },
+                onClearHistory = {
+                    selectedHistoryMenuOffset = null
+                    viewModel.clearHistory()
+                },
+                accentColor = accentColor,
+                primaryTextColor = primaryTextColor
+            )
         }
 
         selectedTagForMenu?.let { (tag, taggedApps, offset) ->
@@ -412,9 +459,11 @@ private fun HistorySection(
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
     accentColor: AccentColor,
+    isHistoryPaused: Boolean,
     isHistoryEditMode: Boolean,
     setHistoryEditMode: (Boolean) -> Unit,
     onRemoveFromHistory: (String) -> Unit,
+    onHistoryIconClick: (Offset) -> Unit,
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit,
     onTagFolderClick: (Tag, List<AppInfo>, Offset) -> Unit,
@@ -504,6 +553,8 @@ private fun HistorySection(
                     isHistoryEditMode = isHistoryEditMode,
                     setHistoryEditMode = setHistoryEditMode,
                     onRemoveFromHistory = onRemoveFromHistory,
+                    isHistoryPaused = isHistoryPaused,
+                    onHistoryIconClick = onHistoryIconClick,
                     onAppClick = onAppClick,
                     onAppLongClick = onAppLongClick
                 )
@@ -638,6 +689,8 @@ private fun HistorySection(
                     isHistoryEditMode = isHistoryEditMode,
                     setHistoryEditMode = setHistoryEditMode,
                     onRemoveFromHistory = onRemoveFromHistory,
+                    isHistoryPaused = isHistoryPaused,
+                    onHistoryIconClick = onHistoryIconClick,
                     onAppClick = onAppClick,
                     onAppLongClick = onAppLongClick
                 )
@@ -695,9 +748,11 @@ private fun ColumnScope.HistoryContentBlock(
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
     accentColor: AccentColor,
+    isHistoryPaused: Boolean,
     isHistoryEditMode: Boolean,
     setHistoryEditMode: (Boolean) -> Unit,
     onRemoveFromHistory: (String) -> Unit,
+    onHistoryIconClick: (Offset) -> Unit,
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit
 ) {
@@ -805,22 +860,28 @@ private fun ColumnScope.HistoryContentBlock(
             Spacer(modifier = Modifier.width(4.dp))
         }
 
+        var historyIconPosition by remember { mutableStateOf(Offset.Zero) }
+
         Box(
             modifier = Modifier
                 .padding(vertical = 8.dp, horizontal = 4.dp)
                 .size(44.dp)
+                .onGloballyPositioned { historyIconPosition = it.positionInRoot() }
                 .pointerInput(isHistoryEditMode) {
                     detectTapGestures(
                         onLongPress = {
                             if (!isHistoryEditMode) {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                setHistoryEditMode(true)
+                                onHistoryIconClick(historyIconPosition + it)
                             }
                         },
                         onTap = {
                             if (isHistoryEditMode) {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 setHistoryEditMode(false)
+                            } else {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onHistoryIconClick(historyIconPosition + it)
                             }
                         }
                     )
@@ -848,9 +909,10 @@ private fun ColumnScope.HistoryContentBlock(
                 }
             } else {
                 Box(contentAlignment = Alignment.Center) {
+                    val historyIcon = if (isHistoryPaused) Icons.Outlined.HistoryToggleOff else Icons.Outlined.History
                     if (showShadows) {
                         Icon(
-                            imageVector = Icons.Outlined.History,
+                            imageVector = historyIcon,
                             contentDescription = null,
                             tint = primaryTextColor.shadowColor,
                             modifier = Modifier
@@ -859,9 +921,9 @@ private fun ColumnScope.HistoryContentBlock(
                         )
                     }
                     Icon(
-                        imageVector = Icons.Outlined.History,
-                        contentDescription = "History",
-                        tint = accentColor.color,
+                        imageVector = historyIcon,
+                        contentDescription = if (isHistoryPaused) "History (Paused)" else "History",
+                        tint = if (isHistoryPaused) accentColor.color.copy(alpha = 0.5f) else accentColor.color,
                         modifier = Modifier.size(22.dp)
                     )
                 }

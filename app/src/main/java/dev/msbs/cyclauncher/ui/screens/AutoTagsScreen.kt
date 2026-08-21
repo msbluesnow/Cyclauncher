@@ -53,6 +53,7 @@ fun AutoTagsScreen(
 ) {
     val accentColor by viewModel.accentColor.collectAsState()
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
+    val buttonTextColor by viewModel.buttonTextColor.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
     val context = LocalContext.current
 
@@ -163,7 +164,7 @@ fun AutoTagsScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
 
                     // Step 1: Export
-                    StepHeader(1, "Export App List", accentColor, primaryTextColor, shadow)
+                    StepHeader(1, "Export App List", accentColor, primaryTextColor, buttonTextColor, shadow)
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -181,11 +182,11 @@ fun AutoTagsScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
-                        Icon(Icons.Outlined.Upload, contentDescription = null, tint = Color.Black)
+                        Icon(Icons.Outlined.Upload, contentDescription = null, tint = buttonTextColor.color)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             "Export App List",
-                            color = Color.Black,
+                            color = buttonTextColor.color,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -196,7 +197,7 @@ fun AutoTagsScreen(
                     )
 
                     // Step 2: Backup Existing Tags
-                    StepHeader(2, "Backup Existing Tags", accentColor, primaryTextColor, shadow)
+                    StepHeader(2, "Backup Existing Tags", accentColor, primaryTextColor, buttonTextColor, shadow)
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -214,11 +215,11 @@ fun AutoTagsScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
-                        Icon(Icons.Outlined.Upload, contentDescription = null, tint = Color.Black)
+                        Icon(Icons.Outlined.Upload, contentDescription = null, tint = buttonTextColor.color)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             "Export Tags Backup",
-                            color = Color.Black,
+                            color = buttonTextColor.color,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -229,7 +230,7 @@ fun AutoTagsScreen(
                     )
 
                     // Step 3: Send to AI
-                    StepHeader(3, "Send to AI", accentColor, primaryTextColor, shadow)
+                    StepHeader(3, "Send to AI", accentColor, primaryTextColor, buttonTextColor, shadow)
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -303,7 +304,7 @@ fun AutoTagsScreen(
                     )
 
                     // Step 4: Import Tagged Apps
-                    StepHeader(4, "Import Tagged Apps", accentColor, primaryTextColor, shadow)
+                    StepHeader(4, "Import Tagged Apps", accentColor, primaryTextColor, buttonTextColor, shadow)
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -321,11 +322,11 @@ fun AutoTagsScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
-                        Icon(Icons.Outlined.Download, contentDescription = null, tint = Color.Black)
+                        Icon(Icons.Outlined.Download, contentDescription = null, tint = buttonTextColor.color)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             "Upload Tagged Result",
-                            color = Color.Black,
+                            color = buttonTextColor.color,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -418,6 +419,7 @@ private fun StepHeader(
     title: String,
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    buttonTextColor: PrimaryTextColor = PrimaryTextColor.BLACK,
     shadow: Shadow?
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -430,7 +432,7 @@ private fun StepHeader(
         ) {
             Text(
                 text = stepNumber.toString(),
-                color = Color.Black,
+                color = buttonTextColor.color,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 style = TextStyle(shadow = shadow)
