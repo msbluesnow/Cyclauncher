@@ -747,6 +747,24 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         refreshApps()
     }
 
+    /**
+     * Called when an application package is installed or updated on the device.
+     *
+     * @param packageName The package name of the newly installed or updated app.
+     */
+    fun onPackageAddedOrUpdated(packageName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val pm = getApplication<Application>().packageManager
+            val launchIntent = pm.getLaunchIntentForPackage(packageName)
+            val component = launchIntent?.component
+            if (component != null) {
+                val compKey = "${component.packageName}/${component.className}"
+                actionsManager.onAppInstalledOrUpdated(compKey)
+            }
+            loadInstalledApps()
+        }
+    }
+
     private var loadAppsJob: kotlinx.coroutines.Job? = null
 
     /**
@@ -754,6 +772,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      * package names, activity names, and starting index characters. Icons are intentionally
      * not loaded here — they are fetched on demand by Coil in the UI layer, which keeps this
      * list lightweight and lets the OS evict bitmaps under memory pressure.
+     * Also detects newly installed or updated applications and adds them to recent history.
      */
     private fun loadInstalledApps() {
         loadAppsJob?.cancel()
@@ -761,7 +780,39 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val pm = getApplication<Application>().packageManager
             val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
             val resolvedInfos = pm.queryIntentActivities(mainIntent, 0)
+
+            val currentUpdateTimes = mutableMapOf<String, Long>()
+            val newlyInstalledOrUpdated = mutableListOf<Pair<String, Long>>() // componentKey to updateTime
+
+            val prevUpdateTimes = actionsManager.loadAppUpdateTimes()
+            val isFirstTimeTracking = prevUpdateTimes.isEmpty()
+
             val appList = resolvedInfos.map { info ->
+                val pkgName = info.activityInfo.packageName
+                val actName = info.activityInfo.name
+                val compKey = "$pkgName/$actName"
+
+                val updateTime = try {
+                    val pInfo = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        pm.getPackageInfo(pkgName, android.content.pm.PackageManager.PackageInfoFlags.of(0))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        pm.getPackageInfo(pkgName, 0)
+                    }
+                    pInfo.lastUpdateTime
+                } catch (_: Exception) {
+                    0L
+                }
+
+                currentUpdateTimes[pkgName] = updateTime
+
+                if (!isFirstTimeTracking && updateTime > 0L) {
+                    val prevTime = prevUpdateTimes[pkgName]
+                    if (prevTime == null || updateTime > prevTime) {
+                        newlyInstalledOrUpdated.add(compKey to updateTime)
+                    }
+                }
+
                 try {
                     val label = try {
                         info.loadLabel(pm).toString().trim().ifEmpty {
@@ -777,23 +828,47 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     val firstChar = label.firstOrNull() ?: ' '
                     AppInfo(
                         label = label,
-                        packageName = info.activityInfo.packageName,
-                        activityName = info.activityInfo.name,
-                        iconKey = "${info.activityInfo.packageName}/${info.activityInfo.name}",
+                        packageName = pkgName,
+                        activityName = actName,
+                        iconKey = compKey,
                         searchChar = mapToSearchChar(firstChar)
                     )
                 } catch (e: Exception) {
                     AppInfo(
                         label = info.activityInfo?.packageName ?: "Unknown",
-                        packageName = info.activityInfo?.packageName ?: "",
-                        activityName = info.activityInfo?.name ?: "",
-                        iconKey = info.activityInfo?.let { "${it.packageName}/${it.name}" }.orEmpty(),
+                        packageName = pkgName,
+                        activityName = actName,
+                        iconKey = compKey,
                         searchChar = '#'
                     )
                 }
             }.sortedBy { it.label.lowercase() }
 
             _apps.value = appList
+
+            if (!isFirstTimeTracking && newlyInstalledOrUpdated.isNotEmpty()) {
+                // Sort by updateTime ascending so that the newest ends up at index 0 of history
+                val sortedKeys = newlyInstalledOrUpdated
+                    .sortedBy { it.second }
+                    .map { it.first }
+                actionsManager.onAppsInstalledOrUpdated(sortedKeys)
+            } else if (isFirstTimeTracking && actionsManager.history.value.isEmpty()) {
+                // On first run, populate history with the most recently installed/updated apps
+                val topRecent = resolvedInfos
+                    .mapNotNull { info ->
+                        val pkg = info.activityInfo.packageName
+                        val time = currentUpdateTimes[pkg] ?: 0L
+                        if (time > 0L) ("$pkg/${info.activityInfo.name}" to time) else null
+                    }
+                    .sortedBy { it.second }
+                    .takeLast(5)
+                    .map { it.first }
+                if (topRecent.isNotEmpty()) {
+                    actionsManager.onAppsInstalledOrUpdated(topRecent)
+                }
+            }
+
+            actionsManager.saveAppUpdateTimes(currentUpdateTimes)
 
             // Perform safe uninstalled app cleanup using PackageInfo validation only if user storage is unlocked
             val userManager = getApplication<Application>().getSystemService(android.content.Context.USER_SERVICE) as? android.os.UserManager

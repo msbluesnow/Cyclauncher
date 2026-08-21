@@ -140,6 +140,40 @@ class AppActionsManager(context: Context) {
     }
 
     /**
+     * Records a newly installed or updated application in the launch history list.
+     * Places the app at the top of the history list (up to max 15 items).
+     * Ignored if history recording is currently paused.
+     *
+     * @param componentKey The application key (formatted as "packageName/activityName").
+     */
+    fun onAppInstalledOrUpdated(componentKey: String) {
+        if (_isHistoryPaused.value) return
+        val current = _history.value.toMutableList()
+        current.remove(componentKey)
+        current.add(0, componentKey)
+        val limited = current.take(15)
+        _history.value = limited
+        saveList("history", limited)
+    }
+
+    /**
+     * Records multiple installed or updated applications in chronological order.
+     *
+     * @param componentKeys List of application keys ordered from oldest to newest update.
+     */
+    fun onAppsInstalledOrUpdated(componentKeys: List<String>) {
+        if (_isHistoryPaused.value || componentKeys.isEmpty()) return
+        val current = _history.value.toMutableList()
+        for (key in componentKeys) {
+            current.remove(key)
+            current.add(0, key)
+        }
+        val limited = current.take(15)
+        _history.value = limited
+        saveList("history", limited)
+    }
+
+    /**
      * Removes the specified application from the launch history.
      * Shows a confirmation toast and updates persistence.
      *
@@ -282,6 +316,41 @@ class AppActionsManager(context: Context) {
             _appTags.value = newAppTags
             saveAppTags(newAppTags)
         }
+
+        val updateTimes = loadAppUpdateTimes().toMutableMap()
+        if (updateTimes.remove(packageName) != null) {
+            saveAppUpdateTimes(updateTimes)
+        }
+    }
+
+    /**
+     * Loads the map of tracked package names and their last known update timestamps.
+     */
+    fun loadAppUpdateTimes(): Map<String, Long> {
+        val raw = prefs.getString("app_last_update_times", null) ?: return emptyMap()
+        return try {
+            val json = org.json.JSONObject(raw)
+            val map = mutableMapOf<String, Long>()
+            val keys = json.keys()
+            while (keys.hasNext()) {
+                val k = keys.next()
+                map[k] = json.getLong(k)
+            }
+            map
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    /**
+     * Saves the map of tracked package names and their last known update timestamps.
+     */
+    fun saveAppUpdateTimes(map: Map<String, Long>) {
+        try {
+            val json = org.json.JSONObject()
+            map.forEach { (k, v) -> json.put(k, v) }
+            prefs.edit().putString("app_last_update_times", json.toString()).apply()
+        } catch (_: Exception) {}
     }
 
     /**
