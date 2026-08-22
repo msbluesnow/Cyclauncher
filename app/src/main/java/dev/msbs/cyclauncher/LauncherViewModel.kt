@@ -628,7 +628,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     /** Opens the project Discord support server in a browser. */
     fun openDiscordPage() {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://discord.gg/9cnf49JnM")).apply {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://discord.gg/Zw4EBe92Qn")).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         getApplication<Application>().startActivity(intent)

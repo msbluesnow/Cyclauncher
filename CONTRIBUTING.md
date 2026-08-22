@@ -90,7 +90,7 @@ app/src/main/java/dev/msbs/cyclauncher/
 
 1. **Find an Issue or Start a Discussion**
    - Check open [GitHub Issues](https://github.com/msbluesnow/Cyclauncher/issues) for `good first issue` or `help wanted` tags.
-   - For major features or architectural changes, discuss your idea first on [Discord](https://discord.gg/9cnf49JnM) in `#development`.
+   - For major features or architectural changes, discuss your idea first on [Discord](https://discord.gg/Zw4EBe92Qn) in `#development`.
 
 2. **Create a Feature Branch**
    ```bash
@@ -116,7 +116,7 @@ app/src/main/java/dev/msbs/cyclauncher/
 
 ## 🤝 Community & Support
 
-- **Discord**: Join `#development` for technical discussions and help: [Join Discord](https://discord.gg/9cnf49JnM)
+- **Discord**: Join `#development` for technical discussions and help: [Join Discord](https://discord.gg/Zw4EBe92Qn)
 - **Issues**: Report bugs or request features via [GitHub Issues](https://github.com/msbluesnow/Cyclauncher/issues).
 
 ---

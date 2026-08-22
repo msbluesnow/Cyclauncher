@@ -57,7 +57,7 @@ Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**,
 
 ## 🤝 Community & Support
 
-- **Discord**: Join the community for feedback and updates: [![Discord](https://img.shields.io/badge/Discord-Join%20Community-7289DA?style=for-the-badge&logo=discord)](https://discord.gg/9cnf49JnM)
+- **Discord**: Join the community for feedback and updates: [![Discord](https://img.shields.io/badge/Discord-Join%20Community-7289DA?style=for-the-badge&logo=discord)](https://discord.gg/Zw4EBe92Qn)
 - **Contributing**: Check out [CONTRIBUTING.md](CONTRIBUTING.md) to learn how to set up the project and submit pull requests.
 - **Tribute**: Support the development of this project: [![Support on Tribute](https://img.shields.io/badge/Support-Tribute-orange?style=for-the-badge)](https://web.tribute.tg/e/1dW)
 

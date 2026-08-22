@@ -1,0 +1,7 @@
+- Added History Action Menu with Edit, Pause/Resume Recording, and Clear options.
+- Added automatic recording of newly installed and updated applications in launch history.
+- Added Button Text color customization (White / Black) alongside Adaptive Shadows in Settings.
+- Replaced tutorial setting with a direct Tutorial button.
+- Performance: background icon rasterization in Coil AppIconFetcher to eliminate main-thread rendering.
+- Enhanced app labels and tags backup import/export with format flexibility and merging.
+- Updated community Discord link.
