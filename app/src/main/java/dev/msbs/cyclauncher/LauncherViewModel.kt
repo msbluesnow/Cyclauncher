@@ -150,6 +150,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         ids.mapNotNull { id -> appMap[id] }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+    /** Set of application component keys that were recently installed or updated and not yet launched. */
+    val recentlyUpdatedApps: StateFlow<Set<String>> = actionsManager.recentlyUpdated
+
     // Избранные элементы (приложения и папки тегов с сохранением порядка)
     val favoriteItems: StateFlow<List<FavoriteItem>> = combine(
         apps,

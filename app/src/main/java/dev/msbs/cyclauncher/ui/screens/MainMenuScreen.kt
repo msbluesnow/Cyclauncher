@@ -58,6 +58,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 
 /**
  * The default launcher home screen, hosting favorite application shortcuts and a scrollable recent launch history list.
@@ -93,6 +95,7 @@ fun MainMenuScreen(
     val accentColor by viewModel.accentColor.collectAsState()
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
     val isHistoryPaused by viewModel.isHistoryPaused.collectAsState()
+    val recentlyUpdatedApps by viewModel.recentlyUpdatedApps.collectAsState()
     var isReorderMode by remember { mutableStateOf(false) }
     var isHistoryEditMode by remember { mutableStateOf(false) }
     var selectedTagForPopup by remember { mutableStateOf<Triple<Tag, List<AppInfo>, Offset>?>(null) }
@@ -262,6 +265,7 @@ fun MainMenuScreen(
                     modifier = Modifier.weight(historyWeight),
                     history = history,
                     popularTags = popularTagsWithApps,
+                    recentlyUpdatedApps = recentlyUpdatedApps,
                     handSide = handSide,
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
@@ -296,6 +300,7 @@ fun MainMenuScreen(
                     modifier = Modifier.weight(historyWeight),
                     history = history,
                     popularTags = popularTagsWithApps,
+                    recentlyUpdatedApps = recentlyUpdatedApps,
                     handSide = handSide,
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
@@ -455,6 +460,7 @@ private fun HistorySection(
     modifier: Modifier,
     history: List<AppInfo>,
     popularTags: List<Pair<Tag, List<AppInfo>>>,
+    recentlyUpdatedApps: Set<String>,
     handSide: HandSide,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
@@ -512,7 +518,7 @@ private fun HistorySection(
     Column(
         modifier = modifier.fillMaxHeight(),
         verticalArrangement = Arrangement.SpaceBetween,
-        horizontalAlignment = if (handSide == HandSide.LEFT) Alignment.End else Alignment.Start
+        horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
     ) {
         if (isHistoryShiftedUp) {
             Column(
@@ -541,11 +547,12 @@ private fun HistorySection(
                         }
                     },
                 verticalArrangement = Arrangement.Top,
-                horizontalAlignment = if (handSide == HandSide.LEFT) Alignment.End else Alignment.Start
+                horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
             ) {
                 HistoryContentBlock(
                     listState = listState,
                     history = history,
+                    recentlyUpdatedApps = recentlyUpdatedApps,
                     handSide = handSide,
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
@@ -595,7 +602,7 @@ private fun HistorySection(
                         }
                     },
                 verticalArrangement = Arrangement.Bottom,
-                horizontalAlignment = if (handSide == HandSide.LEFT) Alignment.End else Alignment.Start
+                horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
             ) {
                 TagsContentBlock(
                     gridState = tagGridState,
@@ -634,7 +641,7 @@ private fun HistorySection(
                         }
                     },
                 verticalArrangement = Arrangement.Bottom,
-                horizontalAlignment = if (handSide == HandSide.LEFT) Alignment.End else Alignment.Start
+                horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
             ) {
                 TagsContentBlock(
                     gridState = tagGridState,
@@ -677,11 +684,12 @@ private fun HistorySection(
                         }
                     },
                 verticalArrangement = Arrangement.Bottom,
-                horizontalAlignment = if (handSide == HandSide.LEFT) Alignment.End else Alignment.Start
+                horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
             ) {
                 HistoryContentBlock(
                     listState = listState,
                     history = history,
+                    recentlyUpdatedApps = recentlyUpdatedApps,
                     handSide = handSide,
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
@@ -711,30 +719,36 @@ private fun ColumnScope.TagsContentBlock(
 ) {
     if (popularTags.isEmpty()) return
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .weight(1f, fill = false)
-            .padding(bottom = 8.dp),
-        contentAlignment = if (handSide == HandSide.LEFT) Alignment.BottomEnd else Alignment.BottomStart
-    ) {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            state = gridState,
-            verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Bottom),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, if (handSide == HandSide.LEFT) Alignment.End else Alignment.Start),
-            modifier = Modifier.fillMaxWidth(),
-            reverseLayout = true
+    val layoutDirection = if (handSide == HandSide.RIGHT) LayoutDirection.Rtl else LayoutDirection.Ltr
+
+    CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = false)
+                .padding(bottom = 8.dp),
+            contentAlignment = if (handSide == HandSide.RIGHT) Alignment.BottomEnd else Alignment.BottomStart
         ) {
-            items(popularTags, key = { it.first.id }) { (tag, taggedApps) ->
-                TagFolderItem(
-                    tag = tag,
-                    apps = taggedApps,
-                    onClick = { offset -> onTagFolderClick(tag, taggedApps, offset) },
-                    onLongClick = { offset -> onTagFolderLongClick(tag, taggedApps, offset) },
-                    primaryTextColor = primaryTextColor,
-                    showShadows = showShadows
-                )
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                state = gridState,
+                verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Bottom),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+                reverseLayout = true
+            ) {
+                items(popularTags, key = { it.first.id }) { (tag, taggedApps) ->
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        TagFolderItem(
+                            tag = tag,
+                            apps = taggedApps,
+                            onClick = { offset -> onTagFolderClick(tag, taggedApps, offset) },
+                            onLongClick = { offset -> onTagFolderLongClick(tag, taggedApps, offset) },
+                            primaryTextColor = primaryTextColor,
+                            showShadows = showShadows
+                        )
+                    }
+                }
             }
         }
     }
@@ -744,6 +758,7 @@ private fun ColumnScope.TagsContentBlock(
 private fun ColumnScope.HistoryContentBlock(
     listState: androidx.compose.foundation.lazy.LazyListState,
     history: List<AppInfo>,
+    recentlyUpdatedApps: Set<String>,
     handSide: HandSide,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
@@ -769,9 +784,11 @@ private fun ColumnScope.HistoryContentBlock(
     ) {
         items(history, key = { "${it.packageName}/${it.activityName}" }) { app ->
             val appKey = "${app.packageName}/${app.activityName}"
+            val isRecentlyUpdated = recentlyUpdatedApps.contains(appKey) || recentlyUpdatedApps.contains(app.componentKey)
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = if (handSide == HandSide.LEFT) Arrangement.End else Arrangement.Start,
+                horizontalArrangement = if (handSide == HandSide.RIGHT) Arrangement.End else Arrangement.Start,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 val showMinusOnLeft = handSide == HandSide.RIGHT
@@ -800,10 +817,12 @@ private fun ColumnScope.HistoryContentBlock(
 
                 AppListItemWithIcon(
                     app = app,
-                    handSide = if (handSide == HandSide.LEFT) HandSide.RIGHT else HandSide.LEFT,
-                    iconSize = 44,
+                    handSide = handSide,
+                    iconSize = 48,
                     fontSize = 22,
                     modifier = Modifier.weight(1f),
+                    isRecentlyUpdated = isRecentlyUpdated,
+                    accentColor = accentColor,
                     onClick = {
                         if (!isHistoryEditMode) {
                             onAppClick(appKey)
@@ -846,7 +865,7 @@ private fun ColumnScope.HistoryContentBlock(
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = if (handSide == HandSide.LEFT) Arrangement.End else Arrangement.Start,
+        horizontalArrangement = if (handSide == HandSide.RIGHT) Arrangement.End else Arrangement.Start,
         modifier = Modifier.fillMaxWidth()
     ) {
         val showMinusOnLeft = handSide == HandSide.RIGHT
@@ -864,7 +883,7 @@ private fun ColumnScope.HistoryContentBlock(
 
         Box(
             modifier = Modifier
-                .padding(vertical = 8.dp, horizontal = 4.dp)
+                .padding(horizontal = 4.dp)
                 .size(44.dp)
                 .onGloballyPositioned { historyIconPosition = it.positionInRoot() }
                 .pointerInput(isHistoryEditMode) {
@@ -1008,8 +1027,7 @@ private fun FavoritesSection(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxHeight()
-                .padding(vertical = 16.dp),
+                .fillMaxHeight(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Bottom
         ) {
@@ -1166,7 +1184,7 @@ private fun FavoritesSection(
             
             Box(
                 modifier = Modifier
-                    .width(56.dp)
+                    .size(44.dp)
                     .pointerInput(isReorderMode) {
                         detectTapGestures(
                             onLongPress = {
@@ -1214,7 +1232,6 @@ private fun FavoritesSection(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }

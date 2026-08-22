@@ -2,12 +2,16 @@ package dev.msbs.cyclauncher.ui.components
 
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.HandSide
+import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Update
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -195,12 +199,14 @@ fun AppListItem(
 
 /**
  * A composite list item presenting both the application icon and its text label in a horizontal layout.
- * Supports different layout orientations depending on preferred hand side.
+ * Supports different layout orientations depending on preferred hand side, and an optional update badge.
  *
  * @param app The application info.
  * @param handSide Layout orientation side (left/right hand).
  * @param fontSize Preferred font size in sp.
  * @param iconSize Preferred icon size in dp.
+ * @param isRecentlyUpdated True if the app was recently installed or updated and has not yet been launched.
+ * @param accentColor Active UI accent color used for the update indicator icon.
  * @param onClick Triggered on item tap.
  * @param onLongClick Triggered on item long-press (provides absolute coordinate Offset).
  * @param primaryTextColor User selectable primary text color setting.
@@ -213,6 +219,8 @@ fun AppListItemWithIcon(
     fontSize: Int = 18,
     iconSize: Int = 40,
     modifier: Modifier = Modifier,
+    isRecentlyUpdated: Boolean = false,
+    accentColor: AccentColor = AccentColor.SKY,
     onClick: () -> Unit,
     onLongClick: (Offset) -> Unit = {},
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
@@ -247,23 +255,77 @@ fun AppListItemWithIcon(
                     .clip(CircleShape)
             )
             Spacer(modifier = Modifier.width(10.dp))
-            AutoResizingText(
-                text = app.label,
-                targetFontSize = fontSize,
-                textAlign = TextAlign.Start,
+            Row(
                 modifier = Modifier.weight(1f),
-                primaryTextColor = primaryTextColor,
-                showShadows = showShadows
-            )
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start
+            ) {
+                AutoResizingText(
+                    text = app.label,
+                    targetFontSize = fontSize,
+                    textAlign = TextAlign.Start,
+                    modifier = Modifier.weight(1f, fill = false),
+                    primaryTextColor = primaryTextColor,
+                    showShadows = showShadows
+                )
+                if (isRecentlyUpdated) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(contentAlignment = Alignment.Center) {
+                        if (showShadows) {
+                            Icon(
+                                imageVector = Icons.Outlined.Update,
+                                contentDescription = "Recently Updated",
+                                tint = primaryTextColor.shadowColor,
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .offset(1.dp, 1.dp)
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Outlined.Update,
+                            contentDescription = "Recently Updated",
+                            tint = accentColor.color,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
         } else {
-            AutoResizingText(
-                text = app.label,
-                targetFontSize = fontSize,
-                textAlign = TextAlign.End,
+            Row(
                 modifier = Modifier.weight(1f),
-                primaryTextColor = primaryTextColor,
-                showShadows = showShadows
-            )
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End
+            ) {
+                if (isRecentlyUpdated) {
+                    Box(contentAlignment = Alignment.Center) {
+                        if (showShadows) {
+                            Icon(
+                                imageVector = Icons.Outlined.Update,
+                                contentDescription = "Recently Updated",
+                                tint = primaryTextColor.shadowColor,
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .offset(1.dp, 1.dp)
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Outlined.Update,
+                            contentDescription = "Recently Updated",
+                            tint = accentColor.color,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
+                AutoResizingText(
+                    text = app.label,
+                    targetFontSize = fontSize,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.weight(1f, fill = false),
+                    primaryTextColor = primaryTextColor,
+                    showShadows = showShadows
+                )
+            }
             Spacer(modifier = Modifier.width(10.dp))
             Image(
                 painter = painter,

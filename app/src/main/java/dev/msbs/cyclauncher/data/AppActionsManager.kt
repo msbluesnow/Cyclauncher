@@ -122,14 +122,46 @@ class AppActionsManager(context: Context) {
         return newVal
     }
 
+    private val _recentlyUpdated = MutableStateFlow<Set<String>>(loadRecentlyUpdated())
+    /** Stream of application component keys that were recently installed or updated and have not yet been launched. */
+    val recentlyUpdated: StateFlow<Set<String>> = _recentlyUpdated
+
+    private fun loadRecentlyUpdated(): Set<String> {
+        val raw = prefs.getString("recently_updated_apps", null) ?: return emptySet()
+        return try {
+            val json = org.json.JSONArray(raw)
+            val set = mutableSetOf<String>()
+            for (i in 0 until json.length()) {
+                set.add(json.getString(i))
+            }
+            set
+        } catch (_: Exception) {
+            emptySet()
+        }
+    }
+
+    private fun saveRecentlyUpdated(set: Set<String>) {
+        try {
+            val json = org.json.JSONArray()
+            set.forEach { json.put(it) }
+            prefs.edit().putString("recently_updated_apps", json.toString()).apply()
+        } catch (_: Exception) {}
+    }
+
     /**
      * Logs an application launch event. Updates the recent history list,
      * placing the app at the top and maintaining a size limit of 15.
+     * Also clears the "recently updated" badge once the app is launched.
      * Ignored if history recording is currently paused.
      *
      * @param componentKey The application key.
      */
     fun logAppLaunch(componentKey: String) {
+        if (_recentlyUpdated.value.contains(componentKey)) {
+            val updatedSet = _recentlyUpdated.value - componentKey
+            _recentlyUpdated.value = updatedSet
+            saveRecentlyUpdated(updatedSet)
+        }
         if (_isHistoryPaused.value) return
         val current = _history.value.toMutableList()
         current.remove(componentKey)
@@ -141,12 +173,16 @@ class AppActionsManager(context: Context) {
 
     /**
      * Records a newly installed or updated application in the launch history list.
-     * Places the app at the top of the history list (up to max 15 items).
+     * Places the app at the top of the history list (up to max 15 items) and marks it as recently updated.
      * Ignored if history recording is currently paused.
      *
      * @param componentKey The application key (formatted as "packageName/activityName").
      */
     fun onAppInstalledOrUpdated(componentKey: String) {
+        val updatedSet = _recentlyUpdated.value + componentKey
+        _recentlyUpdated.value = updatedSet
+        saveRecentlyUpdated(updatedSet)
+
         if (_isHistoryPaused.value) return
         val current = _history.value.toMutableList()
         current.remove(componentKey)
@@ -162,6 +198,12 @@ class AppActionsManager(context: Context) {
      * @param componentKeys List of application keys ordered from oldest to newest update.
      */
     fun onAppsInstalledOrUpdated(componentKeys: List<String>) {
+        if (componentKeys.isNotEmpty()) {
+            val updatedSet = _recentlyUpdated.value + componentKeys
+            _recentlyUpdated.value = updatedSet
+            saveRecentlyUpdated(updatedSet)
+        }
+
         if (_isHistoryPaused.value || componentKeys.isEmpty()) return
         val current = _history.value.toMutableList()
         for (key in componentKeys) {
@@ -184,6 +226,11 @@ class AppActionsManager(context: Context) {
         current.remove(componentKey)
         _history.value = current
         saveList("history", current)
+        if (_recentlyUpdated.value.contains(componentKey)) {
+            val updatedSet = _recentlyUpdated.value - componentKey
+            _recentlyUpdated.value = updatedSet
+            saveRecentlyUpdated(updatedSet)
+        }
         val label = componentKey.split("/").first().split(".").last().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
         Toast.makeText(context, "Removed \"$label\" from History", Toast.LENGTH_SHORT).show()
     }
@@ -195,6 +242,8 @@ class AppActionsManager(context: Context) {
     fun clearHistory() {
         _history.value = emptyList()
         saveList("history", emptyList())
+        _recentlyUpdated.value = emptySet()
+        saveRecentlyUpdated(emptySet())
         Toast.makeText(context, "History cleared", Toast.LENGTH_SHORT).show()
     }
 
@@ -315,6 +364,12 @@ class AppActionsManager(context: Context) {
         if (newAppTags.size != _appTags.value.size) {
             _appTags.value = newAppTags
             saveAppTags(newAppTags)
+        }
+
+        val newRecent = _recentlyUpdated.value.filterNot { it.startsWith("$packageName/") || it == packageName }.toSet()
+        if (newRecent.size != _recentlyUpdated.value.size) {
+            _recentlyUpdated.value = newRecent
+            saveRecentlyUpdated(newRecent)
         }
 
         val updateTimes = loadAppUpdateTimes().toMutableMap()
