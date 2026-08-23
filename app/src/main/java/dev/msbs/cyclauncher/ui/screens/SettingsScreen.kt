@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -117,7 +118,7 @@ fun SettingsScreen(
 
     val shadow = primaryTextColor.getShadow(showShadows)
 
-    BackHandler(enabled = enabled, onBack = onBack)
+    BackHandler(enabled = enabled && !showCharacterMappingScreen && !showAutoTagsScreen, onBack = onBack)
 
     if (showCharacterMappingScreen) {
         CharacterMappingScreen(
@@ -144,16 +145,33 @@ fun SettingsScreen(
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "SETTINGS",
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.Bold,
-                shadow = shadow
-            ),
-            color = accentColor.color
-        )
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.align(Alignment.CenterStart)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                    contentDescription = "Back",
+                    tint = accentColor.color,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Text(
+                text = "SETTINGS",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    shadow = shadow
+                ),
+                color = accentColor.color
+            )
+        }
         
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),

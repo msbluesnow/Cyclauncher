@@ -189,10 +189,15 @@ class MainActivity : ComponentActivity() {
                 }
 
                 val isSettingsActive by remember {
-                    derivedStateOf { horizontalPagerState.currentPage == 1 }
+                    derivedStateOf {
+                        horizontalPagerState.currentPage == 1 || horizontalPagerState.targetPage == 1
+                    }
                 }
                 val isSearchActive by remember {
-                    derivedStateOf { horizontalPagerState.currentPage == 0 && verticalPagerState.currentPage == 1 }
+                    derivedStateOf {
+                        horizontalPagerState.currentPage == 0 &&
+                        (verticalPagerState.currentPage == 1 || verticalPagerState.targetPage == 1)
+                    }
                 }
                 
                 val handSide by viewModel.handSide.collectAsState()
@@ -280,7 +285,7 @@ class MainActivity : ComponentActivity() {
                                     enabled = isSettingsActive,
                                     onBack = {
                                         scope.launch {
-                                            horizontalPagerState.animateScrollToPage(0)
+                                            horizontalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
                                         }
                                     }
                                 )
