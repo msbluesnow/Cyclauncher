@@ -1,0 +1,5 @@
+- Added Custom Character & Symbol Mapping in Settings: map any custom character, emoji (🤗, 🎮...), or foreign alphabet letter (Cyrillic, Arabic, German/Nordic, Romance) to designated search letters with quick presets and JSON import/export.
+- Added visual Update Badges on history icons for newly installed and updated applications.
+- Enhanced search method icons in Settings to dynamically mirror for left-hand vs. right-hand mode.
+- Synchronized item row heights between Favorites and History for pixel-perfect horizontal alignment.
+- Fixed reboot false update badges by refining package receiver triggers.

@@ -49,8 +49,9 @@ Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**,
 
 - **Tag Folder System**: Interactive tag folders on the main screen with color accents, 2x2 live icon previews, and proximity-aware popup menus for seamless category management and launching.
 - **Versatile Search Modes**: Fast app access via a custom **Rectangular Alphabet Wheel**, an ergonomic **Side Alphabet Index** strip for rapid thumb scrubbing, or instant **Text Search**.
+- **Custom Character & Symbol Mapping**: Map any custom symbol, emoji (🤗, 🎮...), or foreign alphabet letter (Cyrillic, Arabic, German/Nordic, Romance) to specific search index letters (`A`–`Z`, `#`) with quick presets and single-row letter management.
 - **Interactive Gesture Tutorial**: Guided hands-on onboarding overlay teaching launcher gestures (search, notifications, favorites & history management, system navigation) with animated visualizers.
-- **Dynamic Favorites**: Organize your top apps with intuitive drag-and-drop reordering (long-press star to enter) and quick-removal tools.
+- **Dynamic Favorites & History Badges**: Organize top apps with intuitive drag-and-drop reordering, and track newly installed or updated apps via subtle visual update badges in history.
 - **AI-Powered Organization**: Categorize your apps efficiently with an AI-assisted tagging workflow (Export → Process via External AI Prompt → Import) and full tag backup support. *Note: AI processing is performed externally using your preferred provider.*
 - **Flexible Data Management**: Robust import/export support for app names and tags in both JSON and plain text formats.
 - **Customizable Themes**: Selectable accent colors, customizable main text color (Black/White) via an interactive switcher, and adaptive shadow inversion for optimal contrast on any wallpaper.
@@ -90,6 +91,7 @@ A continuous, unified timeline of completed milestones and planned updates.
 
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Letter-Based Scroll Wheel</b> — Interactive rectangular scroll wheel for high-performance app retrieval.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Side Alphabet Search Mode</b> — Ergonomic alphabet index strip for swift one-handed scrubbing and app indexing.<br>
+<kbd>&nbsp;✓&nbsp;</kbd> <b>Custom Character & Symbol Search Indexing</b> — Customize first-character rules, emojis, and international alphabets mapped to search letters.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Tag Folder System</b> — On-screen tag folders with multi-app previews, quick popups, and full management.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Application Tag System</b> — Grouping apps with an AI-assisted tagging workflow and full JSON backup options.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Adaptive Text & Theme Accents</b> — Selectable accent palettes, a custom Main Color (Black/White) switcher, and dynamic shadow inversion.<br>
