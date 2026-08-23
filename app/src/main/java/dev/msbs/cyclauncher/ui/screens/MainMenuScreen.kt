@@ -184,6 +184,22 @@ fun MainMenuScreen(
         onAppLongClick(app, offset)
     }
 
+    val handleTagFolderClick: (Tag, List<AppInfo>, Offset) -> Unit = { tag, taggedApps, offset ->
+        selectedTagForMenu = null
+        selectedHistoryMenuOffset = null
+        isTagPopupEditMode = false
+        selectedTagForPopup = Triple(tag, taggedApps, offset)
+    }
+
+    val handleTagFolderLongClick: (Tag, List<AppInfo>, Offset) -> Unit = { tag, taggedApps, offset ->
+        selectedTagForPopup = null
+        selectedHistoryMenuOffset = null
+        isTagPopupEditMode = false
+        isReorderMode = false
+        isHistoryEditMode = false
+        selectedTagForMenu = Triple(tag, taggedApps, offset)
+    }
+
     val isAnyEditMode = isReorderMode || isHistoryEditMode || selectedTagForPopup != null || selectedTagForMenu != null || selectedHistoryMenuOffset != null
     val currentOnSettingsClick by rememberUpdatedState(onSettingsClick)
     val currentOnSwipeUp by rememberUpdatedState(onSwipeUp)
@@ -245,22 +261,15 @@ fun MainMenuScreen(
                     { viewModel.toggleFavorite(it) },
                     onAppClick,
                     handleAppLongClick,
-                    onTagFolderClick = { tag, taggedApps, offset ->
-                        isTagPopupEditMode = false
-                        selectedTagForPopup = Triple(tag, taggedApps, offset)
-                    },
-                    onTagFolderLongClick = { tag, taggedApps, offset ->
-                        isReorderMode = false
-                        isHistoryEditMode = false
-                        selectedTagForMenu = Triple(tag, taggedApps, offset)
-                    },
+                    onTagFolderClick = handleTagFolderClick,
+                    onTagFolderLongClick = handleTagFolderLongClick,
                     onSwipeUp,
                     onSwipeDown,
                     onSettingsClick,
                     isActive
                 )
                 Spacer(modifier = Modifier.width(16.dp))
-                    HistorySection(
+                HistorySection(
                     viewModel = viewModel,
                     modifier = Modifier.weight(historyWeight),
                     history = history,
@@ -281,16 +290,8 @@ fun MainMenuScreen(
                     },
                     onAppClick = onAppClick,
                     onAppLongClick = handleAppLongClick,
-                    onTagFolderClick = { tag, taggedApps, offset ->
-                        isTagPopupEditMode = false
-                        selectedTagForPopup = Triple(tag, taggedApps, offset)
-                    },
-                    onTagFolderLongClick = { tag, taggedApps, offset ->
-                        isReorderMode = false
-                        isHistoryEditMode = false
-                        selectedHistoryMenuOffset = null
-                        selectedTagForMenu = Triple(tag, taggedApps, offset)
-                    },
+                    onTagFolderClick = handleTagFolderClick,
+                    onTagFolderLongClick = handleTagFolderLongClick,
                     onSettingsClick = onSettingsClick,
                     isActive = isActive
                 )
@@ -316,16 +317,8 @@ fun MainMenuScreen(
                     },
                     onAppClick = onAppClick,
                     onAppLongClick = handleAppLongClick,
-                    onTagFolderClick = { tag, taggedApps, offset ->
-                        isTagPopupEditMode = false
-                        selectedTagForPopup = Triple(tag, taggedApps, offset)
-                    },
-                    onTagFolderLongClick = { tag, taggedApps, offset ->
-                        isReorderMode = false
-                        isHistoryEditMode = false
-                        selectedHistoryMenuOffset = null
-                        selectedTagForMenu = Triple(tag, taggedApps, offset)
-                    },
+                    onTagFolderClick = handleTagFolderClick,
+                    onTagFolderLongClick = handleTagFolderLongClick,
                     onSettingsClick = onSettingsClick,
                     isActive = isActive
                 )
@@ -343,16 +336,8 @@ fun MainMenuScreen(
                     { viewModel.toggleFavorite(it) },
                     onAppClick,
                     handleAppLongClick,
-                    onTagFolderClick = { tag, taggedApps, offset ->
-                        isTagPopupEditMode = false
-                        selectedTagForPopup = Triple(tag, taggedApps, offset)
-                    },
-                    onTagFolderLongClick = { tag, taggedApps, offset ->
-                        isReorderMode = false
-                        isHistoryEditMode = false
-                        selectedHistoryMenuOffset = null
-                        selectedTagForMenu = Triple(tag, taggedApps, offset)
-                    },
+                    onTagFolderClick = handleTagFolderClick,
+                    onTagFolderLongClick = handleTagFolderLongClick,
                     onSwipeUp,
                     onSwipeDown,
                     onSettingsClick,
