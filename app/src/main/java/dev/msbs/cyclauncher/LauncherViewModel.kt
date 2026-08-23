@@ -856,7 +856,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     .map { it.first }
                 actionsManager.onAppsInstalledOrUpdated(sortedKeys)
             } else if (isFirstTimeTracking && actionsManager.history.value.isEmpty()) {
-                // On first run, populate history with the most recently installed/updated apps
+                // On first run, populate history with the most recently installed/updated apps without badge
                 val topRecent = resolvedInfos
                     .mapNotNull { info ->
                         val pkg = info.activityInfo.packageName
@@ -867,7 +867,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     .takeLast(5)
                     .map { it.first }
                 if (topRecent.isNotEmpty()) {
-                    actionsManager.onAppsInstalledOrUpdated(topRecent)
+                    actionsManager.setInitialHistory(topRecent)
                 }
             }
 

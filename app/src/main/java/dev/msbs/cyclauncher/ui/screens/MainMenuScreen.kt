@@ -789,7 +789,9 @@ private fun ColumnScope.HistoryContentBlock(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = if (handSide == HandSide.RIGHT) Arrangement.End else Arrangement.Start,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
             ) {
                 val showMinusOnLeft = handSide == HandSide.RIGHT
                 val showMinusOnRight = handSide == HandSide.LEFT
@@ -1050,11 +1052,12 @@ private fun FavoritesSection(
                     val alpha by animateFloatAsState(if (isDraggingThis) 0.8f else 1.0f, label = "alpha")
 
                     val density = LocalDensity.current
-                    val fallbackItemHeightPx = with(density) { 56.dp.toPx() }
+                    val fallbackItemHeightPx = with(density) { 48.dp.toPx() }
 
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .height(48.dp)
                             .animateItem()
                             .onGloballyPositioned { coordinates ->
                                 if (itemHeightPx == 0f && coordinates.size.height > 0) {

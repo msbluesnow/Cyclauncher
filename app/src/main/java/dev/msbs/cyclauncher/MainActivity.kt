@@ -81,7 +81,7 @@ class MainActivity : ComponentActivity() {
 
             if (action == Intent.ACTION_PACKAGE_REMOVED && !isReplacing && !packageName.isNullOrEmpty()) {
                 viewModel.onPackageRemoved(packageName)
-            } else if (!packageName.isNullOrEmpty() && (action == Intent.ACTION_PACKAGE_ADDED || action == Intent.ACTION_PACKAGE_REPLACED || action == Intent.ACTION_PACKAGE_CHANGED)) {
+            } else if (!packageName.isNullOrEmpty() && (action == Intent.ACTION_PACKAGE_ADDED || action == Intent.ACTION_PACKAGE_REPLACED)) {
                 viewModel.onPackageAddedOrUpdated(packageName)
             } else {
                 viewModel.refreshApps()

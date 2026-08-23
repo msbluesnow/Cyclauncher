@@ -216,6 +216,19 @@ class AppActionsManager(context: Context) {
     }
 
     /**
+     * Initializes default history on fresh install without marking apps as recently updated.
+     *
+     * @param componentKeys List of application keys ordered from oldest to newest.
+     */
+    fun setInitialHistory(componentKeys: List<String>) {
+        if (_history.value.isEmpty() && componentKeys.isNotEmpty()) {
+            val limited = componentKeys.reversed().take(15)
+            _history.value = limited
+            saveList("history", limited)
+        }
+    }
+
+    /**
      * Removes the specified application from the launch history.
      * Shows a confirmation toast and updates persistence.
      *

@@ -207,7 +207,7 @@ fun SettingsScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Main Color:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 16.sp))
                         Spacer(modifier = Modifier.height(8.dp))
-                        MainColorSelector(primaryTextColor) { viewModel.setPrimaryTextColor(it) }
+                        MainColorSelector(primaryTextColor, primaryTextColor) { viewModel.setPrimaryTextColor(it) }
                     }
                 }
 
@@ -243,7 +243,7 @@ fun SettingsScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Button Text:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 16.sp))
                         Spacer(modifier = Modifier.height(8.dp))
-                        MainColorSelector(buttonTextColor) { viewModel.setButtonTextColor(it) }
+                        MainColorSelector(buttonTextColor, primaryTextColor) { viewModel.setButtonTextColor(it) }
                     }
                 }
 
@@ -735,7 +735,11 @@ private fun SearchMethodIconOption(
  * Selector for Primary Text Color (Main Color).
  */
 @Composable
-private fun MainColorSelector(selectedColor: PrimaryTextColor, onSelect: (PrimaryTextColor) -> Unit) {
+private fun MainColorSelector(
+    selectedColor: PrimaryTextColor,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    onSelect: (PrimaryTextColor) -> Unit
+) {
     val isBlackSelected = selectedColor == PrimaryTextColor.BLACK
     val thumbOffset by animateFloatAsState(
         targetValue = if (isBlackSelected) 0f else 1f,
@@ -751,7 +755,7 @@ private fun MainColorSelector(selectedColor: PrimaryTextColor, onSelect: (Primar
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(selectedColor.color.copy(alpha = 0.1f))
+            .background(primaryTextColor.color.copy(alpha = 0.1f))
             .clickable { onSelect(if (isBlackSelected) PrimaryTextColor.WHITE else PrimaryTextColor.BLACK) }
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
