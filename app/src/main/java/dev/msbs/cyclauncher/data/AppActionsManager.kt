@@ -47,6 +47,10 @@ class AppActionsManager(context: Context) {
     /** Stream mapping application component keys to a list of assigned tag IDs. */
     val appTags: StateFlow<Map<String, List<String>>> = _appTags
 
+    private val _customCharMappings = MutableStateFlow<Map<String, Char>>(loadCustomCharMappings())
+    /** Stream of custom first-character to search-letter mappings. */
+    val customCharMappings: StateFlow<Map<String, Char>> = _customCharMappings
+
     /**
      * Toggles the favorite status of the specified application or tag folder.
      * Shows a confirmation toast and updates persistence.
@@ -475,6 +479,89 @@ class AppActionsManager(context: Context) {
             _appTags.value = newAppTags
             saveAppTags(newAppTags)
         }
+    }
+
+    /**
+     * Loads custom character mappings from SharedPreferences.
+     */
+    private fun loadCustomCharMappings(): Map<String, Char> {
+        val raw = prefs.getString("custom_char_mappings", null) ?: return emptyMap()
+        return try {
+            val json = JSONObject(raw)
+            val map = mutableMapOf<String, Char>()
+            val keys = json.keys()
+            while (keys.hasNext()) {
+                val k = keys.next()
+                val v = json.getString(k)
+                if (v.isNotEmpty()) {
+                    map[k] = v[0].uppercaseChar()
+                }
+            }
+            map
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    /**
+     * Saves custom character mappings to SharedPreferences.
+     */
+    private fun saveCustomCharMappings(map: Map<String, Char>) {
+        try {
+            val json = JSONObject()
+            map.forEach { (k, v) -> json.put(k, v.toString()) }
+            prefs.edit().putString("custom_char_mappings", json.toString()).apply()
+        } catch (_: Exception) {}
+    }
+
+    /**
+     * Adds or updates a custom character to search-letter mapping.
+     */
+    fun addOrUpdateCharMapping(symbol: String, targetChar: Char): Map<String, Char> {
+        val trimmed = symbol.trim()
+        if (trimmed.isEmpty()) return _customCharMappings.value
+        val updated = _customCharMappings.value.toMutableMap()
+        updated[trimmed] = targetChar.uppercaseChar()
+        _customCharMappings.value = updated
+        saveCustomCharMappings(updated)
+        return updated
+    }
+
+    /**
+     * Adds multiple character mappings at once (e.g. from preset packs).
+     */
+    fun addCharMappings(mappings: Map<String, Char>): Map<String, Char> {
+        if (mappings.isEmpty()) return _customCharMappings.value
+        val updated = _customCharMappings.value.toMutableMap()
+        mappings.forEach { (k, v) ->
+            val trimmed = k.trim()
+            if (trimmed.isNotEmpty()) {
+                updated[trimmed] = v.uppercaseChar()
+            }
+        }
+        _customCharMappings.value = updated
+        saveCustomCharMappings(updated)
+        return updated
+    }
+
+    /**
+     * Removes a custom character mapping.
+     */
+    fun removeCharMapping(symbol: String): Map<String, Char> {
+        val updated = _customCharMappings.value.toMutableMap()
+        updated.remove(symbol)
+        _customCharMappings.value = updated
+        saveCustomCharMappings(updated)
+        return updated
+    }
+
+    /**
+     * Resets all custom character mappings to default.
+     */
+    fun resetCharMappings(): Map<String, Char> {
+        _customCharMappings.value = emptyMap()
+        prefs.edit().remove("custom_char_mappings").apply()
+        return emptyMap()
     }
 
     // App list export / import (unified — used by both Settings and AutoTags).

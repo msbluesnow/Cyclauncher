@@ -124,12 +124,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _historyScrollToBottomTrigger.value = System.currentTimeMillis()
     }
 
-    // Список всех установленных приложений с пользовательскими названиями
-    val apps: StateFlow<List<AppInfo>> = combine(_apps, actionsManager.customLabels) { all, customLabels ->
+    // Список всех установленных приложений с пользовательскими названиями и правилами индексации
+    val apps: StateFlow<List<AppInfo>> = combine(_apps, actionsManager.customLabels, actionsManager.customCharMappings) { all, customLabels, customMappings ->
         all.map { app ->
             val customLabel = customLabels[app.componentKey]
-            if (customLabel != null) {
-                app.copy(label = customLabel, searchChar = mapToSearchChar(customLabel.firstOrNull() ?: ' '))
+            val effectiveLabel = customLabel ?: app.label
+            val symbol = extractFirstSymbol(effectiveLabel)
+            val searchChar = mapToSearchChar(symbol, customMappings)
+            if (customLabel != null || app.searchChar != searchChar) {
+                app.copy(label = effectiveLabel, searchChar = searchChar)
             } else {
                 app
             }
@@ -720,24 +723,103 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _tagsBackupPreview.value = null
     }
 
+    /** Stream of custom first-character to search-letter mappings. */
+    val customCharMappings: StateFlow<Map<String, Char>> = actionsManager.customCharMappings
+
     /**
-     * Maps Cyrillic and special characters to their Latin equivalents for alphabet wheel navigation,
-     * falling back to '#' if the character cannot be mapped to A-Z.
+     * Adds or updates a custom character mapping and re-indexes installed apps.
+     */
+    fun addOrUpdateCharMapping(symbol: String, targetChar: Char) {
+        val updated = actionsManager.addOrUpdateCharMapping(symbol, targetChar)
+        reindexApps(updated)
+    }
+
+    /**
+     * Adds multiple character mappings at once and re-indexes installed apps.
+     */
+    fun addCharMappings(mappings: Map<String, Char>) {
+        val updated = actionsManager.addCharMappings(mappings)
+        reindexApps(updated)
+    }
+
+    /**
+     * Removes a custom character mapping and re-indexes installed apps.
+     */
+    fun removeCharMapping(symbol: String) {
+        val updated = actionsManager.removeCharMapping(symbol)
+        reindexApps(updated)
+    }
+
+    /**
+     * Resets all custom character mappings to default and re-indexes installed apps.
+     */
+    fun resetCharMappings() {
+        val updated = actionsManager.resetCharMappings()
+        reindexApps(updated)
+    }
+
+    /**
+     * Re-calculates searchChar for all loaded apps in-place using the given mappings.
+     */
+    private fun reindexApps(customMappings: Map<String, Char> = actionsManager.customCharMappings.value) {
+        val currentApps = _apps.value
+        if (currentApps.isEmpty()) return
+        val reindexed = currentApps.map { app ->
+            val firstSymbol = extractFirstSymbol(app.label)
+            val newSearchChar = mapToSearchChar(firstSymbol, customMappings)
+            if (app.searchChar != newSearchChar) {
+                app.copy(searchChar = newSearchChar)
+            } else {
+                app
+            }
+        }
+        _apps.value = reindexed
+    }
+
+    /**
+     * Extracts the first graphical symbol, emoji, or character from a string.
+     * Uses [java.text.BreakIterator] to properly handle surrogate pairs and composite emoji sequences.
+     */
+    fun extractFirstSymbol(text: String): String {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return ""
+        val iterator = java.text.BreakIterator.getCharacterInstance()
+        iterator.setText(trimmed)
+        val end = iterator.next()
+        return if (end != java.text.BreakIterator.DONE) trimmed.substring(0, end) else trimmed.take(1)
+    }
+
+    /**
+     * Maps a character, emoji, or foreign language symbol to an alphabet index ('A'..'Z' or '#').
+     * Prioritizes custom user-defined mappings before falling back to built-in rules.
      *
-     * @param char The raw character to map.
+     * @param symbol The raw symbol string (character or emoji).
+     * @param customMappings Active custom character mapping table.
      * @return The resolved character ('A'..'Z' or '#').
      */
-    private fun mapToSearchChar(char: Char): Char {
-        val mapped = when (char.uppercaseChar()) {
-            'А' -> 'A'; 'Б' -> 'B'; 'В' -> 'V'; 'Г' -> 'G'; 'Д' -> 'D'
-            'Е', 'Ё', 'Э' -> 'E'; 'Ж' -> 'J'; 'З' -> 'Z'; 'И', 'Й', 'Ы' -> 'I'
-            'К' -> 'K'; 'Л' -> 'L'; 'М' -> 'M'; 'Н' -> 'N'; 'О' -> 'O'
-            'П' -> 'P'; 'Р' -> 'R'; 'С' -> 'S'; 'Т' -> 'T'; 'У' -> 'U'
-            'Ф' -> 'F'; 'Х' -> 'H'; 'Ц' -> 'C'; 'Ч' -> 'C'; 'Ш', 'Щ' -> 'S'
-            'Ю' -> 'U'; 'Я' -> 'Y'
-            else -> char.uppercaseChar()
+    fun mapToSearchChar(symbol: String, customMappings: Map<String, Char> = actionsManager.customCharMappings.value): Char {
+        if (symbol.isEmpty()) return '#'
+
+        // 1. Direct user custom mapping lookup (exact symbol or uppercase)
+        customMappings[symbol]?.let { return it }
+        customMappings[symbol.uppercase()]?.let { return it }
+
+        // 2. Fallback single character mapping (Cyrillic to Latin & standard uppercase)
+        if (symbol.length == 1) {
+            val char = symbol[0]
+            val mapped = when (char.uppercaseChar()) {
+                'А' -> 'A'; 'Б' -> 'B'; 'В' -> 'V'; 'Г' -> 'G'; 'Д' -> 'D'
+                'Е', 'Ё', 'Э' -> 'E'; 'Ж' -> 'J'; 'З' -> 'Z'; 'И', 'Й', 'Ы' -> 'I'
+                'К' -> 'K'; 'Л' -> 'L'; 'М' -> 'M'; 'Н' -> 'N'; 'О' -> 'O'
+                'П' -> 'P'; 'Р' -> 'R'; 'С' -> 'S'; 'Т' -> 'T'; 'У' -> 'U'
+                'Ф' -> 'F'; 'Х' -> 'H'; 'Ц' -> 'C'; 'Ч' -> 'C'; 'Ш', 'Щ' -> 'S'
+                'Ю' -> 'U'; 'Я' -> 'Y'
+                else -> char.uppercaseChar()
+            }
+            return if (mapped in 'A'..'Z') mapped else '#'
         }
-        return if (mapped in 'A'..'Z') mapped else '#'
+
+        return '#'
     }
 
     /**
@@ -828,13 +910,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     } catch (e: Exception) {
                         info.activityInfo.packageName
                     }
-                    val firstChar = label.firstOrNull() ?: ' '
+                    val firstSymbol = extractFirstSymbol(label)
                     AppInfo(
                         label = label,
                         packageName = pkgName,
                         activityName = actName,
                         iconKey = compKey,
-                        searchChar = mapToSearchChar(firstChar)
+                        searchChar = mapToSearchChar(firstSymbol, actionsManager.customCharMappings.value)
                     )
                 } catch (e: Exception) {
                     AppInfo(

@@ -73,6 +73,8 @@ fun SettingsScreen(
 
     var showDefaultLauncherDialog by remember { mutableStateOf(false) }
     var showAutoTagsScreen by remember { mutableStateOf(false) }
+    var showCharacterMappingScreen by remember { mutableStateOf(false) }
+    val customCharMappings by viewModel.customCharMappings.collectAsState()
     var currentIsDefault by remember { mutableStateOf(viewModel.isDefaultLauncher()) }
 
     // Unified App List export / import (JSON), used by both Settings and AutoTags
@@ -113,6 +115,14 @@ fun SettingsScreen(
     val shadow = primaryTextColor.getShadow(showShadows)
 
     BackHandler(enabled = enabled, onBack = onBack)
+
+    if (showCharacterMappingScreen) {
+        CharacterMappingScreen(
+            viewModel = viewModel,
+            onBack = { showCharacterMappingScreen = false }
+        )
+        return
+    }
 
     if (showAutoTagsScreen) {
         AutoTagsScreen(
@@ -176,6 +186,7 @@ fun SettingsScreen(
                             isSelected = searchMethod == SearchMethod.WHEEL,
                             accentColor = accentColor,
                             primaryTextColor = primaryTextColor,
+                            handSide = handSide,
                             onClick = { viewModel.setSearchMethod(SearchMethod.WHEEL) }
                         )
 
@@ -185,7 +196,37 @@ fun SettingsScreen(
                             isSelected = searchMethod == SearchMethod.SIDE_ALPHABET,
                             accentColor = accentColor,
                             primaryTextColor = primaryTextColor,
+                            handSide = handSide,
                             onClick = { viewModel.setSearchMethod(SearchMethod.SIDE_ALPHABET) }
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
+
+                // Character Mapping (Custom First-Letter / Emoji / Language indexing)
+                SettingsRow(label = "Character Mapping:", textColor = primaryTextColor.color, shadow = shadow) {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(primaryTextColor.color.copy(alpha = 0.1f))
+                            .clickable { showCharacterMappingScreen = true }
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = if (customCharMappings.isEmpty()) "Default" else "${customCharMappings.size} active",
+                            color = accentColor.color,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            style = TextStyle(shadow = shadow)
+                        )
+                        Icon(
+                            imageVector = Icons.Outlined.Tune,
+                            contentDescription = "Configure character mappings",
+                            tint = accentColor.color,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -687,6 +728,7 @@ private fun SearchMethodIconOption(
     isSelected: Boolean,
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
+    handSide: HandSide = HandSide.LEFT,
     onClick: () -> Unit
 ) {
     val boxWidth = if (isHorizontal) 36.dp else 22.dp
@@ -717,7 +759,7 @@ private fun SearchMethodIconOption(
             // Vertical side bar inside vertical rectangle (Side grid icon)
             Row(
                 modifier = Modifier.fillMaxSize().padding(3.dp),
-                horizontalArrangement = Arrangement.Start
+                horizontalArrangement = if (handSide == HandSide.RIGHT) Arrangement.End else Arrangement.Start
             ) {
                 Box(
                     modifier = Modifier
