@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -235,58 +236,87 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
+                // Theme Accent & Adaptive Shadows in a single row
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Theme Accent Selector
+                    // Theme Accent Selector (50%)
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Theme Accent:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 16.sp))
+                        Text("Theme Accent:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 15.sp))
                         Spacer(modifier = Modifier.height(8.dp))
                         AccentColorDropdown(accentColor, primaryTextColor, popupTheme) { viewModel.setAccentColor(it) }
                     }
 
-                    // Main Color Selector
+                    // Adaptive Shadows (50%)
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Main Color:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 16.sp))
+                        Text("Adaptive Shadows:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 15.sp))
                         Spacer(modifier = Modifier.height(8.dp))
-                        MainColorSelector(primaryTextColor, primaryTextColor) { viewModel.setPrimaryTextColor(it) }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(36.dp),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            Switch(
+                                checked = showShadows,
+                                onCheckedChange = { viewModel.setShowShadows(it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = accentColor.color,
+                                    checkedTrackColor = accentColor.color.copy(alpha = 0.5f)
+                                )
+                            )
+                        }
                     }
                 }
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
+                // Main Color, Button Text, and Popup Theme all 3 in a single row
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Main Color Selector
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Main Color:",
+                            color = primaryTextColor.color,
+                            style = TextStyle(shadow = shadow, fontSize = 13.sp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        MainColorSelector(primaryTextColor, primaryTextColor) { viewModel.setPrimaryTextColor(it) }
+                    }
+
                     // Button Text Color Selector
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Button Text:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 16.sp))
+                        Text(
+                            "Button Text:",
+                            color = primaryTextColor.color,
+                            style = TextStyle(shadow = shadow, fontSize = 13.sp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
                         MainColorSelector(buttonTextColor, primaryTextColor) { viewModel.setButtonTextColor(it) }
                     }
 
                     // Popup Theme Selector
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Popup Theme:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 16.sp))
+                        Text(
+                            "Popup Theme:",
+                            color = primaryTextColor.color,
+                            style = TextStyle(shadow = shadow, fontSize = 13.sp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
                         PopupThemeSelector(popupTheme, primaryTextColor) { viewModel.setPopupTheme(it) }
                     }
-                }
-
-                HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
-
-                // Adaptive Shadows Toggle
-                SettingsRow(label = "Adaptive Shadows:", textColor = primaryTextColor.color, shadow = shadow) {
-                    Switch(
-                        checked = showShadows,
-                        onCheckedChange = { viewModel.setShowShadows(it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = accentColor.color,
-                            checkedTrackColor = accentColor.color.copy(alpha = 0.5f)
-                        )
-                    )
                 }
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
@@ -805,14 +835,14 @@ private fun MainColorSelector(
             .clip(RoundedCornerShape(8.dp))
             .background(primaryTextColor.color.copy(alpha = 0.1f))
             .clickable { onSelect(if (isBlackSelected) PrimaryTextColor.WHITE else PrimaryTextColor.BLACK) }
-            .padding(vertical = 8.dp),
+            .padding(horizontal = 4.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
         BoxWithConstraints(
             modifier = Modifier
-                .fillMaxWidth(0.81f)
-                .height(20.dp)
+                .fillMaxWidth(0.85f)
+                .height(16.dp)
         ) {
             // Background halves
             Row(modifier = Modifier.fillMaxSize()) {
@@ -823,8 +853,7 @@ private fun MainColorSelector(
                         .fillMaxHeight()
                         .clipToBounds()
                         .drawBehind {
-                            val borderPx = 1.5.dp.toPx()
-                            val cornerRadius = 4.dp.toPx()
+                            val cornerRadius = 3.dp.toPx()
                             
                             // Draw background (extends to the right)
                             drawRoundRect(
@@ -842,8 +871,7 @@ private fun MainColorSelector(
                         .fillMaxHeight()
                         .clipToBounds()
                         .drawBehind {
-                            val borderPx = 1.5.dp.toPx()
-                            val cornerRadius = 4.dp.toPx()
+                            val cornerRadius = 3.dp.toPx()
                             
                             // Draw background (extends to the left)
                             drawRoundRect(
@@ -857,9 +885,7 @@ private fun MainColorSelector(
             }
 
             // Thumb
-            // Inner height is 20.dp - 3.dp (border thickness on top/bottom) = 17.dp.
-            // 50% of inner height = 8.5.dp.
-            val thumbSize = 8.5.dp
+            val thumbSize = 6.5.dp
             val startOffset = (maxWidth * 0.25f) - (thumbSize / 2)
             val endOffset = (maxWidth * 0.75f) - (thumbSize / 2)
             val currentOffset = startOffset + (endOffset - startOffset) * thumbOffset
@@ -903,14 +929,14 @@ private fun PopupThemeSelector(
             .clip(RoundedCornerShape(8.dp))
             .background(primaryTextColor.color.copy(alpha = 0.1f))
             .clickable { onSelect(if (isDarkSelected) PopupTheme.LIGHT else PopupTheme.DARK) }
-            .padding(vertical = 8.dp),
+            .padding(horizontal = 4.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
         BoxWithConstraints(
             modifier = Modifier
-                .fillMaxWidth(0.81f)
-                .height(20.dp)
+                .fillMaxWidth(0.85f)
+                .height(16.dp)
         ) {
             // Background halves
             Row(modifier = Modifier.fillMaxSize()) {
@@ -921,7 +947,7 @@ private fun PopupThemeSelector(
                         .fillMaxHeight()
                         .clipToBounds()
                         .drawBehind {
-                            val cornerRadius = 4.dp.toPx()
+                            val cornerRadius = 3.dp.toPx()
                             drawRoundRect(
                                 color = Color.Black,
                                 topLeft = Offset.Zero,
@@ -937,7 +963,7 @@ private fun PopupThemeSelector(
                         .fillMaxHeight()
                         .clipToBounds()
                         .drawBehind {
-                            val cornerRadius = 4.dp.toPx()
+                            val cornerRadius = 3.dp.toPx()
                             drawRoundRect(
                                 color = Color.White,
                                 topLeft = Offset(-cornerRadius, 0f),
@@ -949,7 +975,7 @@ private fun PopupThemeSelector(
             }
 
             // Thumb
-            val thumbSize = 8.5.dp
+            val thumbSize = 6.5.dp
             val startOffset = (maxWidth * 0.25f) - (thumbSize / 2)
             val endOffset = (maxWidth * 0.75f) - (thumbSize / 2)
             val currentOffset = startOffset + (endOffset - startOffset) * thumbOffset
