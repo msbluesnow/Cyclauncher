@@ -6,6 +6,8 @@ import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,13 +26,16 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.RestartAlt
+import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
@@ -43,6 +48,7 @@ import androidx.compose.ui.unit.sp
 /**
  * Screen providing user customization of first-character and emoji mappings to alphabet search buckets.
  * Mappings are organized on a per-letter basis (one single line per Latin alphabet letter with overflow badges).
+ * Supports JSON and text file import/export and inherits the Adaptive Shadows setting across all UI components.
  *
  * @param viewModel The view model supplying state data and update operations.
  * @param onBack Callback when pressing back to return to Settings.
@@ -69,6 +75,24 @@ fun CharacterMappingScreen(
 
     val alphabetOptions = remember { listOf('#') + ('A'..'Z').toList() }
 
+    val exportCharMappingsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri -> uri?.let { viewModel.exportCharMappingsJson(it) } }
+
+    val importCharMappingsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            viewModel.importCharMappingsJson(it, merge = true) { result ->
+                result.onSuccess { count ->
+                    Toast.makeText(context, "Imported $count character mappings", Toast.LENGTH_SHORT).show()
+                }.onFailure { error ->
+                    Toast.makeText(context, "Import failed: ${error.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
     val groupedMappings = remember(customMappings) {
         customMappings.entries
             .groupBy({ it.value }, { it.key })
@@ -88,7 +112,8 @@ fun CharacterMappingScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            contentAlignment = Alignment.Center
         ) {
             IconButton(
                 onClick = onBack,
@@ -96,14 +121,20 @@ fun CharacterMappingScreen(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = "Back",
-                    tint = primaryTextColor.color
+                    contentDescription = "Back to Settings",
+                    tint = accentColor.color,
+                    modifier = Modifier.size(24.dp)
                 )
             }
+
             Text(
                 text = "CHARACTER MAPPING",
-                color = primaryTextColor.color,
-                style = TextStyle(shadow = shadow, fontSize = 20.sp, fontWeight = FontWeight.Bold),
+                color = accentColor.color,
+                style = TextStyle(
+                    shadow = shadow,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                ),
                 modifier = Modifier.align(Alignment.Center)
             )
         }
@@ -164,8 +195,20 @@ fun CharacterMappingScreen(
                         OutlinedTextField(
                             value = inputSymbol,
                             onValueChange = { inputSymbol = it },
-                            placeholder = { Text("e.g. 🤗, ب, Ö", color = primaryTextColor.color.copy(alpha = 0.35f), fontSize = 14.sp) },
+                            placeholder = {
+                                Text(
+                                    text = "e.g. 🤗, ب, Ö",
+                                    color = primaryTextColor.color.copy(alpha = 0.35f),
+                                    fontSize = 14.sp,
+                                    style = TextStyle(shadow = shadow)
+                                )
+                            },
                             singleLine = true,
+                            textStyle = TextStyle(
+                                color = primaryTextColor.color,
+                                fontSize = 15.sp,
+                                shadow = shadow
+                            ),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = primaryTextColor.color,
                                 unfocusedTextColor = primaryTextColor.color,
@@ -179,7 +222,13 @@ fun CharacterMappingScreen(
                             keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() })
                         )
 
-                        Text("➔", color = primaryTextColor.color.copy(alpha = 0.5f), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "➔",
+                            color = primaryTextColor.color.copy(alpha = 0.5f),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            style = TextStyle(shadow = shadow)
+                        )
 
                         // Target Letter Selector Box
                         Box(modifier = Modifier.weight(1f)) {
@@ -220,7 +269,8 @@ fun CharacterMappingScreen(
                                             Text(
                                                 text = char.toString(),
                                                 color = if (char == selectedTargetChar) accentColor.color else Color.White,
-                                                fontWeight = if (char == selectedTargetChar) FontWeight.Bold else FontWeight.Normal
+                                                fontWeight = if (char == selectedTargetChar) FontWeight.Bold else FontWeight.Normal,
+                                                style = TextStyle(shadow = shadow)
                                             )
                                         },
                                         onClick = {
@@ -252,9 +302,98 @@ fun CharacterMappingScreen(
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth().height(44.dp)
                     ) {
-                        Icon(imageVector = Icons.Outlined.Add, contentDescription = null, tint = accentColor.color, modifier = Modifier.size(18.dp))
+                        Icon(
+                            imageVector = Icons.Outlined.Add,
+                            contentDescription = null,
+                            tint = accentColor.color,
+                            modifier = Modifier.size(18.dp)
+                        )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Add Mapping", color = accentColor.color, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(
+                            text = "Add Mapping",
+                            color = accentColor.color,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            style = TextStyle(shadow = shadow)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Backup & Share / Import & Export Card
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.05f)),
+                border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = 0.12f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                        Text(
+                            text = "Backup & Restore",
+                            color = primaryTextColor.color,
+                            style = TextStyle(shadow = shadow, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Export rules to JSON or import from file",
+                            color = primaryTextColor.color.copy(alpha = 0.6f),
+                            style = TextStyle(shadow = shadow, fontSize = 12.sp)
+                        )
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Export Button
+                        OutlinedButton(
+                            onClick = { exportCharMappingsLauncher.launch("cyclauncher_character_mappings.json") },
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.5f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = accentColor.color)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Upload,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Export",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                style = TextStyle(shadow = shadow)
+                            )
+                        }
+
+                        // Import Button
+                        OutlinedButton(
+                            onClick = { importCharMappingsLauncher.launch("*/*") },
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.5f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = accentColor.color)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Download,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Import",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                style = TextStyle(shadow = shadow)
+                            )
+                        }
                     }
                 }
             }
@@ -282,6 +421,7 @@ fun CharacterMappingScreen(
                     label = "Cyrillic / Кириллица (А, Б, В, Г...)",
                     accentColor = accentColor,
                     primaryTextColor = primaryTextColor,
+                    shadow = shadow,
                     onClick = {
                         val cyrillicPreset = mapOf(
                             "А" to 'A', "а" to 'A', "Б" to 'B', "б" to 'B', "В" to 'V', "в" to 'V',
@@ -307,6 +447,7 @@ fun CharacterMappingScreen(
                     label = "Popular Emojis (🤗, 🎮, 🎵...)",
                     accentColor = accentColor,
                     primaryTextColor = primaryTextColor,
+                    shadow = shadow,
                     onClick = {
                         val emojiPreset = mapOf(
                             "🤗" to 'A', "🎮" to 'G', "🎵" to 'M', "📷" to 'P',
@@ -323,6 +464,7 @@ fun CharacterMappingScreen(
                     label = "German / Nordic (Ä, Ö, Ü, ß...)",
                     accentColor = accentColor,
                     primaryTextColor = primaryTextColor,
+                    shadow = shadow,
                     onClick = {
                         val umlautPreset = mapOf(
                             "Ä" to 'A', "ä" to 'A', "Ö" to 'O', "ö" to 'O',
@@ -339,15 +481,16 @@ fun CharacterMappingScreen(
                     label = "Arabic Alphabet (ا, ب, ت...)",
                     accentColor = accentColor,
                     primaryTextColor = primaryTextColor,
+                    shadow = shadow,
                     onClick = {
                         val arabicPreset = mapOf(
                             "ا" to 'A', "أ" to 'A', "إ" to 'A', "آ" to 'A',
                             "ب" to 'B', "ت" to 'T', "ث" to 'T', "ج" to 'J',
-                            "ح" to 'H', "خ" to 'K', "د" to 'D', "ذ" to 'D',
-                            "ر" to 'R', "ز" to 'Z', "س" to 'S', "ش" to 'S',
+                            "ح" to 'H', "х" to 'K', "د" to 'D', "ذ" to 'D',
+                            "р" to 'R', "ز" to 'Z', "س" to 'S', "ш" to 'S',
                             "ص" to 'S', "ض" to 'D', "ط" to 'T', "ظ" to 'Z',
                             "ع" to 'A', "غ" to 'G', "ف" to 'F', "ق" to 'Q',
-                            "ك" to 'K', "ل" to 'L', "م" to 'M', "ن" to 'N',
+                            "ك" to 'K', "ل" to 'L', "м" to 'M', "ن" to 'N',
                             "ه" to 'H', "و" to 'W', "ي" to 'Y', "ى" to 'Y'
                         )
                         viewModel.addCharMappings(arabicPreset)
@@ -360,6 +503,7 @@ fun CharacterMappingScreen(
                     label = "French / Spanish (À, É, Ç, Ñ...)",
                     accentColor = accentColor,
                     primaryTextColor = primaryTextColor,
+                    shadow = shadow,
                     onClick = {
                         val romancePreset = mapOf(
                             "À" to 'A', "à" to 'A', "Â" to 'A', "â" to 'A',
@@ -394,9 +538,19 @@ fun CharacterMappingScreen(
                         onClick = { showResetConfirmDialog = true },
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                     ) {
-                        Icon(imageVector = Icons.Outlined.RestartAlt, contentDescription = null, tint = Color.Red.copy(alpha = 0.8f), modifier = Modifier.size(16.dp))
+                        Icon(
+                            imageVector = Icons.Outlined.RestartAlt,
+                            contentDescription = null,
+                            tint = Color.Red.copy(alpha = 0.8f),
+                            modifier = Modifier.size(16.dp)
+                        )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Reset All", color = Color.Red.copy(alpha = 0.8f), fontSize = 13.sp)
+                        Text(
+                            text = "Reset All",
+                            color = Color.Red.copy(alpha = 0.8f),
+                            fontSize = 13.sp,
+                            style = TextStyle(shadow = shadow)
+                        )
                     }
                 }
             }
@@ -415,7 +569,8 @@ fun CharacterMappingScreen(
                         color = primaryTextColor.color.copy(alpha = 0.4f),
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center,
-                        lineHeight = 18.sp
+                        lineHeight = 18.sp,
+                        style = TextStyle(shadow = shadow)
                     )
                 }
             } else {
@@ -465,15 +620,27 @@ fun CharacterMappingScreen(
                             .border(1.dp, accentColor.color.copy(alpha = 0.6f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(targetChar.toString(), color = accentColor.color, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(
+                            text = targetChar.toString(),
+                            color = accentColor.color,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            style = TextStyle(shadow = shadow)
+                        )
                     }
-                    Text("Mapped Symbols (${symbols.size})", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Mapped Symbols (${symbols.size})",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        style = TextStyle(shadow = shadow)
+                    )
                 }
             },
             text = {
                 Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                     if (symbols.isEmpty()) {
-                        Text("No symbols mapped to '$targetChar'", color = Color.Gray)
+                        Text("No symbols mapped to '$targetChar'", color = Color.Gray, style = TextStyle(shadow = shadow))
                     } else {
                         // Flow grid of all symbols
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -492,7 +659,13 @@ fun CharacterMappingScreen(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
-                                            Text(symbol, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                            Text(
+                                                text = symbol,
+                                                color = Color.White,
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                style = TextStyle(shadow = shadow)
+                                            )
                                             IconButton(
                                                 onClick = {
                                                     viewModel.removeCharMapping(symbol)
@@ -500,7 +673,12 @@ fun CharacterMappingScreen(
                                                 },
                                                 modifier = Modifier.size(24.dp)
                                             ) {
-                                                Icon(Icons.Outlined.Close, contentDescription = "Delete", tint = Color.Red.copy(alpha = 0.8f), modifier = Modifier.size(14.dp))
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Close,
+                                                    contentDescription = "Delete",
+                                                    tint = Color.Red.copy(alpha = 0.8f),
+                                                    modifier = Modifier.size(14.dp)
+                                                )
                                             }
                                         }
                                     }
@@ -516,7 +694,11 @@ fun CharacterMappingScreen(
             },
             confirmButton = {
                 TextButton(onClick = { viewingLetterDetail = null }) {
-                    Text("Done", color = accentColor.color)
+                    Text(
+                        text = "Done",
+                        color = accentColor.color,
+                        style = TextStyle(shadow = shadow)
+                    )
                 }
             },
             containerColor = Color(0xFF1E1E1E),
@@ -527,8 +709,20 @@ fun CharacterMappingScreen(
     if (showResetConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showResetConfirmDialog = false },
-            title = { Text("Reset Mappings", color = accentColor.color) },
-            text = { Text("Are you sure you want to remove all custom character mappings?", color = Color.White) },
+            title = {
+                Text(
+                    text = "Reset Mappings",
+                    color = accentColor.color,
+                    style = TextStyle(shadow = shadow)
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to remove all custom character mappings?",
+                    color = Color.White,
+                    style = TextStyle(shadow = shadow)
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -537,12 +731,20 @@ fun CharacterMappingScreen(
                         Toast.makeText(context, "Mappings reset to default", Toast.LENGTH_SHORT).show()
                     }
                 ) {
-                    Text("Reset", color = Color.Red)
+                    Text(
+                        text = "Reset",
+                        color = Color.Red,
+                        style = TextStyle(shadow = shadow)
+                    )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showResetConfirmDialog = false }) {
-                    Text("Cancel", color = Color.Gray)
+                    Text(
+                        text = "Cancel",
+                        color = Color.Gray,
+                        style = TextStyle(shadow = shadow)
+                    )
                 }
             },
             containerColor = Color(0xFF1E1E1E),
@@ -560,7 +762,7 @@ private fun LetterMappingRow(
     symbols: List<String>,
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
-    shadow: androidx.compose.ui.graphics.Shadow?,
+    shadow: Shadow?,
     onRemoveSymbol: (String) -> Unit,
     onAddSymbolClick: () -> Unit,
     onOpenDetails: () -> Unit
@@ -603,7 +805,13 @@ private fun LetterMappingRow(
                 )
             }
 
-            Text("➔", color = primaryTextColor.color.copy(alpha = 0.35f), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = "➔",
+                color = primaryTextColor.color.copy(alpha = 0.35f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                style = TextStyle(shadow = shadow)
+            )
 
             // Visible symbol chips
             visibleSymbols.forEach { symbol ->
@@ -621,7 +829,8 @@ private fun LetterMappingRow(
                         text = symbol,
                         color = primaryTextColor.color,
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        style = TextStyle(shadow = shadow)
                     )
                     Icon(
                         imageVector = Icons.Outlined.Close,
@@ -647,7 +856,8 @@ private fun LetterMappingRow(
                         text = "+$overflowCount",
                         color = accentColor.color,
                         fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        style = TextStyle(shadow = shadow)
                     )
                 }
             }
@@ -676,6 +886,7 @@ private fun PresetChip(
     label: String,
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
+    shadow: Shadow?,
     onClick: () -> Unit
 ) {
     Box(
@@ -690,7 +901,8 @@ private fun PresetChip(
             text = label,
             color = accentColor.color,
             fontSize = 12.sp,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            style = TextStyle(shadow = shadow)
         )
     }
 }

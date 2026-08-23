@@ -564,6 +564,105 @@ class AppActionsManager(context: Context) {
         return emptyMap()
     }
 
+    /**
+     * Exports all custom character mappings to a JSON file at the specified [uri].
+     */
+    fun exportCharMappingsToUri(uri: Uri) {
+        try {
+            val mappingsObj = JSONObject()
+            _customCharMappings.value.forEach { (k, v) ->
+                mappingsObj.put(k, v.toString())
+            }
+            val root = JSONObject()
+            root.put("version", 1)
+            root.put("mappings", mappingsObj)
+
+            context.contentResolver.openOutputStream(uri)?.use {
+                it.write(root.toString(2).toByteArray())
+            }
+            Toast.makeText(context, "Exported ${_customCharMappings.value.size} mappings", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Imports custom character mappings from a JSON or TXT file at the specified [uri].
+     * Supports multiple formats: JSON dictionary, structured wrapper, array, and key-value text.
+     *
+     * @param uri The source file URI.
+     * @param merge If true, merges with existing mappings; if false, replaces them.
+     * @return Number of imported mappings.
+     */
+    fun importCharMappingsFromUri(uri: Uri, merge: Boolean = true): Int {
+        val content = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+            ?: throw IllegalArgumentException("Cannot read file")
+        val trimmed = content.trim()
+        val parsed = mutableMapOf<String, Char>()
+
+        if (trimmed.startsWith("{")) {
+            val json = JSONObject(trimmed)
+            val mappingsJson = if (json.has("mappings")) json.optJSONObject("mappings") ?: JSONObject() else json
+            val keys = mappingsJson.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                if (key == "version") continue
+                val value = mappingsJson.optString(key).trim()
+                if (value.isNotEmpty()) {
+                    parsed[key] = value[0].uppercaseChar()
+                }
+            }
+        } else if (trimmed.startsWith("[")) {
+            val array = JSONArray(trimmed)
+            for (i in 0 until array.length()) {
+                val obj = array.optJSONObject(i) ?: continue
+                val symbol = obj.optString("symbol").ifEmpty { obj.optString("char") }.ifEmpty { obj.optString("from") }.trim()
+                val target = obj.optString("target").ifEmpty { obj.optString("letter") }.ifEmpty { obj.optString("to") }.trim()
+                if (symbol.isNotEmpty() && target.isNotEmpty()) {
+                    parsed[symbol] = target[0].uppercaseChar()
+                }
+            }
+        } else {
+            // Parse line-by-line format: "symbol -> target" or "symbol=target" or "symbol: target"
+            trimmed.lines().forEach { line ->
+                val lineTrimmed = line.trim()
+                if (lineTrimmed.isNotEmpty() && !lineTrimmed.startsWith("#") && !lineTrimmed.startsWith("//")) {
+                    val parts = when {
+                        lineTrimmed.contains("->") -> lineTrimmed.split("->", limit = 2)
+                        lineTrimmed.contains("➔") -> lineTrimmed.split("➔", limit = 2)
+                        lineTrimmed.contains("=") -> lineTrimmed.split("=", limit = 2)
+                        lineTrimmed.contains(":") -> lineTrimmed.split(":", limit = 2)
+                        lineTrimmed.contains("\t") -> lineTrimmed.split("\t", limit = 2)
+                        else -> null
+                    }
+                    if (parts != null && parts.size == 2) {
+                        val sym = parts[0].trim()
+                        val tgt = parts[1].trim()
+                        if (sym.isNotEmpty() && tgt.isNotEmpty()) {
+                            parsed[sym] = tgt[0].uppercaseChar()
+                        }
+                    }
+                }
+            }
+        }
+
+        if (parsed.isEmpty()) {
+            throw IllegalArgumentException("No valid character mappings found in file")
+        }
+
+        val result = if (merge) {
+            val combined = _customCharMappings.value.toMutableMap()
+            combined.putAll(parsed)
+            combined
+        } else {
+            parsed
+        }
+
+        _customCharMappings.value = result
+        saveCustomCharMappings(result)
+        return parsed.size
+    }
+
     // App list export / import (unified — used by both Settings and AutoTags).
     // Exports the list of installed apps as { "package", "label" } objects.
     // JSON is machine-friendly (the original format), TXT is human-readable.

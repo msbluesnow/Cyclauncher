@@ -759,6 +759,28 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
+     * Exports all custom character mappings to a JSON file at [uri].
+     */
+    fun exportCharMappingsJson(uri: Uri) {
+        actionsManager.exportCharMappingsToUri(uri)
+    }
+
+    /**
+     * Imports custom character mappings from the specified [uri] and re-indexes apps.
+     */
+    fun importCharMappingsJson(uri: Uri, merge: Boolean = true, onResult: (Result<Int>) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                val count = actionsManager.importCharMappingsFromUri(uri, merge)
+                reindexApps(actionsManager.customCharMappings.value)
+                onResult(Result.success(count))
+            } catch (e: Exception) {
+                onResult(Result.failure(e))
+            }
+        }
+    }
+
+    /**
      * Re-calculates searchChar for all loaded apps in-place using the given mappings.
      */
     private fun reindexApps(customMappings: Map<String, Char> = actionsManager.customCharMappings.value) {
