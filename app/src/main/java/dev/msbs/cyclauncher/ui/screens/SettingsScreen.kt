@@ -4,6 +4,7 @@ import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.SearchMethod
 import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
 import android.content.Intent
@@ -68,6 +69,7 @@ fun SettingsScreen(
     val accentColor by viewModel.accentColor.collectAsState()
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
     val buttonTextColor by viewModel.buttonTextColor.collectAsState()
+    val popupTheme by viewModel.popupTheme.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
     val context = LocalContext.current
 
@@ -241,7 +243,7 @@ fun SettingsScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Theme Accent:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 16.sp))
                         Spacer(modifier = Modifier.height(8.dp))
-                        AccentColorDropdown(accentColor, primaryTextColor) { viewModel.setAccentColor(it) }
+                        AccentColorDropdown(accentColor, primaryTextColor, popupTheme) { viewModel.setAccentColor(it) }
                     }
 
                     // Main Color Selector
@@ -256,36 +258,35 @@ fun SettingsScreen(
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Adaptive Shadows Toggle
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Adaptive Shadows:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 16.sp))
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(36.dp),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            Switch(
-                                checked = showShadows,
-                                onCheckedChange = { viewModel.setShowShadows(it) },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = accentColor.color,
-                                    checkedTrackColor = accentColor.color.copy(alpha = 0.5f)
-                                )
-                            )
-                        }
-                    }
-
                     // Button Text Color Selector
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Button Text:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 16.sp))
                         Spacer(modifier = Modifier.height(8.dp))
                         MainColorSelector(buttonTextColor, primaryTextColor) { viewModel.setButtonTextColor(it) }
                     }
+
+                    // Popup Theme Selector
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Popup Theme:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 16.sp))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        PopupThemeSelector(popupTheme, primaryTextColor) { viewModel.setPopupTheme(it) }
+                    }
+                }
+
+                HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
+
+                // Adaptive Shadows Toggle
+                SettingsRow(label = "Adaptive Shadows:", textColor = primaryTextColor.color, shadow = shadow) {
+                    Switch(
+                        checked = showShadows,
+                        onCheckedChange = { viewModel.setShowShadows(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = accentColor.color,
+                            checkedTrackColor = accentColor.color.copy(alpha = 0.5f)
+                        )
+                    )
                 }
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
@@ -499,15 +500,15 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { showDefaultLauncherDialog = false },
             title = { Text("Default Launcher", color = accentColor.color) },
-            text = { Text(if (currentIsDefault) "Cyclauncher is now your default launcher!" else "Cyclauncher is not set as default. Try again?", color = Color.White) },
+            text = { Text(if (currentIsDefault) "Cyclauncher is now your default launcher!" else "Cyclauncher is not set as default. Try again?", color = popupTheme.contentColor) },
             confirmButton = {
                 TextButton(onClick = { if (!currentIsDefault) viewModel.openDefaultLauncherSettings(context) else showDefaultLauncherDialog = false }) {
                     Text(if (currentIsDefault) "Great!" else "Set Default", color = accentColor.color)
                 }
             },
-            dismissButton = { TextButton(onClick = { showDefaultLauncherDialog = false }) { Text("Cancel", color = Color.Gray) } },
-            containerColor = Color(0xFF1E1E1E),
-            textContentColor = Color.White
+            dismissButton = { TextButton(onClick = { showDefaultLauncherDialog = false }) { Text("Cancel", color = popupTheme.secondaryContentColor) } },
+            containerColor = popupTheme.solidBackgroundColor,
+            textContentColor = popupTheme.contentColor
         )
     }
 }
@@ -531,7 +532,12 @@ private fun SettingsRow(label: String, textColor: Color = Color.White, shadow: S
  * Dropdown selector for picking the theme accent color.
  */
 @Composable
-private fun AccentColorDropdown(selectedColor: AccentColor, primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE, onSelect: (AccentColor) -> Unit) {
+private fun AccentColorDropdown(
+    selectedColor: AccentColor,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    popupTheme: PopupTheme = PopupTheme.DARK,
+    onSelect: (AccentColor) -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
     val colorPairs = remember {
         listOf(
@@ -572,7 +578,7 @@ private fun AccentColorDropdown(selectedColor: AccentColor, primaryTextColor: Pr
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            modifier = Modifier.width(96.dp).background(Color(0xFF2D2D2D))
+            modifier = Modifier.width(96.dp).background(popupTheme.solidBackgroundColor)
         ) {
             colorPairs.forEach { (light, dark) ->
                 Row(
@@ -590,7 +596,7 @@ private fun AccentColorDropdown(selectedColor: AccentColor, primaryTextColor: Pr
                             .background(light.color)
                             .border(
                                 width = if (selectedColor == light) 2.dp else 1.dp,
-                                color = if (selectedColor == light) Color.White else primaryTextColor.color.copy(alpha = 0.2f),
+                                color = if (selectedColor == light) popupTheme.contentColor else primaryTextColor.color.copy(alpha = 0.2f),
                                 shape = CircleShape
                             )
                             .clickable {
@@ -606,7 +612,7 @@ private fun AccentColorDropdown(selectedColor: AccentColor, primaryTextColor: Pr
                             .background(dark.color)
                             .border(
                                 width = if (selectedColor == dark) 2.dp else 1.dp,
-                                color = if (selectedColor == dark) Color.White else primaryTextColor.color.copy(alpha = 0.2f),
+                                color = if (selectedColor == dark) popupTheme.contentColor else primaryTextColor.color.copy(alpha = 0.2f),
                                 shape = CircleShape
                             )
                             .clickable {
@@ -853,6 +859,96 @@ private fun MainColorSelector(
             // Thumb
             // Inner height is 20.dp - 3.dp (border thickness on top/bottom) = 17.dp.
             // 50% of inner height = 8.5.dp.
+            val thumbSize = 8.5.dp
+            val startOffset = (maxWidth * 0.25f) - (thumbSize / 2)
+            val endOffset = (maxWidth * 0.75f) - (thumbSize / 2)
+            val currentOffset = startOffset + (endOffset - startOffset) * thumbOffset
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .offset(x = currentOffset)
+                    .size(thumbSize)
+                    .clip(CircleShape)
+                    .background(thumbColor)
+            )
+        }
+    }
+}
+
+/**
+ * Selector for Popup Background Theme (Dark / Light).
+ * Reuses the split black/white capsule badge design matching MainColorSelector.
+ */
+@Composable
+private fun PopupThemeSelector(
+    selectedTheme: PopupTheme,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    onSelect: (PopupTheme) -> Unit
+) {
+    val isDarkSelected = selectedTheme == PopupTheme.DARK
+    val thumbOffset by animateFloatAsState(
+        targetValue = if (isDarkSelected) 0f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "thumbOffset"
+    )
+    val thumbColor by animateColorAsState(
+        targetValue = if (isDarkSelected) Color.White else Color.Black,
+        label = "thumbColor"
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(primaryTextColor.color.copy(alpha = 0.1f))
+            .clickable { onSelect(if (isDarkSelected) PopupTheme.LIGHT else PopupTheme.DARK) }
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth(0.81f)
+                .height(20.dp)
+        ) {
+            // Background halves
+            Row(modifier = Modifier.fillMaxSize()) {
+                // Left half (Dark / Black)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clipToBounds()
+                        .drawBehind {
+                            val cornerRadius = 4.dp.toPx()
+                            drawRoundRect(
+                                color = Color.Black,
+                                topLeft = Offset.Zero,
+                                size = Size(size.width + cornerRadius, size.height),
+                                cornerRadius = CornerRadius(cornerRadius, cornerRadius)
+                            )
+                        }
+                )
+                // Right half (Light / White)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clipToBounds()
+                        .drawBehind {
+                            val cornerRadius = 4.dp.toPx()
+                            drawRoundRect(
+                                color = Color.White,
+                                topLeft = Offset(-cornerRadius, 0f),
+                                size = Size(size.width + cornerRadius, size.height),
+                                cornerRadius = CornerRadius(cornerRadius, cornerRadius)
+                            )
+                        }
+                )
+            }
+
+            // Thumb
             val thumbSize = 8.5.dp
             val startOffset = (maxWidth * 0.25f) - (thumbSize / 2)
             val endOffset = (maxWidth * 0.75f) - (thumbSize / 2)

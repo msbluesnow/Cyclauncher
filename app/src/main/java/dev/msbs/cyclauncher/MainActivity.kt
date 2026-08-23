@@ -5,6 +5,7 @@ import dev.msbs.cyclauncher.data.TagsBackupPreview
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.components.AppActionMenu
 import dev.msbs.cyclauncher.ui.components.RenameDialog
 import dev.msbs.cyclauncher.ui.components.TagEditDialog
@@ -196,6 +197,7 @@ class MainActivity : ComponentActivity() {
                 
                 val handSide by viewModel.handSide.collectAsState()
                 val accentColor by viewModel.accentColor.collectAsState()
+                val popupTheme by viewModel.popupTheme.collectAsState()
                 val allTags by viewModel.tags.collectAsState()
                 val appTagsMap by viewModel.appTags.collectAsState()
                 val autoTagsPreview by viewModel.autoTagsPreview.collectAsState()
@@ -297,7 +299,8 @@ class MainActivity : ComponentActivity() {
                                 onInfo = { openAppInfo(app.packageName) },
                                 onRename = { showRenameDialogFor = app },
                                 onTagsClick = { showTagDialogFor = app },
-                                accentColor = accentColor
+                                accentColor = accentColor,
+                                popupTheme = popupTheme
                             )
                         }
 
@@ -305,6 +308,7 @@ class MainActivity : ComponentActivity() {
                             RenameDialog(
                                 initialValue = app.label,
                                 accentColor = accentColor,
+                                popupTheme = popupTheme,
                                 onDismiss = { showRenameDialogFor = null },
                                 onConfirm = { newName ->
                                     viewModel.renameApp("${app.packageName}/${app.activityName}", newName)
@@ -324,7 +328,8 @@ class MainActivity : ComponentActivity() {
                                 onUpdateTag = { tag -> viewModel.updateTag(tag) },
                                 onDeleteTag = { tagId -> viewModel.deleteTag(tagId) },
                                 onDismiss = { showTagDialogFor = null },
-                                accentColor = accentColor
+                                accentColor = accentColor,
+                                popupTheme = popupTheme
                             )
                         }
 
@@ -340,7 +345,8 @@ class MainActivity : ComponentActivity() {
                                     viewModel.deleteTag(tag.id)
                                     tagToEditForDialog = null
                                 },
-                                accentColor = accentColor
+                                accentColor = accentColor,
+                                popupTheme = popupTheme
                             )
                         }
 
@@ -349,6 +355,7 @@ class MainActivity : ComponentActivity() {
                                 preview = preview,
                                 accentColor = accentColor,
                                 showShadows = viewModel.showShadows.collectAsState().value,
+                                popupTheme = popupTheme,
                                 onConfirm = { viewModel.applyAutoTags() },
                                 onDismiss = { viewModel.dismissAutoTagsPreview() }
                             )
@@ -359,6 +366,7 @@ class MainActivity : ComponentActivity() {
                                 preview = preview,
                                 accentColor = accentColor,
                                 showShadows = viewModel.showShadows.collectAsState().value,
+                                popupTheme = popupTheme,
                                 onConfirm = { viewModel.applyTagsBackup() },
                                 onDismiss = { viewModel.dismissTagsBackupPreview() }
                             )
@@ -520,6 +528,7 @@ private fun AutoTagsConfirmDialog(
     preview: AutoTagsPreview,
     accentColor: AccentColor,
     showShadows: Boolean,
+    popupTheme: PopupTheme = PopupTheme.DARK,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -544,7 +553,7 @@ private fun AutoTagsConfirmDialog(
             Column {
                 Text(
                     "${preview.matchedAppsCount} apps will be tagged into ${preview.tags.size} categories:",
-                    color = Color.White.copy(alpha = 0.85f),
+                    color = popupTheme.contentColor.copy(alpha = 0.85f),
                     fontSize = 14.sp,
                     style = androidx.compose.ui.text.TextStyle(shadow = shadow)
                 )
@@ -563,7 +572,7 @@ private fun AutoTagsConfirmDialog(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             tagInfo.name,
-                            color = Color.White,
+                            color = popupTheme.contentColor,
                             fontSize = 13.sp
                         )
                     }
@@ -572,7 +581,7 @@ private fun AutoTagsConfirmDialog(
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         "${preview.unmatchedAppPackages.size} apps not found on device",
-                        color = Color.White.copy(alpha = 0.5f),
+                        color = popupTheme.secondaryContentColor,
                         fontSize = 11.sp
                     )
                 }
@@ -585,11 +594,11 @@ private fun AutoTagsConfirmDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = Color.Gray)
+                Text("Cancel", color = popupTheme.secondaryContentColor)
             }
         },
-        containerColor = Color(0xFF1E1E1E),
-        textContentColor = Color.White
+        containerColor = popupTheme.solidBackgroundColor,
+        textContentColor = popupTheme.contentColor
     )
 }
 
@@ -601,6 +610,7 @@ private fun TagsBackupConfirmDialog(
     preview: TagsBackupPreview,
     accentColor: AccentColor,
     showShadows: Boolean,
+    popupTheme: PopupTheme = PopupTheme.DARK,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -629,7 +639,7 @@ private fun TagsBackupConfirmDialog(
                         append("\nExisting tags kept: ${preview.existingTagCount}")
                         append("\nTag assignments: ${preview.assignmentCount}")
                     },
-                    color = Color.White.copy(alpha = 0.85f),
+                    color = popupTheme.contentColor.copy(alpha = 0.85f),
                     fontSize = 14.sp,
                     style = androidx.compose.ui.text.TextStyle(shadow = shadow)
                 )
@@ -649,7 +659,7 @@ private fun TagsBackupConfirmDialog(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 tagInfo.name,
-                                color = Color.White,
+                                color = popupTheme.contentColor,
                                 fontSize = 13.sp
                             )
                         }
@@ -658,7 +668,7 @@ private fun TagsBackupConfirmDialog(
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             "… and ${preview.newTags.size - 12} more",
-                            color = Color.White.copy(alpha = 0.5f),
+                            color = popupTheme.secondaryContentColor,
                             fontSize = 11.sp
                         )
                     }
@@ -672,10 +682,10 @@ private fun TagsBackupConfirmDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = Color.Gray)
+                Text("Cancel", color = popupTheme.secondaryContentColor)
             }
         },
-        containerColor = Color(0xFF1E1E1E),
-        textContentColor = Color.White
+        containerColor = popupTheme.solidBackgroundColor,
+        textContentColor = popupTheme.contentColor
     )
 }

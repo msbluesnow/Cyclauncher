@@ -3,6 +3,7 @@ package dev.msbs.cyclauncher.ui.components
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
 import androidx.compose.foundation.*
@@ -56,7 +57,8 @@ fun AppActionMenu(
     onInfo: () -> Unit,
     onRename: () -> Unit,
     onTagsClick: () -> Unit,
-    accentColor: AccentColor = AccentColor.SKY
+    accentColor: AccentColor = AccentColor.SKY,
+    popupTheme: PopupTheme = PopupTheme.DARK
 ) {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
@@ -88,8 +90,8 @@ fun AppActionMenu(
             modifier = Modifier
                 .width(menuWidth)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color.Black.copy(alpha = 0.85f))
-                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                .background(popupTheme.backgroundColor)
+                .border(1.dp, popupTheme.borderColor, RoundedCornerShape(16.dp))
                 .padding(vertical = 8.dp)
         ) {
             Column {
@@ -106,6 +108,7 @@ fun AppActionMenu(
                     text = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
                     icon = if (isFavorite) Icons.Outlined.Star else Icons.Outlined.StarOutline,
                     accentColor = accentColor,
+                    popupTheme = popupTheme,
                     onClick = {
                         onToggleFavorite()
                         onDismiss()
@@ -116,6 +119,7 @@ fun AppActionMenu(
                     text = "Manage Tags",
                     icon = Icons.AutoMirrored.Outlined.Label,
                     accentColor = accentColor,
+                    popupTheme = popupTheme,
                     onClick = {
                         onTagsClick()
                         onDismiss()
@@ -126,6 +130,7 @@ fun AppActionMenu(
                     text = "Rename",
                     icon = Icons.Outlined.Edit,
                     accentColor = accentColor,
+                    popupTheme = popupTheme,
                     onClick = {
                         onRename()
                         onDismiss()
@@ -136,6 +141,7 @@ fun AppActionMenu(
                     text = "Info",
                     icon = Icons.Outlined.Info,
                     accentColor = accentColor,
+                    popupTheme = popupTheme,
                     onClick = {
                         onInfo()
                         onDismiss()
@@ -146,6 +152,7 @@ fun AppActionMenu(
                     text = "Uninstall",
                     icon = Icons.Outlined.Delete,
                     accentColor = accentColor,
+                    popupTheme = popupTheme,
                     onClick = {
                         onUninstall()
                         onDismiss()
@@ -169,6 +176,7 @@ fun AppActionMenu(
  * @param onClearHistory Callback when the user selects to clear all history items.
  * @param accentColor The active UI accent color.
  * @param primaryTextColor The primary text color.
+ * @param popupTheme The popup theme setting (DARK or LIGHT).
  */
 @Composable
 fun HistoryActionMenu(
@@ -180,7 +188,8 @@ fun HistoryActionMenu(
     onTogglePause: () -> Unit,
     onClearHistory: (() -> Unit)? = null,
     accentColor: AccentColor = AccentColor.SKY,
-    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    popupTheme: PopupTheme = PopupTheme.DARK
 ) {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
@@ -212,8 +221,8 @@ fun HistoryActionMenu(
             modifier = Modifier
                 .width(menuWidth)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color.Black.copy(alpha = 0.85f))
-                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                .background(popupTheme.backgroundColor)
+                .border(1.dp, popupTheme.borderColor, RoundedCornerShape(16.dp))
                 .padding(vertical = 8.dp)
         ) {
             Column {
@@ -231,7 +240,7 @@ fun HistoryActionMenu(
                     Text(
                         text = "History",
                         style = MaterialTheme.typography.titleSmall,
-                        color = Color.White,
+                        color = popupTheme.contentColor,
                         fontWeight = FontWeight.Bold
                     )
                     if (isHistoryPaused) {
@@ -239,7 +248,7 @@ fun HistoryActionMenu(
                         Text(
                             text = "(Paused)",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.Gray
+                            color = popupTheme.secondaryContentColor
                         )
                     }
                 }
@@ -251,7 +260,7 @@ fun HistoryActionMenu(
                         text = "Edit History",
                         icon = Icons.Outlined.Edit,
                         accentColor = accentColor,
-                        primaryTextColor = primaryTextColor,
+                        popupTheme = popupTheme,
                         onClick = {
                             onDismiss()
                             onEditHistory()
@@ -263,7 +272,7 @@ fun HistoryActionMenu(
                     text = if (isHistoryPaused) "Resume Recording" else "Pause Recording",
                     icon = if (isHistoryPaused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
                     accentColor = accentColor,
-                    primaryTextColor = primaryTextColor,
+                    popupTheme = popupTheme,
                     onClick = {
                         onDismiss()
                         onTogglePause()
@@ -275,7 +284,7 @@ fun HistoryActionMenu(
                         text = "Clear History",
                         icon = Icons.Outlined.Delete,
                         accentColor = accentColor,
-                        primaryTextColor = primaryTextColor,
+                        popupTheme = popupTheme,
                         onClick = {
                             onDismiss()
                             onClearHistory()
@@ -295,7 +304,7 @@ private fun MenuItem(
     text: String,
     icon: ImageVector,
     accentColor: AccentColor,
-    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    popupTheme: PopupTheme = PopupTheme.DARK,
     onClick: () -> Unit
 ) {
     Row(
@@ -314,7 +323,7 @@ private fun MenuItem(
         Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = text,
-            color = primaryTextColor.color,
+            color = popupTheme.contentColor,
             style = MaterialTheme.typography.bodyLarge
         )
     }
@@ -332,6 +341,7 @@ private fun MenuItem(
  * @param onDeleteTag Callback triggered when a tag is deleted.
  * @param onDismiss Callback to close the dialog.
  * @param accentColor The active UI accent color.
+ * @param popupTheme The popup theme setting (DARK or LIGHT).
  */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -344,7 +354,8 @@ fun TagSelectionDialog(
     onUpdateTag: (Tag) -> Unit,
     onDeleteTag: (String) -> Unit,
     onDismiss: () -> Unit,
-    accentColor: AccentColor = AccentColor.SKY
+    accentColor: AccentColor = AccentColor.SKY,
+    popupTheme: PopupTheme = PopupTheme.DARK
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
     var tagToEdit by remember { mutableStateOf<Tag?>(null) }
@@ -352,7 +363,7 @@ fun TagSelectionDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("App Tags: ${app.label}", color = Color.White) },
+        title = { Text("App Tags: ${app.label}", color = popupTheme.contentColor) },
         text = {
             Column(
                 modifier = Modifier
@@ -361,7 +372,7 @@ fun TagSelectionDialog(
                     .verticalScroll(scrollState)
             ) {
                 if (allTags.isEmpty()) {
-                    Text("No tags created yet.", color = Color.Gray, fontSize = 14.sp)
+                    Text("No tags created yet.", color = popupTheme.secondaryContentColor, fontSize = 14.sp)
                 } else {
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
@@ -376,7 +387,7 @@ fun TagSelectionDialog(
                                     onLongClick = { tagToEdit = tag }
                                 ),
                                 shape = CircleShape,
-                                color = if (isAssigned) tag.color.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.03f),
+                                color = if (isAssigned) tag.color.copy(alpha = 0.12f) else popupTheme.contentColor.copy(alpha = 0.04f),
                                 border = BorderStroke(
                                     width = 1.dp, 
                                     color = if (isAssigned) tag.color else tag.color.copy(alpha = 0.38f)
@@ -388,7 +399,7 @@ fun TagSelectionDialog(
                                 ) {
                                     Text(
                                         text = tag.name, 
-                                        color = if (isAssigned) tag.color else Color.White, 
+                                        color = if (isAssigned) tag.color else popupTheme.contentColor, 
                                         fontSize = 13.sp,
                                         fontWeight = if (isAssigned) FontWeight.Bold else FontWeight.Medium
                                     )
@@ -415,8 +426,8 @@ fun TagSelectionDialog(
                 }
             }
         },
-        containerColor = Color(0xFF1E1E1E),
-        textContentColor = Color.White
+        containerColor = popupTheme.solidBackgroundColor,
+        textContentColor = popupTheme.contentColor
     )
 
     if (showCreateDialog) {
@@ -426,7 +437,8 @@ fun TagSelectionDialog(
                 onCreateTag(name, color)
                 showCreateDialog = false
             },
-            accentColor = accentColor
+            accentColor = accentColor,
+            popupTheme = popupTheme
         )
     }
 
@@ -442,7 +454,8 @@ fun TagSelectionDialog(
                 onDeleteTag(tag.id)
                 tagToEdit = null
             },
-            accentColor = accentColor
+            accentColor = accentColor,
+            popupTheme = popupTheme
         )
     }
 }
@@ -456,6 +469,7 @@ fun TagSelectionDialog(
  * @param onConfirm Callback when saving or creating a tag (supplying name and color).
  * @param onDelete Callback when deleting this tag.
  * @param accentColor The active UI accent color.
+ * @param popupTheme The popup theme setting (DARK or LIGHT).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -464,7 +478,8 @@ fun TagEditDialog(
     onDismiss: () -> Unit,
     onConfirm: (String, Color) -> Unit,
     onDelete: (() -> Unit)? = null,
-    accentColor: AccentColor
+    accentColor: AccentColor,
+    popupTheme: PopupTheme = PopupTheme.DARK
 ) {
     var name by remember { mutableStateOf(tag?.name ?: "") }
     val colors = listOf(
@@ -482,7 +497,7 @@ fun TagEditDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(if (tag == null) "Create New Tag" else "Edit Tag", color = Color.White)
+                Text(if (tag == null) "Create New Tag" else "Edit Tag", color = popupTheme.contentColor)
                 if (onDelete != null) {
                     IconButton(onClick = onDelete) {
                         Icon(Icons.Outlined.Delete, contentDescription = "Delete", tint = Color(0xFFEF4444))
@@ -495,12 +510,12 @@ fun TagEditDialog(
                 TextField(
                     value = name,
                     onValueChange = { name = it },
-                    placeholder = { Text("Tag Name") },
+                    placeholder = { Text("Tag Name", color = popupTheme.secondaryContentColor) },
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,
                         unfocusedContainerColor = Color.Transparent,
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = popupTheme.contentColor,
+                        unfocusedTextColor = popupTheme.contentColor,
                         cursorColor = accentColor.color,
                         focusedIndicatorColor = accentColor.color
                     ),
@@ -508,7 +523,7 @@ fun TagEditDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Select Color:", color = Color.White, fontSize = 14.sp)
+                Text("Select Color:", color = popupTheme.contentColor, fontSize = 14.sp)
                 Spacer(modifier = Modifier.height(8.dp))
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
@@ -523,7 +538,7 @@ fun TagEditDialog(
                                 .background(color)
                                 .border(
                                     width = if (selectedColor == color) 2.dp else 0.dp,
-                                    color = Color.White,
+                                    color = popupTheme.contentColor,
                                     shape = CircleShape
                                 )
                                 .clickable { selectedColor = color }
@@ -541,10 +556,10 @@ fun TagEditDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel", color = Color.Gray) }
+            TextButton(onClick = onDismiss) { Text("Cancel", color = popupTheme.secondaryContentColor) }
         },
-        containerColor = Color(0xFF1E1E1E),
-        textContentColor = Color.White
+        containerColor = popupTheme.solidBackgroundColor,
+        textContentColor = popupTheme.contentColor
     )
 }
 
@@ -553,6 +568,7 @@ fun TagEditDialog(
  *
  * @param initialValue The original/current name of the application.
  * @param accentColor The active UI accent color.
+ * @param popupTheme The popup theme setting (DARK or LIGHT).
  * @param onDismiss Callback to close the dialog.
  * @param onConfirm Callback when confirming the new name.
  */
@@ -561,7 +577,8 @@ fun RenameDialog(
     initialValue: String,
     accentColor: AccentColor,
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+    onConfirm: (String) -> Unit,
+    popupTheme: PopupTheme = PopupTheme.DARK
 ) {
     var text by remember { mutableStateOf(initialValue) }
     
@@ -575,8 +592,8 @@ fun RenameDialog(
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
+                    focusedTextColor = popupTheme.contentColor,
+                    unfocusedTextColor = popupTheme.contentColor,
                     cursorColor = accentColor.color,
                     focusedIndicatorColor = accentColor.color
                 ),
@@ -591,10 +608,10 @@ fun RenameDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = Color.Gray)
+                Text("Cancel", color = popupTheme.secondaryContentColor)
             }
         },
-        containerColor = Color(0xFF1E1E1E),
-        textContentColor = Color.White
+        containerColor = popupTheme.solidBackgroundColor,
+        textContentColor = popupTheme.contentColor
     )
 }

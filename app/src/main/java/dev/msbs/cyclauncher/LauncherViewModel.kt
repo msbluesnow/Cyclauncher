@@ -8,6 +8,7 @@ import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.model.FavoriteItem
 import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
 import android.app.Application
@@ -68,6 +69,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _buttonTextColor = MutableStateFlow(PrimaryTextColor.BLACK)
     /** The selected button text color (White or Black). */
     val buttonTextColor: StateFlow<PrimaryTextColor> = _buttonTextColor
+
+    private val _popupTheme = MutableStateFlow(PopupTheme.DARK)
+    /** The selected background theme for popups and dialogs (Dark or Light). */
+    val popupTheme: StateFlow<PopupTheme> = _popupTheme
 
     private val _showShadows = MutableStateFlow(true)
     /** Whether adaptive text/icon drop shadows are enabled. */
@@ -213,6 +218,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
         val savedButtonTextColor = prefs.getString("button_text_color", PrimaryTextColor.BLACK.name) ?: PrimaryTextColor.BLACK.name
         _buttonTextColor.value = PrimaryTextColor.fromName(savedButtonTextColor)
+
+        val savedPopupTheme = prefs.getString("popup_theme", PopupTheme.DARK.name) ?: PopupTheme.DARK.name
+        _popupTheme.value = PopupTheme.fromName(savedPopupTheme)
         
         if (!prefs.contains("show_shadows")) {
             _showShadows.value = true 
@@ -375,6 +383,17 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _buttonTextColor.value = color
         val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putString("button_text_color", color.name).apply()
+    }
+
+    /**
+     * Sets the popup and dialog background theme (Dark or Light) and persists it.
+     *
+     * @param theme The chosen [PopupTheme] instance.
+     */
+    fun setPopupTheme(theme: PopupTheme) {
+        _popupTheme.value = theme
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putString("popup_theme", theme.name).apply()
     }
 
     /**

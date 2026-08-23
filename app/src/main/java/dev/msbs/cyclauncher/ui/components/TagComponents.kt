@@ -43,6 +43,7 @@ import androidx.compose.ui.window.PopupProperties
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import kotlin.math.roundToInt
 
@@ -201,13 +202,11 @@ fun TagFolderPopup(
     onDismiss: () -> Unit,
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     showShadows: Boolean = false,
-    accentColor: AccentColor = AccentColor.SKY
+    accentColor: AccentColor = AccentColor.SKY,
+    popupTheme: PopupTheme = PopupTheme.DARK
 ) {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
-
-    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
-    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
 
     val popupWidth = 260.dp
     val popupWidthPx = with(density) { popupWidth.toPx() }
@@ -216,6 +215,9 @@ fun TagFolderPopup(
     val estimatedHeight = if (apps.isEmpty()) 110.dp else (76 + rows * 80).dp
     val popupHeightPx = with(density) { estimatedHeight.toPx() }
     val borderPadding = with(density) { 16.dp.toPx() }
+
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
 
     var x = offset.x
     var y = offset.y
@@ -235,7 +237,7 @@ fun TagFolderPopup(
                 .width(popupWidth)
                 .heightIn(max = 360.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color.Black.copy(alpha = 0.90f))
+                .background(popupTheme.backgroundColor)
                 .border(1.dp, tag.color.copy(alpha = 0.7f), RoundedCornerShape(16.dp))
                 .padding(16.dp)
         ) {
@@ -256,7 +258,7 @@ fun TagFolderPopup(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = tag.name,
-                            color = Color.White,
+                            color = popupTheme.contentColor,
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
                         )
@@ -273,7 +275,7 @@ fun TagFolderPopup(
                         Icon(
                             imageVector = Icons.Outlined.Edit,
                             contentDescription = "Edit Tag",
-                            tint = Color.White.copy(alpha = 0.75f),
+                            tint = popupTheme.secondaryContentColor,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -291,7 +293,7 @@ fun TagFolderPopup(
                 if (apps.isEmpty()) {
                     Text(
                         text = "No apps in this tag",
-                        color = Color.Gray,
+                        color = popupTheme.secondaryContentColor,
                         fontSize = 13.sp,
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
@@ -317,7 +319,8 @@ fun TagFolderPopup(
                                 onRemoveAppFromTag = onRemoveAppFromTag,
                                 tagId = tag.id,
                                 primaryTextColor = primaryTextColor,
-                                showShadows = showShadows
+                                showShadows = showShadows,
+                                popupTheme = popupTheme
                             )
                         }
                     }
@@ -336,7 +339,8 @@ private fun TagFolderAppItem(
     onRemoveAppFromTag: (String, String) -> Unit,
     tagId: String,
     primaryTextColor: PrimaryTextColor,
-    showShadows: Boolean
+    showShadows: Boolean,
+    popupTheme: PopupTheme = PopupTheme.DARK
 ) {
     var itemPosition by remember { mutableStateOf(Offset.Zero) }
     val currentOnClick by rememberUpdatedState(onClick)
@@ -397,7 +401,7 @@ private fun TagFolderAppItem(
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = app.label,
-            color = Color.White,
+            color = popupTheme.contentColor,
             fontSize = 12.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -490,6 +494,7 @@ fun TagFolderIcon(
  * @param onToggleFavorite Callback when the user toggles favorite status.
  * @param accentColor The active UI accent color.
  * @param primaryTextColor The primary text color.
+ * @param popupTheme The popup theme setting (DARK or LIGHT).
  */
 @Composable
 fun TagFolderActionMenu(
@@ -500,7 +505,8 @@ fun TagFolderActionMenu(
     onEditGroup: () -> Unit,
     onToggleFavorite: () -> Unit,
     accentColor: AccentColor = AccentColor.SKY,
-    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    popupTheme: PopupTheme = PopupTheme.DARK
 ) {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
@@ -532,7 +538,7 @@ fun TagFolderActionMenu(
             modifier = Modifier
                 .width(menuWidth)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color.Black.copy(alpha = 0.85f))
+                .background(popupTheme.backgroundColor)
                 .border(1.dp, tag.color.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
                 .padding(vertical = 8.dp)
         ) {
@@ -551,7 +557,7 @@ fun TagFolderActionMenu(
                     Text(
                         text = tag.name,
                         style = MaterialTheme.typography.titleSmall,
-                        color = Color.White,
+                        color = popupTheme.contentColor,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -577,7 +583,7 @@ fun TagFolderActionMenu(
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "Edit Group",
-                        color = primaryTextColor.color,
+                        color = popupTheme.contentColor,
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
@@ -601,7 +607,7 @@ fun TagFolderActionMenu(
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
-                        color = primaryTextColor.color,
+                        color = popupTheme.contentColor,
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }

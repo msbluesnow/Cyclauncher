@@ -2,6 +2,7 @@ package dev.msbs.cyclauncher.ui.screens
 
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
 import android.content.ClipData
@@ -53,6 +54,7 @@ fun AutoTagsScreen(
 ) {
     val accentColor by viewModel.accentColor.collectAsState()
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
+    val popupTheme by viewModel.popupTheme.collectAsState()
     val buttonTextColor by viewModel.buttonTextColor.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
     val context = LocalContext.current
@@ -339,6 +341,7 @@ fun AutoTagsScreen(
         ExportFormatDialog(
             accentColor = accentColor,
             primaryTextColor = primaryTextColor,
+            popupTheme = popupTheme,
             onDismiss = { showExportFormatDialog = false },
             onSelect = { format ->
                 showExportFormatDialog = false
@@ -360,6 +363,7 @@ private enum class ExportFormat { JSON, TXT }
 private fun ExportFormatDialog(
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    popupTheme: PopupTheme = PopupTheme.DARK,
     onDismiss: () -> Unit,
     onSelect: (ExportFormat) -> Unit
 ) {
@@ -370,7 +374,7 @@ private fun ExportFormatDialog(
             Column {
                 Text(
                     "Choose a format for the exported app list:",
-                    color = primaryTextColor.color.copy(alpha = 0.85f),
+                    color = popupTheme.contentColor.copy(alpha = 0.85f),
                     fontSize = 14.sp
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -388,7 +392,7 @@ private fun ExportFormatDialog(
                     }
                     Button(
                         onClick = { onSelect(ExportFormat.TXT) },
-                        colors = ButtonDefaults.buttonColors(containerColor = primaryTextColor.color.copy(alpha = 0.12f)),
+                        colors = ButtonDefaults.buttonColors(containerColor = popupTheme.contentColor.copy(alpha = 0.12f)),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f).height(48.dp)
                     ) {
@@ -398,15 +402,15 @@ private fun ExportFormatDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     "JSON — for the AI workflow.   TXT — human-readable list.",
-                    color = primaryTextColor.color.copy(alpha = 0.5f),
+                    color = popupTheme.secondaryContentColor,
                     fontSize = 11.sp
                 )
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = Color.Gray) } },
-        containerColor = Color(0xFF1E1E1E),
-        textContentColor = primaryTextColor.color
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = popupTheme.secondaryContentColor) } },
+        containerColor = popupTheme.solidBackgroundColor,
+        textContentColor = popupTheme.contentColor
     )
 }
 

@@ -94,6 +94,7 @@ fun MainMenuScreen(
     val showShadows by viewModel.showShadows.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
+    val popupTheme by viewModel.popupTheme.collectAsState()
     val isHistoryPaused by viewModel.isHistoryPaused.collectAsState()
     val recentlyUpdatedApps by viewModel.recentlyUpdatedApps.collectAsState()
     var isReorderMode by remember { mutableStateOf(false) }
@@ -365,7 +366,8 @@ fun MainMenuScreen(
                     viewModel.clearHistory()
                 },
                 accentColor = accentColor,
-                primaryTextColor = primaryTextColor
+                primaryTextColor = primaryTextColor,
+                popupTheme = popupTheme
             )
         }
 
@@ -385,7 +387,8 @@ fun MainMenuScreen(
                     viewModel.toggleFavorite("tag:${tag.id}")
                 },
                 accentColor = accentColor,
-                primaryTextColor = primaryTextColor
+                primaryTextColor = primaryTextColor,
+                popupTheme = popupTheme
             )
         }
 
@@ -414,7 +417,8 @@ fun MainMenuScreen(
                 onDismiss = { selectedTagForPopup = null },
                 primaryTextColor = primaryTextColor,
                 showShadows = showShadows,
-                accentColor = accentColor
+                accentColor = accentColor,
+                popupTheme = popupTheme
             )
         }
     }
