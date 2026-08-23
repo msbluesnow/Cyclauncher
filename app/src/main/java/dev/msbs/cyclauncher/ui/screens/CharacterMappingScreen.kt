@@ -271,8 +271,7 @@ fun CharacterMappingScreen(
                                             Text(
                                                 text = char.toString(),
                                                 color = if (char == selectedTargetChar) accentColor.color else popupTheme.contentColor,
-                                                fontWeight = if (char == selectedTargetChar) FontWeight.Bold else FontWeight.Normal,
-                                                style = TextStyle(shadow = shadow)
+                                                fontWeight = if (char == selectedTargetChar) FontWeight.Bold else FontWeight.Normal
                                             )
                                         },
                                         onClick = {
@@ -626,23 +625,21 @@ fun CharacterMappingScreen(
                             text = targetChar.toString(),
                             color = accentColor.color,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            style = TextStyle(shadow = shadow)
+                            fontSize = 16.sp
                         )
                     }
                     Text(
                         text = "Mapped Symbols (${symbols.size})",
                         color = popupTheme.contentColor,
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        style = TextStyle(shadow = shadow)
+                        fontWeight = FontWeight.Bold
                     )
                 }
             },
             text = {
                 Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                     if (symbols.isEmpty()) {
-                        Text("No symbols mapped to '$targetChar'", color = popupTheme.secondaryContentColor, style = TextStyle(shadow = shadow))
+                        Text("No symbols mapped to '$targetChar'", color = popupTheme.secondaryContentColor)
                     } else {
                         // Flow grid of all symbols
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -665,8 +662,7 @@ fun CharacterMappingScreen(
                                                 text = symbol,
                                                 color = popupTheme.contentColor,
                                                 fontSize = 15.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                                style = TextStyle(shadow = shadow)
+                                                fontWeight = FontWeight.SemiBold
                                             )
                                             IconButton(
                                                 onClick = {
@@ -698,8 +694,7 @@ fun CharacterMappingScreen(
                 TextButton(onClick = { viewingLetterDetail = null }) {
                     Text(
                         text = "Done",
-                        color = accentColor.color,
-                        style = TextStyle(shadow = shadow)
+                        color = accentColor.color
                     )
                 }
             },
@@ -714,15 +709,13 @@ fun CharacterMappingScreen(
             title = {
                 Text(
                     text = "Reset Mappings",
-                    color = accentColor.color,
-                    style = TextStyle(shadow = shadow)
+                    color = accentColor.color
                 )
             },
             text = {
                 Text(
                     text = "Are you sure you want to remove all custom character mappings?",
-                    color = popupTheme.contentColor,
-                    style = TextStyle(shadow = shadow)
+                    color = popupTheme.contentColor
                 )
             },
             confirmButton = {
@@ -735,8 +728,7 @@ fun CharacterMappingScreen(
                 ) {
                     Text(
                         text = "Reset",
-                        color = Color.Red,
-                        style = TextStyle(shadow = shadow)
+                        color = Color.Red
                     )
                 }
             },
@@ -744,8 +736,7 @@ fun CharacterMappingScreen(
                 TextButton(onClick = { showResetConfirmDialog = false }) {
                     Text(
                         text = "Cancel",
-                        color = popupTheme.secondaryContentColor,
-                        style = TextStyle(shadow = shadow)
+                        color = popupTheme.secondaryContentColor
                     )
                 }
             },

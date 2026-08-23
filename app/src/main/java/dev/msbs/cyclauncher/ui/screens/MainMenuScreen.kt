@@ -795,11 +795,24 @@ private fun ColumnScope.HistoryContentBlock(
                                 onClick = { onRemoveFromHistory(appKey) },
                                 modifier = Modifier.size(32.dp)
                             ) {
-                                Icon(
-                                    Icons.Default.RemoveCircle,
-                                    contentDescription = "Remove from History",
-                                    tint = Color.Red.copy(alpha = 0.8f)
-                                )
+                                Box(contentAlignment = Alignment.Center) {
+                                    if (showShadows) {
+                                        Icon(
+                                            imageVector = Icons.Default.RemoveCircle,
+                                            contentDescription = null,
+                                            tint = primaryTextColor.shadowColor,
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .offset(1.dp, 1.dp)
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Default.RemoveCircle,
+                                        contentDescription = "Remove from History",
+                                        tint = Color.Red.copy(alpha = 0.8f),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -839,11 +852,24 @@ private fun ColumnScope.HistoryContentBlock(
                                 onClick = { onRemoveFromHistory(appKey) },
                                 modifier = Modifier.size(32.dp)
                             ) {
-                                Icon(
-                                    Icons.Default.RemoveCircle,
-                                    contentDescription = "Remove from History",
-                                    tint = Color.Red.copy(alpha = 0.8f)
-                                )
+                                Box(contentAlignment = Alignment.Center) {
+                                    if (showShadows) {
+                                        Icon(
+                                            imageVector = Icons.Default.RemoveCircle,
+                                            contentDescription = null,
+                                            tint = primaryTextColor.shadowColor,
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .offset(1.dp, 1.dp)
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Default.RemoveCircle,
+                                        contentDescription = "Remove from History",
+                                        tint = Color.Red.copy(alpha = 0.8f),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -1161,11 +1187,24 @@ private fun FavoritesSection(
                                     .offset(x = minusOffset)
                                     .size(32.dp)
                             ) {
-                                Icon(
-                                    Icons.Default.RemoveCircle,
-                                    contentDescription = "Remove",
-                                    tint = Color.Red.copy(alpha = 0.8f)
-                                )
+                                Box(contentAlignment = Alignment.Center) {
+                                    if (showShadows) {
+                                        Icon(
+                                            imageVector = Icons.Default.RemoveCircle,
+                                            contentDescription = null,
+                                            tint = primaryTextColor.shadowColor,
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .offset(1.dp, 1.dp)
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Default.RemoveCircle,
+                                        contentDescription = "Remove",
+                                        tint = Color.Red.copy(alpha = 0.8f),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                         }
                     }

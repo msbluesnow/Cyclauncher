@@ -359,7 +359,6 @@ class MainActivity : ComponentActivity() {
                             AutoTagsConfirmDialog(
                                 preview = preview,
                                 accentColor = accentColor,
-                                showShadows = viewModel.showShadows.collectAsState().value,
                                 popupTheme = popupTheme,
                                 onConfirm = { viewModel.applyAutoTags() },
                                 onDismiss = { viewModel.dismissAutoTagsPreview() }
@@ -370,7 +369,6 @@ class MainActivity : ComponentActivity() {
                             TagsBackupConfirmDialog(
                                 preview = preview,
                                 accentColor = accentColor,
-                                showShadows = viewModel.showShadows.collectAsState().value,
                                 popupTheme = popupTheme,
                                 onConfirm = { viewModel.applyTagsBackup() },
                                 onDismiss = { viewModel.dismissTagsBackupPreview() }
@@ -532,19 +530,10 @@ private fun CyclauncherTheme(content: @Composable () -> Unit) {
 private fun AutoTagsConfirmDialog(
     preview: AutoTagsPreview,
     accentColor: AccentColor,
-    showShadows: Boolean,
     popupTheme: PopupTheme = PopupTheme.DARK,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val shadow = if (showShadows) {
-        androidx.compose.ui.graphics.Shadow(
-            color = Color.Black.copy(alpha = 0.6f),
-            offset = androidx.compose.ui.geometry.Offset(2f, 2f),
-            blurRadius = 4f
-        )
-    } else null
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -559,8 +548,7 @@ private fun AutoTagsConfirmDialog(
                 Text(
                     "${preview.matchedAppsCount} apps will be tagged into ${preview.tags.size} categories:",
                     color = popupTheme.contentColor.copy(alpha = 0.85f),
-                    fontSize = 14.sp,
-                    style = androidx.compose.ui.text.TextStyle(shadow = shadow)
+                    fontSize = 14.sp
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 preview.tags.forEach { tagInfo ->
@@ -614,19 +602,10 @@ private fun AutoTagsConfirmDialog(
 private fun TagsBackupConfirmDialog(
     preview: TagsBackupPreview,
     accentColor: AccentColor,
-    showShadows: Boolean,
     popupTheme: PopupTheme = PopupTheme.DARK,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val shadow = if (showShadows) {
-        androidx.compose.ui.graphics.Shadow(
-            color = Color.Black.copy(alpha = 0.6f),
-            offset = androidx.compose.ui.geometry.Offset(2f, 2f),
-            blurRadius = 4f
-        )
-    } else null
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -645,8 +624,7 @@ private fun TagsBackupConfirmDialog(
                         append("\nTag assignments: ${preview.assignmentCount}")
                     },
                     color = popupTheme.contentColor.copy(alpha = 0.85f),
-                    fontSize = 14.sp,
-                    style = androidx.compose.ui.text.TextStyle(shadow = shadow)
+                    fontSize = 14.sp
                 )
                 if (preview.newTags.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(12.dp))
