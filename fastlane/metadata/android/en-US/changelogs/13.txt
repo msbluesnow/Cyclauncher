@@ -1,0 +1,8 @@
+- Added Popup & Dialog Theme setting in Settings: choose between Dark and Light backgrounds for popups, action menus, and dialogs.
+- Fixed 0-byte file creation on Android Storage Access Framework (SAF) during export operations.
+- Fixed custom renamed app labels resetting to default system names during export and import.
+- Added custom app renames preservation in unified Tags Backup export/import.
+- Restored system edge back gesture from Settings screen and added back navigation arrow.
+- Fixed simultaneous opening of folder app list and action menu on quick tap-and-hold.
+- Performance: eliminated redundant package re-queries on resume and optimized IPC binder calls.
+- Applied popup theme styling to interactive gesture tutorial and action preview components.
