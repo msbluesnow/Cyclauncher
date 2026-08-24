@@ -622,6 +622,9 @@ private fun TagsBackupConfirmDialog(
                         append("New tags to create: ${preview.newTags.size}")
                         append("\nExisting tags kept: ${preview.existingTagCount}")
                         append("\nTag assignments: ${preview.assignmentCount}")
+                        if (preview.customLabels.isNotEmpty()) {
+                            append("\nCustom labels to restore: ${preview.customLabels.size}")
+                        }
                     },
                     color = popupTheme.contentColor.copy(alpha = 0.85f),
                     fontSize = 14.sp

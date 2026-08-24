@@ -22,6 +22,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Represents the user's preferred hand orientation for the launcher UI layout.
@@ -661,35 +662,67 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     /** Exports installed application names to JSON format at the given URI. */
     fun exportAppNamesJson(uri: Uri) {
-        actionsManager.exportAppNamesToUri(uri, _apps.value)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val list = apps.value
+                actionsManager.exportAppNamesToUri(uri, list)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(getApplication(), "Exported ${list.size} apps", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(getApplication(), "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     /** Exports installed application names to plain text format at the given URI. */
     fun exportAppNamesText(uri: Uri) {
-        actionsManager.exportAppNamesToUriAsText(uri, _apps.value)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val list = apps.value
+                actionsManager.exportAppNamesToUriAsText(uri, list)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(getApplication(), "Exported ${list.size} apps", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(getApplication(), "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     /** Imports custom app labels from JSON and applies them. */
     fun importAppNamesPreview(uri: Uri, onResult: (Int) -> Unit) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
-                val map = actionsManager.importAppNamesFromUri(uri, _apps.value)
+                val map = actionsManager.importAppNamesFromUri(uri, apps.value)
                 actionsManager.applyAppLabels(map)
-                onResult(map.size)
+                withContext(Dispatchers.Main) {
+                    onResult(map.size)
+                }
             } catch (e: Exception) {
-                Toast.makeText(getApplication(), "Import failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(getApplication(), "Import failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
 
     /** Loads and parses AI-generated auto-tagging preview details. */
     fun loadAutoTagsPreview(uri: Uri) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
-                val preview = actionsManager.parseAutoTags(uri, _apps.value)
-                _autoTagsPreview.value = preview
+                val preview = actionsManager.parseAutoTags(uri, apps.value)
+                withContext(Dispatchers.Main) {
+                    _autoTagsPreview.value = preview
+                }
             } catch (e: Exception) {
-                Toast.makeText(getApplication(), "Failed to parse tags: ${e.message}", Toast.LENGTH_SHORT).show()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(getApplication(), "Failed to parse tags: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -715,16 +748,32 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     /** Exports tags and assignments to a JSON file at the given URI. */
     fun exportTagsBackup(uri: Uri) {
-        actionsManager.exportTagsBackupToUri(uri)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                actionsManager.exportTagsBackupToUri(uri)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(getApplication(), "Exported ${tags.value.size} tags", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(getApplication(), "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     /** Loads and parses a tags backup JSON file to prepare import details. */
     fun loadTagsBackupPreview(uri: Uri) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
-                _tagsBackupPreview.value = actionsManager.parseTagsBackup(uri)
+                val preview = actionsManager.parseTagsBackup(uri)
+                withContext(Dispatchers.Main) {
+                    _tagsBackupPreview.value = preview
+                }
             } catch (e: Exception) {
-                Toast.makeText(getApplication(), "Failed to parse tags file: ${e.message}", Toast.LENGTH_SHORT).show()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(getApplication(), "Failed to parse tags file: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -732,7 +781,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Applies the currently loaded tags backup configuration. */
     fun applyTagsBackup() {
         _tagsBackupPreview.value?.let { preview ->
-            actionsManager.applyTagsBackup(preview, _apps.value)
+            actionsManager.applyTagsBackup(preview, apps.value)
             _tagsBackupPreview.value = null
         }
     }
@@ -781,20 +830,36 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      * Exports all custom character mappings to a JSON file at [uri].
      */
     fun exportCharMappingsJson(uri: Uri) {
-        actionsManager.exportCharMappingsToUri(uri)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val count = customCharMappings.value.size
+                actionsManager.exportCharMappingsToUri(uri)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(getApplication(), "Exported $count mappings", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(getApplication(), "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     /**
      * Imports custom character mappings from the specified [uri] and re-indexes apps.
      */
     fun importCharMappingsJson(uri: Uri, merge: Boolean = true, onResult: (Result<Int>) -> Unit = {}) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val count = actionsManager.importCharMappingsFromUri(uri, merge)
-                reindexApps(actionsManager.customCharMappings.value)
-                onResult(Result.success(count))
+                withContext(Dispatchers.Main) {
+                    reindexApps(actionsManager.customCharMappings.value)
+                    onResult(Result.success(count))
+                }
             } catch (e: Exception) {
-                onResult(Result.failure(e))
+                withContext(Dispatchers.Main) {
+                    onResult(Result.failure(e))
+                }
             }
         }
     }

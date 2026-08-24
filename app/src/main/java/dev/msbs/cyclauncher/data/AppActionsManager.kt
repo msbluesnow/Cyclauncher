@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.FileOutputStream
+import java.io.IOException
 import java.util.UUID
 
 import dev.msbs.cyclauncher.utils.getSafeStorageContext
@@ -565,25 +567,54 @@ class AppActionsManager(context: Context) {
     }
 
     /**
+     * Writes a UTF-8 string to a content [uri] reliably using Android SAF.
+     * Uses "wt" (write-truncate) mode with explicit buffer flushing and sync to avoid 0-byte file issues on Android 10-17+.
+     */
+    fun writeStringToUri(uri: Uri, content: String) {
+        val outputStream = try {
+            context.contentResolver.openOutputStream(uri, "wt")
+        } catch (_: Exception) {
+            null
+        } ?: context.contentResolver.openOutputStream(uri)
+          ?: throw IOException("Cannot open output stream for URI: $uri")
+
+        outputStream.use { os ->
+            os.writer(Charsets.UTF_8).use { writer ->
+                writer.write(content)
+                writer.flush()
+            }
+            os.flush()
+            try {
+                (os as? FileOutputStream)?.fd?.sync()
+            } catch (_: Exception) {
+                // Ignore sync error if unsupported by document provider
+            }
+        }
+    }
+
+    /**
+     * Reads a UTF-8 string from a content [uri], handling UTF-8 BOM if present.
+     */
+    fun readStringFromUri(uri: Uri): String {
+        val inputStream = context.contentResolver.openInputStream(uri)
+            ?: throw IOException("Cannot open input stream for URI: $uri")
+        val content = inputStream.reader(Charsets.UTF_8).use { it.readText() }
+        return if (content.startsWith("\uFEFF")) content.substring(1) else content
+    }
+
+    /**
      * Exports all custom character mappings to a JSON file at the specified [uri].
      */
     fun exportCharMappingsToUri(uri: Uri) {
-        try {
-            val mappingsObj = JSONObject()
-            _customCharMappings.value.forEach { (k, v) ->
-                mappingsObj.put(k, v.toString())
-            }
-            val root = JSONObject()
-            root.put("version", 1)
-            root.put("mappings", mappingsObj)
-
-            context.contentResolver.openOutputStream(uri)?.use {
-                it.write(root.toString(2).toByteArray())
-            }
-            Toast.makeText(context, "Exported ${_customCharMappings.value.size} mappings", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+        val mappingsObj = JSONObject()
+        _customCharMappings.value.forEach { (k, v) ->
+            mappingsObj.put(k, v.toString())
         }
+        val root = JSONObject()
+        root.put("version", 1)
+        root.put("mappings", mappingsObj)
+
+        writeStringToUri(uri, root.toString(2))
     }
 
     /**
@@ -595,8 +626,7 @@ class AppActionsManager(context: Context) {
      * @return Number of imported mappings.
      */
     fun importCharMappingsFromUri(uri: Uri, merge: Boolean = true): Int {
-        val content = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
-            ?: throw IllegalArgumentException("Cannot read file")
+        val content = readStringFromUri(uri)
         val trimmed = content.trim()
         val parsed = mutableMapOf<String, Char>()
 
@@ -674,22 +704,16 @@ class AppActionsManager(context: Context) {
      * @param apps The list of applications to export.
      */
     fun exportAppNamesToUri(uri: Uri, apps: List<dev.msbs.cyclauncher.model.AppInfo>) {
-        try {
-            val array = JSONArray()
-            apps.forEach { app ->
-                val obj = JSONObject()
-                obj.put("package", app.packageName)
-                obj.put("label", app.label)
-                array.put(obj)
-            }
-            val json = array.toString(2)
-            context.contentResolver.openOutputStream(uri)?.use {
-                it.write(json.toByteArray())
-            }
-            Toast.makeText(context, "Exported ${apps.size} apps", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+        val array = JSONArray()
+        apps.forEach { app ->
+            val obj = JSONObject()
+            obj.put("package", app.packageName)
+            obj.put("component", app.componentKey)
+            obj.put("label", app.label)
+            array.put(obj)
         }
+        val json = array.toString(2)
+        writeStringToUri(uri, json)
     }
 
     /**
@@ -700,22 +724,15 @@ class AppActionsManager(context: Context) {
      * @param apps The list of applications to export.
      */
     fun exportAppNamesToUriAsText(uri: Uri, apps: List<dev.msbs.cyclauncher.model.AppInfo>) {
-        try {
-            val text = buildString {
-                apps.forEach { app ->
-                    append(app.label)
-                    append(" — ")
-                    append(app.packageName)
-                    append('\n')
-                }
+        val text = buildString {
+            apps.forEach { app ->
+                append(app.label)
+                append(" — ")
+                append(app.packageName)
+                append('\n')
             }
-            context.contentResolver.openOutputStream(uri)?.use {
-                it.write(text.toByteArray())
-            }
-            Toast.makeText(context, "Exported ${apps.size} apps", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
         }
+        writeStringToUri(uri, text)
     }
 
     /**
@@ -727,7 +744,7 @@ class AppActionsManager(context: Context) {
      * @return A map of application component keys to custom labels.
      */
     fun importAppNamesFromUri(uri: Uri, currentApps: List<dev.msbs.cyclauncher.model.AppInfo>): Map<String, String> {
-        val jsonString = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+        val jsonString = readStringFromUri(uri)
             ?: throw IllegalArgumentException("Cannot read file")
         val trimmed = jsonString.trim()
         val packageToApps = currentApps.groupBy { it.packageName }
@@ -854,37 +871,38 @@ class AppActionsManager(context: Context) {
      * @param uri The destination URI.
      */
     fun exportTagsBackupToUri(uri: Uri) {
-        try {
-            val idToName = _tags.value.associate { it.id to it.name }
-            val tagsArray = JSONArray()
-            _tags.value.forEach { tag ->
-                val obj = JSONObject()
-                obj.put("name", tag.name)
-                obj.put("color", colorToHex(tag.color))
-                tagsArray.put(obj)
-            }
-
-            // Map componentKey -> tag names (only keep tags that still exist).
-            val assignments = JSONObject()
-            _appTags.value.forEach { (componentKey, tagIds) ->
-                val names = tagIds.mapNotNull { id -> idToName[id] }
-                if (names.isNotEmpty()) {
-                    assignments.put(componentKey, JSONArray(names))
-                }
-            }
-
-            val root = JSONObject()
-            root.put("version", 1)
-            root.put("tags", tagsArray)
-            root.put("assignments", assignments)
-
-            context.contentResolver.openOutputStream(uri)?.use {
-                it.write(root.toString(2).toByteArray())
-            }
-            Toast.makeText(context, "Exported ${_tags.value.size} tags", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+        val idToName = _tags.value.associate { it.id to it.name }
+        val tagsArray = JSONArray()
+        _tags.value.forEach { tag ->
+            val obj = JSONObject()
+            obj.put("name", tag.name)
+            obj.put("color", colorToHex(tag.color))
+            tagsArray.put(obj)
         }
+
+        // Map componentKey -> tag names (only keep tags that still exist).
+        val assignments = JSONObject()
+        _appTags.value.forEach { (componentKey, tagIds) ->
+            val names = tagIds.mapNotNull { id -> idToName[id] }
+            if (names.isNotEmpty()) {
+                assignments.put(componentKey, JSONArray(names))
+            }
+        }
+
+        val root = JSONObject()
+        root.put("version", 1)
+        root.put("tags", tagsArray)
+        root.put("assignments", assignments)
+
+        val customLabelsObj = JSONObject()
+        _customLabels.value.forEach { (k, v) ->
+            customLabelsObj.put(k, v)
+        }
+        if (_customLabels.value.isNotEmpty()) {
+            root.put("custom_labels", customLabelsObj)
+        }
+
+        writeStringToUri(uri, root.toString(2))
     }
 
     /**
@@ -895,14 +913,14 @@ class AppActionsManager(context: Context) {
      * @return A [TagsBackupPreview] containing parsed data.
      */
     fun parseTagsBackup(uri: Uri): TagsBackupPreview {
-        val jsonString = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
-            ?: throw IllegalArgumentException("Cannot read file")
+        val jsonString = readStringFromUri(uri)
         val trimmed = jsonString.trim()
 
         val existingNames = _tags.value.map { it.name.lowercase().trim() }.toMutableSet()
         val tagsToCreate = mutableListOf<TagsBackupPreview.TagInfo>()
         val createdNamesSet = mutableSetOf<String>()
         val assignments = mutableListOf<TagsBackupPreview.AssignmentInfo>()
+        val parsedCustomLabels = mutableMapOf<String, String>()
 
         if (trimmed.startsWith("[")) {
             // AutoTags array format: [{"package": "...", "tag": "...", "color": "..."}]
@@ -950,6 +968,18 @@ class AppActionsManager(context: Context) {
             val root = JSONObject(trimmed)
             val tagsArray = root.optJSONArray("tags")
             val assignmentsObj = root.optJSONObject("assignments")
+            val customLabelsObj = root.optJSONObject("custom_labels") ?: root.optJSONObject("labels")
+
+            if (customLabelsObj != null) {
+                val keys = customLabelsObj.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    val label = customLabelsObj.optString(key).trim()
+                    if (label.isNotEmpty()) {
+                        parsedCustomLabels[key] = label
+                    }
+                }
+            }
 
             if (tagsArray != null || assignmentsObj != null) {
                 tagsArray?.let { array ->
@@ -987,6 +1017,7 @@ class AppActionsManager(context: Context) {
                 // Dictionary format {"TagName": ["pkg1", "pkg2"]}
                 val packageToTagNames = mutableMapOf<String, MutableList<String>>()
                 root.keys().forEach { tagName ->
+                    if (tagName == "custom_labels" || tagName == "labels") return@forEach
                     val lower = tagName.lowercase().trim()
                     if (lower !in existingNames && lower !in createdNamesSet) {
                         tagsToCreate.add(TagsBackupPreview.TagInfo(name = tagName, color = generateTagColor(tagName)))
@@ -1014,7 +1045,8 @@ class AppActionsManager(context: Context) {
             newTags = tagsToCreate,
             assignmentCount = assignments.sumOf { it.tagNames.size },
             parsedAssignments = assignments,
-            existingTagCount = _tags.value.size
+            existingTagCount = _tags.value.size,
+            customLabels = parsedCustomLabels
         )
     }
 
@@ -1070,6 +1102,10 @@ class AppActionsManager(context: Context) {
         }
         _appTags.value = currentAppTags
         saveAppTags(currentAppTags)
+
+        if (preview.customLabels.isNotEmpty()) {
+            applyAppLabels(preview.customLabels)
+        }
 
         val created = preview.newTags.size
         Toast.makeText(
@@ -1143,9 +1179,7 @@ class AppActionsManager(context: Context) {
      * @return An [AutoTagsPreview] detailing match metrics and tag metadata.
      */
     fun parseAutoTags(uri: Uri, apps: List<dev.msbs.cyclauncher.model.AppInfo>): AutoTagsPreview {
-        val inputStream = context.contentResolver.openInputStream(uri)
-        val jsonString = inputStream?.bufferedReader()?.use { it.readText() }
-            ?: throw IllegalArgumentException("Cannot read file")
+        val jsonString = readStringFromUri(uri)
         val trimmed = jsonString.trim()
 
         val uniqueTags = mutableMapOf<String, Color>()
@@ -1190,6 +1224,20 @@ class AppActionsManager(context: Context) {
                         packageToTag[pkg] = firstTag.trim()
                         if (!uniqueTags.containsKey(firstTag.trim())) {
                             uniqueTags[firstTag.trim()] = generateTagColor(firstTag.trim())
+                        }
+                    }
+                }
+            } else {
+                root.keys().forEach { tagName ->
+                    val color = generateTagColor(tagName)
+                    uniqueTags[tagName] = color
+                    val arr = root.optJSONArray(tagName)
+                    if (arr != null) {
+                        for (i in 0 until arr.length()) {
+                            val pkg = arr.optString(i).trim()
+                            if (pkg.isNotEmpty()) {
+                                packageToTag[pkg] = tagName
+                            }
                         }
                     }
                 }
@@ -1282,12 +1330,16 @@ class AppActionsManager(context: Context) {
     private fun parseHexColor(hex: String): Color {
         val cleaned = hex.removePrefix("#").trim()
         if (cleaned.isEmpty()) return Color(0xFF888888.toInt())
-        val argb = try {
-            AndroidColor.parseColor("#$cleaned")
-        } catch (e: Exception) {
-            0xFF888888.toInt()
+        return try {
+            val colorInt = when (cleaned.length) {
+                6 -> AndroidColor.parseColor("#$cleaned")
+                8 -> AndroidColor.parseColor("#$cleaned")
+                else -> AndroidColor.GRAY
+            }
+            Color(colorInt)
+        } catch (_: Exception) {
+            Color.Gray
         }
-        return Color(argb)
     }
 
     private fun colorToHex(color: Color): String {
@@ -1321,7 +1373,8 @@ data class TagsBackupPreview(
     val newTags: List<TagInfo>,
     val assignmentCount: Int,
     val parsedAssignments: List<AssignmentInfo>,
-    val existingTagCount: Int
+    val existingTagCount: Int,
+    val customLabels: Map<String, String> = emptyMap()
 ) {
     /**
      * Holds basic tag definition metadata in a backup.
