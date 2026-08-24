@@ -171,14 +171,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     ) { allApps, allTags, allAppTags, ids ->
         val appMap = allApps.associateBy { it.componentKey }
         val tagMap = allTags.associateBy { it.id }
+        val tagToAppsMap = mutableMapOf<String, MutableList<AppInfo>>()
+        allApps.forEach { app ->
+            val tagIds = allAppTags[app.componentKey] ?: allAppTags[app.packageName] ?: emptyList()
+            tagIds.forEach { tagId ->
+                tagToAppsMap.getOrPut(tagId) { mutableListOf() }.add(app)
+            }
+        }
         ids.mapNotNull { id ->
             if (id.startsWith("tag:")) {
                 val tagId = id.removePrefix("tag:")
                 val tag = tagMap[tagId] ?: return@mapNotNull null
-                val taggedApps = allApps.filter { app ->
-                    val tagIds = allAppTags[app.componentKey] ?: allAppTags[app.packageName] ?: emptyList()
-                    tagIds.contains(tag.id)
-                }
+                val taggedApps = tagToAppsMap[tag.id] ?: emptyList()
                 FavoriteItem.TagFolder(tag, taggedApps)
             } else {
                 val app = appMap[id] ?: return@mapNotNull null
@@ -934,6 +938,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      * @param packageName The package name of the uninstalled app.
      */
     fun onPackageRemoved(packageName: String) {
+        invalidateIconCache(packageName)
         actionsManager.onPackageRemoved(packageName)
         refreshApps()
     }
@@ -944,6 +949,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      * @param packageName The package name of the newly installed or updated app.
      */
     fun onPackageAddedOrUpdated(packageName: String) {
+        invalidateIconCache(packageName)
         viewModelScope.launch(Dispatchers.IO) {
             val pm = getApplication<Application>().packageManager
             val launchIntent = pm.getLaunchIntentForPackage(packageName)
@@ -954,6 +960,21 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             }
             loadInstalledApps()
         }
+    }
+
+    /**
+     * Evicts cached icon bitmaps for the given package from Coil's memory cache.
+     */
+    private fun invalidateIconCache(packageName: String) {
+        try {
+            val imageLoader = coil3.SingletonImageLoader.get(getApplication())
+            imageLoader.memoryCache?.let { memoryCache ->
+                val keysToRemove = memoryCache.keys.filter { key ->
+                    key.toString().contains(packageName)
+                }
+                keysToRemove.forEach { memoryCache.remove(it) }
+            }
+        } catch (_: Exception) {}
     }
 
     private var loadAppsJob: kotlinx.coroutines.Job? = null
@@ -972,6 +993,19 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
             val resolvedInfos = pm.queryIntentActivities(mainIntent, 0)
 
+            // Batch-query all installed package update times in a single IPC call instead of N sequential Binder queries
+            val updateTimeMap = try {
+                val pList = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    pm.getInstalledPackages(android.content.pm.PackageManager.PackageInfoFlags.of(0))
+                } else {
+                    @Suppress("DEPRECATION")
+                    pm.getInstalledPackages(0)
+                }
+                pList.associate { it.packageName to it.lastUpdateTime }
+            } catch (_: Exception) {
+                emptyMap()
+            }
+
             val currentUpdateTimes = mutableMapOf<String, Long>()
             val newlyInstalledOrUpdated = mutableListOf<Pair<String, Long>>() // componentKey to updateTime
 
@@ -983,18 +1017,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 val actName = info.activityInfo.name
                 val compKey = "$pkgName/$actName"
 
-                val updateTime = try {
-                    val pInfo = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                        pm.getPackageInfo(pkgName, android.content.pm.PackageManager.PackageInfoFlags.of(0))
-                    } else {
-                        @Suppress("DEPRECATION")
-                        pm.getPackageInfo(pkgName, 0)
-                    }
-                    pInfo.lastUpdateTime
-                } catch (_: Exception) {
-                    0L
-                }
-
+                val updateTime = updateTimeMap[pkgName] ?: 0L
                 currentUpdateTimes[pkgName] = updateTime
 
                 if (!isFirstTimeTracking && updateTime > 0L) {

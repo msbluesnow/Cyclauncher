@@ -41,18 +41,23 @@ class CyclauncherApp : Application(), SingletonImageLoader.Factory {
     @Suppress("DEPRECATION")
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level >= TRIM_MEMORY_COMPLETE || level >= TRIM_MEMORY_RUNNING_CRITICAL) {
-            imageLoader?.memoryCache?.clear()
-        } else if (level >= TRIM_MEMORY_MODERATE) {
-            imageLoader?.memoryCache?.let { cache ->
-                cache.trimToSize(cache.size / 2)
+        try {
+            val cache = imageLoader?.memoryCache ?: SingletonImageLoader.get(this).memoryCache
+            if (level >= TRIM_MEMORY_COMPLETE || level >= TRIM_MEMORY_RUNNING_CRITICAL) {
+                cache?.clear()
+            } else if (level >= TRIM_MEMORY_MODERATE) {
+                cache?.let { c ->
+                    c.trimToSize(c.size / 2)
+                }
             }
-        }
+        } catch (_: Exception) {}
     }
 
     override fun onLowMemory() {
         super.onLowMemory()
-        imageLoader?.memoryCache?.clear()
+        try {
+            (imageLoader?.memoryCache ?: SingletonImageLoader.get(this).memoryCache)?.clear()
+        } catch (_: Exception) {}
     }
 
     private companion object {

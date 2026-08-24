@@ -393,7 +393,9 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         isDefaultLauncherCached = viewModel.isDefaultLauncher()
-        viewModel.refreshApps()
+        if (viewModel.apps.value.isEmpty()) {
+            viewModel.refreshApps()
+        }
         viewModel.requestReset()
         viewModel.requestHistoryScrollToBottom()
     }

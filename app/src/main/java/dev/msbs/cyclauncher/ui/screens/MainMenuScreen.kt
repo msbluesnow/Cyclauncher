@@ -106,15 +106,16 @@ fun MainMenuScreen(
 
     val popularTagsWithApps = remember(tags, appTags, apps, favoriteItems) {
         val favoritedTagIds = favoriteItems.mapNotNull { (it as? FavoriteItem.TagFolder)?.tag?.id }.toSet()
+        val tagToAppsMap = mutableMapOf<String, MutableList<AppInfo>>()
+        apps.forEach { app ->
+            val tagIds = appTags[app.componentKey] ?: appTags[app.packageName] ?: emptyList()
+            tagIds.forEach { tagId ->
+                tagToAppsMap.getOrPut(tagId) { mutableListOf() }.add(app)
+            }
+        }
         tags
             .filter { tag -> tag.id !in favoritedTagIds }
-            .map { tag ->
-                val taggedApps = apps.filter { app ->
-                    val tagIds = appTags[app.componentKey] ?: appTags[app.packageName] ?: emptyList()
-                    tagIds.contains(tag.id)
-                }
-                tag to taggedApps
-            }
+            .map { tag -> tag to (tagToAppsMap[tag.id] ?: emptyList()) }
             .sortedByDescending { it.second.size }
     }
 
