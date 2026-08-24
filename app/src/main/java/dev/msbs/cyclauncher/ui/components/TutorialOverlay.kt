@@ -3,12 +3,14 @@ package dev.msbs.cyclauncher.ui.components
 import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.theme.PopupTheme
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -79,6 +81,7 @@ fun TutorialOverlay(
     val handSide by viewModel.handSide.collectAsState()
     val accentColorEnum by viewModel.accentColor.collectAsState()
     val buttonTextColor by viewModel.buttonTextColor.collectAsState()
+    val popupTheme by viewModel.popupTheme.collectAsState()
 
     val accentColor = accentColorEnum.color
     val haptic = LocalHapticFeedback.current
@@ -205,6 +208,7 @@ fun TutorialOverlay(
                 gestureType = currentStep.gestureType,
                 handSide = handSide,
                 accentColor = accentColor,
+                popupTheme = popupTheme,
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -262,8 +266,9 @@ fun TutorialOverlay(
                     .fillMaxWidth()
                     .shadow(16.dp, RoundedCornerShape(24.dp)),
                 shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.dp, popupTheme.borderColor),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF1C1C1E).copy(alpha = 0.94f)
+                    containerColor = if (popupTheme == PopupTheme.LIGHT) Color(0xFFF6F6F6).copy(alpha = 0.96f) else Color(0xFF1C1C1E).copy(alpha = 0.94f)
                 )
             ) {
                 Column(
@@ -272,7 +277,7 @@ fun TutorialOverlay(
                 ) {
                     Text(
                         text = currentStep.title,
-                        color = Color.White,
+                        color = popupTheme.contentColor,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
@@ -282,7 +287,7 @@ fun TutorialOverlay(
 
                     Text(
                         text = currentStep.description,
-                        color = Color.White.copy(alpha = 0.75f),
+                        color = popupTheme.secondaryContentColor,
                         fontSize = 14.sp,
                         lineHeight = 20.sp,
                         textAlign = TextAlign.Center
@@ -293,8 +298,8 @@ fun TutorialOverlay(
                     // Pulsing interactive hint badge
                     Surface(
                         shape = RoundedCornerShape(50),
-                        color = accentColor.copy(alpha = 0.2f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.5f))
+                        color = accentColor.copy(alpha = if (popupTheme == PopupTheme.LIGHT) 0.12f else 0.2f),
+                        border = BorderStroke(1.dp, accentColor.copy(alpha = if (popupTheme == PopupTheme.LIGHT) 0.35f else 0.5f))
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -335,7 +340,7 @@ fun TutorialOverlay(
                                         onNavigateToSearch()
                                     }
                                 },
-                                colors = ButtonDefaults.textButtonColors(contentColor = Color.White.copy(alpha = 0.7f))
+                                colors = ButtonDefaults.textButtonColors(contentColor = popupTheme.secondaryContentColor)
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -382,6 +387,7 @@ private fun GestureAnimationCanvas(
     gestureType: GestureType,
     handSide: HandSide,
     accentColor: Color,
+    popupTheme: PopupTheme = PopupTheme.DARK,
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "GestureAnim")
@@ -597,7 +603,7 @@ private fun GestureAnimationCanvas(
                             .size(64.dp)
                             .shadow(12.dp, CircleShape)
                             .clip(CircleShape)
-                            .background(Color(0xFF1C1C1E))
+                            .background(popupTheme.solidBackgroundColor)
                             .border(2.dp, accentColor, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
@@ -624,7 +630,7 @@ private fun GestureAnimationCanvas(
                             .size(64.dp)
                             .shadow(12.dp, CircleShape)
                             .clip(CircleShape)
-                            .background(Color(0xFF1C1C1E))
+                            .background(popupTheme.solidBackgroundColor)
                             .border(2.dp, accentColor.copy(alpha = 0.6f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
@@ -651,7 +657,7 @@ private fun GestureAnimationCanvas(
                             .size(64.dp)
                             .shadow(12.dp, RoundedCornerShape(16.dp))
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xFF1C1C1E))
+                            .background(popupTheme.solidBackgroundColor)
                             .border(2.dp, accentColor.copy(alpha = 0.8f), RoundedCornerShape(16.dp)),
                         contentAlignment = Alignment.Center
                     ) {
