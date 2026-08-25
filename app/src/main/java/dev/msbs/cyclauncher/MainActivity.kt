@@ -152,6 +152,11 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             CyclauncherTheme {
+                val hideStatusBar by viewModel.hideStatusBar.collectAsState()
+                LaunchedEffect(hideStatusBar) {
+                    updateStatusBarVisibility(hideStatusBar)
+                }
+
                 val horizontalPagerState = rememberPagerState { 2 } // [MainCluster, Settings]
                 val verticalPagerState = rememberPagerState { 2 } // [Main, Search]
                 val scope = rememberCoroutineScope()
@@ -404,6 +409,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        updateStatusBarVisibility(viewModel.hideStatusBar.value)
         isDefaultLauncherCached = viewModel.isDefaultLauncher()
         if (viewModel.apps.value.isEmpty()) {
             viewModel.refreshApps()
@@ -527,6 +533,16 @@ class MainActivity : ComponentActivity() {
             expandMethod.invoke(statusBarService)
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    private fun updateStatusBarVisibility(hide: Boolean) {
+        val insetsController = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
+        insetsController.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        if (hide) {
+            insetsController.hide(androidx.core.view.WindowInsetsCompat.Type.statusBars())
+        } else {
+            insetsController.show(androidx.core.view.WindowInsetsCompat.Type.statusBars())
         }
     }
 }

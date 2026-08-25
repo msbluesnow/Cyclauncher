@@ -79,6 +79,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Whether adaptive text/icon drop shadows are enabled. */
     val showShadows: StateFlow<Boolean> = _showShadows
 
+    private val _hideStatusBar = MutableStateFlow(false)
+    /** Controls whether the Android system status bar is hidden for an immersive fullscreen launcher layout. */
+    val hideStatusBar: StateFlow<Boolean> = _hideStatusBar
+
     private val _searchMethod = MutableStateFlow(SearchMethod.SIDE_ALPHABET)
     /** The active application search layout method. */
     val searchMethod: StateFlow<SearchMethod> = _searchMethod
@@ -233,6 +237,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             _showShadows.value = prefs.getBoolean("show_shadows", true)
         }
 
+        _hideStatusBar.value = prefs.getBoolean("hide_status_bar", false)
+
         val savedSearchMethod = prefs.getString("search_method", SearchMethod.SIDE_ALPHABET.name) ?: SearchMethod.SIDE_ALPHABET.name
         val initialMethod = try { SearchMethod.valueOf(savedSearchMethod) } catch (e: Exception) { SearchMethod.SIDE_ALPHABET }
         _searchMethod.value = initialMethod
@@ -355,6 +361,17 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
         val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putString("hand_side", side.name).apply()
+    }
+
+    /**
+     * Sets whether the Android system status bar should be hidden for an immersive launcher layout and persists the setting.
+     *
+     * @param hide True to hide status bar, false to show it.
+     */
+    fun setHideStatusBar(hide: Boolean) {
+        _hideStatusBar.value = hide
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("hide_status_bar", hide).apply()
     }
 
     /**

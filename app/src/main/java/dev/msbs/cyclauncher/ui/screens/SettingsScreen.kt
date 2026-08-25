@@ -75,6 +75,7 @@ fun SettingsScreen(
     val buttonTextColor by viewModel.buttonTextColor.collectAsState()
     val popupTheme by viewModel.popupTheme.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
+    val hideStatusBar by viewModel.hideStatusBar.collectAsState()
     val context = LocalContext.current
 
     var showDefaultLauncherDialog by remember { mutableStateOf(false) }
@@ -156,12 +157,25 @@ fun SettingsScreen(
                 onClick = onBack,
                 modifier = Modifier.align(Alignment.CenterStart)
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = "Back",
-                    tint = accentColor.color,
-                    modifier = Modifier.size(24.dp)
-                )
+                Box {
+                    if (showShadows) {
+                        val shadowOffset = 1.dp
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = null,
+                            tint = if (primaryTextColor == PrimaryTextColor.WHITE) Color.Black.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.85f),
+                            modifier = Modifier
+                                .size(24.dp)
+                                .offset(x = shadowOffset, y = shadowOffset)
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                        contentDescription = "Back",
+                        tint = accentColor.color,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
 
             Text(
@@ -224,6 +238,20 @@ fun SettingsScreen(
                             onClick = { viewModel.setSearchMethod(SearchMethod.SIDE_ALPHABET) }
                         )
                     }
+                }
+
+                HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
+
+                // Hide Status Bar (Fullscreen Mode)
+                SettingsRow(label = "Hide Status Bar:", textColor = primaryTextColor.color, shadow = shadow) {
+                    Switch(
+                        checked = hideStatusBar,
+                        onCheckedChange = { viewModel.setHideStatusBar(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = accentColor.color,
+                            checkedTrackColor = accentColor.color.copy(alpha = 0.5f)
+                        )
+                    )
                 }
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
@@ -513,7 +541,7 @@ fun SettingsScreen(
                             Text("Discord 💬", color = primaryTextColor.color.copy(alpha = 0.8f), style = TextStyle(shadow = shadow, fontSize = 13.sp))
                         }
                         TextButton(onClick = { viewModel.openSupportPage() }, modifier = Modifier.weight(1f)) {
-                            Text("Tribute 💝", color = accentColor.color, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("Tribute 💝", color = accentColor.color, fontWeight = FontWeight.Bold, fontSize = 13.sp, style = TextStyle(shadow = shadow))
                         }
                     }
                 }
