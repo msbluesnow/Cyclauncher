@@ -664,6 +664,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         getApplication<Application>().startActivity(intent)
     }
 
+    /** Opens the Keep Android Open initiative website in a browser. */
+    fun openKeepAndroidOpenPage() {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://keepandroidopen.org/")).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        getApplication<Application>().startActivity(intent)
+    }
+
     /** Exports installed application names to JSON format at the given URI. */
     fun exportAppNamesJson(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {

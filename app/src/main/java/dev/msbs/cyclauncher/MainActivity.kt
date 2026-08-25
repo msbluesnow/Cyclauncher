@@ -138,6 +138,18 @@ class MainActivity : ComponentActivity() {
         
         enableEdgeToEdge()
 
+        // Keep Android Open initiative warning check (FreeDroidWarn)
+        try {
+            val currentVersionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                packageManager.getPackageInfo(packageName, 0).longVersionCode.toInt()
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.getPackageInfo(packageName, 0).versionCode
+            }
+            org.woheller69.freeDroidWarn.FreeDroidWarn.showWarningOnUpgrade(this, currentVersionCode)
+        } catch (_: Exception) {
+        }
+
         setContent {
             CyclauncherTheme {
                 val horizontalPagerState = rememberPagerState { 2 } // [MainCluster, Settings]

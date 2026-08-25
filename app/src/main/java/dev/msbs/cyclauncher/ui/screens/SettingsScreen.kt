@@ -6,6 +6,8 @@ import dev.msbs.cyclauncher.SearchMethod
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
+import dev.msbs.cyclauncher.ui.components.KeepAndroidOpenBanner
+import dev.msbs.cyclauncher.ui.components.KeepAndroidOpenDialog
 
 import android.content.Intent
 import android.net.Uri
@@ -78,6 +80,7 @@ fun SettingsScreen(
     var showDefaultLauncherDialog by remember { mutableStateOf(false) }
     var showAutoTagsScreen by remember { mutableStateOf(false) }
     var showCharacterMappingScreen by remember { mutableStateOf(false) }
+    var showKeepAndroidOpenDialog by remember { mutableStateOf(false) }
     val customCharMappings by viewModel.customCharMappings.collectAsState()
     var currentIsDefault by remember { mutableStateOf(viewModel.isDefaultLauncher()) }
 
@@ -493,7 +496,7 @@ fun SettingsScreen(
 
                 // Support Project Section
                 Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                    Text("Support Project:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 16.sp))
+                    Text("Support & Community:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 16.sp))
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -518,7 +521,19 @@ fun SettingsScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Keep Android Open Countdown Banner
+        KeepAndroidOpenBanner(
+            accentColor = accentColor,
+            primaryTextColor = primaryTextColor,
+            popupTheme = popupTheme,
+            showShadows = showShadows,
+            onLearnMoreClick = { showKeepAndroidOpenDialog = true },
+            onWebsiteClick = { viewModel.openKeepAndroidOpenPage() }
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
 
         // App Version Section (outside Card)
         val versionName = remember {
@@ -542,6 +557,15 @@ fun SettingsScreen(
         )
 
         Spacer(modifier = Modifier.height(24.dp))
+    }
+
+    if (showKeepAndroidOpenDialog) {
+        KeepAndroidOpenDialog(
+            popupTheme = popupTheme,
+            accentColor = accentColor,
+            onDismiss = { showKeepAndroidOpenDialog = false },
+            onOpenWebsite = { viewModel.openKeepAndroidOpenPage() }
+        )
     }
 
     if (showDefaultLauncherDialog) {
