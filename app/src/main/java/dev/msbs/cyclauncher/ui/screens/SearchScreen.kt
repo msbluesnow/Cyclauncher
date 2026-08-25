@@ -5,6 +5,8 @@ import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
+import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
+import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import dev.msbs.cyclauncher.ui.components.AppListItem
 import dev.msbs.cyclauncher.ui.components.RectangularAlphabetWheel
 
@@ -130,10 +132,11 @@ fun WheelSearchLayout(
         val stepSize = 34.dp * scaleFactor
 
         Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            val animationsEnabled = LocalAnimationsEnabled.current
             val scrollModifier = Modifier
                 .fillMaxHeight()
                 .weight(1f)
-                .alphabetWheelDragGesture(scrollOffset, density, stepSize)
+                .alphabetWheelDragGesture(scrollOffset, density, stepSize, animationsEnabled)
 
             if (listAlignment == TextAlign.End) {
                 Box(modifier = scrollModifier)
@@ -231,7 +234,8 @@ private fun SearchToggleBar(
     showShadows: Boolean,
     onToggle: () -> Unit
 ) {
-    val shadow = primaryTextColor.getShadow(showShadows)
+    val shadowSettings = LocalShadowSettings.current
+    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),

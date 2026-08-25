@@ -5,6 +5,7 @@ import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
+import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -60,7 +61,8 @@ fun SideAlphabetSearchLayout(
     val accentColor by viewModel.accentColor.collectAsState()
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
-    val shadow = primaryTextColor.getShadow(showShadows)
+    val shadowSettings = LocalShadowSettings.current
+    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
     val savedYRatio by viewModel.sideAlphabetButtonYRatio.collectAsState()
     var localYRatio by remember(savedYRatio) { mutableStateOf(savedYRatio) }
 
@@ -244,7 +246,7 @@ private fun SwapSemiCircleButton(
     onDragEnd: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
-    val shadow = primaryTextColor.getShadow(showShadows)
+    val shadow = primaryTextColor.getShadow(showShadows, LocalShadowSettings.current.shadowColorOverride)
     val shape = if (handSide == HandSide.LEFT) {
         RoundedCornerShape(topEnd = 27.dp, bottomEnd = 27.dp, topStart = 0.dp, bottomStart = 0.dp)
     } else {
@@ -418,7 +420,7 @@ private fun LetterTile(
     showShadows: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val shadow = primaryTextColor.getShadow(showShadows)
+    val shadow = primaryTextColor.getShadow(showShadows, LocalShadowSettings.current.shadowColorOverride)
     val tileBackground = if (isSelected) accentColor.color.copy(alpha = 0.30f) else primaryTextColor.color.copy(alpha = 0.05f)
     val tileBorderColor = if (isSelected) accentColor.color else primaryTextColor.color.copy(alpha = 0.12f)
     val textColor = if (isSelected) accentColor.color else primaryTextColor.color

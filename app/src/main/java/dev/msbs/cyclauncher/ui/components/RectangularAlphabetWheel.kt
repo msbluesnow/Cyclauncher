@@ -3,6 +3,7 @@ package dev.msbs.cyclauncher.ui.components
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
+import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 
 import android.graphics.Paint
 import androidx.compose.animation.core.*
@@ -440,10 +441,11 @@ private fun AlphabetLetterItem(
         contentAlignment = Alignment.Center
     ) {
         val isExact by isExactState
-        val outlineShadow = remember(primaryTextColor, showShadows) {
-            if (showShadows) {
+        val shadowSettings = LocalShadowSettings.current
+        val outlineShadow = remember(primaryTextColor, showShadows, shadowSettings) {
+            if (showShadows || shadowSettings.showShadows) {
                 Shadow(
-                    color = if (primaryTextColor == PrimaryTextColor.WHITE) Color.Black.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.9f),
+                    color = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.9f),
                     offset = Offset.Zero,
                     blurRadius = 2.5f
                 )
@@ -480,8 +482,9 @@ private fun AlphabetLetterItem(
 fun Modifier.alphabetWheelDragGesture(
     scrollOffset: Animatable<Float, AnimationVector1D>,
     density: Density,
-    stepSize: Dp
-): Modifier = this.pointerInput(scrollOffset, density, stepSize) {
+    stepSize: Dp,
+    animationsEnabled: Boolean = true
+): Modifier = this.pointerInput(scrollOffset, density, stepSize, animationsEnabled) {
     val s = with(density) { stepSize.toPx() }
     val slowThresholdPxPerMs = with(density) { 600.dp.toPx() } / 1000f
     val fastThresholdPxPerMs = slowThresholdPxPerMs * 2.5f
@@ -529,13 +532,17 @@ fun Modifier.alphabetWheelDragGesture(
 
                 // Snap to nearest letter on drag end
                 launch {
-                    scrollOffset.animateTo(
-                        targetValue = scrollOffset.value.roundToInt().toFloat(),
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioLowBouncy,
-                            stiffness = Spring.StiffnessLow
+                    if (animationsEnabled) {
+                        scrollOffset.animateTo(
+                            targetValue = scrollOffset.value.roundToInt().toFloat(),
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioLowBouncy,
+                                stiffness = Spring.StiffnessLow
+                            )
                         )
-                    )
+                    } else {
+                        scrollOffset.snapTo(scrollOffset.value.roundToInt().toFloat())
+                    }
                 }
             }
         }

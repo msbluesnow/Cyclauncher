@@ -5,6 +5,8 @@ import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
+import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
+import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.ui.components.AppListItemWithIcon
 
 import androidx.compose.foundation.layout.*
@@ -117,7 +119,8 @@ private fun CloseSearchButton(
     showShadows: Boolean,
     onClick: () -> Unit
 ) {
-    val shadow = primaryTextColor.getShadow(showShadows)
+    val shadowSettings = LocalShadowSettings.current
+    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
 
     Row(
         modifier = Modifier
@@ -149,7 +152,9 @@ private fun SearchTextField(
     modifier: Modifier = Modifier
 ) {
     val alignment = if (handSide == HandSide.LEFT) TextAlign.Start else TextAlign.End
-    val shadow = primaryTextColor.getShadow(showShadows)
+    val shadowSettings = LocalShadowSettings.current
+    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
+    val animationsEnabled = LocalAnimationsEnabled.current
 
     TextField(
         value = value,
@@ -173,7 +178,7 @@ private fun SearchTextField(
             unfocusedContainerColor = Color.Transparent,
             focusedTextColor = primaryTextColor.color,
             unfocusedTextColor = primaryTextColor.color,
-            cursorColor = accentColor.color,
+            cursorColor = if (animationsEnabled) accentColor.color else Color.Transparent,
             focusedIndicatorColor = accentColor.color
         ),
         singleLine = true

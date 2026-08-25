@@ -33,6 +33,8 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.snap
+import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,7 +77,9 @@ fun SettingsScreen(
     val buttonTextColor by viewModel.buttonTextColor.collectAsState()
     val popupTheme by viewModel.popupTheme.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
+    val shadowColorOverride by viewModel.shadowColor.collectAsState()
     val hideStatusBar by viewModel.hideStatusBar.collectAsState()
+    val animationsEnabled by viewModel.animationsEnabled.collectAsState()
     val context = LocalContext.current
 
     var showDefaultLauncherDialog by remember { mutableStateOf(false) }
@@ -120,7 +124,7 @@ fun SettingsScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val shadow = primaryTextColor.getShadow(showShadows)
+    val shadow = primaryTextColor.getShadow(showShadows, shadowColorOverride)
 
     BackHandler(enabled = enabled && !showCharacterMappingScreen && !showAutoTagsScreen, onBack = onBack)
 
@@ -163,7 +167,7 @@ fun SettingsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = null,
-                            tint = if (primaryTextColor == PrimaryTextColor.WHITE) Color.Black.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.85f),
+                            tint = primaryTextColor.getShadowColor(shadowColorOverride),
                             modifier = Modifier
                                 .size(24.dp)
                                 .offset(x = shadowOffset, y = shadowOffset)
@@ -242,16 +246,57 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Hide Status Bar (Fullscreen Mode)
-                SettingsRow(label = "Hide Status Bar:", textColor = primaryTextColor.color, shadow = shadow) {
-                    Switch(
-                        checked = hideStatusBar,
-                        onCheckedChange = { viewModel.setHideStatusBar(it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = accentColor.color,
-                            checkedTrackColor = accentColor.color.copy(alpha = 0.5f)
+                // Hide Status Bar & Animations in a single row
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Hide Status Bar (Fullscreen Mode)
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "Hide Status Bar:",
+                            color = primaryTextColor.color,
+                            style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                    )
+                        Switch(
+                            checked = hideStatusBar,
+                            onCheckedChange = { viewModel.setHideStatusBar(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = accentColor.color,
+                                checkedTrackColor = accentColor.color.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
+
+                    // Animations Toggle
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "Animations:",
+                            color = primaryTextColor.color,
+                            style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Switch(
+                            checked = animationsEnabled,
+                            onCheckedChange = { viewModel.setAnimationsEnabled(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = accentColor.color,
+                                checkedTrackColor = accentColor.color.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
                 }
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
@@ -302,11 +347,12 @@ fun SettingsScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Adaptive Shadows:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 15.sp))
                         Spacer(modifier = Modifier.height(8.dp))
-                        Box(
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(36.dp),
-                            contentAlignment = Alignment.CenterStart
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Switch(
                                 checked = showShadows,
@@ -316,6 +362,9 @@ fun SettingsScreen(
                                     checkedTrackColor = accentColor.color.copy(alpha = 0.5f)
                                 )
                             )
+                            Box(modifier = Modifier.weight(1f)) {
+                                MainColorSelector(shadowColorOverride, primaryTextColor) { viewModel.setShadowColor(it) }
+                            }
                         }
                     }
                 }
@@ -476,6 +525,7 @@ fun SettingsScreen(
                     accentColor = accentColor,
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
+                    shadowColorOverride = shadowColorOverride,
                     onDefaultClick = {
                         viewModel.openDefaultLauncherSettings(context)
                         showDefaultLauncherDialog = true
@@ -735,10 +785,11 @@ private fun DefaultLauncherAndRelaunchRow(
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     showShadows: Boolean,
+    shadowColorOverride: PrimaryTextColor? = null,
     onDefaultClick: () -> Unit,
     onRelaunchClick: () -> Unit
 ) {
-    val shadow = primaryTextColor.getShadow(showShadows)
+    val shadow = primaryTextColor.getShadow(showShadows, shadowColorOverride)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -888,14 +939,16 @@ private fun MainColorSelector(
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     onSelect: (PrimaryTextColor) -> Unit
 ) {
+    val animationsEnabled = LocalAnimationsEnabled.current
     val isBlackSelected = selectedColor == PrimaryTextColor.BLACK
     val thumbOffset by animateFloatAsState(
         targetValue = if (isBlackSelected) 0f else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        animationSpec = if (animationsEnabled) spring(stiffness = Spring.StiffnessMediumLow) else snap(),
         label = "thumbOffset"
     )
     val thumbColor by animateColorAsState(
         targetValue = if (isBlackSelected) Color.White else Color.Black,
+        animationSpec = if (animationsEnabled) spring() else snap(),
         label = "thumbColor"
     )
 
@@ -982,14 +1035,16 @@ private fun PopupThemeSelector(
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     onSelect: (PopupTheme) -> Unit
 ) {
+    val animationsEnabled = LocalAnimationsEnabled.current
     val isDarkSelected = selectedTheme == PopupTheme.DARK
     val thumbOffset by animateFloatAsState(
         targetValue = if (isDarkSelected) 0f else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        animationSpec = if (animationsEnabled) spring(stiffness = Spring.StiffnessMediumLow) else snap(),
         label = "thumbOffset"
     )
     val thumbColor by animateColorAsState(
         targetValue = if (isDarkSelected) Color.White else Color.Black,
+        animationSpec = if (animationsEnabled) spring() else snap(),
         label = "thumbColor"
     )
 

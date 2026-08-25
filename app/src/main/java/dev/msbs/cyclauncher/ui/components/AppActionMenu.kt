@@ -5,6 +5,7 @@ import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
+import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -506,6 +507,7 @@ fun TagEditDialog(
             }
         },
         text = {
+            val animationsEnabled = LocalAnimationsEnabled.current
             Column {
                 TextField(
                     value = name,
@@ -516,7 +518,7 @@ fun TagEditDialog(
                         unfocusedContainerColor = Color.Transparent,
                         focusedTextColor = popupTheme.contentColor,
                         unfocusedTextColor = popupTheme.contentColor,
-                        cursorColor = accentColor.color,
+                        cursorColor = if (animationsEnabled) accentColor.color else Color.Transparent,
                         focusedIndicatorColor = accentColor.color
                     ),
                     singleLine = true,
@@ -581,6 +583,7 @@ fun RenameDialog(
     popupTheme: PopupTheme = PopupTheme.DARK
 ) {
     var text by remember { mutableStateOf(initialValue) }
+    val animationsEnabled = LocalAnimationsEnabled.current
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -594,7 +597,7 @@ fun RenameDialog(
                     unfocusedContainerColor = Color.Transparent,
                     focusedTextColor = popupTheme.contentColor,
                     unfocusedTextColor = popupTheme.contentColor,
-                    cursorColor = accentColor.color,
+                    cursorColor = if (animationsEnabled) accentColor.color else Color.Transparent,
                     focusedIndicatorColor = accentColor.color
                 ),
                 singleLine = true,

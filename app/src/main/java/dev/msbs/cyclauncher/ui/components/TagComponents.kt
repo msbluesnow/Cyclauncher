@@ -45,6 +45,7 @@ import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
+import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import kotlin.math.roundToInt
 
 /**
@@ -151,7 +152,7 @@ fun TagFolderItem(
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodySmall.copy(
-                shadow = primaryTextColor.getShadow(showShadows)
+                shadow = primaryTextColor.getShadow(showShadows, LocalShadowSettings.current.shadowColorOverride)
             ),
             modifier = Modifier.fillMaxWidth()
         )

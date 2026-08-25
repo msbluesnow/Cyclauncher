@@ -3,6 +3,7 @@ package dev.msbs.cyclauncher.ui.theme
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.runtime.compositionLocalOf
 
 /** Основной цвет текста (белый/чёрный) с адаптивными тенями. */
 enum class PrimaryTextColor(
@@ -11,23 +12,39 @@ enum class PrimaryTextColor(
     val shadowColor: Color
 ) {
     WHITE("White", Color.White, Color.Black.copy(alpha = 0.6f)),
-    BLACK("Black", Color.Black, Color.White.copy(alpha = 0.6f));
+    BLACK("Black", Color.Black, Color.White.copy(alpha = 0.85f));
 
-    fun getShadow(showShadows: Boolean): Shadow? {
+    fun getShadow(showShadows: Boolean, shadowColorOverride: PrimaryTextColor? = null): Shadow? {
         return if (showShadows) {
-            when (this) {
-                WHITE -> Shadow(
-                    color = shadowColor,
-                    offset = Offset.Zero,
-                    blurRadius = 4f
-                )
-                BLACK -> Shadow(
+            val isWhiteShadow = if (shadowColorOverride != null) {
+                shadowColorOverride == WHITE
+            } else {
+                this == BLACK
+            }
+
+            if (isWhiteShadow) {
+                Shadow(
                     color = Color.White.copy(alpha = 0.85f),
                     offset = Offset.Zero,
                     blurRadius = 1.8f
                 )
+            } else {
+                Shadow(
+                    color = Color.Black.copy(alpha = 0.6f),
+                    offset = Offset.Zero,
+                    blurRadius = 4f
+                )
             }
         } else null
+    }
+
+    fun getShadowColor(shadowColorOverride: PrimaryTextColor? = null): Color {
+        val isWhiteShadow = if (shadowColorOverride != null) {
+            shadowColorOverride == WHITE
+        } else {
+            this == BLACK
+        }
+        return if (isWhiteShadow) Color.White.copy(alpha = 0.85f) else Color.Black.copy(alpha = 0.6f)
     }
 
     companion object {
@@ -36,3 +53,14 @@ enum class PrimaryTextColor(
         }
     }
 }
+
+/** Global settings for adaptive shadows, provided via CompositionLocal. */
+data class ShadowSettings(
+    val showShadows: Boolean = true,
+    val shadowColorOverride: PrimaryTextColor? = null
+)
+
+val LocalShadowSettings = compositionLocalOf { ShadowSettings() }
+
+/** Global setting for launcher animations (enabled/disabled), provided via CompositionLocal. */
+val LocalAnimationsEnabled = compositionLocalOf { true }

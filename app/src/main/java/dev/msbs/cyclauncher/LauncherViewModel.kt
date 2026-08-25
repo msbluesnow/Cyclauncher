@@ -79,9 +79,17 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Whether adaptive text/icon drop shadows are enabled. */
     val showShadows: StateFlow<Boolean> = _showShadows
 
+    private val _shadowColor = MutableStateFlow(PrimaryTextColor.BLACK)
+    /** The selected shadow color override (WHITE = white shadow, BLACK = black shadow). */
+    val shadowColor: StateFlow<PrimaryTextColor> = _shadowColor
+
     private val _hideStatusBar = MutableStateFlow(false)
     /** Controls whether the Android system status bar is hidden for an immersive fullscreen launcher layout. */
     val hideStatusBar: StateFlow<Boolean> = _hideStatusBar
+
+    private val _animationsEnabled = MutableStateFlow(true)
+    /** Controls whether animations and cursor blinking are enabled throughout the launcher. */
+    val animationsEnabled: StateFlow<Boolean> = _animationsEnabled
 
     private val _searchMethod = MutableStateFlow(SearchMethod.SIDE_ALPHABET)
     /** The active application search layout method. */
@@ -237,7 +245,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             _showShadows.value = prefs.getBoolean("show_shadows", true)
         }
 
+        val savedShadowColor = prefs.getString("shadow_color", PrimaryTextColor.BLACK.name) ?: PrimaryTextColor.BLACK.name
+        _shadowColor.value = PrimaryTextColor.fromName(savedShadowColor)
+
         _hideStatusBar.value = prefs.getBoolean("hide_status_bar", false)
+        _animationsEnabled.value = prefs.getBoolean("animations_enabled", true)
 
         val savedSearchMethod = prefs.getString("search_method", SearchMethod.SIDE_ALPHABET.name) ?: SearchMethod.SIDE_ALPHABET.name
         val initialMethod = try { SearchMethod.valueOf(savedSearchMethod) } catch (e: Exception) { SearchMethod.SIDE_ALPHABET }
@@ -375,6 +387,17 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
+     * Sets whether launcher animations and cursor blinking should be enabled and persists the setting.
+     *
+     * @param enabled True to enable animations, false to disable them.
+     */
+    fun setAnimationsEnabled(enabled: Boolean) {
+        _animationsEnabled.value = enabled
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("animations_enabled", enabled).apply()
+    }
+
+    /**
      * Sets the UI theme accent color preference and persists it.
      *
      * @param color The chosen [AccentColor] instance.
@@ -427,6 +450,17 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _showShadows.value = enabled
         val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putBoolean("show_shadows", enabled).apply()
+    }
+
+    /**
+     * Sets the shadow color override (WHITE = white shadow, BLACK = black shadow) and persists it.
+     *
+     * @param color The chosen [PrimaryTextColor] instance for shadow.
+     */
+    fun setShadowColor(color: PrimaryTextColor) {
+        _shadowColor.value = color
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putString("shadow_color", color.name).apply()
     }
 
     /**

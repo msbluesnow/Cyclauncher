@@ -4,6 +4,7 @@ import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
+import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -52,7 +53,8 @@ fun AutoResizingText(
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     showShadows: Boolean = false
 ) {
-    val shadow = primaryTextColor.getShadow(showShadows)
+    val shadowSettings = LocalShadowSettings.current
+    val shadow = primaryTextColor.getShadow(showShadows || shadowSettings.showShadows, shadowSettings.shadowColorOverride)
 
     BoxWithConstraints(modifier = modifier) {
         val containerWidth = maxWidth
@@ -271,11 +273,12 @@ fun AppListItemWithIcon(
                 if (isRecentlyUpdated) {
                     Spacer(modifier = Modifier.width(6.dp))
                     Box(contentAlignment = Alignment.Center) {
-                        if (showShadows) {
+                        val shadowSettings = LocalShadowSettings.current
+                        if (showShadows || shadowSettings.showShadows) {
                             Icon(
                                 imageVector = Icons.Outlined.Update,
                                 contentDescription = "Recently Updated",
-                                tint = primaryTextColor.shadowColor,
+                                tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
                                 modifier = Modifier
                                     .size(16.dp)
                                     .offset(1.dp, 1.dp)
@@ -298,11 +301,12 @@ fun AppListItemWithIcon(
             ) {
                 if (isRecentlyUpdated) {
                     Box(contentAlignment = Alignment.Center) {
-                        if (showShadows) {
+                        val shadowSettings = LocalShadowSettings.current
+                        if (showShadows || shadowSettings.showShadows) {
                             Icon(
                                 imageVector = Icons.Outlined.Update,
                                 contentDescription = "Recently Updated",
-                                tint = primaryTextColor.shadowColor,
+                                tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
                                 modifier = Modifier
                                     .size(16.dp)
                                     .offset(1.dp, 1.dp)

@@ -4,6 +4,7 @@ import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
+import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 
 import android.content.ClipData
 import android.content.Context
@@ -57,9 +58,10 @@ fun AutoTagsScreen(
     val popupTheme by viewModel.popupTheme.collectAsState()
     val buttonTextColor by viewModel.buttonTextColor.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
+    val shadowSettings = LocalShadowSettings.current
     val context = LocalContext.current
 
-    val shadow = primaryTextColor.getShadow(showShadows)
+    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
 
     var copiedToClipboard by remember { mutableStateOf(false) }
     var showExportFormatDialog by remember { mutableStateOf(false) }

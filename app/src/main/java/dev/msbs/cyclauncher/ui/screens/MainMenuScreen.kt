@@ -7,6 +7,7 @@ import dev.msbs.cyclauncher.model.FavoriteItem
 import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
+import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.ui.components.AppListItemWithIcon
 import dev.msbs.cyclauncher.ui.components.AppIconItem
 import dev.msbs.cyclauncher.ui.components.TagFolderIcon
@@ -16,6 +17,9 @@ import dev.msbs.cyclauncher.ui.components.TagFolderPopup
 import dev.msbs.cyclauncher.ui.components.HistoryActionMenu
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.snap
+import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -468,7 +472,8 @@ private fun HistorySection(
     isActive: Boolean
 ) {
     val haptic = LocalHapticFeedback.current
-    val shadow = primaryTextColor.getShadow(showShadows)
+    val shadowSettings = LocalShadowSettings.current
+    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
 
     val listState = rememberLazyListState()
     val tagGridState = rememberLazyGridState()
@@ -798,10 +803,11 @@ private fun ColumnScope.HistoryContentBlock(
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     if (showShadows) {
+                                        val shadowSettings = LocalShadowSettings.current
                                         Icon(
                                             imageVector = Icons.Default.RemoveCircle,
                                             contentDescription = null,
-                                            tint = primaryTextColor.shadowColor,
+                                            tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
                                             modifier = Modifier
                                                 .size(24.dp)
                                                 .offset(1.dp, 1.dp)
@@ -855,10 +861,11 @@ private fun ColumnScope.HistoryContentBlock(
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     if (showShadows) {
+                                        val shadowSettings = LocalShadowSettings.current
                                         Icon(
                                             imageVector = Icons.Default.RemoveCircle,
                                             contentDescription = null,
-                                            tint = primaryTextColor.shadowColor,
+                                            tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
                                             modifier = Modifier
                                                 .size(24.dp)
                                                 .offset(1.dp, 1.dp)
@@ -948,10 +955,11 @@ private fun ColumnScope.HistoryContentBlock(
                 Box(contentAlignment = Alignment.Center) {
                     val historyIcon = if (isHistoryPaused) Icons.Outlined.HistoryToggleOff else Icons.Outlined.History
                     if (showShadows) {
+                        val shadowSettings = LocalShadowSettings.current
                         Icon(
                             imageVector = historyIcon,
                             contentDescription = null,
-                            tint = primaryTextColor.shadowColor,
+                            tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
                             modifier = Modifier
                                 .size(22.dp)
                                 .offset(1.dp, 1.dp)
@@ -1017,7 +1025,7 @@ private fun FavoritesSection(
     onSettingsClick: () -> Unit,
     isActive: Boolean
 ) {
-    val shadow = primaryTextColor.getShadow(showShadows)
+    val shadow = primaryTextColor.getShadow(showShadows, LocalShadowSettings.current.shadowColorOverride)
 
     val haptic = LocalHapticFeedback.current
     var draggingKey by remember { mutableStateOf<String?>(null) }
@@ -1064,17 +1072,28 @@ private fun FavoritesSection(
                     val currentIndex by rememberUpdatedState(index)
                     val currentSize by rememberUpdatedState(favorites.size)
 
-                    val scale by animateFloatAsState(if (isDraggingThis) 1.25f else 1.0f, label = "scale")
-                    val alpha by animateFloatAsState(if (isDraggingThis) 0.8f else 1.0f, label = "alpha")
+                    val animationsEnabled = LocalAnimationsEnabled.current
+                    val scale by animateFloatAsState(
+                        targetValue = if (isDraggingThis) 1.25f else 1.0f,
+                        animationSpec = if (animationsEnabled) spring() else snap(),
+                        label = "scale"
+                    )
+                    val alpha by animateFloatAsState(
+                        targetValue = if (isDraggingThis) 0.8f else 1.0f,
+                        animationSpec = if (animationsEnabled) spring() else snap(),
+                        label = "alpha"
+                    )
 
                     val density = LocalDensity.current
                     val fallbackItemHeightPx = with(density) { 48.dp.toPx() }
+
+                    val itemAnimModifier = if (animationsEnabled) Modifier.animateItem() else Modifier
 
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp)
-                            .animateItem()
+                            .then(itemAnimModifier)
                             .onGloballyPositioned { coordinates ->
                                 if (itemHeightPx == 0f && coordinates.size.height > 0) {
                                     itemHeightPx = coordinates.size.height.toFloat()
@@ -1190,10 +1209,11 @@ private fun FavoritesSection(
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     if (showShadows) {
+                                        val shadowSettings = LocalShadowSettings.current
                                         Icon(
                                             imageVector = Icons.Default.RemoveCircle,
                                             contentDescription = null,
-                                            tint = primaryTextColor.shadowColor,
+                                            tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
                                             modifier = Modifier
                                                 .size(24.dp)
                                                 .offset(1.dp, 1.dp)

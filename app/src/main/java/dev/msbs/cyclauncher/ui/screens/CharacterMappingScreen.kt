@@ -4,6 +4,8 @@ import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
+import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
+import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -64,10 +66,11 @@ fun CharacterMappingScreen(
     val popupTheme by viewModel.popupTheme.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
     val customMappings by viewModel.customCharMappings.collectAsState()
+    val shadowSettings = LocalShadowSettings.current
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    val shadow = primaryTextColor.getShadow(showShadows)
+    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
 
     var inputSymbol by remember { mutableStateOf("") }
     var selectedTargetChar by remember { mutableStateOf('A') }
@@ -216,7 +219,7 @@ fun CharacterMappingScreen(
                                 unfocusedTextColor = primaryTextColor.color,
                                 focusedBorderColor = accentColor.color,
                                 unfocusedBorderColor = primaryTextColor.color.copy(alpha = 0.2f),
-                                cursorColor = accentColor.color
+                                cursorColor = if (LocalAnimationsEnabled.current) accentColor.color else Color.Transparent
                             ),
                             modifier = Modifier.weight(1.3f),
                             shape = RoundedCornerShape(10.dp),

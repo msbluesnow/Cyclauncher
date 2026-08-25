@@ -153,254 +153,299 @@ class MainActivity : ComponentActivity() {
         setContent {
             CyclauncherTheme {
                 val hideStatusBar by viewModel.hideStatusBar.collectAsState()
-                LaunchedEffect(hideStatusBar) {
-                    updateStatusBarVisibility(hideStatusBar)
-                }
+                val animationsEnabled by viewModel.animationsEnabled.collectAsState()
+                val showShadows by viewModel.showShadows.collectAsState()
+                val shadowColorOverride by viewModel.shadowColor.collectAsState()
 
-                val horizontalPagerState = rememberPagerState { 2 } // [MainCluster, Settings]
-                val verticalPagerState = rememberPagerState { 2 } // [Main, Search]
-                val scope = rememberCoroutineScope()
-                val fastAnimSpec = remember { tween<Float>(durationMillis = 150, easing = FastOutSlowInEasing) }
-                
-                var showActionMenuFor by remember { mutableStateOf<AppInfo?>(null) }
-                var showRenameDialogFor by remember { mutableStateOf<AppInfo?>(null) }
-                var showTagDialogFor by remember { mutableStateOf<AppInfo?>(null) }
-                var tagToEditForDialog by remember { mutableStateOf<Tag?>(null) }
-                
-                var menuSource by remember { mutableStateOf("none") }
-                var menuOffset by remember { mutableStateOf(Offset.Zero) }
+                CompositionLocalProvider(
+                    dev.msbs.cyclauncher.ui.theme.LocalShadowSettings provides dev.msbs.cyclauncher.ui.theme.ShadowSettings(showShadows, shadowColorOverride),
+                    dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled provides animationsEnabled
+                ) {
+                    LaunchedEffect(hideStatusBar) {
+                        updateStatusBarVisibility(hideStatusBar)
+                    }
 
-                LaunchedEffect(Unit) {
-                    viewModel.resetRequest.collect {
-                        showActionMenuFor = null
-                        showRenameDialogFor = null
-                        showTagDialogFor = null
-                        tagToEditForDialog = null
-                        scope.launch {
-                            if (horizontalPagerState.currentPage != 0) {
-                                horizontalPagerState.scrollToPage(0)
-                            }
-                            if (verticalPagerState.currentPage != 0) {
-                                verticalPagerState.scrollToPage(0)
+                    val horizontalPagerState = rememberPagerState { 2 } // [MainCluster, Settings]
+                    val verticalPagerState = rememberPagerState { 2 } // [Main, Search]
+                    val scope = rememberCoroutineScope()
+                    val fastAnimSpec = remember { tween<Float>(durationMillis = 150, easing = FastOutSlowInEasing) }
+                    
+                    var showActionMenuFor by remember { mutableStateOf<AppInfo?>(null) }
+                    var showRenameDialogFor by remember { mutableStateOf<AppInfo?>(null) }
+                    var showTagDialogFor by remember { mutableStateOf<AppInfo?>(null) }
+                    var tagToEditForDialog by remember { mutableStateOf<Tag?>(null) }
+                    
+                    var menuSource by remember { mutableStateOf("none") }
+                    var menuOffset by remember { mutableStateOf(Offset.Zero) }
+
+                    LaunchedEffect(Unit) {
+                        viewModel.resetRequest.collect {
+                            showActionMenuFor = null
+                            showRenameDialogFor = null
+                            showTagDialogFor = null
+                            tagToEditForDialog = null
+                            scope.launch {
+                                if (horizontalPagerState.currentPage != 0) {
+                                    horizontalPagerState.scrollToPage(0)
+                                }
+                                if (verticalPagerState.currentPage != 0) {
+                                    verticalPagerState.scrollToPage(0)
+                                }
                             }
                         }
                     }
-                }
 
-                val showTutorial by viewModel.showTutorial.collectAsState()
+                    val showTutorial by viewModel.showTutorial.collectAsState()
 
-                LaunchedEffect(showTutorial) {
-                    if (showTutorial) {
-                        horizontalPagerState.scrollToPage(0)
-                        verticalPagerState.scrollToPage(0)
+                    LaunchedEffect(showTutorial) {
+                        if (showTutorial) {
+                            horizontalPagerState.scrollToPage(0)
+                            verticalPagerState.scrollToPage(0)
+                        }
                     }
-                }
 
-                val isOnMainScreen by remember {
-                    derivedStateOf {
-                        horizontalPagerState.currentPage == 0 &&
-                        verticalPagerState.currentPage == 0 &&
-                        horizontalPagerState.targetPage == 0 &&
-                        verticalPagerState.targetPage == 0
+                    val isOnMainScreen by remember {
+                        derivedStateOf {
+                            horizontalPagerState.currentPage == 0 &&
+                            verticalPagerState.currentPage == 0 &&
+                            horizontalPagerState.targetPage == 0 &&
+                            verticalPagerState.targetPage == 0
+                        }
                     }
-                }
 
-                val isSettingsActive by remember {
-                    derivedStateOf {
-                        horizontalPagerState.currentPage == 1 || horizontalPagerState.targetPage == 1
+                    val isSettingsActive by remember {
+                        derivedStateOf {
+                            horizontalPagerState.currentPage == 1 || horizontalPagerState.targetPage == 1
+                        }
                     }
-                }
-                val isSearchActive by remember {
-                    derivedStateOf {
-                        horizontalPagerState.currentPage == 0 &&
-                        (verticalPagerState.currentPage == 1 || verticalPagerState.targetPage == 1)
+                    val isSearchActive by remember {
+                        derivedStateOf {
+                            horizontalPagerState.currentPage == 0 &&
+                            (verticalPagerState.currentPage == 1 || verticalPagerState.targetPage == 1)
+                        }
                     }
-                }
-                
-                val handSide by viewModel.handSide.collectAsState()
-                val accentColor by viewModel.accentColor.collectAsState()
-                val popupTheme by viewModel.popupTheme.collectAsState()
-                val allTags by viewModel.tags.collectAsState()
-                val appTagsMap by viewModel.appTags.collectAsState()
-                val autoTagsPreview by viewModel.autoTagsPreview.collectAsState()
-                val tagsBackupPreview by viewModel.tagsBackupPreview.collectAsState()
+                    
+                    val handSide by viewModel.handSide.collectAsState()
+                    val accentColor by viewModel.accentColor.collectAsState()
+                    val popupTheme by viewModel.popupTheme.collectAsState()
+                    val allTags by viewModel.tags.collectAsState()
+                    val appTagsMap by viewModel.appTags.collectAsState()
+                    val autoTagsPreview by viewModel.autoTagsPreview.collectAsState()
+                    val tagsBackupPreview by viewModel.tagsBackupPreview.collectAsState()
 
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = Color.Transparent
-                ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        HorizontalPager(
-                            state = horizontalPagerState,
-                            modifier = Modifier.fillMaxSize(),
-                            beyondViewportPageCount = 1,
-                            userScrollEnabled = false 
-                        ) { hIndex ->
-                            if (hIndex == 0) {
-                                VerticalPager(
-                                    state = verticalPagerState,
-                                    modifier = Modifier.fillMaxSize(),
-                                    beyondViewportPageCount = 1,
-                                    userScrollEnabled = false 
-                                ) { vIndex ->
-                                    if (vIndex == 0) {
-                                        val isActionMenuOpen = showActionMenuFor != null || showRenameDialogFor != null || showTagDialogFor != null || tagToEditForDialog != null
-                                        MainMenuScreen(
-                                            viewModel = viewModel,
-                                            isActive = isOnMainScreen,
-                                            isActionMenuOpen = isActionMenuOpen,
-                                            onAppClick = ::openApp,
-                                            onAppLongClick = { app, offset -> 
-                                                showActionMenuFor = app
-                                                menuOffset = offset
-                                                menuSource = "history_or_favorites" 
-                                            },
-                                            onSwipeUp = {
-                                                scope.launch { verticalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec) }
-                                            },
-                                            onSwipeDown = ::openNotifications,
-                                            onSettingsClick = {
-                                                scope.launch { horizontalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec) }
-                                            },
-                                            onEditTag = { tag -> tagToEditForDialog = tag }
-                                        )
-                                    } else {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .pointerInput(Unit) {
-                                                    detectTapGestures(
-                                                        onLongPress = {
-                                                            scope.launch {
-                                                                horizontalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec)
-                                                            }
-                                                        }
-                                                    )
-                                                }
-                                        ) {
-                                            SearchScreen(
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = Color.Transparent
+                    ) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            HorizontalPager(
+                                state = horizontalPagerState,
+                                modifier = Modifier.fillMaxSize(),
+                                beyondViewportPageCount = 1,
+                                userScrollEnabled = false 
+                            ) { hIndex ->
+                                if (hIndex == 0) {
+                                    VerticalPager(
+                                        state = verticalPagerState,
+                                        modifier = Modifier.fillMaxSize(),
+                                        beyondViewportPageCount = 1,
+                                        userScrollEnabled = false 
+                                    ) { vIndex ->
+                                        if (vIndex == 0) {
+                                            val isActionMenuOpen = showActionMenuFor != null || showRenameDialogFor != null || showTagDialogFor != null || tagToEditForDialog != null
+                                            MainMenuScreen(
                                                 viewModel = viewModel,
-                                                enabled = isSearchActive,
-                                                onBackToMain = {
-                                                    scope.launch {
-                                                        verticalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
-                                                    }
-                                                },
+                                                isActive = isOnMainScreen,
+                                                isActionMenuOpen = isActionMenuOpen,
                                                 onAppClick = ::openApp,
                                                 onAppLongClick = { app, offset -> 
                                                     showActionMenuFor = app
                                                     menuOffset = offset
-                                                    menuSource = "search"
-                                                }
+                                                    menuSource = "history_or_favorites" 
+                                                },
+                                                onSwipeUp = {
+                                                    scope.launch {
+                                                        if (animationsEnabled) {
+                                                            verticalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec)
+                                                        } else {
+                                                            verticalPagerState.scrollToPage(1)
+                                                        }
+                                                    }
+                                                },
+                                                onSwipeDown = ::openNotifications,
+                                                onSettingsClick = {
+                                                    scope.launch {
+                                                        if (animationsEnabled) {
+                                                            horizontalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec)
+                                                        } else {
+                                                            horizontalPagerState.scrollToPage(1)
+                                                        }
+                                                    }
+                                                },
+                                                onEditTag = { tag -> tagToEditForDialog = tag }
                                             )
+                                        } else {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .pointerInput(Unit) {
+                                                        detectTapGestures(
+                                                            onLongPress = {
+                                                                scope.launch {
+                                                                    if (animationsEnabled) {
+                                                                        horizontalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec)
+                                                                    } else {
+                                                                        horizontalPagerState.scrollToPage(1)
+                                                                    }
+                                                                }
+                                                            }
+                                                        )
+                                                    }
+                                            ) {
+                                                SearchScreen(
+                                                    viewModel = viewModel,
+                                                    enabled = isSearchActive,
+                                                    onBackToMain = {
+                                                        scope.launch {
+                                                            if (animationsEnabled) {
+                                                                verticalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
+                                                            } else {
+                                                                verticalPagerState.scrollToPage(0)
+                                                            }
+                                                        }
+                                                    },
+                                                    onAppClick = ::openApp,
+                                                    onAppLongClick = { app, offset -> 
+                                                        showActionMenuFor = app
+                                                        menuOffset = offset
+                                                        menuSource = "search"
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
-                                }
-                            } else {
-                                SettingsScreen(
-                                    viewModel = viewModel,
-                                    enabled = isSettingsActive,
-                                    onBack = {
-                                        scope.launch {
-                                            horizontalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
+                                } else {
+                                    SettingsScreen(
+                                        viewModel = viewModel,
+                                        enabled = isSettingsActive,
+                                        onBack = {
+                                            scope.launch {
+                                                if (animationsEnabled) {
+                                                    horizontalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
+                                                } else {
+                                                    horizontalPagerState.scrollToPage(0)
+                                                }
+                                            }
                                         }
+                                    )
+                                }
+                            }
+
+                            showActionMenuFor?.let { app ->
+                                val componentKey = "${app.packageName}/${app.activityName}"
+                                AppActionMenu(
+                                    app = app,
+                                    isFavorite = viewModel.isFavorite(componentKey),
+                                    offset = menuOffset,
+                                    onDismiss = { showActionMenuFor = null },
+                                    onToggleFavorite = { viewModel.toggleFavorite(componentKey) },
+                                    onUninstall = { uninstallApp(app.packageName) },
+                                    onInfo = { openAppInfo(app.packageName) },
+                                    onRename = { showRenameDialogFor = app },
+                                    onTagsClick = { showTagDialogFor = app },
+                                    accentColor = accentColor,
+                                    popupTheme = popupTheme
+                                )
+                            }
+
+                            showRenameDialogFor?.let { app ->
+                                RenameDialog(
+                                    initialValue = app.label,
+                                    accentColor = accentColor,
+                                    popupTheme = popupTheme,
+                                    onDismiss = { showRenameDialogFor = null },
+                                    onConfirm = { newName ->
+                                        viewModel.renameApp("${app.packageName}/${app.activityName}", newName)
+                                        showRenameDialogFor = null
                                     }
                                 )
                             }
-                        }
 
-                        showActionMenuFor?.let { app ->
-                            val componentKey = "${app.packageName}/${app.activityName}"
-                            AppActionMenu(
-                                app = app,
-                                isFavorite = viewModel.isFavorite(componentKey),
-                                offset = menuOffset,
-                                onDismiss = { showActionMenuFor = null },
-                                onToggleFavorite = { viewModel.toggleFavorite(componentKey) },
-                                onUninstall = { uninstallApp(app.packageName) },
-                                onInfo = { openAppInfo(app.packageName) },
-                                onRename = { showRenameDialogFor = app },
-                                onTagsClick = { showTagDialogFor = app },
-                                accentColor = accentColor,
-                                popupTheme = popupTheme
-                            )
-                        }
+                            showTagDialogFor?.let { app ->
+                                val key = "${app.packageName}/${app.activityName}"
+                                TagSelectionDialog(
+                                    app = app,
+                                    allTags = allTags,
+                                    assignedTagIds = appTagsMap[key] ?: appTagsMap[app.packageName] ?: emptyList(),
+                                    onToggleTag = { tagId -> viewModel.toggleTagForApp(key, tagId) },
+                                    onCreateTag = { name, color -> viewModel.createTag(Tag(name = name, color = color)) },
+                                    onUpdateTag = { tag -> viewModel.updateTag(tag) },
+                                    onDeleteTag = { tagId -> viewModel.deleteTag(tagId) },
+                                    onDismiss = { showTagDialogFor = null },
+                                    accentColor = accentColor,
+                                    popupTheme = popupTheme
+                                )
+                            }
 
-                        showRenameDialogFor?.let { app ->
-                            RenameDialog(
-                                initialValue = app.label,
-                                accentColor = accentColor,
-                                popupTheme = popupTheme,
-                                onDismiss = { showRenameDialogFor = null },
-                                onConfirm = { newName ->
-                                    viewModel.renameApp("${app.packageName}/${app.activityName}", newName)
-                                    showRenameDialogFor = null
+                            tagToEditForDialog?.let { tag ->
+                                TagEditDialog(
+                                    tag = tag,
+                                    onDismiss = { tagToEditForDialog = null },
+                                    onConfirm = { name, color ->
+                                        viewModel.updateTag(tag.copy(name = name, color = color))
+                                        tagToEditForDialog = null
+                                    },
+                                    onDelete = {
+                                        viewModel.deleteTag(tag.id)
+                                        tagToEditForDialog = null
+                                    },
+                                    accentColor = accentColor,
+                                    popupTheme = popupTheme
+                                )
+                            }
+
+                            autoTagsPreview?.let { preview ->
+                                AutoTagsConfirmDialog(
+                                    preview = preview,
+                                    accentColor = accentColor,
+                                    popupTheme = popupTheme,
+                                    onConfirm = { viewModel.applyAutoTags() },
+                                    onDismiss = { viewModel.dismissAutoTagsPreview() }
+                                )
+                            }
+
+                            tagsBackupPreview?.let { preview ->
+                                TagsBackupConfirmDialog(
+                                    preview = preview,
+                                    accentColor = accentColor,
+                                    popupTheme = popupTheme,
+                                    onConfirm = { viewModel.applyTagsBackup() },
+                                    onDismiss = { viewModel.dismissTagsBackupPreview() }
+                                )
+                            }
+
+                            TutorialOverlay(
+                                viewModel = viewModel,
+                                onNavigateToSearch = {
+                                    scope.launch {
+                                        if (animationsEnabled) {
+                                            verticalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec)
+                                        } else {
+                                            verticalPagerState.scrollToPage(1)
+                                        }
+                                    }
+                                },
+                                onNavigateToMain = {
+                                    scope.launch {
+                                        if (animationsEnabled) {
+                                            verticalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
+                                        } else {
+                                            verticalPagerState.scrollToPage(0)
+                                        }
+                                    }
                                 }
                             )
                         }
-
-                        showTagDialogFor?.let { app ->
-                            val key = "${app.packageName}/${app.activityName}"
-                            TagSelectionDialog(
-                                app = app,
-                                allTags = allTags,
-                                assignedTagIds = appTagsMap[key] ?: appTagsMap[app.packageName] ?: emptyList(),
-                                onToggleTag = { tagId -> viewModel.toggleTagForApp(key, tagId) },
-                                onCreateTag = { name, color -> viewModel.createTag(Tag(name = name, color = color)) },
-                                onUpdateTag = { tag -> viewModel.updateTag(tag) },
-                                onDeleteTag = { tagId -> viewModel.deleteTag(tagId) },
-                                onDismiss = { showTagDialogFor = null },
-                                accentColor = accentColor,
-                                popupTheme = popupTheme
-                            )
-                        }
-
-                        tagToEditForDialog?.let { tag ->
-                            TagEditDialog(
-                                tag = tag,
-                                onDismiss = { tagToEditForDialog = null },
-                                onConfirm = { name, color ->
-                                    viewModel.updateTag(tag.copy(name = name, color = color))
-                                    tagToEditForDialog = null
-                                },
-                                onDelete = {
-                                    viewModel.deleteTag(tag.id)
-                                    tagToEditForDialog = null
-                                },
-                                accentColor = accentColor,
-                                popupTheme = popupTheme
-                            )
-                        }
-
-                        autoTagsPreview?.let { preview ->
-                            AutoTagsConfirmDialog(
-                                preview = preview,
-                                accentColor = accentColor,
-                                popupTheme = popupTheme,
-                                onConfirm = { viewModel.applyAutoTags() },
-                                onDismiss = { viewModel.dismissAutoTagsPreview() }
-                            )
-                        }
-
-                        tagsBackupPreview?.let { preview ->
-                            TagsBackupConfirmDialog(
-                                preview = preview,
-                                accentColor = accentColor,
-                                popupTheme = popupTheme,
-                                onConfirm = { viewModel.applyTagsBackup() },
-                                onDismiss = { viewModel.dismissTagsBackupPreview() }
-                            )
-                        }
-
-                        TutorialOverlay(
-                            viewModel = viewModel,
-                            onNavigateToSearch = {
-                                scope.launch { verticalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec) }
-                            },
-                            onNavigateToMain = {
-                                scope.launch { verticalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec) }
-                            }
-                        )
                     }
                 }
             }

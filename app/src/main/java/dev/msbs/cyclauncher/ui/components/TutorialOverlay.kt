@@ -5,8 +5,11 @@ import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
 
+import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -153,10 +156,12 @@ fun TutorialOverlay(
         }
     }
 
+    val animationsEnabled = LocalAnimationsEnabled.current
+
     AnimatedVisibility(
         visible = showTutorial,
-        enter = fadeIn(animationSpec = tween(400)),
-        exit = fadeOut(animationSpec = tween(300))
+        enter = if (animationsEnabled) fadeIn(animationSpec = tween(400)) else EnterTransition.None,
+        exit = if (animationsEnabled) fadeOut(animationSpec = tween(300)) else ExitTransition.None
     ) {
         Box(
             modifier = modifier
@@ -390,16 +395,22 @@ private fun GestureAnimationCanvas(
     popupTheme: PopupTheme = PopupTheme.DARK,
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "GestureAnim")
-    val progress by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1800, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "Progress"
-    )
+    val animationsEnabled = LocalAnimationsEnabled.current
+    val progress = if (animationsEnabled) {
+        val infiniteTransition = rememberInfiniteTransition(label = "GestureAnim")
+        val animProgress by infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 1800, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "Progress"
+        )
+        animProgress
+    } else {
+        0.5f
+    }
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         // Overlay Canvas for gesture paths, pointers, and rings
