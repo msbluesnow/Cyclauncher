@@ -8,6 +8,9 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -36,3 +39,12 @@ jobs:
         with:
           path: scripts/fdroid_state.json
           key: fdroid-state-${{ github.run_id }}
+
+      - name: Trim old workflow runs (keep latest 40)
+        uses: Mattraks/delete-workflow-runs@v2
+        if: always()
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          retain_days: 0
+          keep_minimum_runs: 40
