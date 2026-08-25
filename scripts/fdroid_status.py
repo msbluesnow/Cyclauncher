@@ -46,6 +46,28 @@ def published_versions() -> list[dict]:
     return data.get("packages", [])
 
 
+def extract_mr_version(title: str, source_branch: str = "") -> str:
+    """Extract human-readable version/tag (e.g. 'v0.8.1-alpha (13)') from MR title or branch."""
+    m = re.search(r'to\s+([vV]?\d+[\w\.\-]+(?:\s*\(\d+\))?)', title, re.IGNORECASE)
+    if m:
+        return m.group(1).strip()
+
+    m_code = re.search(r'\((\d+)\)', title)
+    m_ver = re.search(r'([vV]\d+\.[\w\.\-]+|\b\d+\.\d+(?:\.\d+)?[\w\.\-]*)', title)
+    if m_ver and m_code:
+        return f"{m_ver.group(1)} ({m_code.group(1)})"
+    elif m_ver:
+        return m_ver.group(1)
+    elif m_code:
+        return f"code {m_code.group(1)}"
+
+    if source_branch:
+        clean_b = source_branch.replace(PACKAGE, "").replace("checkupdates-bot-", "").strip("-_")
+        if clean_b:
+            return clean_b
+    return ""
+
+
 def gitlab_mr_status() -> list[dict]:
     """Fetch Merge Requests in fdroid/fdroiddata matching the package, including bot updates and CI pipeline state."""
     mrs_by_iid = {}
@@ -82,6 +104,8 @@ def gitlab_mr_status() -> list[dict]:
         updated_at = mr.get("updated_at", "")
         merged_at = mr.get("merged_at", "")
         labels = mr.get("labels", [])
+        source_branch = mr.get("source_branch", "")
+        version = extract_mr_version(title, source_branch)
 
         pipeline_status = None
         pipeline_url = None
@@ -105,6 +129,8 @@ def gitlab_mr_status() -> list[dict]:
             "updated_at": updated_at,
             "merged_at": merged_at,
             "labels": labels,
+            "source_branch": source_branch,
+            "version": version,
             "pipeline_status": pipeline_status,
             "pipeline_url": pipeline_url,
         })
@@ -144,9 +170,9 @@ def report() -> None:
 
     try:
         versions = published_versions()
-        print("[Store] published versions:")
+        print("[Store] Published versions in F-Droid:")
         for v in versions:
-            print(f"  - {v.get('versionName')}  (versionCode {v.get('versionCode')})")
+            print(f"  • {v.get('versionName')}  (versionCode {v.get('versionCode')})")
         if not versions:
             print("  (none)")
     except Exception as e:
@@ -154,10 +180,12 @@ def report() -> None:
 
     try:
         mrs = gitlab_mr_status()
-        print("\n[GitLab] fdroiddata merge requests (bot & community updates):")
+        print("\n[GitLab] Merge requests on fdroiddata (Bot & Manual Updates):")
         for mr in mrs:
-            pipeline_info = f" | Pipeline CI: {mr['pipeline_status']}" if mr.get("pipeline_status") else ""
-            print(f"  - !{mr['iid']}: \"{mr['title']}\" [{mr['state']}]{pipeline_info}")
+            ver_tag = f"[{mr['version']}] " if mr.get("version") else ""
+            pipeline_info = f" | CI: {mr['pipeline_status']}" if mr.get("pipeline_status") else ""
+            state_str = mr['state'].upper()
+            print(f"  • {ver_tag}MR !{mr['iid']}: \"{mr['title']}\" [{state_str}]{pipeline_info}")
             if mr.get("author"):
                 print(f"    Author: @{mr['author']} | Labels: {', '.join(mr.get('labels', [])) or '(none)'}")
             if mr.get("pipeline_url"):
@@ -170,19 +198,19 @@ def report() -> None:
 
     try:
         logs = build_logs()
-        print("\n[Monitor] build logs on server:")
+        print("\n[Monitor] Build logs on server:")
         for name in logs:
-            print(f"  - {name}")
+            print(f"  • {name}")
         if not logs:
             print("  (no build logs yet)")
     except Exception as e:
         print(f"\n[Monitor] failed to query build logs: {e}")
 
     hits = queue_status()
-    print("\n[Queue] current build queue:")
+    print("\n[Queue] Current build queue:")
     if hits:
         for h in hits:
-            print(f"  - {h}")
+            print(f"  • {h}")
     else:
         print("  (package not in running/waiting queue)")
 
@@ -209,9 +237,12 @@ def normalize_status(state: dict | None) -> dict | None:
     mr_list = [
         {
             "iid": mr.get("iid"),
-            "title": mr.get("title"),
-            "state": mr.get("state"),
+            "title": mr.get("title", ""),
+            "state": mr.get("state", ""),
             "pipeline_status": mr.get("pipeline_status"),
+            "web_url": mr.get("web_url", ""),
+            "author": mr.get("author", ""),
+            "version": mr.get("version") or extract_mr_version(mr.get("title", ""), mr.get("source_branch", "")),
         }
         for mr in state.get("gitlab_mrs", [])
         if isinstance(mr, dict) and mr.get("iid") is not None
@@ -253,9 +284,12 @@ def collect_status(previous_state: dict | None = None) -> tuple[dict, bool]:
         status["gitlab_mrs"] = [
             {
                 "iid": mr.get("iid"),
-                "title": mr.get("title"),
-                "state": mr.get("state"),
+                "title": mr.get("title", ""),
+                "state": mr.get("state", ""),
                 "pipeline_status": mr.get("pipeline_status"),
+                "web_url": mr.get("web_url", ""),
+                "author": mr.get("author", ""),
+                "version": mr.get("version", ""),
             }
             for mr in mrs
         ]
@@ -290,66 +324,117 @@ def collect_status(previous_state: dict | None = None) -> tuple[dict, bool]:
     return status, had_error
 
 
-def compute_changes(old: dict, new: dict) -> list[str]:
-    """Return human-readable list of semantic changes between old and new state."""
+def compute_changes(old: dict, new: dict) -> tuple[list[str], list[str]]:
+    """Return (changes_list, top_targets_summary_list) between old and new state."""
     changes = []
+    top_targets = []
 
-    # Store changes
+    # 1. Store changes
     old_store_codes = {v.get("versionCode") for v in old.get("store", [])}
     new_store_versions = [v for v in new.get("store", []) if v.get("versionCode") not in old_store_codes]
     for v in new_store_versions:
-        changes.append(f"🎉 New version in F-Droid Store: {v.get('versionName')} (code {v.get('versionCode')})")
+        ver_name = v.get('versionName') or f"code {v.get('versionCode')}"
+        top_targets.append(f"🎉 Store: {ver_name} published!")
+        changes.append(f"🎉 New version live in F-Droid Store: {v.get('versionName')} (versionCode {v.get('versionCode')})")
 
-    # GitLab MR changes
+    # 2. GitLab MR changes
     old_mrs = {mr.get("iid"): mr for mr in old.get("gitlab_mrs", [])}
     new_mrs = {mr.get("iid"): mr for mr in new.get("gitlab_mrs", [])}
+
     for iid, new_mr in new_mrs.items():
+        ver = new_mr.get("version") or extract_mr_version(new_mr.get("title", ""))
+        ver_tag = f"[{ver}] " if ver else ""
+        mr_url = new_mr.get("web_url") or f"https://gitlab.com/fdroid/fdroiddata/-/merge_requests/{iid}"
+
         if iid not in old_mrs:
-            changes.append(f"📋 New GitLab MR !{iid}: \"{new_mr.get('title')}\" [{new_mr.get('state')}]")
+            top_targets.append(f"📋 New MR !{iid} {ver_tag}({new_mr.get('state')})")
+            changes.append(
+                f"📋 New GitLab MR !{iid} {ver_tag}\n"
+                f"   Title: \"{new_mr.get('title')}\"\n"
+                f"   State: {new_mr.get('state')}\n"
+                f"   URL: {mr_url}"
+            )
         else:
             old_mr = old_mrs[iid]
-            if old_mr.get("state") != new_mr.get("state"):
-                changes.append(f"🔄 GitLab MR !{iid} state: {old_mr.get('state')} ➔ {new_mr.get('state')}")
-            if old_mr.get("pipeline_status") != new_mr.get("pipeline_status") and new_mr.get("pipeline_status"):
-                changes.append(f"⚙️ GitLab MR !{iid} CI pipeline: {old_mr.get('pipeline_status')} ➔ {new_mr.get('pipeline_status')}")
+            state_changed = old_mr.get("state") != new_mr.get("state")
+            pipeline_changed = (
+                old_mr.get("pipeline_status") != new_mr.get("pipeline_status")
+                and new_mr.get("pipeline_status") is not None
+            )
 
-    # Build logs changes
+            if state_changed:
+                old_st = old_mr.get("state", "unknown")
+                new_st = new_mr.get("state", "unknown")
+                state_note = ""
+                if new_st == "merged":
+                    state_note = " (✅ Merged into fdroiddata — queued for next build)"
+                elif new_st == "closed":
+                    state_note = " (❌ Closed without merge)"
+
+                top_targets.append(f"🔄 MR !{iid} {ver_tag}: {old_st} ➔ {new_st.upper()}")
+                changes.append(
+                    f"🔄 GitLab MR !{iid} {ver_tag}\n"
+                    f"   Title: \"{new_mr.get('title')}\"\n"
+                    f"   State change: {old_st} ➔ {new_st.upper()}{state_note}\n"
+                    f"   URL: {mr_url}"
+                )
+
+            if pipeline_changed:
+                p_old = old_mr.get("pipeline_status") or "none"
+                p_new = new_mr.get("pipeline_status")
+                top_targets.append(f"⚙️ MR !{iid} {ver_tag}CI: {p_old} ➔ {p_new}")
+                changes.append(
+                    f"⚙️ GitLab MR !{iid} {ver_tag}CI Pipeline:\n"
+                    f"   Pipeline status: {p_old} ➔ {p_new.upper()}\n"
+                    f"   Title: \"{new_mr.get('title')}\"\n"
+                    f"   URL: {mr_url}"
+                )
+
+    # 3. Build logs changes
     old_logs = set(old.get("logs", []))
     new_logs = [l for l in new.get("logs", []) if l not in old_logs]
     for log in new_logs:
+        top_targets.append(f"📝 Build Log: {log}")
         changes.append(f"📝 New build log on monitor: {log}")
 
-    # Queue changes
+    # 4. Queue changes
     old_queue = set(old.get("queue", []))
     new_queue = set(new.get("queue", []))
     if old_queue != new_queue:
         if new_queue:
-            changes.append(f"⏳ Build queue updated: {', '.join(new.get('queue', []))}")
+            q_str = ', '.join(new.get('queue', []))
+            top_targets.append(f"⏳ In Build Queue: {q_str}")
+            changes.append(f"⏳ Build queue updated: {q_str}")
         elif old_queue:
-            changes.append("✅ Package left the build queue")
+            top_targets.append("✅ Package left build queue")
+            changes.append("✅ Package left the build queue (build finished)")
 
-    return changes
+    return changes, top_targets
 
 
 def format_status(status: dict) -> str:
     lines = [f"F-Droid status for {PACKAGE}:", ""]
     lines.append("Store:")
     for v in status.get("store", []):
-        lines.append(f"  {v['versionName']} (code {v['versionCode']})")
+        lines.append(f"  • {v['versionName']} (code {v['versionCode']})")
     if not status.get("store"):
         lines.append("  (none)")
 
-    lines.append("GitLab MRs:")
+    lines.append("\nGitLab MRs:")
     for mr in status.get("gitlab_mrs", []):
+        ver_tag = f"[{mr.get('version')}] " if mr.get("version") else ""
         p_stat = f" (CI: {mr['pipeline_status']})" if mr.get("pipeline_status") else ""
-        lines.append(f"  !{mr['iid']}: \"{mr['title']}\" [{mr['state']}]{p_stat}")
+        st = mr['state'].upper()
+        lines.append(f"  • {ver_tag}!{mr['iid']}: \"{mr['title']}\" [{st}]{p_stat}")
+        if mr.get("web_url"):
+            lines.append(f"    {mr['web_url']}")
     if not status.get("gitlab_mrs"):
         lines.append("  (none)")
 
-    lines.append("Build logs:")
-    lines += [f"  {n}" for n in status.get("logs", [])] or ["  (none)"]
-    lines.append("Queue:")
-    lines += [f"  {h}" for h in status.get("queue", [])] or ["  (not in queue)"]
+    lines.append("\nBuild logs:")
+    lines += [f"  • {n}" for n in status.get("logs", [])] or ["  (none)"]
+    lines.append("\nQueue:")
+    lines += [f"  • {h}" for h in status.get("queue", [])] or ["  (not in queue)"]
     return "\n".join(lines)
 
 
@@ -400,22 +485,30 @@ def notify_if_changed() -> None:
         print("\nBaseline saved, no notification on first run.")
         return
 
-    changes = compute_changes(old, current)
+    changes, top_targets = compute_changes(old, current)
     if changes:
         with open(STATE_FILE, "w", encoding="utf-8") as f:
             json.dump(current, f, ensure_ascii=False, indent=2)
 
-        change_summary = "\n".join(changes)
+        header_lines = ["🔔 F-Droid: Статус обновления изменился!"]
+        if top_targets:
+            header_lines.append("")
+            header_lines.append("🎯 Затронутое обновление / MR:")
+            for t in top_targets:
+                header_lines.append(f"  {t}")
+
+        change_summary = "\n\n".join(changes)
         lines = [
-            "🔔 F-Droid status changed!",
+            "\n".join(header_lines),
             "",
+            "📋 Детали изменений:",
             change_summary,
             "",
             "────────────────────────",
             report_extra
         ]
         send_telegram("\n".join(lines))
-        print("\nStatus changed, Telegram notification sent:\n" + change_summary)
+        print("\nStatus changed, Telegram notification sent:\n" + "\n".join(top_targets) + "\n\n" + change_summary)
     else:
         # Always re-save normalized state
         with open(STATE_FILE, "w", encoding="utf-8") as f:
