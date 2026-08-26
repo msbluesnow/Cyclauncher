@@ -18,27 +18,10 @@ app/release/
 local.properties
 signing.properties
 
-# Android Studio / IntelliJ IDEA / VS Code
+# IDEs (Android Studio / IntelliJ / VS Code)
 *.iml
-.idea/caches
-.idea/libraries
-.idea/modules.xml
-.idea/workspace.xml
-.idea/navEditor.xml
-.idea/assetWizardSettings.xml
-.idea/deploymentTargetSelector.xml
-.idea/deviceManager.xml
-.idea/planningMode.xml
-.idea/studiobot.xml
-.idea/appInsightsSettings.xml
-.idea/shelf/
-.idea/tasks.xml
+.idea/
 .vscode/
-
-# AI Assistants & Internal Scratch
-.zcode/
-.gemini/
-.antigravity/
 
 # OS generated files
 .DS_Store
