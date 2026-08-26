@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -646,27 +647,74 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Support Project Section
-                Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                    Text("Support & Community:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 16.sp))
-                    Spacer(modifier = Modifier.height(8.dp))
+                // Support & Community Section
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Favorite,
+                            contentDescription = null,
+                            tint = accentColor.color,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Support & Community",
+                            color = primaryTextColor.color,
+                            style = TextStyle(
+                                shadow = shadow,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        TextButton(onClick = {
-                            viewModel.openGitHubPage()
-                        }) {
-                            Text("GitHub ⭐", color = primaryTextColor.color.copy(alpha = 0.8f), style = TextStyle(shadow = shadow, fontSize = 13.sp))
-                        }
-                        TextButton(onClick = {
-                            viewModel.openDiscordPage()
-                        }) {
-                            Text("Discord 💬", color = primaryTextColor.color.copy(alpha = 0.8f), style = TextStyle(shadow = shadow, fontSize = 13.sp))
-                        }
-                        TextButton(onClick = { viewModel.openSupportPage() }, modifier = Modifier.weight(1f)) {
-                            Text("Tribute 💝", color = accentColor.color, fontWeight = FontWeight.Bold, fontSize = 13.sp, style = TextStyle(shadow = shadow))
-                        }
+                        CommunityButton(
+                            title = "GitHub",
+                            subtitle = "⭐ Project",
+                            icon = Icons.Outlined.Code,
+                            accentColor = accentColor,
+                            primaryTextColor = primaryTextColor,
+                            shadow = shadow,
+                            isHighlight = false,
+                            onClick = { viewModel.openGitHubPage() },
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        CommunityButton(
+                            title = "Discord",
+                            subtitle = "Join chat",
+                            icon = Icons.AutoMirrored.Outlined.Chat,
+                            accentColor = accentColor,
+                            primaryTextColor = primaryTextColor,
+                            shadow = shadow,
+                            isHighlight = false,
+                            onClick = { viewModel.openDiscordPage() },
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        CommunityButton(
+                            title = "Tribute",
+                            subtitle = "Sponsor",
+                            icon = Icons.Outlined.VolunteerActivism,
+                            accentColor = accentColor,
+                            primaryTextColor = primaryTextColor,
+                            shadow = shadow,
+                            isHighlight = true,
+                            onClick = { viewModel.openSupportPage() },
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
 
@@ -749,6 +797,86 @@ private fun SettingsRow(label: String, textColor: Color = Color.White, shadow: S
     ) {
         Text(label, color = textColor, style = TextStyle(shadow = shadow, fontSize = 16.sp))
         content()
+    }
+}
+
+/**
+ * Interactive card button for Support & Community links.
+ */
+@Composable
+private fun CommunityButton(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    shadow: Shadow?,
+    isHighlight: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val containerBg = if (isHighlight) {
+        accentColor.color.copy(alpha = 0.16f)
+    } else {
+        primaryTextColor.color.copy(alpha = 0.05f)
+    }
+
+    val borderColor = if (isHighlight) {
+        accentColor.color.copy(alpha = 0.45f)
+    } else {
+        primaryTextColor.color.copy(alpha = 0.12f)
+    }
+
+    val iconTint = if (isHighlight) accentColor.color else primaryTextColor.color.copy(alpha = 0.85f)
+    val titleColor = if (isHighlight) accentColor.color else primaryTextColor.color
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(containerBg)
+            .border(1.dp, borderColor, RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(if (isHighlight) accentColor.color.copy(alpha = 0.2f) else primaryTextColor.color.copy(alpha = 0.08f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    tint = iconTint,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = title,
+                color = titleColor,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                style = TextStyle(shadow = shadow)
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Text(
+                text = subtitle,
+                color = primaryTextColor.color.copy(alpha = if (isHighlight) 0.85f else 0.55f),
+                fontSize = 11.sp,
+                style = TextStyle(shadow = shadow)
+            )
+        }
     }
 }
 
