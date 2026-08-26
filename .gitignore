@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Built application files
 *.apk
 *.ap_
@@ -19,7 +18,7 @@ app/release/
 local.properties
 signing.properties
 
-# Android Studio / IntelliJ IDEA
+# Android Studio / IntelliJ IDEA / VS Code
 *.iml
 .idea/caches
 .idea/libraries
@@ -34,6 +33,7 @@ signing.properties
 .idea/appInsightsSettings.xml
 .idea/shelf/
 .idea/tasks.xml
+.vscode/
 
 # AI Assistants & Internal Scratch
 .zcode/
@@ -43,8 +43,6 @@ signing.properties
 # OS generated files
 .DS_Store
 Thumbs.db
-=======
->>>>>>> 56fc25e43ca540427b147c5e98a8fadc6a19ac49
 
 # F-Droid status script state
 scripts/fdroid_state.json
