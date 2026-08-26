@@ -5,7 +5,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.runtime.compositionLocalOf
 
-/** Основной цвет текста (белый/чёрный) с адаптивными тенями. */
+/** Primary text color options (White/Black) with adaptive drop shadows. */
 enum class PrimaryTextColor(
     val displayName: String,
     val color: Color,

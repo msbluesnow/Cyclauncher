@@ -5,7 +5,7 @@ import androidx.compose.ui.graphics.toArgb
 import org.json.JSONObject
 import java.util.UUID
 
-/** Пользовательский тег для категоризации приложений. */
+/** Represents a custom user-defined tag for categorizing applications. */
 data class Tag(
     val id: String = UUID.randomUUID().toString(),
     val name: String,

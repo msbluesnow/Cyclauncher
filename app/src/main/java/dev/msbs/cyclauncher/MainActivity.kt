@@ -600,7 +600,7 @@ private fun CyclauncherTheme(content: @Composable () -> Unit) {
     MaterialTheme { content() }
 }
 
-// Диалог подтверждения применения автоматических тегов
+/** Confirmation dialog for applying auto-generated AI application tags. */
 @Composable
 private fun AutoTagsConfirmDialog(
     preview: AutoTagsPreview,

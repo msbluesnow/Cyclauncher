@@ -18,10 +18,10 @@ import coil3.toUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** Ключ для загрузки иконки приложения формата "packageName/activityName". */
+/** Key representing an application icon in "packageName/activityName" format. */
 data class AppIconKey(val componentKey: String)
 
-/** Загрузчик иконок установленных приложений через PackageManager для Coil 3. */
+/** Coil 3 Fetcher for loading installed application icons via PackageManager. */
 internal class AppIconFetcher private constructor(
     private val context: Context,
     private val key: AppIconKey,

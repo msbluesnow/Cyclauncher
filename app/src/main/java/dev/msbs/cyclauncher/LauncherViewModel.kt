@@ -142,7 +142,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _historyScrollToBottomTrigger.value = System.currentTimeMillis()
     }
 
-    // Список всех установленных приложений с пользовательскими названиями и правилами индексации
+    /** List of all installed applications with custom labels and search indexing applied. */
     val apps: StateFlow<List<AppInfo>> = combine(_apps, actionsManager.customLabels, actionsManager.customCharMappings) { all, customLabels, customMappings ->
         all.map { app ->
             val customLabel = customLabels[app.componentKey]
@@ -157,7 +157,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    // Приложения для выбранной буквы алфавита
+    /** Applications filtered for the currently selected search letter. */
     val filteredApps: StateFlow<List<AppInfo>> = combine(apps, _selectedLetter) { all, letter ->
         all.filter { it.searchChar == letter }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -165,7 +165,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** List of all favorite keys (app component keys and "tag:$tagId" entries). */
     val favorites: StateFlow<List<String>> = actionsManager.favorites
 
-    // Недавние приложения (быстрый O(1) поиск по ключу)
+    /** Recent application list in order of launch. */
     val historyApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.history) { all, ids ->
         val appMap = all.associateBy { it.componentKey }
         ids.mapNotNull { id -> appMap[id] }
@@ -174,7 +174,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Set of application component keys that were recently installed or updated and not yet launched. */
     val recentlyUpdatedApps: StateFlow<Set<String>> = actionsManager.recentlyUpdated
 
-    // Избранные элементы (приложения и папки тегов с сохранением порядка)
+    /** Ordered list of favorite items (both applications and tag folders). */
     val favoriteItems: StateFlow<List<FavoriteItem>> = combine(
         apps,
         tags,
@@ -203,12 +203,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    // Избранные приложения (для обратной совместимости)
+    /** Favorite applications (filtered for backwards compatibility). */
     val favoriteApps: StateFlow<List<AppInfo>> = favoriteItems.map { items ->
         items.mapNotNull { (it as? FavoriteItem.App)?.appInfo }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    // Результаты текстового поиска
+    /** Applications filtered by the active text search query. */
     val textFilteredApps: StateFlow<List<AppInfo>> = combine(apps, _searchText) { all, query ->
         if (query.isEmpty()) all
         else all.filter { it.label.contains(query, ignoreCase = true) }

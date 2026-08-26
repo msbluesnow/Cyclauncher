@@ -1,9 +1,9 @@
 package dev.msbs.cyclauncher.model
 
 /**
- * Информация об установленном приложении.
- * Иконки загружаются лениво через Coil по [iconKey], чтобы ViewModel
- * не держал декодированные битмапы в памяти.
+ * Metadata for an installed application.
+ * App icons are loaded lazily on demand via Coil using [iconKey]
+ * to prevent ViewModels from holding decoded Bitmaps in memory.
  */
 data class AppInfo(
     val label: String,

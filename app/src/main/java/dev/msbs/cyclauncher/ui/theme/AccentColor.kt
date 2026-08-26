@@ -2,7 +2,7 @@ package dev.msbs.cyclauncher.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-/** Доступные акцентные цвета темы. */
+/** Available theme accent color presets. */
 enum class AccentColor(
     val displayName: String,
     val color: Color,

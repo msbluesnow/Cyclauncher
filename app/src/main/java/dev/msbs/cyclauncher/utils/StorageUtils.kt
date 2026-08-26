@@ -3,8 +3,8 @@ package dev.msbs.cyclauncher.utils
 import android.content.Context
 
 /**
- * Возвращает device-protected storage context для работы в Direct Boot.
- * Мигрирует SharedPreferences из credential-protected storage при первом вызове.
+ * Returns a device-protected storage context for Direct Boot compatibility.
+ * Automatically migrates SharedPreferences from credential-protected storage on first invocation.
  */
 fun Context.getSafeStorageContext(): Context {
     if (this.isDeviceProtectedStorage) {
@@ -20,7 +20,7 @@ fun Context.getSafeStorageContext(): Context {
             }
         }
     } catch (_: Exception) {
-        // Credential-protected storage может быть заблокирован во время Direct Boot
+        // Credential-protected storage may be locked during Direct Boot
     }
     return deviceProtectedContext
 }

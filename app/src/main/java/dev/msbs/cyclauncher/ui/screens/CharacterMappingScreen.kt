@@ -430,7 +430,7 @@ fun CharacterMappingScreen(
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Preset: Cyrillic / Кириллица
+                // Preset: Cyrillic
                 PresetChip(
                     label = "Cyrillic / Кириллица (А, Б, В, Г...)",
                     accentColor = accentColor,
