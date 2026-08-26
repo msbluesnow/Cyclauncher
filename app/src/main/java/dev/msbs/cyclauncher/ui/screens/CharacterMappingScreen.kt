@@ -25,6 +25,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.Close
@@ -541,29 +542,33 @@ fun CharacterMappingScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = "Alphabet Letter Rows (${groupedMappings.size} letters, ${customMappings.size} rules)",
-                    color = primaryTextColor.color,
-                    style = TextStyle(shadow = shadow, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.List,
+                        contentDescription = "Letter Rows",
+                        tint = primaryTextColor.color,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "(${groupedMappings.size} letters, ${customMappings.size} rules)",
+                        color = primaryTextColor.color.copy(alpha = 0.75f),
+                        style = TextStyle(shadow = shadow, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    )
+                }
 
                 if (customMappings.isNotEmpty()) {
-                    TextButton(
+                    IconButton(
                         onClick = { showResetConfirmDialog = true },
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.RestartAlt,
-                            contentDescription = null,
-                            tint = Color.Red.copy(alpha = 0.8f),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Reset All",
-                            color = Color.Red.copy(alpha = 0.8f),
-                            fontSize = 13.sp,
-                            style = TextStyle(shadow = shadow)
+                            contentDescription = "Reset All Mappings",
+                            tint = Color.Red.copy(alpha = 0.85f),
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
