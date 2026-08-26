@@ -8,8 +8,8 @@ This guide provides an overview of the project setup, architectural conventions,
 
 ## 🛠️ Prerequisites & Setup
 
-1. **JDK 17 or higher** (bundled with Android Studio).
-2. **Android Studio Meerkat (2025.1)** or newer recommended.
+1. **JDK 17 or higher** (JDK 17/21 or Android Studio JBR).
+2. **Android Studio (Meerkat/Ladybug or newer)** or **Antigravity IDE / VS Code**.
 3. **Android SDK 36** with Build Tools installed (minimum SDK: 24 / Android 7.0).
 
 ### Build & Run locally
@@ -19,8 +19,12 @@ This guide provides an overview of the project setup, architectural conventions,
 git clone https://github.com/msbluesnow/Cyclauncher.git
 cd Cyclauncher
 
-# Build debug APK via Gradle wrapper
+# Linux / macOS
+chmod +x gradlew
 ./gradlew assembleDebug
+
+# Windows (Command Prompt / PowerShell)
+.\gradlew.bat assembleDebug
 ```
 
 > **Tip:** Testing on a **physical device** is strongly encouraged. Launcher features like system gesture navigation (swipe-up to home), recent app transitions, and direct boot handling can behave differently on emulators.
@@ -29,7 +33,7 @@ cd Cyclauncher
 
 ## 📂 Project Architecture
 
-Cyclauncher is built using **Kotlin**, **Jetpack Compose**, and **MVVM architecture** with `StateFlow`.
+Cyclauncher is built using **Kotlin 2.2.10**, **Jetpack Compose** (Material 3), and **MVVM architecture** with Kotlin Coroutines and `StateFlow`.
 
 ```
 app/src/main/java/dev/msbs/cyclauncher/
@@ -41,16 +45,18 @@ app/src/main/java/dev/msbs/cyclauncher/
 │   └── AppIconFetcher.kt
 │
 ├── data/                          # Data layer & persistence
-│   └── AppActionsManager.kt        # Favorites, history, tags, custom labels & AI auto-tagging
+│   └── AppActionsManager.kt        # Favorites, history, tags, custom labels, character maps & AI auto-tagging
 │
 ├── model/                         # Core data models
 │   ├── AppInfo.kt                 # Application metadata (packageName, activityName, label, searchChar)
+│   ├── FavoriteItem.kt            # Polymorphic favorite entries (FavoriteApp vs FavoriteTag)
 │   └── Tag.kt                     # Custom tag model (id, name, color)
 │
 ├── ui/                            # User Interface
 │   ├── components/
 │   │   ├── AppActionMenu.kt             # Context menu (Favorites, Edit Label, Tags, Uninstall)
 │   │   ├── AppUiComponents.kt           # Shared UI elements (AppIconPainter, AppListItemWithIcon)
+│   │   ├── KeepAndroidOpenBanner.kt     # Keep Android Open countdown banner & FreeDroidWarn integration
 │   │   ├── RectangularAlphabetWheel.kt  # Custom Canvas-rendered wheel with deceleration physics
 │   │   ├── SideAlphabetSearchLayout.kt  # Side index strip for rapid thumb-scrubbing app retrieval
 │   │   ├── TagComponents.kt             # Components for tag folders, chips, and selection dialogs
@@ -59,10 +65,12 @@ app/src/main/java/dev/msbs/cyclauncher/
 │   │   ├── MainMenuScreen.kt            # Main screen (Favorites drag & drop, History with adaptive shadows)
 │   │   ├── SearchScreen.kt              # Letter-filtered app list view
 │   │   ├── TextSearchInterface.kt       # Keyboard search interface
-│   │   ├── SettingsScreen.kt            # Accent colors (Catppuccin/Nord), hand orientation, default launcher
+│   │   ├── SettingsScreen.kt            # Accent colors, animation controls, hand orientation, default launcher
+│   │   ├── CharacterMappingScreen.kt    # Custom character, emoji, and foreign alphabet mapping rules
 │   │   └── AutoTagsScreen.kt            # AI-assisted tagging import/export workflow
 │   └── theme/
 │       ├── AccentColor.kt               # Curated Catppuccin & Nord light/dark accent color pairs
+│       ├── PopupTheme.kt                # Proximity-aware popup menus, dialog styling & adaptive shadows
 │       └── PrimaryTextColor.kt          # White/Black text modes with adaptive drop-shadow calculation
 │
 └── utils/                         # Utilities
@@ -81,8 +89,12 @@ app/src/main/java/dev/msbs/cyclauncher/
 
 ### Key Performance & Architectural Principles
 1. **Asynchronous Icon Fetching:** Never load bitmaps directly inside ViewModels or synchronous lists. App icons are fetched on demand by Coil via `AppIconFetcher.kt`, keeping RAM overhead low.
-2. **Gesture & SystemUI Compatibility:** Do not re-introduce `windowIsTranslucent` or `FLAG_LAYOUT_NO_LIMITS`. Always preserve standard `taskAffinity` and use `enableEdgeToEdge()` to maintain gesture navigation and Recents overview support.
-3. **Direct Boot Safe Context:** Use `getSafeStorageContext()` when accessing SharedPreferences to prevent crashes before device unlock.
+2. **Polymorphic Favorites Architecture:** Both applications and tag folders can be pinned and reordered in favorites via the `FavoriteItem` sealed hierarchy.
+3. **Character & Alphabet Mapping Engine:** Custom symbol, foreign alphabet, and emoji categorization must route through `AppActionsManager` mapping utilities to preserve search index consistency.
+4. **Gesture & SystemUI Compatibility:** Do not re-introduce `windowIsTranslucent` or `FLAG_LAYOUT_NO_LIMITS`. Always preserve standard `taskAffinity` and use `enableEdgeToEdge()` to maintain gesture navigation and Recents overview support.
+5. **Direct Boot Safe Context:** Use `getSafeStorageContext()` when accessing SharedPreferences to prevent crashes before device unlock.
+6. **F-Droid Compatibility:** Keep dependencies 100% open source. Never embed closed binaries, trackers, or non-FOSS dependencies. Keep `dependenciesInfo.includeInApk = false`.
+
 
 ---
 

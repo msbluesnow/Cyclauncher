@@ -47,14 +47,14 @@ Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**,
 
 ## ✨ Key Features
 
-- **Tag Folder System**: Interactive tag folders on the main screen with color accents, 2x2 live icon previews, and proximity-aware popup menus for seamless category management and launching.
-- **Versatile Search Modes**: Fast app access via a custom **Rectangular Alphabet Wheel**, an ergonomic **Side Alphabet Index** strip for rapid thumb scrubbing, or instant **Text Search**.
-- **Custom Character & Symbol Mapping**: Map any custom symbol, emoji (🤗, 🎮...), or foreign alphabet letter (Cyrillic, Arabic, German/Nordic, Romance) to specific search index letters (`A`–`Z`, `#`) with quick presets and single-row letter management.
-- **Interactive Gesture Tutorial**: Guided hands-on onboarding overlay teaching launcher gestures (search, notifications, favorites & history management, system navigation) with animated visualizers.
+- **Tag Folder System & Tag Favorites**: Interactive tag folders on the main screen with color accents, 2x2 live icon previews, proximity-aware popup menus, and the ability to pin tag folders directly alongside favorite apps with smooth drag-and-drop reordering.
+- **Versatile Search Modes**: Rapid app navigation via a custom **Rectangular Alphabet Wheel** (with inertia physics), an ergonomic **Side Alphabet Index** strip for instant thumb scrubbing, or instant **Text Search**.
+- **Character & Symbol Mapping**: Comprehensive custom mapping engine to bind any symbol, emoji (🤗, 🎮...), or international alphabet letter (Cyrillic, Arabic, German/Nordic, Romance) to specific search index buckets (`A`–`Z`, `#`) with instant presets.
+- **Interactive Gesture Tutorial**: Guided onboarding overlay teaching launcher gestures (search, notifications, favorites & history management, system navigation) with animated visualizers.
 - **Dynamic Favorites & History Badges**: Organize top apps with intuitive drag-and-drop reordering, and track newly installed or updated apps via subtle visual update badges in history.
-- **AI-Powered Organization**: Categorize your apps efficiently with an AI-assisted tagging workflow (Export → Process via External AI Prompt → Import) and full tag backup support. *Note: AI processing is performed externally using your preferred provider.*
-- **Flexible Data Management**: Robust import/export support for app names and tags in both JSON and plain text formats.
-- **Customizable Themes**: Selectable accent colors, customizable main text color (Black/White) via an interactive switcher, and adaptive shadow inversion for optimal contrast on any wallpaper.
+- **AI-Assisted App Tagging**: Fast batch categorization of applications with an external AI tagging workflow (Export → Process via External Prompt → Import) and full JSON backup options.
+- **Deep Theme Customization & Accessibility**: Curated accent palettes (Catppuccin, Nord), primary text color modes (Black/White) with adaptive wallpaper drop-shadows, customizable shadow colors, and an accessibility toggle to disable all animations including cursor blinking.
+- **Keep Android Open Initiative**: Integrated awareness banner and FreeDroidWarn support to advocate for open mobile platforms and fair distribution.
 
 ## 🤝 Community & Support
 
@@ -64,26 +64,35 @@ Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**,
 
 ## 🛠 Tech Stack
 
-- **Language**: [Kotlin](https://kotlinlang.org/)
-- **UI Framework**: [Jetpack Compose](https://developer.android.com/jetpack/compose)
-- **Architecture**: MVVM with StateFlow
-- **Graphics**: High-performance animations powered by the low-level Canvas API.
-- **Documentation**: Enriched with comprehensive inline KDoc for improved maintainability.
+- **Language**: [Kotlin 2.2.10](https://kotlinlang.org/)
+- **UI Framework**: [Jetpack Compose](https://developer.android.com/jetpack/compose) (Material 3 & Compose BOM)
+- **Build System**: Gradle 9.6.1 + Android Gradle Plugin 9.3.2 (Target SDK 36, Min SDK 24)
+- **Architecture**: MVVM with Kotlin Coroutines & `StateFlow`
+- **Image Loading**: [Coil 3](https://coil-kt.github.io/coil/) with custom asynchronous `AppIconFetcher`
+- **Graphics**: High-performance custom animations rendered via the low-level Android Canvas API
+- **Code Quality & Docs**: Strict Kotlin code style with comprehensive inline KDoc documentation
 
 ## 🚀 Getting Started
 
-Testing of this alpha version is performed by cloning the repository and running it via Android Studio.
+To build and run Cyclauncher locally:
 
-1. The repository is cloned: `git clone https://github.com/msbluesnow/Cyclauncher.git`
-2. The project is opened in **Android Studio Ladybug (or newer)**.
-3. The application is built and deployed to a device.
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/msbluesnow/Cyclauncher.git
+   cd Cyclauncher
+   ```
+2. **Open in IDE:**
+   - Open the project in **Android Studio Meerkat / Ladybug (or newer)** or **Antigravity IDE / VS Code**.
+   - Ensure JDK 17+ (or bundled JBR) and Android SDK 36 are installed.
+3. **Build via CLI:**
+   ```bash
+   # Linux / macOS
+   chmod +x gradlew
+   ./gradlew assembleDebug
 
-### CLI Build Instructions
-For automated systems or command-line enthusiasts, the application is built using the following commands:
-```bash
-chmod +x gradlew
-./gradlew assembleRelease
-```
+   # Windows
+   .\gradlew.bat assembleDebug
+   ```
 
 ## 🗺️ Roadmap
 
@@ -92,16 +101,18 @@ A continuous, unified timeline of completed milestones and planned updates.
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Letter-Based Scroll Wheel</b> — Interactive rectangular scroll wheel for high-performance app retrieval.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Side Alphabet Search Mode</b> — Ergonomic alphabet index strip for swift one-handed scrubbing and app indexing.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Custom Character & Symbol Search Indexing</b> — Customize first-character rules, emojis, and international alphabets mapped to search letters.<br>
-<kbd>&nbsp;✓&nbsp;</kbd> <b>Tag Folder System</b> — On-screen tag folders with multi-app previews, quick popups, and full management.<br>
+<kbd>&nbsp;✓&nbsp;</kbd> <b>Tag Folder System & Tag Pinning</b> — On-screen tag folders with multi-app previews, quick popups, and favorite pin support.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Application Tag System</b> — Grouping apps with an AI-assisted tagging workflow and full JSON backup options.<br>
-<kbd>&nbsp;✓&nbsp;</kbd> <b>Adaptive Text & Theme Accents</b> — Selectable accent palettes, a custom Main Color (Black/White) switcher, and dynamic shadow inversion.<br>
+<kbd>&nbsp;✓&nbsp;</kbd> <b>Adaptive Text & Theme Accents</b> — Selectable accent palettes, a custom Main Color (Black/White) switcher, dynamic shadow inversion, and animation controls.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Performance Tuning</b> — Asynchronous Coil icon prefetching with safe path filters, and cached default launcher checks to eliminate main thread IPC jank.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Interactive Gesture Tutorial</b> — Guided onboarding overlay teaching launcher gestures with animated visualizers.<br>
+<kbd>&nbsp;✓&nbsp;</kbd> <b>Keep Android Open Integration</b> — In-app initiative banner and FreeDroidWarn integration.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>Tag Map</i> — Interactive tag map showing connections between applications and implementing quick tag-based navigation.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>App Shortcuts</i> — Quick-launch actions like dialing specific contacts or opening deep-linked settings.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>Widgets Integration</i> — Full support for configuring and pinning dynamic Android widgets on the home layout.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>Localization</i> — Native translation support for multiple popular world languages.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>3D Hex Search Grid</i> — Immersive 3D application navigation styled as a rotatable hexagonal prism.<br>
+
 
 
 ## ⚠️ Known Issues
