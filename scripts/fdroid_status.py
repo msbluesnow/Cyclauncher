@@ -398,16 +398,40 @@ def compute_changes(old: dict, new: dict) -> tuple[list[str], list[str]]:
         changes.append(f"📝 New build log on monitor: {log}")
 
     # 4. Queue changes
-    old_queue = set(old.get("queue", []))
-    new_queue = set(new.get("queue", []))
-    if old_queue != new_queue:
-        if new_queue:
-            q_str = ', '.join(new.get('queue', []))
+    old_q = set(old.get("queue", []))
+    new_q = set(new.get("queue", []))
+    if old_q != new_q:
+        all_mrs = new.get("gitlab_mrs", [])
+
+        def find_mr_for_queue(q_entry):
+            # Queue entry is usually like "[state] dev.msbs.cyclauncher:13"
+            m = re.search(r':(\d+)$', q_entry)
+            if m:
+                code = m.group(1)
+                for mr in all_mrs:
+                    v = mr.get("version") or ""
+                    # Match if code is in version string like "v0.8.1 (13)" or "code 13"
+                    if f"({code})" in v or f"code {code}" in v or v == code:
+                        return f"MR !{mr['iid']} ({v})"
+            return None
+
+        if new_q:
+            q_details = []
+            for qe in sorted(list(new_q)):
+                mr_label = find_mr_for_queue(qe)
+                q_details.append(f"{qe}{' [' + mr_label + ']' if mr_label else ''}")
+            q_str = ', '.join(q_details)
             top_targets.append(f"⏳ In Build Queue: {q_str}")
             changes.append(f"⏳ Build queue updated: {q_str}")
-        elif old_queue:
-            top_targets.append("✅ Package left build queue")
-            changes.append("✅ Package left the build queue (build finished)")
+        elif old_q:
+            related = []
+            for qe in sorted(list(old_q)):
+                mr_label = find_mr_for_queue(qe)
+                if mr_label:
+                    related.append(mr_label)
+            suffix = f" (related: {', '.join(set(related))})" if related else ""
+            top_targets.append(f"✅ Package left build queue{suffix}")
+            changes.append(f"✅ Package left the build queue (build finished){suffix}")
 
     return changes, top_targets
 
@@ -490,10 +514,10 @@ def notify_if_changed() -> None:
         with open(STATE_FILE, "w", encoding="utf-8") as f:
             json.dump(current, f, ensure_ascii=False, indent=2)
 
-        header_lines = ["🔔 F-Droid: Статус обновления изменился!"]
+        header_lines = ["🔔 F-Droid: Update status changed!"]
         if top_targets:
             header_lines.append("")
-            header_lines.append("🎯 Затронутое обновление / MR:")
+            header_lines.append("🎯 Affected update / MR:")
             for t in top_targets:
                 header_lines.append(f"  {t}")
 
@@ -501,7 +525,7 @@ def notify_if_changed() -> None:
         lines = [
             "\n".join(header_lines),
             "",
-            "📋 Детали изменений:",
+            "📋 Change details:",
             change_summary,
             "",
             "────────────────────────",
