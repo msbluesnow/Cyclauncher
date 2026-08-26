@@ -16,6 +16,9 @@
   <a href="https://f-droid.org/packages/dev.msbs.cyclauncher/">
     <img src="https://img.shields.io/f-droid/v/dev.msbs.cyclauncher?style=for-the-badge&logo=f-droid&logoColor=white&label=F-Droid" alt="F-Droid Version">
   </a>
+  <a href="https://github.com/msbluesnow/Cyclauncher/releases">
+    <img src="https://img.shields.io/github/downloads/msbluesnow/Cyclauncher/total?style=for-the-badge&logo=github&color=blue&label=Downloads" alt="Total Downloads">
+  </a>
   <a href="https://github.com/msbluesnow/Cyclauncher/actions/workflows/fdroid-check.yml">
     <img src="https://img.shields.io/github/actions/workflow/status/msbluesnow/Cyclauncher/fdroid-check.yml?style=for-the-badge&label=F-Droid%20Check&logo=github" alt="F-Droid Status Check">
   </a>
@@ -54,7 +57,6 @@ Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**,
 - **Dynamic Favorites & History Badges**: Organize top apps with intuitive drag-and-drop reordering, and track newly installed or updated apps via subtle visual update badges in history.
 - **AI-Assisted App Tagging**: Fast batch categorization of applications with an external AI tagging workflow (Export → Process via External Prompt → Import) and full JSON backup options.
 - **Deep Theme Customization & Accessibility**: Curated accent palettes (Catppuccin, Nord), primary text color modes (Black/White) with adaptive wallpaper drop-shadows, customizable shadow colors, and an accessibility toggle to disable all animations including cursor blinking.
-- **Keep Android Open Initiative**: Integrated awareness banner and FreeDroidWarn support to advocate for open mobile platforms and fair distribution.
 
 ## 🤝 Community & Support
 
@@ -82,7 +84,7 @@ To build and run Cyclauncher locally:
    cd Cyclauncher
    ```
 2. **Open in IDE:**
-   - Open the project in **Android Studio Meerkat / Ladybug (or newer)** or **Antigravity IDE / VS Code**.
+   - Open the project in **Android Studio Meerkat / Ladybug (or newer)** or **VS Code**.
    - Ensure JDK 17+ (or bundled JBR) and Android SDK 36 are installed.
 3. **Build via CLI:**
    ```bash
@@ -106,7 +108,6 @@ A continuous, unified timeline of completed milestones and planned updates.
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Adaptive Text & Theme Accents</b> — Selectable accent palettes, a custom Main Color (Black/White) switcher, dynamic shadow inversion, and animation controls.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Performance Tuning</b> — Asynchronous Coil icon prefetching with safe path filters, and cached default launcher checks to eliminate main thread IPC jank.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Interactive Gesture Tutorial</b> — Guided onboarding overlay teaching launcher gestures with animated visualizers.<br>
-<kbd>&nbsp;✓&nbsp;</kbd> <b>Keep Android Open Integration</b> — In-app initiative banner and FreeDroidWarn integration.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>Tag Map</i> — Interactive tag map showing connections between applications and implementing quick tag-based navigation.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>App Shortcuts</i> — Quick-launch actions like dialing specific contacts or opening deep-linked settings.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>Widgets Integration</i> — Full support for configuring and pinning dynamic Android widgets on the home layout.<br>

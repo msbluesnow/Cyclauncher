@@ -9,7 +9,7 @@ This guide provides an overview of the project setup, architectural conventions,
 ## 🛠️ Prerequisites & Setup
 
 1. **JDK 17 or higher** (JDK 17/21 or Android Studio JBR).
-2. **Android Studio (Meerkat/Ladybug or newer)** or **Antigravity IDE / VS Code**.
+2. **Android Studio (Meerkat/Ladybug or newer)** or **VS Code**.
 3. **Android SDK 36** with Build Tools installed (minimum SDK: 24 / Android 7.0).
 
 ### Build & Run locally
