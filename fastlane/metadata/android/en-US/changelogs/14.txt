@@ -1,0 +1,5 @@
+- Added option to disable all launcher animations (including cursor blinking) and customize shadow colors.
+- Added Keep Android Open initiative countdown banner in Settings.
+- Redesigned Settings screen with modern section icons and interactive Support & Community action cards.
+- Improved Character Mapping screen layout with icon-based headers and streamlined reset button.
+- Removed drop shadows from long-press context menu icons for a cleaner look.
