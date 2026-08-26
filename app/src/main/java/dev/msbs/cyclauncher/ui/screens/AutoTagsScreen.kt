@@ -116,7 +116,7 @@ fun AutoTagsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = null,
-                            tint = Color.Black.copy(alpha = 0.25f),
+                            tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.25f),
                             modifier = Modifier
                                 .size(24.dp)
                                 .offset(1.dp, 1.dp)

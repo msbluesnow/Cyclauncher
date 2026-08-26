@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -115,7 +116,7 @@ fun KeepAndroidOpenBanner(
                 ),
                 shape = RoundedCornerShape(16.dp)
             )
-            .padding(16.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Header Row: Title & Countdown Badge
@@ -156,8 +157,7 @@ fun KeepAndroidOpenBanner(
                         Text(
                             text = "Your phone is about to stop being yours",
                             color = primaryTextColor.color.copy(alpha = 0.65f),
-                            style = TextStyle(shadow = shadow, fontSize = 11.sp),
-                            maxLines = 1
+                            style = TextStyle(shadow = shadow, fontSize = 11.sp, lineHeight = 14.sp)
                         )
                     }
                 }
@@ -195,16 +195,16 @@ fun KeepAndroidOpenBanner(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Informational Summary
             Text(
                 text = "Starting in 2027, Google will block every Android app whose developer hasn't registered with Google and submitted government ID.",
                 color = primaryTextColor.color.copy(alpha = 0.85f),
-                style = TextStyle(shadow = shadow, fontSize = 12.5.sp, lineHeight = 17.5.sp)
+                style = TextStyle(shadow = shadow, fontSize = 12.sp, lineHeight = 16.sp)
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Action Buttons
             Row(

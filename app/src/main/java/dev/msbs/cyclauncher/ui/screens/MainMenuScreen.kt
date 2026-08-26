@@ -1261,7 +1261,7 @@ private fun FavoritesSection(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = null,
-                                tint = Color.Black.copy(alpha = 0.6f),
+                                tint = primaryTextColor.getShadowColor(LocalShadowSettings.current.shadowColorOverride).copy(alpha = 0.6f),
                                 modifier = Modifier
                                     .size(24.dp)
                                     .offset(1.dp, 1.dp)

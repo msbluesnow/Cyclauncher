@@ -201,46 +201,96 @@ fun SettingsScreen(
             border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = 0.12f))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                // Handside Selector
-                SettingsRow(label = "Preferred Hand:", textColor = primaryTextColor.color, shadow = shadow) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        HandOption("Left", handSide == HandSide.LEFT, accentColor, shadow) {
-                            viewModel.setHandSide(HandSide.LEFT)
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        HandOption("Right", handSide == HandSide.RIGHT, accentColor, shadow) {
-                            viewModel.setHandSide(HandSide.RIGHT)
-                        }
-                    }
-                }
-
-                HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
-
-                // Search Method Selector (single compact line with icons)
-                SettingsRow(label = "Search Method:", textColor = primaryTextColor.color, shadow = shadow) {
+                // Combined Hand Side and Search Method Row
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left Side: Preferred Hand
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        modifier = Modifier.weight(1.1f)
                     ) {
-                        // Horizontal rectangle icon for WHEEL (width > height)
-                        SearchMethodIconOption(
-                            isHorizontal = true,
-                            isSelected = searchMethod == SearchMethod.WHEEL,
-                            accentColor = accentColor,
-                            primaryTextColor = primaryTextColor,
-                            handSide = handSide,
-                            onClick = { viewModel.setSearchMethod(SearchMethod.WHEEL) }
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            if (showShadows) {
+                                Icon(
+                                    imageVector = Icons.Outlined.PanTool,
+                                    contentDescription = null,
+                                    tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                                    modifier = Modifier.size(20.dp).offset(1.dp, 1.dp)
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Outlined.PanTool,
+                                contentDescription = null,
+                                tint = primaryTextColor.color.copy(alpha = 0.7f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            HandOption("L", handSide == HandSide.LEFT, accentColor, shadow) {
+                                viewModel.setHandSide(HandSide.LEFT)
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            HandOption("R", handSide == HandSide.RIGHT, accentColor, shadow) {
+                                viewModel.setHandSide(HandSide.RIGHT)
+                            }
+                        }
+                    }
 
-                        // Vertical rectangle icon for SIDE_ALPHABET (height > width)
-                        SearchMethodIconOption(
-                            isHorizontal = false,
-                            isSelected = searchMethod == SearchMethod.SIDE_ALPHABET,
-                            accentColor = accentColor,
-                            primaryTextColor = primaryTextColor,
-                            handSide = handSide,
-                            onClick = { viewModel.setSearchMethod(SearchMethod.SIDE_ALPHABET) }
-                        )
+                    // Vertical Separator
+                    VerticalDivider(
+                        modifier = Modifier.height(24.dp).padding(horizontal = 8.dp),
+                        color = primaryTextColor.color.copy(alpha = 0.15f)
+                    )
+
+                    // Right Side: Search Method
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.End,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            if (showShadows) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Search,
+                                    contentDescription = null,
+                                    tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                                    modifier = Modifier.size(20.dp).offset(1.dp, 1.dp)
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Outlined.Search,
+                                contentDescription = null,
+                                tint = primaryTextColor.color.copy(alpha = 0.7f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            SearchMethodIconOption(
+                                isHorizontal = true,
+                                isSelected = searchMethod == SearchMethod.WHEEL,
+                                accentColor = accentColor,
+                                primaryTextColor = primaryTextColor,
+                                handSide = handSide,
+                                onClick = { viewModel.setSearchMethod(SearchMethod.WHEEL) }
+                            )
+
+                            SearchMethodIconOption(
+                                isHorizontal = false,
+                                isSelected = searchMethod == SearchMethod.SIDE_ALPHABET,
+                                accentColor = accentColor,
+                                primaryTextColor = primaryTextColor,
+                                handSide = handSide,
+                                onClick = { viewModel.setSearchMethod(SearchMethod.SIDE_ALPHABET) }
+                            )
+                        }
                     }
                 }
 
@@ -265,14 +315,28 @@ fun SettingsScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        Switch(
-                            checked = hideStatusBar,
-                            onCheckedChange = { viewModel.setHideStatusBar(it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = accentColor.color,
-                                checkedTrackColor = accentColor.color.copy(alpha = 0.5f)
-                            )
-                        )
+                        val visibilityIcon = if (hideStatusBar) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility
+                        IconButton(
+                            onClick = { viewModel.setHideStatusBar(!hideStatusBar) },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                if (showShadows) {
+                                    Icon(
+                                        imageVector = visibilityIcon,
+                                        contentDescription = null,
+                                        tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                                        modifier = Modifier.size(22.dp).offset(1.dp, 1.dp)
+                                    )
+                                }
+                                Icon(
+                                    imageVector = visibilityIcon,
+                                    contentDescription = "Toggle status bar visibility",
+                                    tint = accentColor.color,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                        }
                     }
 
                     // Animations Toggle
@@ -319,12 +383,22 @@ fun SettingsScreen(
                             fontWeight = FontWeight.SemiBold,
                             style = TextStyle(shadow = shadow)
                         )
-                        Icon(
-                            imageVector = Icons.Outlined.Tune,
-                            contentDescription = "Configure character mappings",
-                            tint = accentColor.color,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            if (showShadows) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Tune,
+                                    contentDescription = null,
+                                    tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                                    modifier = Modifier.size(18.dp).offset(1.dp, 1.dp)
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Outlined.Tune,
+                                contentDescription = "Configure character mappings",
+                                tint = accentColor.color,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
 
@@ -444,7 +518,7 @@ fun SettingsScreen(
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 if (showShadows) {
-                                    Icon(Icons.Outlined.Upload, null, tint = primaryTextColor.shadowColor.copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
+                                    Icon(Icons.Outlined.Upload, null, tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
                                 }
                                 Icon(Icons.Outlined.Upload, null, tint = accentColor.color, modifier = Modifier.size(22.dp))
                             }
@@ -455,7 +529,7 @@ fun SettingsScreen(
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 if (showShadows) {
-                                    Icon(Icons.Outlined.Download, null, tint = primaryTextColor.shadowColor.copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
+                                    Icon(Icons.Outlined.Download, null, tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
                                 }
                                 Icon(Icons.Outlined.Download, null, tint = accentColor.color, modifier = Modifier.size(22.dp))
                             }
@@ -487,7 +561,7 @@ fun SettingsScreen(
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 if (showShadows) {
-                                    Icon(Icons.Outlined.AutoAwesome, null, tint = primaryTextColor.shadowColor.copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
+                                    Icon(Icons.Outlined.AutoAwesome, null, tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
                                 }
                                 Icon(Icons.Outlined.AutoAwesome, null, tint = accentColor.color, modifier = Modifier.size(22.dp))
                             }
@@ -498,7 +572,7 @@ fun SettingsScreen(
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 if (showShadows) {
-                                    Icon(Icons.Outlined.Upload, null, tint = primaryTextColor.shadowColor.copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
+                                    Icon(Icons.Outlined.Upload, null, tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
                                 }
                                 Icon(Icons.Outlined.Upload, null, tint = accentColor.color, modifier = Modifier.size(22.dp))
                             }
@@ -509,7 +583,7 @@ fun SettingsScreen(
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 if (showShadows) {
-                                    Icon(Icons.Outlined.Download, null, tint = primaryTextColor.shadowColor.copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
+                                    Icon(Icons.Outlined.Download, null, tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
                                 }
                                 Icon(Icons.Outlined.Download, null, tint = accentColor.color, modifier = Modifier.size(22.dp))
                             }
@@ -599,7 +673,7 @@ fun SettingsScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // Keep Android Open Countdown Banner
         KeepAndroidOpenBanner(
@@ -718,12 +792,23 @@ private fun AccentColorDropdown(
                     .background(selectedColor.color)
                     .border(1.dp, primaryTextColor.color.copy(alpha = 0.2f), CircleShape)
             )
-            Icon(
-                imageVector = Icons.Outlined.KeyboardArrowDown,
-                contentDescription = null,
-                tint = selectedColor.color,
-                modifier = Modifier.size(20.dp)
-            )
+            val shadowSettings = dev.msbs.cyclauncher.ui.theme.LocalShadowSettings.current
+            Box(contentAlignment = Alignment.Center) {
+                if (shadowSettings.showShadows) {
+                    Icon(
+                        imageVector = Icons.Outlined.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.25f),
+                        modifier = Modifier.size(20.dp).offset(1.dp, 1.dp)
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Outlined.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = selectedColor.color,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
         DropdownMenu(
             expanded = expanded,

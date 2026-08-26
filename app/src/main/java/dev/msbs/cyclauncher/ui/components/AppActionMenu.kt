@@ -5,6 +5,7 @@ import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
+import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 
 import androidx.compose.foundation.*
@@ -231,12 +232,23 @@ fun HistoryActionMenu(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.History,
-                        contentDescription = null,
-                        tint = accentColor.color,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    val shadowSettings = LocalShadowSettings.current
+                    Box(contentAlignment = Alignment.Center) {
+                        if (shadowSettings.showShadows) {
+                            Icon(
+                                imageVector = Icons.Outlined.History,
+                                contentDescription = null,
+                                tint = Color.Black.copy(alpha = 0.2f),
+                                modifier = Modifier.size(20.dp).offset(1.dp, 1.dp)
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Outlined.History,
+                            contentDescription = null,
+                            tint = accentColor.color,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "History",
@@ -315,12 +327,23 @@ private fun MenuItem(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = accentColor.color,
-            modifier = Modifier.size(20.dp)
-        )
+        val shadowSettings = LocalShadowSettings.current
+        Box(contentAlignment = Alignment.Center) {
+            if (shadowSettings.showShadows) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color.Black.copy(alpha = 0.2f),
+                    modifier = Modifier.size(20.dp).offset(1.dp, 1.dp)
+                )
+            }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accentColor.color,
+                modifier = Modifier.size(20.dp)
+            )
+        }
         Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = text,
