@@ -28,7 +28,7 @@
             android:stateNotNeeded="true"
             android:directBootAware="true"
             android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustPan">
+            android:windowSoftInputMode="adjustResize">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

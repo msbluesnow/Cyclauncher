@@ -498,7 +498,8 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Attempts to open the application represented by the given component key.
-     * Uses a specific class-name-based intent if possible, falling back to a package-launch intent.
+     * Prioritizes the system [android.content.pm.LauncherApps] API for native multi-profile (Work profile) support,
+     * falling back to explicit component and package launch intents.
      * Logs the application launch event inside the view model.
      *
      * @param componentKey The component key (formatted as "packageName/activityName" or package name).
@@ -508,24 +509,38 @@ class MainActivity : ComponentActivity() {
         if (parts.size == 2) {
             val packageName = parts[0]
             val activityName = parts[1]
-            try {
-                val intent = Intent(Intent.ACTION_MAIN).apply {
-                    addCategory(Intent.CATEGORY_LAUNCHER)
-                    setClassName(packageName, activityName)
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
-                }
-                viewModel.logAppLaunch(componentKey)
-                viewModel.requestHistoryScrollToBottom()
-                startActivity(intent)
-            } catch (e: Exception) {
-                packageManager.getLaunchIntentForPackage(packageName)?.let { intent ->
+            val componentName = android.content.ComponentName(packageName, activityName)
+
+            viewModel.logAppLaunch(componentKey)
+            viewModel.requestHistoryScrollToBottom()
+
+            val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
+            var launched = false
+            if (launcherApps != null) {
+                try {
+                    launcherApps.startMainActivity(componentName, android.os.Process.myUserHandle(), null, null)
+                    launched = true
+                } catch (_: Exception) {}
+            }
+
+            if (!launched) {
+                try {
+                    val intent = Intent(Intent.ACTION_MAIN).apply {
+                        addCategory(Intent.CATEGORY_LAUNCHER)
+                        component = componentName
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+                    }
                     startActivity(intent)
+                } catch (e: Exception) {
+                    packageManager.getLaunchIntentForPackage(packageName)?.let { intent ->
+                        startActivity(intent)
+                    }
                 }
             }
         } else {
+            viewModel.logAppLaunch(componentKey)
+            viewModel.requestHistoryScrollToBottom()
             packageManager.getLaunchIntentForPackage(componentKey)?.let { intent ->
-                viewModel.logAppLaunch(componentKey)
-                viewModel.requestHistoryScrollToBottom()
                 startActivity(intent)
             }
         }
