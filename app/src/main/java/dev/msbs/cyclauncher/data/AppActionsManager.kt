@@ -356,35 +356,13 @@ class AppActionsManager(context: Context) {
     }
     
     /**
-     * Cleans up stored favorites, history, custom labels, and app tags for a specific package that was uninstalled.
+     * Handles package removal events.
+     * Preserves custom labels, tags, favorites, and history so that user configurations
+     * are not lost during package update cycles (e.g. F-Droid, APK updates, or reinstallation).
      *
-     * @param packageName The package name of the uninstalled application.
+     * @param packageName The package name of the removed application.
      */
     fun onPackageRemoved(packageName: String) {
-        val newFavorites = _favorites.value.filterNot { it.startsWith("$packageName/") || it == packageName }
-        if (newFavorites.size != _favorites.value.size) {
-            _favorites.value = newFavorites
-            saveList("favorites", newFavorites)
-        }
-
-        val newHistory = _history.value.filterNot { it.startsWith("$packageName/") || it == packageName }
-        if (newHistory.size != _history.value.size) {
-            _history.value = newHistory
-            saveList("history", newHistory)
-        }
-
-        val newLabels = _customLabels.value.filterKeys { !it.startsWith("$packageName/") && it != packageName }
-        if (newLabels.size != _customLabels.value.size) {
-            _customLabels.value = newLabels
-            saveMap("custom_labels", newLabels)
-        }
-
-        val newAppTags = _appTags.value.filterKeys { !it.startsWith("$packageName/") && it != packageName }
-        if (newAppTags.size != _appTags.value.size) {
-            _appTags.value = newAppTags
-            saveAppTags(newAppTags)
-        }
-
         val newRecent = _recentlyUpdated.value.filterNot { it.startsWith("$packageName/") || it == packageName }.toSet()
         if (newRecent.size != _recentlyUpdated.value.size) {
             _recentlyUpdated.value = newRecent
@@ -427,61 +405,7 @@ class AppActionsManager(context: Context) {
         } catch (_: Exception) {}
     }
 
-    /**
-     * Safely cleans up references to uninstalled apps by querying PackageManager for each package individually.
-     * This avoids accidentally wiping user data during system boot when bulk activity queries might be incomplete.
-     *
-     * @param pm The system PackageManager instance.
-     */
-    fun cleanupUninstalledApps(pm: android.content.pm.PackageManager) {
-        fun isPackageInstalled(key: String): Boolean {
-            val pkgName = key.split("/").firstOrNull() ?: return false
-            return try {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    pm.getPackageInfo(pkgName, android.content.pm.PackageManager.PackageInfoFlags.of(0))
-                } else {
-                    @Suppress("DEPRECATION")
-                    pm.getPackageInfo(pkgName, 0)
-                }
-                true
-            } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
-                false
-            } catch (e: Exception) {
-                true // Fallback: keep if status couldn't be definitively checked
-            }
-        }
 
-        val newFavorites = _favorites.value.filter { key ->
-            if (key.startsWith("tag:")) {
-                val tagId = key.removePrefix("tag:")
-                _tags.value.any { it.id == tagId }
-            } else {
-                isPackageInstalled(key)
-            }
-        }
-        if (newFavorites.size != _favorites.value.size) {
-            _favorites.value = newFavorites
-            saveList("favorites", newFavorites)
-        }
-
-        val newHistory = _history.value.filter { isPackageInstalled(it) }
-        if (newHistory.size != _history.value.size) {
-            _history.value = newHistory
-            saveList("history", newHistory)
-        }
-
-        val newLabels = _customLabels.value.filterKeys { isPackageInstalled(it) }
-        if (newLabels.size != _customLabels.value.size) {
-            _customLabels.value = newLabels
-            saveMap("custom_labels", newLabels)
-        }
-
-        val newAppTags = _appTags.value.filterKeys { isPackageInstalled(it) }
-        if (newAppTags.size != _appTags.value.size) {
-            _appTags.value = newAppTags
-            saveAppTags(newAppTags)
-        }
-    }
 
     /**
      * Loads custom character mappings from SharedPreferences.

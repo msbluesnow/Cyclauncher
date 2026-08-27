@@ -37,7 +37,11 @@ internal class AppIconFetcher private constructor(
         val drawable: Drawable = try {
             resolveIcon(pm, pkg, activity)
         } catch (_: Exception) {
-            pm.defaultActivityIcon
+            try {
+                pm.getApplicationIcon(pkg)
+            } catch (_: Exception) {
+                pm.defaultActivityIcon
+            }
         }
 
         val targetSize = resolveTargetSize(drawable, options)
@@ -93,10 +97,7 @@ internal class AppIconFetcher private constructor(
             val key = when (data) {
                 is AppIconKey -> data
                 is String -> {
-                    if (data.startsWith("/")) return null
-                    val uri = data.toUri()
-                    if (uri.scheme != null) return null
-                    if (!data.contains('/')) return null
+                    if (data.startsWith("/") || data.contains("://") || !data.contains('/')) return null
                     AppIconKey(data)
                 }
                 else -> return null

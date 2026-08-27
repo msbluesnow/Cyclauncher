@@ -125,6 +125,7 @@ fun AppIconItem(
     onLongClick: (Offset) -> Unit = {}
 ) {
     var itemPosition by remember { mutableStateOf(Offset.Zero) }
+    val currentItemPosition by rememberUpdatedState(itemPosition)
     val currentOnClick by rememberUpdatedState(onClick)
     val currentOnLongClick by rememberUpdatedState(onLongClick)
 
@@ -143,7 +144,7 @@ fun AppIconItem(
             .pointerInput(app.componentKey) {
                 detectTapGestures(
                     onTap = { currentOnClick() },
-                    onLongPress = { currentOnLongClick(itemPosition + it) }
+                    onLongPress = { currentOnLongClick(currentItemPosition + it) }
                 )
             }
     )

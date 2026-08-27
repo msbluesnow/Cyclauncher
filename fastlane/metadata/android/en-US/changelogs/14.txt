@@ -3,3 +3,4 @@
 - Redesigned Settings screen with modern section icons and interactive Support & Community action cards.
 - Improved Character Mapping screen layout with icon-based headers and streamlined reset button.
 - Removed drop shadows from long-press context menu icons for a cleaner look.
+- Fixed custom renamed app labels resetting to defaults when updating applications (e.g., from F-Droid).

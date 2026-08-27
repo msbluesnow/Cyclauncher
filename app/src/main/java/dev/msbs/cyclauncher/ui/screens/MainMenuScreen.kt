@@ -216,30 +216,51 @@ fun MainMenuScreen(
             .fillMaxSize()
             .pointerInput(isActive, isAnyEditMode) {
                 if (!isActive || isAnyEditMode) return@pointerInput
-                detectTapGestures(
-                    onLongPress = { currentOnSettingsClick() }
-                )
-            }
-            .pointerInput(isActive, isAnyEditMode) {
-                if (!isActive || isAnyEditMode) return@pointerInput
-                var totalDragY = 0f
-                detectVerticalDragGestures(
-                    onDragStart = { totalDragY = 0f },
-                    onDragEnd = {
-                        if (totalDragY < -50f) {
-                            currentOnSwipeUp()
-                        } else if (totalDragY > 50f) {
-                            currentOnSwipeDown()
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    var isDrag = false
+                    var totalDragY = 0f
+                    var isLongPressTriggered = false
+
+                    val dragOrTimeout = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if (!change.pressed) break
+                            val deltaY = change.positionChange().y
+                            totalDragY += deltaY
+                            if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop) {
+                                isDrag = true
+                                change.consume()
+                                return@withTimeoutOrNull true
+                            }
                         }
-                        totalDragY = 0f
-                    },
-                    onDragCancel = {
-                        totalDragY = 0f
-                    },
-                    onVerticalDrag = { _, dragAmount ->
-                        totalDragY += dragAmount
+                        false
                     }
-                )
+
+                    if (dragOrTimeout == null && !isDrag) {
+                        isLongPressTriggered = true
+                        currentOnSettingsClick()
+                    }
+
+                    if (isDrag && !isLongPressTriggered) {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if (!change.pressed) {
+                                if (totalDragY < -50f) {
+                                    currentOnSwipeUp()
+                                } else if (totalDragY > 50f) {
+                                    currentOnSwipeDown()
+                                }
+                                break
+                            }
+                            val deltaY = change.positionChange().y
+                            totalDragY += deltaY
+                            change.consume()
+                        }
+                    }
+                }
             }
     ) {
         Row(

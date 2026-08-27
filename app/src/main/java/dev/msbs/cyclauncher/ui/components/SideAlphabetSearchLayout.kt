@@ -363,16 +363,17 @@ private fun SideAlphabetGrid(
             .heightIn(max = maxGridHeight)
             .padding(bottom = 8.dp, start = 4.dp, end = 4.dp)
             .onGloballyPositioned { gridBoundsSize = it.size.toSize() }
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onPress = { offset -> processTouchOffset(offset) },
-                    onTap = { offset -> processTouchOffset(offset) }
-                )
-            }
-            .pointerInput(Unit) {
-                detectDragGestures { change, _ ->
-                    change.consume()
-                    processTouchOffset(change.position)
+            .pointerInput(alphabet) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    processTouchOffset(down.position)
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) break
+                        change.consume()
+                        processTouchOffset(change.position)
+                    }
                 }
             }
     ) {

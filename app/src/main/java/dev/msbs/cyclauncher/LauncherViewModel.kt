@@ -1052,17 +1052,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
             val resolvedInfos = pm.queryIntentActivities(mainIntent, 0)
 
-            // Batch-query all installed package update times in a single IPC call instead of N sequential Binder queries
-            val updateTimeMap = try {
-                val pList = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    pm.getInstalledPackages(android.content.pm.PackageManager.PackageInfoFlags.of(0))
-                } else {
-                    @Suppress("DEPRECATION")
-                    pm.getInstalledPackages(0)
+            val distinctPkgs = resolvedInfos.map { it.activityInfo.packageName }.distinct()
+            val updateTimeMap = distinctPkgs.associateWith { pkgName ->
+                try {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        pm.getPackageInfo(pkgName, android.content.pm.PackageManager.PackageInfoFlags.of(0)).lastUpdateTime
+                    } else {
+                        @Suppress("DEPRECATION")
+                        pm.getPackageInfo(pkgName, 0).lastUpdateTime
+                    }
+                } catch (_: Exception) {
+                    0L
                 }
-                pList.associate { it.packageName to it.lastUpdateTime }
-            } catch (_: Exception) {
-                emptyMap()
             }
 
             val currentUpdateTimes = mutableMapOf<String, Long>()
@@ -1142,12 +1143,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             }
 
             actionsManager.saveAppUpdateTimes(currentUpdateTimes)
-
-            // Perform safe uninstalled app cleanup using PackageInfo validation only if user storage is unlocked
-            val userManager = getApplication<Application>().getSystemService(android.content.Context.USER_SERVICE) as? android.os.UserManager
-            if (userManager == null || userManager.isUserUnlocked) {
-                actionsManager.cleanupUninstalledApps(pm)
-            }
         }
     }
 }

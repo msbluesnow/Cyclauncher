@@ -222,6 +222,7 @@ fun RectangularAlphabetWheel(
                             strokeCap = Paint.Cap.BUTT
                             strokeJoin = Paint.Join.MITER
                         }
+                        val segmentPath = Path()
 
                         onDrawBehind {
                             val lower = floatIndex.toInt()
@@ -234,7 +235,7 @@ fun RectangularAlphabetWheel(
                             val currentDist = (rawDist * scale) % totalLength
                             
                             val halfLen = (stepSize * 0.4f).toPx()
-                            val segmentPath = Path()
+                            segmentPath.reset()
                             
                             val start = currentDist - halfLen
                             val end = currentDist + halfLen
