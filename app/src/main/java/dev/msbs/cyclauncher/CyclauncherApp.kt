@@ -22,6 +22,14 @@ class CyclauncherApp : Application(), SingletonImageLoader.Factory {
 
     private var imageLoader: ImageLoader? = null
 
+    override fun onCreate() {
+        super.onCreate()
+        // Purge any legacy disk image cache left by previous versions to reclaim storage
+        try {
+            cacheDir.resolve("image_cache").deleteRecursively()
+        } catch (_: Exception) {}
+    }
+
     override fun newImageLoader(context: Context): ImageLoader {
         val loader = ImageLoader.Builder(context)
             .components {
@@ -32,6 +40,7 @@ class CyclauncherApp : Application(), SingletonImageLoader.Factory {
                     .maxSizeBytes(MAX_MEMORY_BYTES)
                     .build()
             }
+            .diskCache(null)
             .crossfade(false)
             .build()
         imageLoader = loader

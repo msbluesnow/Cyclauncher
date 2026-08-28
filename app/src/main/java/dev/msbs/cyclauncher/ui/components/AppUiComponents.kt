@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.rememberAsyncImagePainter
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 
 /**
@@ -88,6 +89,7 @@ fun AutoResizingText(
  *
  * [sizeDp] is promoted to px and passed to the request so Coil decodes at the right resolution
  * instead of always rasterizing the full-density source drawable.
+ * Disk cache is explicitly disabled as local app icons are already available from PackageManager.
  */
 @Composable
 fun rememberAppIconPainter(iconKey: String, sizeDp: Int = 48): Painter {
@@ -99,6 +101,8 @@ fun rememberAppIconPainter(iconKey: String, sizeDp: Int = 48): Painter {
             ImageRequest.Builder(context)
                 .data(dev.msbs.cyclauncher.coil.AppIconKey(iconKey))
                 .size(px)
+                .diskCachePolicy(CachePolicy.DISABLED)
+                .memoryCachePolicy(CachePolicy.ENABLED)
                 .build()
         }
     )

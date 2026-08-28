@@ -50,7 +50,7 @@ internal class AppIconFetcher private constructor(
         ImageFetchResult(
             image = bitmap.asImage(),
             isSampled = false,
-            dataSource = DataSource.DISK,
+            dataSource = DataSource.MEMORY,
         )
     }
 
