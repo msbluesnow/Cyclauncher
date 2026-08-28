@@ -445,20 +445,6 @@ class MainActivity : ComponentActivity() {
         viewModel.requestHistoryScrollToBottom()
     }
 
-    override fun onUserLeaveHint() {
-        super.onUserLeaveHint()
-        if (!isDefaultLauncherCached) {
-            finish()
-        }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        if (!isDefaultLauncherCached) {
-            finish()
-        }
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(packageReceiver)
