@@ -29,6 +29,9 @@ Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**,
 > [!IMPORTANT]
 > **Alpha Version**: This project is currently in early development. Features are subject to change, and bugs may be encountered as the experience is refined.
 
+> [!TIP]
+> **Get the Latest Build**: Download the latest signed APK (**v0.8.3-alpha**, Build 15) directly from [GitHub Releases](https://github.com/msbluesnow/Cyclauncher/releases/tag/v0.8.3-alpha).
+
 ## 📽️ Demo Showcases
 
 <table style="width: 100%; border: none;">
@@ -61,7 +64,7 @@ Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**,
 ## 🤝 Community & Support
 
 - **Discord**: Join the community for feedback and updates: [![Discord](https://img.shields.io/badge/Discord-Join%20Community-7289DA?style=for-the-badge&logo=discord)](https://discord.gg/Zw4EBe92Qn)
-- **Contributing**: Check out [CONTRIBUTING.md](CONTRIBUTING.md) to learn how to set up the project and submit pull requests.
+- **Contributing**: Check out [CONTRIBUTING.md](CONTRIBUTING.md) to learn how to set up the project, submit pull requests, and report issues (specifying versions and attaching reproduction videos).
 - **Tribute**: Support the development of this project: [![Support on Tribute](https://img.shields.io/badge/Support-Tribute-orange?style=for-the-badge)](https://web.tribute.tg/e/1dW)
 
 ## 🛠 Tech Stack
