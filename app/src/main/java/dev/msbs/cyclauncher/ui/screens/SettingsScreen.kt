@@ -101,8 +101,15 @@ fun SettingsScreen(
         ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
-            viewModel.importAppNamesPreview(it) { count ->
-                Toast.makeText(context, "Imported $count app labels", Toast.LENGTH_SHORT).show()
+            viewModel.importAppNamesPreview(it) { labelCount, favCount ->
+                val msg = if (favCount > 0 && labelCount > 0) {
+                    "Imported $labelCount app labels & $favCount favorites"
+                } else if (favCount > 0) {
+                    "Imported $favCount favorites"
+                } else {
+                    "Imported $labelCount app labels"
+                }
+                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
             }
         }
     }

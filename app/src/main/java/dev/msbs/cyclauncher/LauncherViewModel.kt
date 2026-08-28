@@ -769,14 +769,19 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /** Imports custom app labels from JSON and applies them. */
-    fun importAppNamesPreview(uri: Uri, onResult: (Int) -> Unit) {
+    /** Imports custom app labels and favorites from JSON/text and applies them. */
+    fun importAppNamesPreview(uri: Uri, onResult: (labelCount: Int, favCount: Int) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val map = actionsManager.importAppNamesFromUri(uri, apps.value)
-                actionsManager.applyAppLabels(map)
+                val result = actionsManager.importAppNamesFromUri(uri, apps.value)
+                if (result.labels.isNotEmpty()) {
+                    actionsManager.applyAppLabels(result.labels)
+                }
+                if (result.favorites.isNotEmpty()) {
+                    actionsManager.importFavorites(result.favorites)
+                }
                 withContext(Dispatchers.Main) {
-                    onResult(map.size)
+                    onResult(result.labels.size, result.favorites.size)
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {

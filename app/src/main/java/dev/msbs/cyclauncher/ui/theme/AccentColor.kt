@@ -27,47 +27,47 @@ data class AccentColor(
         // --- Official Echo Icon Theme Palette ---
 
         // Echo Blue
-        val ECHO_BLUE_LIGHT = AccentColor("ECHO_BLUE_LIGHT", "Echo Sky", Color(0xFF19AEFF), Color(0x3319AEFF))
-        val ECHO_BLUE = AccentColor("ECHO_BLUE", "Echo Blue", Color(0xFF0084C8), Color(0x330084C8))
-        val ECHO_BLUE_DARK = AccentColor("ECHO_BLUE_DARK", "Echo Deep Blue", Color(0xFF005C94), Color(0x33005C94))
+        val ECHO_BLUE_LIGHT = AccentColor("ECHO_BLUE_LIGHT", "Sky", Color(0xFF19AEFF), Color(0x3319AEFF))
+        val ECHO_BLUE = AccentColor("ECHO_BLUE", "Blue", Color(0xFF0084C8), Color(0x330084C8))
+        val ECHO_BLUE_DARK = AccentColor("ECHO_BLUE_DARK", "Deep Blue", Color(0xFF005C94), Color(0x33005C94))
 
         // Echo Green
-        val ECHO_GREEN_LIGHT = AccentColor("ECHO_GREEN_LIGHT", "Echo Lime", Color(0xFFCCFF42), Color(0x33CCFF42))
-        val ECHO_GREEN = AccentColor("ECHO_GREEN", "Echo Green", Color(0xFF9ADE00), Color(0x339ADE00))
-        val ECHO_GREEN_DARK = AccentColor("ECHO_GREEN_DARK", "Echo Forest", Color(0xFF009100), Color(0x33009100))
+        val ECHO_GREEN_LIGHT = AccentColor("ECHO_GREEN_LIGHT", "Lime", Color(0xFFCCFF42), Color(0x33CCFF42))
+        val ECHO_GREEN = AccentColor("ECHO_GREEN", "Green", Color(0xFF9ADE00), Color(0x339ADE00))
+        val ECHO_GREEN_DARK = AccentColor("ECHO_GREEN_DARK", "Forest", Color(0xFF009100), Color(0x33009100))
 
         // Echo Orange & Yellow
-        val ECHO_YELLOW = AccentColor("ECHO_YELLOW", "Echo Yellow", Color(0xFFFFFF3E), Color(0x33FFFF3E))
-        val ECHO_ORANGE = AccentColor("ECHO_ORANGE", "Echo Orange", Color(0xFFFF9900), Color(0x33FF9900))
-        val ECHO_ORANGE_DARK = AccentColor("ECHO_ORANGE_DARK", "Echo Amber", Color(0xFFFF6600), Color(0x33FF6600))
+        val ECHO_YELLOW = AccentColor("ECHO_YELLOW", "Yellow", Color(0xFFFFFF3E), Color(0x33FFFF3E))
+        val ECHO_ORANGE = AccentColor("ECHO_ORANGE", "Orange", Color(0xFFFF9900), Color(0x33FF9900))
+        val ECHO_ORANGE_DARK = AccentColor("ECHO_ORANGE_DARK", "Amber", Color(0xFFFF6600), Color(0x33FF6600))
 
         // Echo Red
-        val ECHO_RED_LIGHT = AccentColor("ECHO_RED_LIGHT", "Echo Coral", Color(0xFFFF4141), Color(0x33FF4141))
-        val ECHO_RED = AccentColor("ECHO_RED", "Echo Red", Color(0xFFDC0000), Color(0x33DC0000))
-        val ECHO_RED_DARK = AccentColor("ECHO_RED_DARK", "Echo Crimson", Color(0xFFB50000), Color(0x33B50000))
+        val ECHO_RED_LIGHT = AccentColor("ECHO_RED_LIGHT", "Coral", Color(0xFFFF4141), Color(0x33FF4141))
+        val ECHO_RED = AccentColor("ECHO_RED", "Red", Color(0xFFDC0000), Color(0x33DC0000))
+        val ECHO_RED_DARK = AccentColor("ECHO_RED_DARK", "Crimson", Color(0xFFB50000), Color(0x33B50000))
 
         // Echo Purple
-        val ECHO_PURPLE_LIGHT = AccentColor("ECHO_PURPLE_LIGHT", "Echo Lilac", Color(0xFFF1CAFF), Color(0x33F1CAFF))
-        val ECHO_PURPLE = AccentColor("ECHO_PURPLE", "Echo Purple", Color(0xFFD76CFF), Color(0x33D76CFF))
-        val ECHO_PURPLE_DARK = AccentColor("ECHO_PURPLE_DARK", "Echo Violet", Color(0xFFBA00FF), Color(0x33BA00FF))
+        val ECHO_PURPLE_LIGHT = AccentColor("ECHO_PURPLE_LIGHT", "Lilac", Color(0xFFF1CAFF), Color(0x33F1CAFF))
+        val ECHO_PURPLE = AccentColor("ECHO_PURPLE", "Purple", Color(0xFFD76CFF), Color(0x33D76CFF))
+        val ECHO_PURPLE_DARK = AccentColor("ECHO_PURPLE_DARK", "Violet", Color(0xFFBA00FF), Color(0x33BA00FF))
 
         // Echo Brown
-        val ECHO_BROWN_LIGHT = AccentColor("ECHO_BROWN_LIGHT", "Echo Sand", Color(0xFFFFC022), Color(0x33FFC022))
-        val ECHO_BROWN = AccentColor("ECHO_BROWN", "Echo Ochre", Color(0xFFB88100), Color(0x33B88100))
-        val ECHO_BROWN_DARK = AccentColor("ECHO_BROWN_DARK", "Echo Brown", Color(0xFF804D00), Color(0x33804D00))
+        val ECHO_BROWN_LIGHT = AccentColor("ECHO_BROWN_LIGHT", "Sand", Color(0xFFFFC022), Color(0x33FFC022))
+        val ECHO_BROWN = AccentColor("ECHO_BROWN", "Ochre", Color(0xFFB88100), Color(0x33B88100))
+        val ECHO_BROWN_DARK = AccentColor("ECHO_BROWN_DARK", "Brown", Color(0xFF804D00), Color(0x33804D00))
 
         // Echo Metallic
-        val ECHO_METALLIC_LIGHT = AccentColor("ECHO_METALLIC_LIGHT", "Echo Steel", Color(0xFFBDCDD4), Color(0x33BDCDD4))
-        val ECHO_METALLIC = AccentColor("ECHO_METALLIC", "Echo Slate", Color(0xFF9EABB0), Color(0x339EABB0))
-        val ECHO_METALLIC_DARK = AccentColor("ECHO_METALLIC_DARK", "Echo Navy Slate", Color(0xFF364E59), Color(0x33364E59))
-        val ECHO_METALLIC_DEEP = AccentColor("ECHO_METALLIC_DEEP", "Echo Abyss", Color(0xFF0E232E), Color(0x330E232E))
+        val ECHO_METALLIC_LIGHT = AccentColor("ECHO_METALLIC_LIGHT", "Steel", Color(0xFFBDCDD4), Color(0x33BDCDD4))
+        val ECHO_METALLIC = AccentColor("ECHO_METALLIC", "Slate", Color(0xFF9EABB0), Color(0x339EABB0))
+        val ECHO_METALLIC_DARK = AccentColor("ECHO_METALLIC_DARK", "Navy Slate", Color(0xFF364E59), Color(0x33364E59))
+        val ECHO_METALLIC_DEEP = AccentColor("ECHO_METALLIC_DEEP", "Abyss", Color(0xFF0E232E), Color(0x330E232E))
 
         // Echo Monochrome
-        val ECHO_WHITE = AccentColor("ECHO_WHITE", "Echo White", Color(0xFFFFFFFF), Color(0x33FFFFFF))
-        val ECHO_GREY_LIGHT = AccentColor("ECHO_GREY_LIGHT", "Echo Platinum", Color(0xFFCCCCCC), Color(0x33CCCCCC))
-        val ECHO_GREY = AccentColor("ECHO_GREY", "Echo Grey", Color(0xFF999999), Color(0x33999999))
-        val ECHO_GREY_DARK = AccentColor("ECHO_GREY_DARK", "Echo Graphite", Color(0xFF666666), Color(0x33666666))
-        val ECHO_CHARCOAL = AccentColor("ECHO_CHARCOAL", "Echo Charcoal", Color(0xFF2D2D2D), Color(0x332D2D2D))
+        val ECHO_WHITE = AccentColor("ECHO_WHITE", "White", Color(0xFFFFFFFF), Color(0x33FFFFFF))
+        val ECHO_GREY_LIGHT = AccentColor("ECHO_GREY_LIGHT", "Platinum", Color(0xFFCCCCCC), Color(0x33CCCCCC))
+        val ECHO_GREY = AccentColor("ECHO_GREY", "Grey", Color(0xFF999999), Color(0x33999999))
+        val ECHO_GREY_DARK = AccentColor("ECHO_GREY_DARK", "Graphite", Color(0xFF666666), Color(0x33666666))
+        val ECHO_CHARCOAL = AccentColor("ECHO_CHARCOAL", "Charcoal", Color(0xFF2D2D2D), Color(0x332D2D2D))
 
         // --- Backward Compatibility Aliases ---
         val SKY = ECHO_BLUE_LIGHT

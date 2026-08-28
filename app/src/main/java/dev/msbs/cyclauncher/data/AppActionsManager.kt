@@ -622,18 +622,29 @@ class AppActionsManager(context: Context) {
     // JSON is machine-friendly (the original format), TXT is human-readable.
 
     /**
-     * Exports the list of installed apps to a JSON file at the specified URI.
+     * Holds the result of importing application metadata from JSON/text.
+     */
+    data class AppNamesImportResult(
+        val labels: Map<String, String>,
+        val favorites: List<String>
+    )
+
+    /**
+     * Exports the list of installed apps to a JSON file at the specified URI,
+     * including custom labels and favorite status.
      *
      * @param uri The destination URI.
      * @param apps The list of applications to export.
      */
     fun exportAppNamesToUri(uri: Uri, apps: List<dev.msbs.cyclauncher.model.AppInfo>) {
+        val favs = _favorites.value.toSet()
         val array = JSONArray()
         apps.forEach { app ->
             val obj = JSONObject()
             obj.put("package", app.packageName)
             obj.put("component", app.componentKey)
             obj.put("label", app.label)
+            obj.put("is_favorite", favs.contains(app.componentKey) || favs.contains(app.packageName))
             array.put(obj)
         }
         val json = array.toString(2)
@@ -660,19 +671,29 @@ class AppActionsManager(context: Context) {
     }
 
     /**
-     * Imports custom app labels from a JSON or text file at the given URI.
+     * Imports custom app labels and favorite flags from a JSON or text file at the given URI.
      * Supports multiple JSON structures (arrays, key-value maps, nested objects) and plain text.
      *
      * @param uri The source URI.
      * @param currentApps The current list of installed applications.
-     * @return A map of application component keys to custom labels.
+     * @return Result containing imported labels map and list of favorited component keys.
      */
-    fun importAppNamesFromUri(uri: Uri, currentApps: List<dev.msbs.cyclauncher.model.AppInfo>): Map<String, String> {
+    fun importAppNamesFromUri(uri: Uri, currentApps: List<dev.msbs.cyclauncher.model.AppInfo>): AppNamesImportResult {
         val jsonString = readStringFromUri(uri)
             ?: throw IllegalArgumentException("Cannot read file")
         val trimmed = jsonString.trim()
         val packageToApps = currentApps.groupBy { it.packageName }
-        val imported = mutableMapOf<String, String>()
+        val importedLabels = mutableMapOf<String, String>()
+        val importedFavorites = mutableListOf<String>()
+
+        fun extractIsFavorite(obj: JSONObject): Boolean {
+            return when {
+                obj.has("is_favorite") -> obj.optBoolean("is_favorite", false)
+                obj.has("isFavorite") -> obj.optBoolean("isFavorite", false)
+                obj.has("favorite") -> obj.optBoolean("favorite", false)
+                else -> false
+            }
+        }
 
         if (trimmed.startsWith("[")) {
             val array = JSONArray(trimmed)
@@ -682,16 +703,30 @@ class AppActionsManager(context: Context) {
                     val pkg = item.optString("package").ifEmpty { item.optString("packageName").ifEmpty { item.optString("app") } }.trim()
                     val component = item.optString("component").ifEmpty { item.optString("componentKey") }.trim()
                     val label = item.optString("label").ifEmpty { item.optString("name").ifEmpty { item.optString("customLabel") } }.trim()
+                    val isFav = extractIsFavorite(item)
 
                     if (label.isNotEmpty()) {
                         if (component.isNotEmpty()) {
-                            imported[component] = label
+                            importedLabels[component] = label
                         } else if (pkg.isNotEmpty()) {
                             val matchingApps = packageToApps[pkg]
                             if (!matchingApps.isNullOrEmpty()) {
-                                matchingApps.forEach { app -> imported[app.componentKey] = label }
+                                matchingApps.forEach { app -> importedLabels[app.componentKey] = label }
                             } else {
-                                imported[pkg] = label
+                                importedLabels[pkg] = label
+                            }
+                        }
+                    }
+
+                    if (isFav) {
+                        if (component.isNotEmpty()) {
+                            importedFavorites.add(component)
+                        } else if (pkg.isNotEmpty()) {
+                            val matchingApps = packageToApps[pkg]
+                            if (!matchingApps.isNullOrEmpty()) {
+                                matchingApps.forEach { app -> importedFavorites.add(app.componentKey) }
+                            } else {
+                                importedFavorites.add(pkg)
                             }
                         }
                     }
@@ -701,6 +736,16 @@ class AppActionsManager(context: Context) {
             val root = JSONObject(trimmed)
             val nestedArray = root.optJSONArray("apps") ?: root.optJSONArray("labels") ?: root.optJSONArray("custom_labels")
             val nestedObj = root.optJSONObject("custom_labels") ?: root.optJSONObject("labels") ?: root.optJSONObject("apps")
+            val favoritesArray = root.optJSONArray("favorites")
+
+            if (favoritesArray != null) {
+                for (i in 0 until favoritesArray.length()) {
+                    val favKey = favoritesArray.optString(i).trim()
+                    if (favKey.isNotEmpty()) {
+                        importedFavorites.add(favKey)
+                    }
+                }
+            }
 
             if (nestedArray != null) {
                 for (i in 0 until nestedArray.length()) {
@@ -708,15 +753,30 @@ class AppActionsManager(context: Context) {
                     val pkg = item.optString("package").ifEmpty { item.optString("packageName").ifEmpty { item.optString("app") } }.trim()
                     val component = item.optString("component").ifEmpty { item.optString("componentKey") }.trim()
                     val label = item.optString("label").ifEmpty { item.optString("name").ifEmpty { item.optString("customLabel") } }.trim()
+                    val isFav = extractIsFavorite(item)
+
                     if (label.isNotEmpty()) {
                         if (component.isNotEmpty()) {
-                            imported[component] = label
+                            importedLabels[component] = label
                         } else if (pkg.isNotEmpty()) {
                             val matchingApps = packageToApps[pkg]
                             if (!matchingApps.isNullOrEmpty()) {
-                                matchingApps.forEach { app -> imported[app.componentKey] = label }
+                                matchingApps.forEach { app -> importedLabels[app.componentKey] = label }
                             } else {
-                                imported[pkg] = label
+                                importedLabels[pkg] = label
+                            }
+                        }
+                    }
+
+                    if (isFav) {
+                        if (component.isNotEmpty()) {
+                            importedFavorites.add(component)
+                        } else if (pkg.isNotEmpty()) {
+                            val matchingApps = packageToApps[pkg]
+                            if (!matchingApps.isNullOrEmpty()) {
+                                matchingApps.forEach { app -> importedFavorites.add(app.componentKey) }
+                            } else {
+                                importedFavorites.add(pkg)
                             }
                         }
                     }
@@ -727,13 +787,13 @@ class AppActionsManager(context: Context) {
                     val label = targetObj.optString(key).trim()
                     if (label.isNotEmpty()) {
                         if (key.contains("/")) {
-                            imported[key] = label
+                            importedLabels[key] = label
                         } else {
                             val matchingApps = packageToApps[key]
                             if (!matchingApps.isNullOrEmpty()) {
-                                matchingApps.forEach { app -> imported[app.componentKey] = label }
+                                matchingApps.forEach { app -> importedLabels[app.componentKey] = label }
                             } else {
-                                imported[key] = label
+                                importedLabels[key] = label
                             }
                         }
                     }
@@ -750,9 +810,9 @@ class AppActionsManager(context: Context) {
                         val pkg = parts[1]
                         val matchingApps = packageToApps[pkg]
                         if (!matchingApps.isNullOrEmpty()) {
-                            matchingApps.forEach { app -> imported[app.componentKey] = label }
+                            matchingApps.forEach { app -> importedLabels[app.componentKey] = label }
                         } else {
-                            imported[pkg] = label
+                            importedLabels[pkg] = label
                         }
                     }
                 } else if (l.contains(":") || l.contains("=")) {
@@ -763,15 +823,33 @@ class AppActionsManager(context: Context) {
                         val label = parts[1]
                         val matchingApps = packageToApps[pkg]
                         if (!matchingApps.isNullOrEmpty()) {
-                            matchingApps.forEach { app -> imported[app.componentKey] = label }
+                            matchingApps.forEach { app -> importedLabels[app.componentKey] = label }
                         } else {
-                            imported[pkg] = label
+                            importedLabels[pkg] = label
                         }
                     }
                 }
             }
         }
-        return imported
+        return AppNamesImportResult(
+            labels = importedLabels,
+            favorites = importedFavorites.distinct()
+        )
+    }
+
+    /**
+     * Imports a list of favorite application component keys, adding them without duplicates.
+     */
+    fun importFavorites(favoritesToImport: List<String>) {
+        if (favoritesToImport.isEmpty()) return
+        val current = _favorites.value.toMutableList()
+        favoritesToImport.forEach { favKey ->
+            if (!current.contains(favKey)) {
+                current.add(favKey)
+            }
+        }
+        _favorites.value = current
+        saveList("favorites", current)
     }
 
     /**
