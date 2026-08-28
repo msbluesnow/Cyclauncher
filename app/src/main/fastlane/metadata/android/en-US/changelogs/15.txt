@@ -1,3 +1,4 @@
+- Fixed export/import producing an empty file when Cyclauncher is not set as the default launcher.
 - Resolved gesture conflicts: long-pressing empty space reliably opens Settings without interfering with app context menus.
 - Restored smooth swipe gesture to swap positions of recent history and popular tags.
 - Improved swipe-up (search) and swipe-down (notifications) responsiveness and consistency.
