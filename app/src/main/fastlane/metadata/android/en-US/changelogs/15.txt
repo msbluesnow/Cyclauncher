@@ -1,0 +1,6 @@
+- Resolved gesture conflicts: long-pressing empty space reliably opens Settings without interfering with app context menus.
+- Restored smooth swipe gesture to swap positions of recent history and popular tags.
+- Improved swipe-up (search) and swipe-down (notifications) responsiveness and consistency.
+- Eliminated redundant disk caching for app icons, preventing storage cache growth on app switches.
+- Modernized app queries via LauncherApps and updated windowSoftInputMode for smoother keyboard transitions.
+- Optimized UI rendering performance and memory usage.
