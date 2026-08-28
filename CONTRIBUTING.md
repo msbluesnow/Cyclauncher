@@ -69,7 +69,7 @@ app/src/main/java/dev/msbs/cyclauncher/
 │   │   ├── CharacterMappingScreen.kt    # Custom character, emoji, and foreign alphabet mapping rules
 │   │   └── AutoTagsScreen.kt            # AI-assisted tagging import/export workflow
 │   └── theme/
-│       ├── AccentColor.kt               # Curated Catppuccin & Nord light/dark accent color pairs
+│       ├── AccentColor.kt               # Echo Icon Theme palette, dynamic Material You & custom color engine
 │       ├── PopupTheme.kt                # Proximity-aware popup menus, dialog styling & adaptive shadows
 │       └── PrimaryTextColor.kt          # White/Black text modes with adaptive drop-shadow calculation
 │

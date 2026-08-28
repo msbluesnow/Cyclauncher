@@ -28,7 +28,11 @@ internal class AppIconFetcher private constructor(
     private val options: Options,
 ) : Fetcher {
 
-    override suspend fun fetch(): FetchResult? = withContext(Dispatchers.IO) {
+    private companion object {
+        val iconDispatcher = Dispatchers.IO.limitedParallelism(4)
+    }
+
+    override suspend fun fetch(): FetchResult? = withContext(iconDispatcher) {
         val pm = context.packageManager
         val parts = key.componentKey.split("/", limit = 2)
         if (parts.size != 2) return@withContext null

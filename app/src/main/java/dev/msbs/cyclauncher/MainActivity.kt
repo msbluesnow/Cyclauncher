@@ -69,6 +69,7 @@ class MainActivity : ComponentActivity() {
     private val viewModel: LauncherViewModel by viewModels()
 
     private var isDefaultLauncherCached = false
+    private var wallpaperColorsListener: Any? = null
 
     /**
      * BroadcastReceiver to dynamically refresh the app list when applications are installed,
@@ -136,6 +137,17 @@ class MainActivity : ComponentActivity() {
             registerReceiver(systemReceiver, systemFilter)
         }
         
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
+            val wpManager = getSystemService(android.app.WallpaperManager::class.java)
+            val listener = android.app.WallpaperManager.OnColorsChangedListener { _, _ ->
+                viewModel.refreshDynamicWallpaperColor(this@MainActivity)
+            }
+            try {
+                wpManager?.addOnColorsChangedListener(listener, android.os.Handler(android.os.Looper.getMainLooper()))
+                wallpaperColorsListener = listener
+            } catch (_: Exception) {}
+        }
+
         enableEdgeToEdge()
 
         // Keep Android Open initiative warning check (FreeDroidWarn)
@@ -436,6 +448,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        viewModel.refreshDynamicWallpaperColor(this)
         updateStatusBarVisibility(viewModel.hideStatusBar.value)
         isDefaultLauncherCached = viewModel.isDefaultLauncher()
         if (viewModel.apps.value.isEmpty()) {
@@ -445,10 +458,23 @@ class MainActivity : ComponentActivity() {
         viewModel.requestHistoryScrollToBottom()
     }
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        viewModel.refreshDynamicWallpaperColor(this)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(packageReceiver)
         unregisterReceiver(systemReceiver)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1 && wallpaperColorsListener != null) {
+            val wpManager = getSystemService(android.app.WallpaperManager::class.java)
+            try {
+                (wallpaperColorsListener as? android.app.WallpaperManager.OnColorsChangedListener)?.let {
+                    wpManager?.removeOnColorsChangedListener(it)
+                }
+            } catch (_: Exception) {}
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

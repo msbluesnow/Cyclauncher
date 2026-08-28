@@ -228,7 +228,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _handSide.value = try { HandSide.valueOf(savedHand) } catch (e: Exception) { HandSide.LEFT }
         
         val savedColor = prefs.getString("accent_color", AccentColor.SKY.name) ?: AccentColor.SKY.name
-        _accentColor.value = AccentColor.fromName(savedColor)
+        _accentColor.value = AccentColor.fromName(savedColor, safeContext)
         
         val savedTextColor = prefs.getString("primary_text_color", PrimaryTextColor.WHITE.name) ?: PrimaryTextColor.WHITE.name
         _primaryTextColor.value = PrimaryTextColor.fromName(savedTextColor)
@@ -406,6 +406,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _accentColor.value = color
         val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putString("accent_color", color.name).apply()
+    }
+
+    /**
+     * Refreshes the dynamic wallpaper accent color if the current theme is set to WALLPAPER.
+     */
+    fun refreshDynamicWallpaperColor(context: Context) {
+        if (_accentColor.value.isDynamicWallpaper) {
+            val updated = AccentColor.wallpaper(context)
+            if (_accentColor.value.color != updated.color) {
+                _accentColor.value = updated
+            }
+        }
     }
 
     /**

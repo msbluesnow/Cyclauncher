@@ -28,7 +28,8 @@
             android:stateNotNeeded="true"
             android:directBootAware="true"
             android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="uiMode|colorMode|screenSize|screenLayout|orientation|keyboardHidden|keyboard|density|fontScale|assetsPaths">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

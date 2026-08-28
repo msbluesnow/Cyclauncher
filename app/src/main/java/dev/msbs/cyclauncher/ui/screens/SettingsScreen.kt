@@ -47,6 +47,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -883,6 +885,10 @@ private fun CommunityButton(
 /**
  * Dropdown selector for picking the theme accent color.
  */
+/**
+ * Selector button and dialog for picking the theme accent color.
+ * Supports preset pairs, dynamic Material You wallpaper color, and a custom interactive color picker.
+ */
 @Composable
 private fun AccentColorDropdown(
     selectedColor: AccentColor,
@@ -890,17 +896,7 @@ private fun AccentColorDropdown(
     popupTheme: PopupTheme = PopupTheme.DARK,
     onSelect: (AccentColor) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val colorPairs = remember {
-        listOf(
-            AccentColor.SKY to AccentColor.DARK_SKY,
-            AccentColor.LAVENDER to AccentColor.DARK_LAVENDER,
-            AccentColor.MINT to AccentColor.DARK_MINT,
-            AccentColor.ROSE to AccentColor.DARK_ROSE,
-            AccentColor.PEACH to AccentColor.DARK_PEACH,
-            AccentColor.SNOW to AccentColor.DARK_SLATE,
-        )
-    }
+    var showDialog by remember { mutableStateOf(false) }
 
     Box {
         Row(
@@ -908,7 +904,7 @@ private fun AccentColorDropdown(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
                 .background(primaryTextColor.color.copy(alpha = 0.1f))
-                .clickable { expanded = true }
+                .clickable { showDialog = true }
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -918,8 +914,18 @@ private fun AccentColorDropdown(
                     .size(20.dp)
                     .clip(CircleShape)
                     .background(selectedColor.color)
-                    .border(1.dp, primaryTextColor.color.copy(alpha = 0.2f), CircleShape)
-            )
+                    .border(1.dp, primaryTextColor.color.copy(alpha = 0.2f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                if (selectedColor.isDynamicWallpaper) {
+                    Icon(
+                        imageVector = Icons.Outlined.AutoAwesome,
+                        contentDescription = null,
+                        tint = if (selectedColor.color.luminance() > 0.5f) Color.Black else Color.White,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
+            }
             val shadowSettings = dev.msbs.cyclauncher.ui.theme.LocalShadowSettings.current
             Box(contentAlignment = Alignment.Center) {
                 if (shadowSettings.showShadows) {
@@ -938,54 +944,496 @@ private fun AccentColorDropdown(
                 )
             }
         }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.width(96.dp).background(popupTheme.solidBackgroundColor)
-        ) {
-            colorPairs.forEach { (light, dark) ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Light Variant (Left)
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(light.color)
-                            .border(
-                                width = if (selectedColor == light) 2.dp else 1.dp,
-                                color = if (selectedColor == light) popupTheme.contentColor else primaryTextColor.color.copy(alpha = 0.2f),
-                                shape = CircleShape
-                            )
-                            .clickable {
-                                onSelect(light)
-                                expanded = false
-                            }
-                    )
-                    // Dark Variant (Right)
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(dark.color)
-                            .border(
-                                width = if (selectedColor == dark) 2.dp else 1.dp,
-                                color = if (selectedColor == dark) popupTheme.contentColor else primaryTextColor.color.copy(alpha = 0.2f),
-                                shape = CircleShape
-                            )
-                            .clickable {
-                                onSelect(dark)
-                                expanded = false
-                            }
+
+        if (showDialog) {
+            AccentColorDialog(
+                selectedColor = selectedColor,
+                popupTheme = popupTheme,
+                onDismiss = { showDialog = false },
+                onSelect = {
+                    onSelect(it)
+                    showDialog = false
+                }
+            )
+        }
+    }
+}
+
+/**
+ * Modern modal dialog allowing the user to select theme accents from:
+ * 1. Dynamic Wallpaper color (Material You)
+ * 2. Curated Presets (Light & Dark pairs)
+ * 3. Custom Color Picker with interactive Hue/Saturation sliders, swatches palette, and HEX input
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AccentColorDialog(
+    selectedColor: AccentColor,
+    popupTheme: PopupTheme,
+    onDismiss: () -> Unit,
+    onSelect: (AccentColor) -> Unit
+) {
+    val context = LocalContext.current
+    var selectedTab by remember { mutableStateOf(if (selectedColor.isCustom) 1 else 0) }
+
+    val wallpaperColor = remember(context) { AccentColor.getWallpaperAccentColor(context) }
+
+    // State for Custom Color Picker
+    val initialHsv = remember(selectedColor) {
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(selectedColor.color.toArgb(), hsv)
+        hsv
+    }
+    var currentHue by remember { mutableFloatStateOf(initialHsv[0]) }
+    var currentSat by remember { mutableFloatStateOf(initialHsv[1].coerceAtLeast(0.1f)) }
+    var currentVal by remember { mutableFloatStateOf(initialHsv[2].coerceAtLeast(0.1f)) }
+
+    val customPickedColor = remember(currentHue, currentSat, currentVal) {
+        val hsv = floatArrayOf(currentHue, currentSat, currentVal)
+        Color(android.graphics.Color.HSVToColor(hsv))
+    }
+
+    var hexInputText by remember {
+        val argb = selectedColor.color.toArgb()
+        mutableStateOf(String.format("%06X", 0xFFFFFF and argb))
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = popupTheme.solidBackgroundColor,
+        shape = RoundedCornerShape(20.dp),
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Theme Accent",
+                    color = popupTheme.contentColor,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+                IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = "Close",
+                        tint = popupTheme.secondaryContentColor,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
-        }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Tab Row (Presets & Wallpaper vs Custom Color)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(popupTheme.contentColor.copy(alpha = 0.08f))
+                        .padding(3.dp)
+                ) {
+                    // Tab 0
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (selectedTab == 0) popupTheme.contentColor.copy(alpha = 0.16f) else Color.Transparent)
+                            .clickable { selectedTab = 0 }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "Presets & Wallpaper",
+                            fontSize = 12.sp,
+                            fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
+                            color = if (selectedTab == 0) popupTheme.contentColor else popupTheme.secondaryContentColor
+                        )
+                    }
+                    // Tab 1
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (selectedTab == 1) popupTheme.contentColor.copy(alpha = 0.16f) else Color.Transparent)
+                            .clickable { selectedTab = 1 }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "Custom Color",
+                            fontSize = 12.sp,
+                            fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
+                            color = if (selectedTab == 1) popupTheme.contentColor else popupTheme.secondaryContentColor
+                        )
+                    }
+                }
+
+                if (selectedTab == 0) {
+                    // Section 1: Dynamic Wallpaper Color (Material You)
+                    Text(
+                        "Wallpaper Accent (Material You)",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = popupTheme.secondaryContentColor
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (selectedColor.isDynamicWallpaper) wallpaperColor.copy(alpha = 0.18f)
+                                else popupTheme.contentColor.copy(alpha = 0.06f)
+                            )
+                            .border(
+                                width = if (selectedColor.isDynamicWallpaper) 1.5.dp else 1.dp,
+                                color = if (selectedColor.isDynamicWallpaper) wallpaperColor else popupTheme.contentColor.copy(alpha = 0.12f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .clickable {
+                                onSelect(AccentColor.wallpaper(context))
+                            }
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(wallpaperColor)
+                                    .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = if (wallpaperColor.luminance() > 0.5f) Color.Black else Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    "Dynamic Wallpaper Color",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = popupTheme.contentColor
+                                )
+                                Text(
+                                    "Matches system wallpaper theme",
+                                    fontSize = 11.sp,
+                                    color = popupTheme.secondaryContentColor
+                                )
+                            }
+                        }
+                        if (selectedColor.isDynamicWallpaper) {
+                            Icon(
+                                imageVector = Icons.Outlined.Check,
+                                contentDescription = "Selected",
+                                tint = wallpaperColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Section 2: Echo Icon Theme Presets Grid
+                    Text(
+                        "Echo Icon Theme Presets",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = popupTheme.secondaryContentColor
+                    )
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        AccentColor.PRESET_PAIRS.forEach { (light, dark) ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                PresetColorChip(
+                                    accent = light,
+                                    isSelected = selectedColor == light,
+                                    modifier = Modifier.weight(1f),
+                                    popupTheme = popupTheme,
+                                    onClick = { onSelect(light) }
+                                )
+                                PresetColorChip(
+                                    accent = dark,
+                                    isSelected = selectedColor == dark,
+                                    modifier = Modifier.weight(1f),
+                                    popupTheme = popupTheme,
+                                    onClick = { onSelect(dark) }
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // Custom Color Tab
+                    Text(
+                        "Interactive Color Picker",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = popupTheme.secondaryContentColor
+                    )
+
+                    // Quick Swatches
+                    val quickSwatches = remember {
+                        listOf(
+                            Color(0xFFF44336), Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF673AB7),
+                            Color(0xFF3F51B5), Color(0xFF2196F3), Color(0xFF03A9F4), Color(0xFF00BCD4),
+                            Color(0xFF009688), Color(0xFF4CAF50), Color(0xFF8BC34A), Color(0xFFCDDC39),
+                            Color(0xFFFFEB3B), Color(0xFFFFC107), Color(0xFFFF9800), Color(0xFFFF5722)
+                        )
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Quick Swatches", fontSize = 11.sp, color = popupTheme.secondaryContentColor)
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            quickSwatches.forEach { swatch ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(CircleShape)
+                                        .background(swatch)
+                                        .border(
+                                            width = if (customPickedColor == swatch) 2.dp else 1.dp,
+                                            color = if (customPickedColor == swatch) popupTheme.contentColor else Color.Black.copy(alpha = 0.2f),
+                                            shape = CircleShape
+                                        )
+                                        .clickable {
+                                            val hsv = FloatArray(3)
+                                            android.graphics.Color.colorToHSV(swatch.toArgb(), hsv)
+                                            currentHue = hsv[0]
+                                            currentSat = hsv[1]
+                                            currentVal = hsv[2]
+                                            val argb = swatch.toArgb()
+                                            hexInputText = String.format("%06X", 0xFFFFFF and argb)
+                                        }
+                                )
+                            }
+                        }
+                    }
+
+                    // Hue Slider
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Hue (${currentHue.toInt()}°)", fontSize = 11.sp, color = popupTheme.secondaryContentColor)
+                        }
+                        HueSlider(
+                            hue = currentHue,
+                            onHueChange = {
+                                currentHue = it
+                                val hsv = floatArrayOf(currentHue, currentSat, currentVal)
+                                val col = Color(android.graphics.Color.HSVToColor(hsv))
+                                hexInputText = String.format("%06X", 0xFFFFFF and col.toArgb())
+                            }
+                        )
+                    }
+
+                    // Saturation Slider
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Saturation (${(currentSat * 100).toInt()}%)", fontSize = 11.sp, color = popupTheme.secondaryContentColor)
+                        Slider(
+                            value = currentSat,
+                            onValueChange = {
+                                currentSat = it
+                                val hsv = floatArrayOf(currentHue, currentSat, currentVal)
+                                val col = Color(android.graphics.Color.HSVToColor(hsv))
+                                hexInputText = String.format("%06X", 0xFFFFFF and col.toArgb())
+                            },
+                            valueRange = 0.05f..1f,
+                            colors = SliderDefaults.colors(
+                                thumbColor = customPickedColor,
+                                activeTrackColor = customPickedColor,
+                                inactiveTrackColor = popupTheme.contentColor.copy(alpha = 0.15f)
+                            )
+                        )
+                    }
+
+                    // Brightness (Value) Slider
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Brightness (${(currentVal * 100).toInt()}%)", fontSize = 11.sp, color = popupTheme.secondaryContentColor)
+                        Slider(
+                            value = currentVal,
+                            onValueChange = {
+                                currentVal = it
+                                val hsv = floatArrayOf(currentHue, currentSat, currentVal)
+                                val col = Color(android.graphics.Color.HSVToColor(hsv))
+                                hexInputText = String.format("%06X", 0xFFFFFF and col.toArgb())
+                            },
+                            valueRange = 0.05f..1f,
+                            colors = SliderDefaults.colors(
+                                thumbColor = customPickedColor,
+                                activeTrackColor = customPickedColor,
+                                inactiveTrackColor = popupTheme.contentColor.copy(alpha = 0.15f)
+                            )
+                        )
+                    }
+
+                    // Live Preview & HEX Input
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(customPickedColor)
+                                .border(1.5.dp, popupTheme.contentColor.copy(alpha = 0.3f), CircleShape)
+                        )
+                        OutlinedTextField(
+                            value = hexInputText,
+                            onValueChange = { input ->
+                                val filtered = input.filter { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }.take(6).uppercase()
+                                hexInputText = filtered
+                                if (filtered.length == 6) {
+                                    try {
+                                        val parsed = filtered.toLong(16)
+                                        val col = Color((0xFF000000 or parsed).toInt())
+                                        val hsv = FloatArray(3)
+                                        android.graphics.Color.colorToHSV(col.toArgb(), hsv)
+                                        currentHue = hsv[0]
+                                        currentSat = hsv[1]
+                                        currentVal = hsv[2]
+                                    } catch (_: Exception) {}
+                                }
+                            },
+                            prefix = { Text("#", color = popupTheme.contentColor, fontWeight = FontWeight.Bold) },
+                            singleLine = true,
+                            label = { Text("HEX Code", color = popupTheme.secondaryContentColor) },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = customPickedColor,
+                                unfocusedBorderColor = popupTheme.contentColor.copy(alpha = 0.2f),
+                                focusedTextColor = popupTheme.contentColor,
+                                unfocusedTextColor = popupTheme.contentColor
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                            onSelect(AccentColor.custom(customPickedColor))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = customPickedColor),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text(
+                            "Apply Custom Color",
+                            fontWeight = FontWeight.Bold,
+                            color = if (customPickedColor.luminance() > 0.5f) Color.Black else Color.White
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {}
+    )
+}
+
+/**
+ * Rainbow gradient Hue slider (0°..360°).
+ */
+@Composable
+private fun HueSlider(
+    hue: Float,
+    onHueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val hueColors = remember {
+        listOf(
+            Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red
+        )
+    }
+
+    Slider(
+        value = hue,
+        onValueChange = onHueChange,
+        valueRange = 0f..360f,
+        modifier = modifier.drawBehind {
+            val trackHeight = 8.dp.toPx()
+            val top = (size.height - trackHeight) / 2
+            drawRoundRect(
+                brush = androidx.compose.ui.graphics.Brush.horizontalGradient(hueColors),
+                topLeft = Offset(0f, top),
+                size = Size(size.width, trackHeight),
+                cornerRadius = CornerRadius(trackHeight / 2, trackHeight / 2)
+            )
+        },
+        colors = SliderDefaults.colors(
+            thumbColor = Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, 1f, 1f))),
+            activeTrackColor = Color.Transparent,
+            inactiveTrackColor = Color.Transparent
+        )
+    )
+}
+
+/**
+ * Preset accent color selection chip.
+ */
+@Composable
+private fun PresetColorChip(
+    accent: AccentColor,
+    isSelected: Boolean,
+    modifier: Modifier = Modifier,
+    popupTheme: PopupTheme,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (isSelected) accent.color.copy(alpha = 0.2f) else popupTheme.contentColor.copy(alpha = 0.05f))
+            .border(
+                width = if (isSelected) 1.5.dp else 1.dp,
+                color = if (isSelected) accent.color else popupTheme.contentColor.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(10.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .clip(CircleShape)
+                .background(accent.color)
+                .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape)
+        )
+        Text(
+            text = accent.displayName,
+            fontSize = 12.sp,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            color = popupTheme.contentColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

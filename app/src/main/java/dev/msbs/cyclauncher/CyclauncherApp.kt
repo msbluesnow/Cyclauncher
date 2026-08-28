@@ -52,9 +52,9 @@ class CyclauncherApp : Application(), SingletonImageLoader.Factory {
         super.onTrimMemory(level)
         try {
             val cache = imageLoader?.memoryCache ?: SingletonImageLoader.get(this).memoryCache
-            if (level >= TRIM_MEMORY_COMPLETE || level >= TRIM_MEMORY_RUNNING_CRITICAL) {
+            if (level >= TRIM_MEMORY_COMPLETE) {
                 cache?.clear()
-            } else if (level >= TRIM_MEMORY_MODERATE) {
+            } else if (level >= TRIM_MEMORY_RUNNING_CRITICAL || level >= TRIM_MEMORY_MODERATE) {
                 cache?.let { c ->
                     c.trimToSize(c.size / 2)
                 }
