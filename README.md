@@ -121,7 +121,7 @@ A continuous, unified timeline of completed milestones and planned updates.
 ### Custom ROM Gesture Interception (crDroid / LineageOS / Quickstep)
 * **Symptom:** When switching between Cyclauncher (or any third-party launcher) and the built-in system launcher (e.g., Trebuchet on crDroid / LineageOS), the SystemUI gesture navigation bar may occasionally fail to trigger the "Home" animation or open Recents Overview when opening a non-default launcher directly.
 * **Root Cause:** This is a system-level behavior in custom ROMs (crDroid / LineageOS) where the bundled SystemUI/Quickstep provider is compiled into `/system/priv-app/`. When a non-default launcher with `CATEGORY_HOME` in its manifest is opened, Quickstep suppresses the Home swipe animation to prevent feedback loops between launcher activities.
-* **Workaround / Resolution:** Cyclauncher automatically mitigates this behavior via native `onUserLeaveHint()` lifecycle handlers that finish the activity when a Home gesture is performed while non-default. If gestures become unresponsive on custom ROMs, simply re-select your preferred launcher in **Settings → Default Apps → Home app**.
+* **Workaround / Resolution:** Cyclauncher mitigates this behavior by capturing the Home intent inside `onNewIntent()` and immediately finishing the activity when launched while not set as default. If gestures become unresponsive on custom ROMs, simply re-select your preferred launcher in **Settings → Default Apps → Home app**.
 
 ## 📜 License
 
