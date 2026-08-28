@@ -212,36 +212,42 @@ fun MainMenuScreen(
     val currentOnSwipeDown by rememberUpdatedState(onSwipeDown)
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(isActive, isAnyEditMode) {
-                if (!isActive || isAnyEditMode) return@pointerInput
-                detectTapGestures(
-                    onLongPress = { currentOnSettingsClick() }
-                )
-            }
-            .pointerInput(isActive, isAnyEditMode) {
-                if (!isActive || isAnyEditMode) return@pointerInput
-                var totalDragY = 0f
-                detectVerticalDragGestures(
-                    onDragStart = { totalDragY = 0f },
-                    onDragEnd = {
-                        if (totalDragY < -50f) {
-                            currentOnSwipeUp()
-                        } else if (totalDragY > 50f) {
-                            currentOnSwipeDown()
-                        }
-                        totalDragY = 0f
-                    },
-                    onDragCancel = {
-                        totalDragY = 0f
-                    },
-                    onVerticalDrag = { _, dragAmount ->
-                        totalDragY += dragAmount
-                    }
-                )
-            }
+        modifier = Modifier.fillMaxSize()
     ) {
+        // Background touch layer - handles empty wallpaper long-press (Settings) and vertical swipes (Search / Notifications)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(isActive, isAnyEditMode) {
+                    if (!isActive || isAnyEditMode) return@pointerInput
+                    detectTapGestures(
+                        onLongPress = { currentOnSettingsClick() }
+                    )
+                }
+                .pointerInput(isActive, isAnyEditMode) {
+                    if (!isActive || isAnyEditMode) return@pointerInput
+                    var totalDragY = 0f
+                    detectVerticalDragGestures(
+                        onDragStart = { totalDragY = 0f },
+                        onDragEnd = {
+                            if (totalDragY < -50f) {
+                                currentOnSwipeUp()
+                            } else if (totalDragY > 50f) {
+                                currentOnSwipeDown()
+                            }
+                            totalDragY = 0f
+                        },
+                        onDragCancel = {
+                            totalDragY = 0f
+                        },
+                        onVerticalDrag = { _, dragAmount ->
+                            totalDragY += dragAmount
+                        }
+                    )
+                }
+        )
+
+        // Foreground content layer - Favorites and History sections
         Row(
             modifier = Modifier
                 .fillMaxSize()
@@ -506,12 +512,20 @@ private fun HistorySection(
     // Automatically exit history edit mode if all history items were removed
     LaunchedEffect(history.isEmpty()) {
         if (history.isEmpty()) {
-            setHistoryEditMode(false)
+                    setHistoryEditMode(false)
         }
     }
 
     Column(
-        modifier = modifier.fillMaxHeight(),
+        modifier = modifier
+            .fillMaxHeight()
+            .pointerInput(isHistoryEditMode) {
+                if (!isHistoryEditMode) {
+                    detectTapGestures(
+                        onLongPress = { currentOnSettingsClick() }
+                    )
+                }
+            },
         verticalArrangement = Arrangement.SpaceBetween,
         horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
     ) {
@@ -520,26 +534,27 @@ private fun HistorySection(
                 modifier = Modifier
                     .fillMaxHeight(0.5f)
                     .fillMaxWidth()
+                    .pointerInput(isHistoryEditMode) {
+                        if (!isHistoryEditMode) {
+                            detectTapGestures(
+                                onLongPress = { currentOnSettingsClick() }
+                            )
+                        }
+                    }
                     .pointerInput(isHistoryShiftedUp) {
                         if (!isHistoryShiftedUp) return@pointerInput
-                        awaitEachGesture {
-                            awaitFirstDown(pass = PointerEventPass.Initial)
-                            val startedAtEdge = (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0)
-                            var totalDragY = 0f
-                            do {
-                                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                                val change = event.changes.firstOrNull() ?: break
-                                if (change.pressed) {
-                                    val deltaY = change.positionChange().y
-                                    totalDragY += deltaY
-                                    if (startedAtEdge && totalDragY > 18f) {
-                                        isHistoryShiftedUp = false
-                                        change.consume()
-                                        break
-                                    }
+                        var totalDrag = 0f
+                        detectVerticalDragGestures(
+                            onDragStart = { totalDrag = 0f },
+                            onDragEnd = {
+                                if (totalDrag > 24f) {
+                                    isHistoryShiftedUp = false
                                 }
-                            } while (event.changes.any { it.pressed })
-                        }
+                                totalDrag = 0f
+                            },
+                            onDragCancel = { totalDrag = 0f },
+                            onVerticalDrag = { _, dragAmount -> totalDrag += dragAmount }
+                        )
                     },
                 verticalArrangement = Arrangement.Top,
                 horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
@@ -557,6 +572,7 @@ private fun HistorySection(
                     onRemoveFromHistory = onRemoveFromHistory,
                     isHistoryPaused = isHistoryPaused,
                     onHistoryIconClick = onHistoryIconClick,
+                    onSettingsClick = currentOnSettingsClick,
                     onAppClick = onAppClick,
                     onAppLongClick = onAppLongClick
                 )
@@ -566,35 +582,27 @@ private fun HistorySection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight()
+                    .pointerInput(isHistoryEditMode) {
+                        if (!isHistoryEditMode) {
+                            detectTapGestures(
+                                onLongPress = { currentOnSettingsClick() }
+                            )
+                        }
+                    }
                     .pointerInput(isHistoryShiftedUp) {
                         if (!isHistoryShiftedUp) return@pointerInput
-                        awaitEachGesture {
-                            awaitFirstDown(pass = PointerEventPass.Initial)
-                            val startedAtEdge = (tagGridState.firstVisibleItemIndex == 0 && tagGridState.firstVisibleItemScrollOffset == 0)
-                            var totalDragY = 0f
-                            var hasDraggedDown = false
-                            do {
-                                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                                val change = event.changes.firstOrNull() ?: break
-                                if (change.pressed) {
-                                    val deltaY = change.positionChange().y
-                                    if (deltaY > 5f) {
-                                        hasDraggedDown = true
-                                    }
-                                    totalDragY += deltaY
-                                    if (startedAtEdge && !hasDraggedDown && totalDragY < -18f) {
-                                        isHistoryShiftedUp = false
-                                        change.consume()
-                                        break
-                                    }
-                                    if (hasDraggedDown && totalDragY > 18f) {
-                                        isHistoryShiftedUp = false
-                                        change.consume()
-                                        break
-                                    }
+                        var totalDrag = 0f
+                        detectVerticalDragGestures(
+                            onDragStart = { totalDrag = 0f },
+                            onDragEnd = {
+                                if (totalDrag > 24f || totalDrag < -24f) {
+                                    isHistoryShiftedUp = false
                                 }
-                            } while (event.changes.any { it.pressed })
-                        }
+                                totalDrag = 0f
+                            },
+                            onDragCancel = { totalDrag = 0f },
+                            onVerticalDrag = { _, dragAmount -> totalDrag += dragAmount }
+                        )
                     },
                 verticalArrangement = Arrangement.Bottom,
                 horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
@@ -605,6 +613,7 @@ private fun HistorySection(
                     handSide = handSide,
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
+                    onSettingsClick = currentOnSettingsClick,
                     onTagFolderClick = onTagFolderClick,
                     onTagFolderLongClick = onTagFolderLongClick
                 )
@@ -614,26 +623,27 @@ private fun HistorySection(
                 modifier = Modifier
                     .fillMaxHeight(0.5f)
                     .fillMaxWidth()
+                    .pointerInput(isHistoryEditMode) {
+                        if (!isHistoryEditMode) {
+                            detectTapGestures(
+                                onLongPress = { currentOnSettingsClick() }
+                            )
+                        }
+                    }
                     .pointerInput(isHistoryShiftedUp) {
                         if (isHistoryShiftedUp) return@pointerInput
-                        awaitEachGesture {
-                            awaitFirstDown(pass = PointerEventPass.Initial)
-                            val startedAtEdge = (tagGridState.firstVisibleItemIndex == 0 && tagGridState.firstVisibleItemScrollOffset == 0)
-                            var totalDragY = 0f
-                            do {
-                                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                                val change = event.changes.firstOrNull() ?: break
-                                if (change.pressed) {
-                                    val deltaY = change.positionChange().y
-                                    totalDragY += deltaY
-                                    if (startedAtEdge && totalDragY < -18f) {
-                                        isHistoryShiftedUp = true
-                                        change.consume()
-                                        break
-                                    }
+                        var totalDrag = 0f
+                        detectVerticalDragGestures(
+                            onDragStart = { totalDrag = 0f },
+                            onDragEnd = {
+                                if (totalDrag < -24f) {
+                                    isHistoryShiftedUp = true
                                 }
-                            } while (event.changes.any { it.pressed })
-                        }
+                                totalDrag = 0f
+                            },
+                            onDragCancel = { totalDrag = 0f },
+                            onVerticalDrag = { _, dragAmount -> totalDrag += dragAmount }
+                        )
                     },
                 verticalArrangement = Arrangement.Bottom,
                 horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
@@ -644,6 +654,7 @@ private fun HistorySection(
                     handSide = handSide,
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
+                    onSettingsClick = currentOnSettingsClick,
                     onTagFolderClick = onTagFolderClick,
                     onTagFolderLongClick = onTagFolderLongClick
                 )
@@ -653,30 +664,27 @@ private fun HistorySection(
                 modifier = Modifier
                     .fillMaxHeight()
                     .fillMaxWidth()
+                    .pointerInput(isHistoryEditMode) {
+                        if (!isHistoryEditMode) {
+                            detectTapGestures(
+                                onLongPress = { currentOnSettingsClick() }
+                            )
+                        }
+                    }
                     .pointerInput(isHistoryShiftedUp) {
                         if (isHistoryShiftedUp) return@pointerInput
-                        awaitEachGesture {
-                            awaitFirstDown(pass = PointerEventPass.Initial)
-                            val startedAtBottom = (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0)
-                            var totalDragY = 0f
-                            var hasDraggedDown = false
-                            do {
-                                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                                val change = event.changes.firstOrNull() ?: break
-                                if (change.pressed) {
-                                    val deltaY = change.positionChange().y
-                                    if (deltaY > 5f) {
-                                        hasDraggedDown = true
-                                    }
-                                    totalDragY += deltaY
-                                    if (startedAtBottom && !hasDraggedDown && totalDragY < -18f) {
-                                        isHistoryShiftedUp = true
-                                        change.consume()
-                                        break
-                                    }
+                        var totalDrag = 0f
+                        detectVerticalDragGestures(
+                            onDragStart = { totalDrag = 0f },
+                            onDragEnd = {
+                                if (totalDrag < -24f) {
+                                    isHistoryShiftedUp = true
                                 }
-                            } while (event.changes.any { it.pressed })
-                        }
+                                totalDrag = 0f
+                            },
+                            onDragCancel = { totalDrag = 0f },
+                            onVerticalDrag = { _, dragAmount -> totalDrag += dragAmount }
+                        )
                     },
                 verticalArrangement = Arrangement.Bottom,
                 horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
@@ -689,11 +697,12 @@ private fun HistorySection(
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
                     accentColor = accentColor,
+                    isHistoryPaused = isHistoryPaused,
                     isHistoryEditMode = isHistoryEditMode,
                     setHistoryEditMode = setHistoryEditMode,
                     onRemoveFromHistory = onRemoveFromHistory,
-                    isHistoryPaused = isHistoryPaused,
                     onHistoryIconClick = onHistoryIconClick,
+                    onSettingsClick = currentOnSettingsClick,
                     onAppClick = onAppClick,
                     onAppLongClick = onAppLongClick
                 )
@@ -709,6 +718,7 @@ private fun ColumnScope.TagsContentBlock(
     handSide: HandSide,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
+    onSettingsClick: () -> Unit,
     onTagFolderClick: (Tag, List<AppInfo>, Offset) -> Unit,
     onTagFolderLongClick: (Tag, List<AppInfo>, Offset) -> Unit
 ) {
@@ -721,7 +731,12 @@ private fun ColumnScope.TagsContentBlock(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = false)
-                .padding(bottom = 8.dp),
+                .padding(bottom = 8.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = { onSettingsClick() }
+                    )
+                },
             contentAlignment = if (handSide == HandSide.RIGHT) Alignment.BottomEnd else Alignment.BottomStart
         ) {
             LazyVerticalGrid(
@@ -729,7 +744,13 @@ private fun ColumnScope.TagsContentBlock(
                 state = gridState,
                 verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Bottom),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onLongPress = { onSettingsClick() }
+                        )
+                    },
                 reverseLayout = true
             ) {
                 items(popularTags, key = { it.first.id }) { (tag, taggedApps) ->
@@ -763,6 +784,7 @@ private fun ColumnScope.HistoryContentBlock(
     setHistoryEditMode: (Boolean) -> Unit,
     onRemoveFromHistory: (String) -> Unit,
     onHistoryIconClick: (Offset) -> Unit,
+    onSettingsClick: () -> Unit,
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit
 ) {
@@ -773,7 +795,14 @@ private fun ColumnScope.HistoryContentBlock(
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Bottom),
         modifier = Modifier
             .weight(1f, fill = false)
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .pointerInput(isHistoryEditMode) {
+                if (!isHistoryEditMode) {
+                    detectTapGestures(
+                        onLongPress = { onSettingsClick() }
+                    )
+                }
+            },
         reverseLayout = true,
         userScrollEnabled = true
     ) {
@@ -891,7 +920,15 @@ private fun ColumnScope.HistoryContentBlock(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = if (handSide == HandSide.RIGHT) Arrangement.End else Arrangement.Start,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(isHistoryEditMode) {
+                if (!isHistoryEditMode) {
+                    detectTapGestures(
+                        onLongPress = { onSettingsClick() }
+                    )
+                }
+            }
     ) {
         val showMinusOnLeft = handSide == HandSide.RIGHT
         val showMinusOnRight = handSide == HandSide.LEFT
@@ -1058,7 +1095,15 @@ private fun FavoritesSection(
             verticalArrangement = Arrangement.Bottom
         ) {
             LazyColumn(
-                modifier = Modifier.weight(1f, fill = false),
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .pointerInput(isReorderMode) {
+                        if (!isReorderMode) {
+                            detectTapGestures(
+                                onLongPress = { currentOnSettingsClick() }
+                            )
+                        }
+                    },
                 verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Bottom),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 reverseLayout = true,
@@ -1094,6 +1139,13 @@ private fun FavoritesSection(
                             .fillMaxWidth()
                             .height(48.dp)
                             .then(itemAnimModifier)
+                            .pointerInput(isReorderMode) {
+                                if (!isReorderMode) {
+                                    detectTapGestures(
+                                        onLongPress = { currentOnSettingsClick() }
+                                    )
+                                }
+                            }
                             .onGloballyPositioned { coordinates ->
                                 if (itemHeightPx == 0f && coordinates.size.height > 0) {
                                     itemHeightPx = coordinates.size.height.toFloat()

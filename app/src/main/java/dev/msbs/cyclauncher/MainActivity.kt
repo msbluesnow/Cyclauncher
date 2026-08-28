@@ -285,43 +285,25 @@ class MainActivity : ComponentActivity() {
                                                 onEditTag = { tag -> tagToEditForDialog = tag }
                                             )
                                         } else {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .pointerInput(Unit) {
-                                                        detectTapGestures(
-                                                            onLongPress = {
-                                                                scope.launch {
-                                                                    if (animationsEnabled) {
-                                                                        horizontalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec)
-                                                                    } else {
-                                                                        horizontalPagerState.scrollToPage(1)
-                                                                    }
-                                                                }
-                                                            }
-                                                        )
-                                                    }
-                                            ) {
-                                                SearchScreen(
-                                                    viewModel = viewModel,
-                                                    enabled = isSearchActive,
-                                                    onBackToMain = {
-                                                        scope.launch {
-                                                            if (animationsEnabled) {
-                                                                verticalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
-                                                            } else {
-                                                                verticalPagerState.scrollToPage(0)
-                                                            }
+                                            SearchScreen(
+                                                viewModel = viewModel,
+                                                enabled = isSearchActive,
+                                                onBackToMain = {
+                                                    scope.launch {
+                                                        if (animationsEnabled) {
+                                                            verticalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
+                                                        } else {
+                                                            verticalPagerState.scrollToPage(0)
                                                         }
-                                                    },
-                                                    onAppClick = ::openApp,
-                                                    onAppLongClick = { app, offset -> 
-                                                        showActionMenuFor = app
-                                                        menuOffset = offset
-                                                        menuSource = "search"
                                                     }
-                                                )
-                                            }
+                                                },
+                                                onAppClick = ::openApp,
+                                                onAppLongClick = { app, offset -> 
+                                                    showActionMenuFor = app
+                                                    menuOffset = offset
+                                                    menuSource = "search"
+                                                }
+                                            )
                                         }
                                     }
                                 } else {

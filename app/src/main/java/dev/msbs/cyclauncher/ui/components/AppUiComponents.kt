@@ -170,6 +170,7 @@ fun AppListItem(
     showShadows: Boolean = false
 ) {
     var itemPosition by remember { mutableStateOf(Offset.Zero) }
+    val currentItemPosition by rememberUpdatedState(itemPosition)
     val currentOnClick by rememberUpdatedState(onClick)
     val currentOnLongClick by rememberUpdatedState(onLongClick)
 
@@ -180,7 +181,7 @@ fun AppListItem(
             .pointerInput("${app.packageName}/${app.activityName}") {
                 detectTapGestures(
                     onTap = { currentOnClick() },
-                    onLongPress = { currentOnLongClick(itemPosition + it) }
+                    onLongPress = { currentOnLongClick(currentItemPosition + it) }
                 )
             }
             .padding(vertical = 12.dp, horizontal = 16.dp),
@@ -230,6 +231,7 @@ fun AppListItemWithIcon(
     showShadows: Boolean = false
 ) {
     var itemPosition by remember { mutableStateOf(Offset.Zero) }
+    val currentItemPosition by rememberUpdatedState(itemPosition)
     val currentOnClick by rememberUpdatedState(onClick)
     val currentOnLongClick by rememberUpdatedState(onLongClick)
     val painter: Painter = rememberAppIconPainter(app.iconKey, iconSize)
@@ -241,7 +243,7 @@ fun AppListItemWithIcon(
             .pointerInput("${app.packageName}/${app.activityName}") {
                 detectTapGestures(
                     onTap = { currentOnClick() },
-                    onLongPress = { currentOnLongClick(itemPosition + it) }
+                    onLongPress = { currentOnLongClick(currentItemPosition + it) }
                 )
             }
             .padding(horizontal = 4.dp),
