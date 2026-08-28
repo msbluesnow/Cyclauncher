@@ -181,7 +181,16 @@ fun MainMenuScreen(
         }
     }
 
+    var lastItemActionTime by remember { mutableLongStateOf(0L) }
+    val markItemAction = { lastItemActionTime = System.currentTimeMillis() }
+
+    val handleAppClick: (String) -> Unit = { key ->
+        markItemAction()
+        onAppClick(key)
+    }
+
     val handleAppLongClick: (AppInfo, Offset) -> Unit = { app, offset ->
+        markItemAction()
         isReorderMode = false
         isHistoryEditMode = false
         selectedTagForPopup = null
@@ -192,6 +201,7 @@ fun MainMenuScreen(
     }
 
     val handleTagFolderClick: (Tag, List<AppInfo>, Offset) -> Unit = { tag, taggedApps, offset ->
+        markItemAction()
         selectedTagForMenu = null
         selectedHistoryMenuOffset = null
         isTagPopupEditMode = false
@@ -199,6 +209,7 @@ fun MainMenuScreen(
     }
 
     val handleTagFolderLongClick: (Tag, List<AppInfo>, Offset) -> Unit = { tag, taggedApps, offset ->
+        markItemAction()
         selectedTagForPopup = null
         selectedHistoryMenuOffset = null
         isTagPopupEditMode = false
@@ -212,6 +223,12 @@ fun MainMenuScreen(
     val currentOnSwipeUp by rememberUpdatedState(onSwipeUp)
     val currentOnSwipeDown by rememberUpdatedState(onSwipeDown)
 
+    val safeOnSettingsClick: () -> Unit = {
+        if (!isActionMenuOpen && !isAnyEditMode && System.currentTimeMillis() - lastItemActionTime > 350L) {
+            currentOnSettingsClick()
+        }
+    }
+
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -222,15 +239,18 @@ fun MainMenuScreen(
                 .pointerInput(isActive, isAnyEditMode) {
                     if (!isActive || isAnyEditMode) return@pointerInput
                     awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val down = awaitFirstDown(requireUnconsumed = true)
                         var isDrag = false
                         var totalDragY = 0f
 
                         val dragOrTimeout = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
                             while (true) {
-                                val event = awaitPointerEvent()
+                                val event = awaitPointerEvent(pass = PointerEventPass.Main)
                                 val change = event.changes.firstOrNull { it.id == down.id } ?: break
                                 if (!change.pressed) break
+                                if (change.isConsumed) {
+                                    return@withTimeoutOrNull false
+                                }
                                 val deltaY = change.positionChange().y
                                 totalDragY += deltaY
                                 if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop) {
@@ -243,7 +263,7 @@ fun MainMenuScreen(
                         }
 
                         if (dragOrTimeout == null && !isDrag) {
-                            currentOnSettingsClick()
+                            safeOnSettingsClick()
                         }
 
                         if (isDrag) {
@@ -290,13 +310,13 @@ fun MainMenuScreen(
                     setReorderMode = { isReorderMode = it },
                     onReorder = { from, to -> viewModel.reorderFavorites(from, to) },
                     onToggleFavorite = { viewModel.toggleFavorite(it) },
-                    onAppClick = onAppClick,
+                    onAppClick = handleAppClick,
                     onAppLongClick = handleAppLongClick,
                     onTagFolderClick = handleTagFolderClick,
                     onTagFolderLongClick = handleTagFolderLongClick,
                     onSwipeUp = onSwipeUp,
                     onSwipeDown = onSwipeDown,
-                    onSettingsClick = onSettingsClick,
+                    onSettingsClick = safeOnSettingsClick,
                     isActive = isActive
                 )
                 Spacer(modifier = Modifier.width(16.dp))
@@ -315,15 +335,16 @@ fun MainMenuScreen(
                     setHistoryEditMode = { isHistoryEditMode = it },
                     onRemoveFromHistory = { viewModel.removeFromHistory(it) },
                     onHistoryIconClick = { offset ->
+                        markItemAction()
                         selectedTagForMenu = null
                         selectedTagForPopup = null
                         selectedHistoryMenuOffset = offset
                     },
-                    onAppClick = onAppClick,
+                    onAppClick = handleAppClick,
                     onAppLongClick = handleAppLongClick,
                     onTagFolderClick = handleTagFolderClick,
                     onTagFolderLongClick = handleTagFolderLongClick,
-                    onSettingsClick = onSettingsClick,
+                    onSettingsClick = safeOnSettingsClick,
                     isActive = isActive
                 )
             } else {
@@ -342,15 +363,16 @@ fun MainMenuScreen(
                     setHistoryEditMode = { isHistoryEditMode = it },
                     onRemoveFromHistory = { viewModel.removeFromHistory(it) },
                     onHistoryIconClick = { offset ->
+                        markItemAction()
                         selectedTagForMenu = null
                         selectedTagForPopup = null
                         selectedHistoryMenuOffset = offset
                     },
-                    onAppClick = onAppClick,
+                    onAppClick = handleAppClick,
                     onAppLongClick = handleAppLongClick,
                     onTagFolderClick = handleTagFolderClick,
                     onTagFolderLongClick = handleTagFolderLongClick,
-                    onSettingsClick = onSettingsClick,
+                    onSettingsClick = safeOnSettingsClick,
                     isActive = isActive
                 )
                 Spacer(modifier = Modifier.width(16.dp))
@@ -365,13 +387,13 @@ fun MainMenuScreen(
                     setReorderMode = { isReorderMode = it },
                     onReorder = { from, to -> viewModel.reorderFavorites(from, to) },
                     onToggleFavorite = { viewModel.toggleFavorite(it) },
-                    onAppClick = onAppClick,
+                    onAppClick = handleAppClick,
                     onAppLongClick = handleAppLongClick,
                     onTagFolderClick = handleTagFolderClick,
                     onTagFolderLongClick = handleTagFolderLongClick,
                     onSwipeUp = onSwipeUp,
                     onSwipeDown = onSwipeDown,
-                    onSettingsClick = onSettingsClick,
+                    onSettingsClick = safeOnSettingsClick,
                     isActive = isActive
                 )
             }
@@ -539,31 +561,29 @@ private fun HistorySection(
                             awaitFirstDown(pass = PointerEventPass.Initial)
                             val startedAtEdge = (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0)
                             var totalDragY = 0f
-                            var isDrag = false
 
-                            val dragOrTimeout = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
-                                do {
-                                    val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                                    val change = event.changes.firstOrNull() ?: break
-                                    if (change.pressed) {
-                                        val deltaY = change.positionChange().y
-                                        totalDragY += deltaY
-                                        if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop) {
-                                            isDrag = true
-                                            if (startedAtEdge && totalDragY > 18f) {
-                                                isHistoryShiftedUp = false
-                                                change.consume()
-                                                return@withTimeoutOrNull true
-                                            }
+                            do {
+                                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                val change = event.changes.firstOrNull() ?: break
+                                if (change.pressed) {
+                                    val deltaY = change.positionChange().y
+                                    totalDragY += deltaY
+                                    if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop) {
+                                        if (startedAtEdge && totalDragY > 18f) {
+                                            isHistoryShiftedUp = false
+                                            change.consume()
+                                            break
                                         }
                                     }
-                                } while (event.changes.any { it.pressed })
-                                false
-                            }
-
-                            if (dragOrTimeout == null && !isDrag) {
-                                currentOnSettingsClick()
-                            }
+                                }
+                            } while (event.changes.any { it.pressed })
+                        }
+                    }
+                    .pointerInput(isHistoryEditMode) {
+                        if (!isHistoryEditMode) {
+                            detectTapGestures(
+                                onLongPress = { currentOnSettingsClick() }
+                            )
                         }
                     },
                 verticalArrangement = Arrangement.Top,
@@ -599,39 +619,37 @@ private fun HistorySection(
                             val startedAtEdge = (tagGridState.firstVisibleItemIndex == 0 && tagGridState.firstVisibleItemScrollOffset == 0)
                             var totalDragY = 0f
                             var hasDraggedDown = false
-                            var isDrag = false
 
-                            val dragOrTimeout = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
-                                do {
-                                    val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                                    val change = event.changes.firstOrNull() ?: break
-                                    if (change.pressed) {
-                                        val deltaY = change.positionChange().y
-                                        if (deltaY > 5f) {
-                                            hasDraggedDown = true
+                            do {
+                                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                val change = event.changes.firstOrNull() ?: break
+                                if (change.pressed) {
+                                    val deltaY = change.positionChange().y
+                                    if (deltaY > 5f) {
+                                        hasDraggedDown = true
+                                    }
+                                    totalDragY += deltaY
+                                    if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop) {
+                                        if (startedAtEdge && !hasDraggedDown && totalDragY < -18f) {
+                                            isHistoryShiftedUp = false
+                                            change.consume()
+                                            break
                                         }
-                                        totalDragY += deltaY
-                                        if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop) {
-                                            isDrag = true
-                                            if (startedAtEdge && !hasDraggedDown && totalDragY < -18f) {
-                                                isHistoryShiftedUp = false
-                                                change.consume()
-                                                return@withTimeoutOrNull true
-                                            }
-                                            if (hasDraggedDown && totalDragY > 18f) {
-                                                isHistoryShiftedUp = false
-                                                change.consume()
-                                                return@withTimeoutOrNull true
-                                            }
+                                        if (hasDraggedDown && totalDragY > 18f) {
+                                            isHistoryShiftedUp = false
+                                            change.consume()
+                                            break
                                         }
                                     }
-                                } while (event.changes.any { it.pressed })
-                                false
-                            }
-
-                            if (dragOrTimeout == null && !isDrag) {
-                                currentOnSettingsClick()
-                            }
+                                }
+                            } while (event.changes.any { it.pressed })
+                        }
+                    }
+                    .pointerInput(isHistoryEditMode) {
+                        if (!isHistoryEditMode) {
+                            detectTapGestures(
+                                onLongPress = { currentOnSettingsClick() }
+                            )
                         }
                     },
                 verticalArrangement = Arrangement.Bottom,
@@ -659,31 +677,29 @@ private fun HistorySection(
                             awaitFirstDown(pass = PointerEventPass.Initial)
                             val startedAtEdge = (tagGridState.firstVisibleItemIndex == 0 && tagGridState.firstVisibleItemScrollOffset == 0)
                             var totalDragY = 0f
-                            var isDrag = false
 
-                            val dragOrTimeout = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
-                                do {
-                                    val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                                    val change = event.changes.firstOrNull() ?: break
-                                    if (change.pressed) {
-                                        val deltaY = change.positionChange().y
-                                        totalDragY += deltaY
-                                        if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop) {
-                                            isDrag = true
-                                            if (startedAtEdge && totalDragY < -18f) {
-                                                isHistoryShiftedUp = true
-                                                change.consume()
-                                                return@withTimeoutOrNull true
-                                            }
+                            do {
+                                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                val change = event.changes.firstOrNull() ?: break
+                                if (change.pressed) {
+                                    val deltaY = change.positionChange().y
+                                    totalDragY += deltaY
+                                    if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop) {
+                                        if (startedAtEdge && totalDragY < -18f) {
+                                            isHistoryShiftedUp = true
+                                            change.consume()
+                                            break
                                         }
                                     }
-                                } while (event.changes.any { it.pressed })
-                                false
-                            }
-
-                            if (dragOrTimeout == null && !isDrag) {
-                                currentOnSettingsClick()
-                            }
+                                }
+                            } while (event.changes.any { it.pressed })
+                        }
+                    }
+                    .pointerInput(isHistoryEditMode) {
+                        if (!isHistoryEditMode) {
+                            detectTapGestures(
+                                onLongPress = { currentOnSettingsClick() }
+                            )
                         }
                     },
                 verticalArrangement = Arrangement.Bottom,
@@ -712,34 +728,32 @@ private fun HistorySection(
                             val startedAtBottom = (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0)
                             var totalDragY = 0f
                             var hasDraggedDown = false
-                            var isDrag = false
 
-                            val dragOrTimeout = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
-                                do {
-                                    val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                                    val change = event.changes.firstOrNull() ?: break
-                                    if (change.pressed) {
-                                        val deltaY = change.positionChange().y
-                                        if (deltaY > 5f) {
-                                            hasDraggedDown = true
-                                        }
-                                        totalDragY += deltaY
-                                        if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop) {
-                                            isDrag = true
-                                            if (startedAtBottom && !hasDraggedDown && totalDragY < -18f) {
-                                                isHistoryShiftedUp = true
-                                                change.consume()
-                                                return@withTimeoutOrNull true
-                                            }
+                            do {
+                                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                val change = event.changes.firstOrNull() ?: break
+                                if (change.pressed) {
+                                    val deltaY = change.positionChange().y
+                                    if (deltaY > 5f) {
+                                        hasDraggedDown = true
+                                    }
+                                    totalDragY += deltaY
+                                    if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop) {
+                                        if (startedAtBottom && !hasDraggedDown && totalDragY < -18f) {
+                                            isHistoryShiftedUp = true
+                                            change.consume()
+                                            break
                                         }
                                     }
-                                } while (event.changes.any { it.pressed })
-                                false
-                            }
-
-                            if (dragOrTimeout == null && !isDrag) {
-                                currentOnSettingsClick()
-                            }
+                                }
+                            } while (event.changes.any { it.pressed })
+                        }
+                    }
+                    .pointerInput(isHistoryEditMode) {
+                        if (!isHistoryEditMode) {
+                            detectTapGestures(
+                                onLongPress = { currentOnSettingsClick() }
+                            )
                         }
                     },
                 verticalArrangement = Arrangement.Bottom,
@@ -787,6 +801,11 @@ private fun ColumnScope.TagsContentBlock(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = false)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = { onSettingsClick() }
+                    )
+                }
                 .padding(bottom = 8.dp),
             contentAlignment = if (handSide == HandSide.RIGHT) Alignment.BottomEnd else Alignment.BottomStart
         ) {
@@ -1122,8 +1141,46 @@ private fun FavoritesSection(
         }
     }
 
+    val viewConfiguration = LocalViewConfiguration.current
+
     Box(
-        modifier = modifier.fillMaxHeight(),
+        modifier = modifier
+            .fillMaxHeight()
+            .pointerInput(isReorderMode) {
+                if (isReorderMode) return@pointerInput
+                awaitEachGesture {
+                    val down = awaitFirstDown(pass = PointerEventPass.Initial)
+                    var totalDragY = 0f
+                    var isDrag = false
+
+                    while (true) {
+                        val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) {
+                            if (isDrag) {
+                                if (totalDragY < -40f) {
+                                    currentOnSwipeUp()
+                                } else if (totalDragY > 40f) {
+                                    currentOnSwipeDown()
+                                }
+                            }
+                            break
+                        }
+                        val deltaY = change.positionChange().y
+                        totalDragY += deltaY
+                        if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop) {
+                            isDrag = true
+                        }
+                    }
+                }
+            }
+            .pointerInput(isReorderMode) {
+                if (!isReorderMode) {
+                    detectTapGestures(
+                        onLongPress = { onSettingsClick() }
+                    )
+                }
+            },
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -1132,57 +1189,10 @@ private fun FavoritesSection(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Bottom
         ) {
-            val viewConfiguration = LocalViewConfiguration.current
 
             LazyColumn(
                 modifier = Modifier
-                    .weight(1f, fill = false)
-                    .pointerInput(isReorderMode) {
-                        if (isReorderMode) return@pointerInput
-                        awaitEachGesture {
-                            val down = awaitFirstDown(requireUnconsumed = false)
-                            var isDrag = false
-                            var totalDragY = 0f
-
-                            val dragOrTimeout = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                                    if (!change.pressed) break
-                                    val deltaY = change.positionChange().y
-                                    totalDragY += deltaY
-                                    if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop) {
-                                        isDrag = true
-                                        change.consume()
-                                        return@withTimeoutOrNull true
-                                    }
-                                }
-                                false
-                            }
-
-                            if (dragOrTimeout == null && !isDrag) {
-                                currentOnSettingsClick()
-                            }
-
-                            if (isDrag) {
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                                    if (!change.pressed) {
-                                        if (totalDragY < -40f) {
-                                            currentOnSwipeUp()
-                                        } else if (totalDragY > 40f) {
-                                            currentOnSwipeDown()
-                                        }
-                                        break
-                                    }
-                                    val deltaY = change.positionChange().y
-                                    totalDragY += deltaY
-                                    change.consume()
-                                }
-                            }
-                        }
-                    },
+                    .weight(1f, fill = false),
                 verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Bottom),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 reverseLayout = true,
@@ -1198,7 +1208,7 @@ private fun FavoritesSection(
 
                     val animationsEnabled = LocalAnimationsEnabled.current
                     val scale by animateFloatAsState(
-                        targetValue = if (isDraggingThis) 1.25f else 1.0f,
+                        targetValue = if (isDraggingThis) 1.15f else 1.0f,
                         animationSpec = if (animationsEnabled) spring() else snap(),
                         label = "scale"
                     )
@@ -1229,6 +1239,13 @@ private fun FavoritesSection(
                                 this.alpha = alpha
                                 if (isDraggingThis) {
                                     translationY = dragVerticalOffset
+                                }
+                            }
+                            .pointerInput(itemKey, isReorderMode) {
+                                if (!isReorderMode) {
+                                    detectTapGestures(
+                                        onLongPress = { onSettingsClick() }
+                                    )
                                 }
                             },
                         contentAlignment = Alignment.Center
