@@ -66,9 +66,7 @@ fun AutoTagsScreen(
     var copiedToClipboard by remember { mutableStateOf(false) }
     var showExportFormatDialog by remember { mutableStateOf(false) }
 
-    // Step 1 — Export the installed app list. Same unified method as on the main
-    // Settings page. JSON is the machine-friendly format (for the AI workflow),
-    // TXT is a human-readable alternative.
+    // Step 1 — Export the installed app list (JSON machine-friendly, TXT human-readable)
     val exportJsonLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri -> uri?.let { viewModel.exportAppNamesJson(it) } }
@@ -77,18 +75,8 @@ fun AutoTagsScreen(
         ActivityResultContracts.CreateDocument("text/plain")
     ) { uri -> uri?.let { viewModel.exportAppNamesText(it) } }
 
-    // Step 3 — Import the AI-returned tagged JSON.
+    // Step 3 — Import the AI-returned tagged JSON or full backup.
     val importTaggedLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri -> uri?.let { viewModel.loadAutoTagsPreview(it) } }
-
-    // Unified tags backup (tags + assignments) — identical to the Tags section
-    // in the main Settings page.
-    val exportTagsLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
-    ) { uri -> uri?.let { viewModel.exportTagsBackup(it) } }
-
-    val importTagsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri -> uri?.let { viewModel.loadTagsBackupPreview(it) } }
 
@@ -173,7 +161,7 @@ fun AutoTagsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Export the list of your installed apps. Send this file to an AI model to categorize them. Choose JSON (for the AI) or TXT (human-readable).",
+                        text = "Export your installed app list (labels, package names, favorites & tags). Choose JSON (for AI categorization) or TXT (human-readable).",
                         color = primaryTextColor.color.copy(alpha = 0.6f),
                         fontSize = 13.sp
                     )
@@ -200,46 +188,13 @@ fun AutoTagsScreen(
                         modifier = Modifier.padding(vertical = 16.dp)
                     )
 
-                    // Step 2: Backup Existing Tags
-                    StepHeader(2, "Backup Existing Tags", accentColor, primaryTextColor, buttonTextColor, shadow)
+                    // Step 2: Send to AI
+                    StepHeader(2, "Send to AI", accentColor, primaryTextColor, buttonTextColor, shadow)
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Back up your existing tags and their app assignments to a file before applying AI-generated tags.",
-                        color = primaryTextColor.color.copy(alpha = 0.6f),
-                        fontSize = 13.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Button(
-                        onClick = { exportTagsLauncher.launch("cyclauncher_tags.json") },
-                        colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
-                    ) {
-                        Icon(Icons.Outlined.Upload, contentDescription = null, tint = buttonTextColor.color)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Export Tags Backup",
-                            color = buttonTextColor.color,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    HorizontalDivider(
-                        color = primaryTextColor.color.copy(alpha = 0.08f),
-                        modifier = Modifier.padding(vertical = 16.dp)
-                    )
-
-                    // Step 3: Send to AI
-                    StepHeader(3, "Send to AI", accentColor, primaryTextColor, buttonTextColor, shadow)
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "Copy the prompt below, paste it into any AI (ChatGPT, Claude, etc.) along with the exported app list.",
+                        text = "Copy the prompt below and send it to an AI model (ChatGPT, Claude, Gemini, etc.) along with the exported app list file.",
                         color = primaryTextColor.color.copy(alpha = 0.6f),
                         fontSize = 13.sp
                     )
@@ -307,13 +262,13 @@ fun AutoTagsScreen(
                         modifier = Modifier.padding(vertical = 16.dp)
                     )
 
-                    // Step 4: Import Tagged Apps
-                    StepHeader(4, "Import Tagged Apps", accentColor, primaryTextColor, buttonTextColor, shadow)
+                    // Step 3: Import Tagged Apps
+                    StepHeader(3, "Import Tagged Apps", accentColor, primaryTextColor, buttonTextColor, shadow)
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "After the AI returns the tagged result, save it to a file and upload it here. Both JSON and TXT files are supported.",
+                        text = "After the AI generates the tagged JSON result, save it as a .json file and import it here. All tags, colors, and assignments will be previewed before applying.",
                         color = primaryTextColor.color.copy(alpha = 0.6f),
                         fontSize = 13.sp
                     )
@@ -403,7 +358,7 @@ private fun ExportFormatDialog(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "JSON — for the AI workflow.   TXT — human-readable list.",
+                    "JSON — includes labels, favorites & tags.   TXT — human-readable list.",
                     color = popupTheme.secondaryContentColor,
                     fontSize = 11.sp
                 )
@@ -463,24 +418,32 @@ private fun copyToClipboard(context: Context, text: String) {
     clipboard.setPrimaryClip(ClipData.newPlainText("AI Prompt", text))
 }
 
-private const val AI_PROMPT = """Here is a JSON array of installed mobile apps. Please categorize each app into a group and assign a color (hex format #RRGGBB) to each group.
+private const val AI_PROMPT = """You are an AI assistant helping categorize mobile applications for an Android launcher.
+Attached or listed below is a list of installed apps (JSON array or text).
 
-Requirements:
-- Use a minimal number of categories (10-15 groups)
-- Group apps into meaningful, concise categories (e.g., "Social", "Games", "Productivity", "Media", etc.)
-- Each category should contain at least 2 apps if possible, or a single app if it is truly unique
-- Assign each category a distinct color
-- Add two new fields to each object: "tag" (category name) and "color" (hex color like "#3B82F6")
-- Keep all original fields ("package" and "label") unchanged
-- Return ONLY the modified JSON array, no other text, no markdown code blocks
+TASK:
+1. Group all apps into 10-15 clean, meaningful, concise categories/tags (e.g. "Social", "Messengers", "Games", "Productivity", "Media", "Finance", "Tools", "Shopping", "Navigation", "System", "News", "Health", etc.).
+2. Assign each category a distinct, aesthetic HEX color code (format: "#RRGGBB").
+3. Output the result strictly as a valid JSON file (a JSON array of objects).
 
-Example of the expected output format:
+SCHEMA FOR EACH OBJECT:
+- "package": (string, required) the package name from input
+- "label": (string, optional) the app name/label
+- "tag": (string, required) the category name
+- "color": (string, required) the category HEX color (e.g., "#3B82F6")
+
+CRITICAL OUTPUT RULES:
+- Output MUST be valid pure JSON.
+- DO NOT wrap the output in conversational text or explanations.
+- The output should be directly saveable as a `.json` file.
+
+EXAMPLE OF VALID OUTPUT:
 [
   {"package": "com.android.chrome", "label": "Chrome", "tag": "Browsers", "color": "#3B82F6"},
   {"package": "org.telegram.messenger", "label": "Telegram", "tag": "Messengers", "color": "#10B981"},
-  {"package": "com.google.youtube", "label": "YouTube", "tag": "Video", "color": "#EF4444"},
+  {"package": "com.google.android.youtube", "label": "YouTube", "tag": "Video", "color": "#EF4444"},
   {"package": "com.spotify.music", "label": "Spotify", "tag": "Music", "color": "#1DB954"},
-  {"package": "com.chess.app", "label": "Chess", "tag": "Games", "color": "#8B5CF6"}
+  {"package": "com.chess", "label": "Chess", "tag": "Games", "color": "#8B5CF6"}
 ]
 
-You can use the JSON or TXT export from the app (both contain the same app list). Paste your exported app list below:"""
+Paste your exported app list below:"""

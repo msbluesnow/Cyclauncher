@@ -615,10 +615,8 @@ class AppActionsManager(context: Context) {
         _customCharMappings.value = result
         saveCustomCharMappings(result)
         return parsed.size
-    }
-
-    // App list export / import (unified — used by both Settings and AutoTags).
-    // Exports the list of installed apps as { "package", "label" } objects.
+    }    // App list export / import (unified — used by both Settings and AutoTags).
+    // Exports the list of installed apps as { "package", "component", "label", "is_favorite", "tags" } objects.
     // JSON is machine-friendly (the original format), TXT is human-readable.
 
     /**
@@ -629,15 +627,29 @@ class AppActionsManager(context: Context) {
         val favorites: List<String>
     )
 
+    private fun cleanJsonString(input: String): String {
+        var s = input.trim()
+        if (s.startsWith("```json", ignoreCase = true)) {
+            s = s.substring(7).trim()
+        } else if (s.startsWith("```")) {
+            s = s.substring(3).trim()
+        }
+        if (s.endsWith("```")) {
+            s = s.substring(0, s.length - 3).trim()
+        }
+        return s
+    }
+
     /**
      * Exports the list of installed apps to a JSON file at the specified URI,
-     * including custom labels and favorite status.
+     * including custom labels, favorite status, and assigned tags.
      *
      * @param uri The destination URI.
      * @param apps The list of applications to export.
      */
     fun exportAppNamesToUri(uri: Uri, apps: List<dev.msbs.cyclauncher.model.AppInfo>) {
         val favs = _favorites.value.toSet()
+        val idToName = _tags.value.associate { it.id to it.name }
         val array = JSONArray()
         apps.forEach { app ->
             val obj = JSONObject()
@@ -645,6 +657,12 @@ class AppActionsManager(context: Context) {
             obj.put("component", app.componentKey)
             obj.put("label", app.label)
             obj.put("is_favorite", favs.contains(app.componentKey) || favs.contains(app.packageName))
+            val tagIds = _appTags.value[app.componentKey] ?: _appTags.value[app.packageName] ?: emptyList()
+            val tagNames = tagIds.mapNotNull { idToName[it] }
+            if (tagNames.isNotEmpty()) {
+                obj.put("tags", JSONArray(tagNames))
+                obj.put("tag", tagNames.first())
+            }
             array.put(obj)
         }
         val json = array.toString(2)
@@ -679,9 +697,9 @@ class AppActionsManager(context: Context) {
      * @return Result containing imported labels map and list of favorited component keys.
      */
     fun importAppNamesFromUri(uri: Uri, currentApps: List<dev.msbs.cyclauncher.model.AppInfo>): AppNamesImportResult {
-        val jsonString = readStringFromUri(uri)
+        val raw = readStringFromUri(uri)
             ?: throw IllegalArgumentException("Cannot read file")
-        val trimmed = jsonString.trim()
+        val trimmed = cleanJsonString(raw)
         val packageToApps = currentApps.groupBy { it.packageName }
         val importedLabels = mutableMapOf<String, String>()
         val importedFavorites = mutableListOf<String>()
@@ -864,15 +882,16 @@ class AppActionsManager(context: Context) {
         saveMap("custom_labels", current)
     }
 
-    // Tags backup export / import (tags + assignments). Unified across the app.
+    // Unified Backup export / import (tags + assignments + labels + favorites + apps).
 
     /**
-     * Exports every defined tag (name + color) and every tag assignment
-     * (componentKey -> list of tag names) to a JSON object written to [uri].
+     * Exports a comprehensive backup (tags, tag assignments, custom labels, favorites,
+     * and app metadata) to a JSON file written to [uri].
      *
      * @param uri The destination URI.
+     * @param apps Optional list of apps to include in the backup.
      */
-    fun exportTagsBackupToUri(uri: Uri) {
+    fun exportTagsBackupToUri(uri: Uri, apps: List<dev.msbs.cyclauncher.model.AppInfo> = emptyList()) {
         val idToName = _tags.value.associate { it.id to it.name }
         val tagsArray = JSONArray()
         _tags.value.forEach { tag ->
@@ -885,7 +904,7 @@ class AppActionsManager(context: Context) {
         // Map componentKey -> tag names (only keep tags that still exist).
         val assignments = JSONObject()
         _appTags.value.forEach { (componentKey, tagIds) ->
-            val names = tagIds.mapNotNull { id -> idToName[id] }
+            val names = tagIds.mapNotNull { idToName[it] }
             if (names.isNotEmpty()) {
                 assignments.put(componentKey, JSONArray(names))
             }
@@ -904,28 +923,66 @@ class AppActionsManager(context: Context) {
             root.put("custom_labels", customLabelsObj)
         }
 
+        val favoritesArray = JSONArray()
+        _favorites.value.forEach { favKey ->
+            favoritesArray.put(favKey)
+        }
+        if (_favorites.value.isNotEmpty()) {
+            root.put("favorites", favoritesArray)
+        }
+
+        if (apps.isNotEmpty()) {
+            val favs = _favorites.value.toSet()
+            val appsArray = JSONArray()
+            apps.forEach { app ->
+                val appObj = JSONObject()
+                appObj.put("package", app.packageName)
+                appObj.put("component", app.componentKey)
+                appObj.put("label", app.label)
+                appObj.put("is_favorite", favs.contains(app.componentKey) || favs.contains(app.packageName))
+                val tagIds = _appTags.value[app.componentKey] ?: _appTags.value[app.packageName] ?: emptyList()
+                val tagNames = tagIds.mapNotNull { idToName[it] }
+                if (tagNames.isNotEmpty()) {
+                    appObj.put("tags", JSONArray(tagNames))
+                    appObj.put("tag", tagNames.first())
+                }
+                appsArray.put(appObj)
+            }
+            root.put("apps", appsArray)
+        }
+
         writeStringToUri(uri, root.toString(2))
     }
 
     /**
-     * Parses a tags-backup JSON into a preview without applying anything.
+     * Parses a backup or AI-tagged JSON file into a preview without applying changes yet.
      * Supports unified backup format, AutoTags format, and tag dictionary format.
      *
      * @param uri The source URI of the backup file.
      * @return A [TagsBackupPreview] containing parsed data.
      */
     fun parseTagsBackup(uri: Uri): TagsBackupPreview {
-        val jsonString = readStringFromUri(uri)
-        val trimmed = jsonString.trim()
+        val raw = readStringFromUri(uri) ?: throw IllegalArgumentException("Cannot read file")
+        val trimmed = cleanJsonString(raw)
 
         val existingNames = _tags.value.map { it.name.lowercase().trim() }.toMutableSet()
         val tagsToCreate = mutableListOf<TagsBackupPreview.TagInfo>()
         val createdNamesSet = mutableSetOf<String>()
         val assignments = mutableListOf<TagsBackupPreview.AssignmentInfo>()
         val parsedCustomLabels = mutableMapOf<String, String>()
+        val parsedFavorites = mutableListOf<String>()
+
+        fun extractIsFavorite(obj: JSONObject): Boolean {
+            return when {
+                obj.has("is_favorite") -> obj.optBoolean("is_favorite", false)
+                obj.has("isFavorite") -> obj.optBoolean("isFavorite", false)
+                obj.has("favorite") -> obj.optBoolean("favorite", false)
+                else -> false
+            }
+        }
 
         if (trimmed.startsWith("[")) {
-            // AutoTags array format: [{"package": "...", "tag": "...", "color": "..."}]
+            // AutoTags array format: [{"package": "...", "label": "...", "tag": "...", "color": "...", "is_favorite": true}]
             val array = JSONArray(trimmed)
             val packageToTagNames = mutableMapOf<String, MutableList<String>>()
             val tagColors = mutableMapOf<String, Color>()
@@ -933,11 +990,14 @@ class AppActionsManager(context: Context) {
             for (i in 0 until array.length()) {
                 val obj = array.optJSONObject(i) ?: continue
                 val pkg = obj.optString("package").ifEmpty { obj.optString("packageName") }.trim()
+                val component = obj.optString("component").ifEmpty { obj.optString("componentKey") }.trim()
+                val label = obj.optString("label").ifEmpty { obj.optString("name") }.trim()
                 val colorHex = obj.optString("color").trim()
                 val color = if (colorHex.isNotEmpty()) parseHexColor(colorHex) else Color.Unspecified
+                val isFav = extractIsFavorite(obj)
 
                 val tagNames = mutableListOf<String>()
-                val singleTag = obj.optString("tag").ifEmpty { obj.optString("name") }.trim()
+                val singleTag = obj.optString("tag").ifEmpty { obj.optString("tagName") }.trim()
                 if (singleTag.isNotEmpty()) tagNames.add(singleTag)
                 obj.optJSONArray("tags")?.let { tagsArr ->
                     for (j in 0 until tagsArr.length()) {
@@ -955,10 +1015,25 @@ class AppActionsManager(context: Context) {
                         tagsToCreate.add(TagsBackupPreview.TagInfo(name = tagName, color = resolvedColor))
                         createdNamesSet.add(lower)
                     }
-                    if (pkg.isNotEmpty()) {
-                        packageToTagNames.getOrPut(pkg) { mutableListOf() }.apply {
+                    val targetKey = component.ifEmpty { pkg }
+                    if (targetKey.isNotEmpty()) {
+                        packageToTagNames.getOrPut(targetKey) { mutableListOf() }.apply {
                             if (!contains(tagName)) add(tagName)
                         }
+                    }
+                }
+
+                if (label.isNotEmpty()) {
+                    val key = component.ifEmpty { pkg }
+                    if (key.isNotEmpty()) {
+                        parsedCustomLabels[key] = label
+                    }
+                }
+
+                if (isFav) {
+                    val key = component.ifEmpty { pkg }
+                    if (key.isNotEmpty()) {
+                        parsedFavorites.add(key)
                     }
                 }
             }
@@ -971,6 +1046,8 @@ class AppActionsManager(context: Context) {
             val tagsArray = root.optJSONArray("tags")
             val assignmentsObj = root.optJSONObject("assignments")
             val customLabelsObj = root.optJSONObject("custom_labels") ?: root.optJSONObject("labels")
+            val favoritesArray = root.optJSONArray("favorites")
+            val appsArray = root.optJSONArray("apps")
 
             if (customLabelsObj != null) {
                 val keys = customLabelsObj.keys()
@@ -979,6 +1056,32 @@ class AppActionsManager(context: Context) {
                     val label = customLabelsObj.optString(key).trim()
                     if (label.isNotEmpty()) {
                         parsedCustomLabels[key] = label
+                    }
+                }
+            }
+
+            if (favoritesArray != null) {
+                for (i in 0 until favoritesArray.length()) {
+                    val favKey = favoritesArray.optString(i).trim()
+                    if (favKey.isNotEmpty()) {
+                        parsedFavorites.add(favKey)
+                    }
+                }
+            }
+
+            if (appsArray != null) {
+                for (i in 0 until appsArray.length()) {
+                    val item = appsArray.optJSONObject(i) ?: continue
+                    val pkg = item.optString("package").ifEmpty { item.optString("packageName") }.trim()
+                    val component = item.optString("component").ifEmpty { item.optString("componentKey") }.trim()
+                    val label = item.optString("label").ifEmpty { item.optString("name") }.trim()
+                    val isFav = extractIsFavorite(item)
+                    val key = component.ifEmpty { pkg }
+                    if (label.isNotEmpty() && key.isNotEmpty()) {
+                        parsedCustomLabels[key] = label
+                    }
+                    if (isFav && key.isNotEmpty()) {
+                        parsedFavorites.add(key)
                     }
                 }
             }
@@ -1019,7 +1122,7 @@ class AppActionsManager(context: Context) {
                 // Dictionary format {"TagName": ["pkg1", "pkg2"]}
                 val packageToTagNames = mutableMapOf<String, MutableList<String>>()
                 root.keys().forEach { tagName ->
-                    if (tagName == "custom_labels" || tagName == "labels") return@forEach
+                    if (tagName in setOf("custom_labels", "labels", "favorites", "apps", "version")) return@forEach
                     val lower = tagName.lowercase().trim()
                     if (lower !in existingNames && lower !in createdNamesSet) {
                         tagsToCreate.add(TagsBackupPreview.TagInfo(name = tagName, color = generateTagColor(tagName)))
@@ -1048,13 +1151,14 @@ class AppActionsManager(context: Context) {
             assignmentCount = assignments.sumOf { it.tagNames.size },
             parsedAssignments = assignments,
             existingTagCount = _tags.value.size,
-            customLabels = parsedCustomLabels
+            customLabels = parsedCustomLabels,
+            favorites = parsedFavorites.distinct()
         )
     }
 
     /**
-     * Applies a previously-parsed [TagsBackupPreview]: creates missing tags and
-     * wires up every assignment (matched by tag name), resolving package names to installed apps.
+     * Applies a previously-parsed [TagsBackupPreview]: creates missing tags,
+     * wires up every assignment (matched by tag name), restores custom labels and favorites.
      */
     fun applyTagsBackup(preview: TagsBackupPreview, installedApps: List<dev.msbs.cyclauncher.model.AppInfo> = emptyList()) {
         val currentTags = _tags.value.toMutableList()
@@ -1109,13 +1213,23 @@ class AppActionsManager(context: Context) {
             applyAppLabels(preview.customLabels)
         }
 
+        if (preview.favorites.isNotEmpty()) {
+            importFavorites(preview.favorites)
+        }
+
         val created = preview.newTags.size
-        Toast.makeText(
-            context,
-            "Imported ${preview.parsedAssignments.size} tag assignments" +
-                if (created > 0) " ($created new tags)" else "",
-            Toast.LENGTH_SHORT
-        ).show()
+        val parts = mutableListOf<String>()
+        if (preview.parsedAssignments.isNotEmpty()) {
+            parts.add("Imported ${preview.parsedAssignments.size} assignments" + if (created > 0) " ($created new tags)" else "")
+        }
+        if (preview.customLabels.isNotEmpty()) {
+            parts.add("${preview.customLabels.size} labels")
+        }
+        if (preview.favorites.isNotEmpty()) {
+            parts.add("${preview.favorites.size} favorites")
+        }
+        val msg = if (parts.isNotEmpty()) parts.joinToString(", ") else "Backup imported successfully"
+        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
     }
 
     private fun saveList(key: String, list: List<String>) {
@@ -1376,7 +1490,8 @@ data class TagsBackupPreview(
     val assignmentCount: Int,
     val parsedAssignments: List<AssignmentInfo>,
     val existingTagCount: Int,
-    val customLabels: Map<String, String> = emptyMap()
+    val customLabels: Map<String, String> = emptyMap(),
+    val favorites: List<String> = emptyList()
 ) {
     /**
      * Holds basic tag definition metadata in a backup.

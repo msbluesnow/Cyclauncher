@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -92,34 +93,12 @@ fun SettingsScreen(
     val customCharMappings by viewModel.customCharMappings.collectAsState()
     var currentIsDefault by remember { mutableStateOf(viewModel.isDefaultLauncher()) }
 
-    // Unified App List export / import (JSON), used by both Settings and AutoTags
-    val exportAppListLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
-    ) { uri -> uri?.let { viewModel.exportAppNamesJson(it) } }
-
-    val importAppListLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let {
-            viewModel.importAppNamesPreview(it) { labelCount, favCount ->
-                val msg = if (favCount > 0 && labelCount > 0) {
-                    "Imported $labelCount app labels & $favCount favorites"
-                } else if (favCount > 0) {
-                    "Imported $favCount favorites"
-                } else {
-                    "Imported $labelCount app labels"
-                }
-                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    // Unified Tags backup export / import (JSON)
-    val exportTagsLauncher = rememberLauncherForActivityResult(
+    // Unified Backup export / import (JSON: tags, assignments, custom labels, favorites, app list)
+    val exportBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri -> uri?.let { viewModel.exportTagsBackup(it) } }
 
-    val importTagsLauncher = rememberLauncherForActivityResult(
+    val importBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri -> uri?.let { viewModel.loadTagsBackupPreview(it) } }
 
@@ -503,100 +482,120 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Combined App List & Tags Row in a single line with vertical separator
+                // Unified Backup & AI AutoTags Pills Row (Option 1)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Left Side: App List (Export / Import)
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(0.dp)
+                    // Left Pill: Backup & Restore (Centered with Accent Border)
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(46.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = primaryTextColor.color.copy(alpha = 0.07f),
+                        border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.35f))
                     ) {
-                        Text(
-                            text = "App List:",
-                            color = primaryTextColor.color,
-                            style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium),
-                            modifier = Modifier.padding(end = 2.dp)
-                        )
-                        IconButton(
-                            onClick = { exportAppListLauncher.launch("cyclauncher_apps.json") },
-                            modifier = Modifier.size(34.dp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                if (showShadows) {
-                                    Icon(Icons.Outlined.Upload, null, tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
+                            Text(
+                                text = "Backup",
+                                color = primaryTextColor.color,
+                                style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            IconButton(
+                                onClick = { exportBackupLauncher.launch("cyclauncher_backup.json") },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    if (showShadows) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Upload,
+                                            contentDescription = null,
+                                            tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                                            modifier = Modifier.size(22.dp).offset(1.dp, 1.dp)
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Outlined.Upload,
+                                        contentDescription = "Export Backup",
+                                        tint = accentColor.color,
+                                        modifier = Modifier.size(22.dp)
+                                    )
                                 }
-                                Icon(Icons.Outlined.Upload, null, tint = accentColor.color, modifier = Modifier.size(22.dp))
                             }
-                        }
-                        IconButton(
-                            onClick = { importAppListLauncher.launch("*/*") },
-                            modifier = Modifier.size(34.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                if (showShadows) {
-                                    Icon(Icons.Outlined.Download, null, tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
+                            IconButton(
+                                onClick = { importBackupLauncher.launch("*/*") },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    if (showShadows) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Download,
+                                            contentDescription = null,
+                                            tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                                            modifier = Modifier.size(22.dp).offset(1.dp, 1.dp)
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Outlined.Download,
+                                        contentDescription = "Import Backup",
+                                        tint = accentColor.color,
+                                        modifier = Modifier.size(22.dp)
+                                    )
                                 }
-                                Icon(Icons.Outlined.Download, null, tint = accentColor.color, modifier = Modifier.size(22.dp))
                             }
                         }
                     }
 
-                    // Vertical Separator Divider with margin to prevent overlapping Tags text
-                    VerticalDivider(
+                    // Right Pill: AI AutoTags (Centered with Accent Border)
+                    Surface(
+                        onClick = { showAutoTagsScreen = true },
                         modifier = Modifier
-                            .height(24.dp)
-                            .padding(horizontal = 6.dp),
-                        color = primaryTextColor.color.copy(alpha = 0.2f)
-                    )
-
-                    // Right Side: Tags (AutoTags / Export / Import)
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(0.dp)
+                            .weight(1f)
+                            .height(46.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = primaryTextColor.color.copy(alpha = 0.07f),
+                        border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.35f))
                     ) {
-                        Text(
-                            text = "Tags:",
-                            color = primaryTextColor.color,
-                            style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium),
-                            modifier = Modifier.padding(end = 2.dp)
-                        )
-                        IconButton(
-                            onClick = { showAutoTagsScreen = true },
-                            modifier = Modifier.size(34.dp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 if (showShadows) {
-                                    Icon(Icons.Outlined.AutoAwesome, null, tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
+                                    Icon(
+                                        imageVector = Icons.Outlined.AutoAwesome,
+                                        contentDescription = null,
+                                        tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                                        modifier = Modifier.size(20.dp).offset(1.dp, 1.dp)
+                                    )
                                 }
-                                Icon(Icons.Outlined.AutoAwesome, null, tint = accentColor.color, modifier = Modifier.size(22.dp))
+                                Icon(
+                                    imageVector = Icons.Outlined.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = accentColor.color,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
-                        }
-                        IconButton(
-                            onClick = { exportTagsLauncher.launch("cyclauncher_tags.json") },
-                            modifier = Modifier.size(34.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                if (showShadows) {
-                                    Icon(Icons.Outlined.Upload, null, tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
-                                }
-                                Icon(Icons.Outlined.Upload, null, tint = accentColor.color, modifier = Modifier.size(22.dp))
-                            }
-                        }
-                        IconButton(
-                            onClick = { importTagsLauncher.launch("*/*") },
-                            modifier = Modifier.size(34.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                if (showShadows) {
-                                    Icon(Icons.Outlined.Download, null, tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f), modifier = Modifier.size(22.dp).offset(1.dp, 1.dp))
-                                }
-                                Icon(Icons.Outlined.Download, null, tint = accentColor.color, modifier = Modifier.size(22.dp))
-                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "AI Tags",
+                                color = primaryTextColor.color,
+                                style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                            )
                         }
                     }
                 }
@@ -1515,8 +1514,8 @@ private fun DefaultLauncherAndRelaunchRow(
             Spacer(modifier = Modifier.height(10.dp))
             Button(
                 onClick = onRelaunchClick,
-                colors = ButtonDefaults.buttonColors(containerColor = accentColor.color.copy(alpha = 0.15f)),
-                border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.5f)),
+                colors = ButtonDefaults.buttonColors(containerColor = primaryTextColor.color.copy(alpha = 0.07f)),
+                border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.35f)),
                 modifier = Modifier.fillMaxWidth().height(42.dp),
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 8.dp)

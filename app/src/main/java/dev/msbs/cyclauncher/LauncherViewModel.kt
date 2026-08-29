@@ -830,9 +830,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun exportTagsBackup(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                actionsManager.exportTagsBackupToUri(uri)
+                val list = apps.value
+                actionsManager.exportTagsBackupToUri(uri, list)
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), "Exported ${tags.value.size} tags", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(getApplication(), "Backup exported (${tags.value.size} tags, ${list.size} apps)", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {

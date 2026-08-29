@@ -694,7 +694,7 @@ private fun TagsBackupConfirmDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                "Import Tags?",
+                "Import Backup / Tags?",
                 color = accentColor.color,
                 fontWeight = FontWeight.Bold
             )
@@ -703,11 +703,18 @@ private fun TagsBackupConfirmDialog(
             Column {
                 Text(
                     buildString {
-                        append("New tags to create: ${preview.newTags.size}")
-                        append("\nExisting tags kept: ${preview.existingTagCount}")
-                        append("\nTag assignments: ${preview.assignmentCount}")
+                        if (preview.newTags.isNotEmpty() || preview.existingTagCount > 0 || preview.assignmentCount > 0) {
+                            append("New tags to create: ${preview.newTags.size}")
+                            append("\nExisting tags kept: ${preview.existingTagCount}")
+                            append("\nTag assignments: ${preview.assignmentCount}")
+                        }
                         if (preview.customLabels.isNotEmpty()) {
-                            append("\nCustom labels to restore: ${preview.customLabels.size}")
+                            if (isNotEmpty()) append("\n")
+                            append("Custom labels to restore: ${preview.customLabels.size}")
+                        }
+                        if (preview.favorites.isNotEmpty()) {
+                            if (isNotEmpty()) append("\n")
+                            append("Favorites to restore: ${preview.favorites.size}")
                         }
                     },
                     color = popupTheme.contentColor.copy(alpha = 0.85f),
