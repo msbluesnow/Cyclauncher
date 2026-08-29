@@ -9,14 +9,7 @@ import coil3.request.crossfade
 import dev.msbs.cyclauncher.coil.AppIconFetcher
 
 /**
- * Application entry point. Sets up Coil's singleton [ImageLoader] with:
- *  - the custom [AppIconFetcher] wired into the component chain;
- *  - an LRU memory cache with hard caps so decoded app icons can be evicted under memory pressure;
- *  - a bounded disk cache so icons survive process death and don't re-decode on every reload.
- *
- * Registering here (rather than inline in Composables) keeps image loading off the main thread
- * and out of the ViewModel, which is the whole point of moving off the in-memory `ImageBitmap`
- * field on [dev.msbs.cyclauncher.model.AppInfo].
+ * Application class initializing Coil image loader with memory caching for app icons.
  */
 class CyclauncherApp : Application(), SingletonImageLoader.Factory {
 
@@ -24,7 +17,6 @@ class CyclauncherApp : Application(), SingletonImageLoader.Factory {
 
     override fun onCreate() {
         super.onCreate()
-        // Purge any legacy disk image cache left by previous versions to reclaim storage
         try {
             cacheDir.resolve("image_cache").deleteRecursively()
         } catch (_: Exception) {}
@@ -70,9 +62,6 @@ class CyclauncherApp : Application(), SingletonImageLoader.Factory {
     }
 
     private companion object {
-        // 24 MiB of decoded bitmaps in memory is plenty for a launcher grid (most icons are
-        // 96–144 px). Beyond this Coil evicts least-recently-used entries — exactly the
-        // behavior the old in-memory `ImageBitmap` field lacked.
         const val MAX_MEMORY_BYTES = 24L * 1024L * 1024L
     }
 }

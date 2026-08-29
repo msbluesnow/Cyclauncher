@@ -49,15 +49,7 @@ import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import kotlin.math.roundToInt
 
 /**
- * A folder-styled UI component representing a custom tag.
- * Shows a border with the tag's color and a 2x2 grid containing up to 4 app icons inside.
- *
- * @param tag The tag instance.
- * @param apps The list of applications associated with this tag.
- * @param onClick Callback triggered when the tag folder is tapped (provides item Offset).
- * @param onLongClick Callback triggered when the tag folder is long-pressed (provides item Offset).
- * @param primaryTextColor Theme text color setting.
- * @param showShadows Whether drop shadows are enabled.
+ * Tag folder item displaying a colored border and a 2x2 preview of assigned app icons.
  */
 @Composable
 fun TagFolderItem(
@@ -86,7 +78,6 @@ fun TagFolderItem(
             }
             .padding(vertical = 4.dp, horizontal = 2.dp)
     ) {
-        // Folder preview box with tag color border
         Box(
             modifier = Modifier
                 .size(52.dp)
@@ -102,7 +93,6 @@ fun TagFolderItem(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Row 1 (up to 2 icons)
                 Row(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically,
@@ -119,7 +109,6 @@ fun TagFolderItem(
                         Spacer(modifier = Modifier.size(16.dp))
                     }
                 }
-                // Row 2 (up to 2 icons)
                 if (previewApps.size > 2) {
                     Row(
                         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -143,7 +132,6 @@ fun TagFolderItem(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Tag name
         Text(
             text = tag.name,
             fontSize = 11.sp,
@@ -173,22 +161,7 @@ private fun MiniAppIconPreview(app: AppInfo) {
 }
 
 /**
- * Folder popup displaying all applications assigned to a specific tag.
- * Implemented using [Popup] positioned near the tapped folder icon.
- * Includes top pencil icon to edit tag, and minus overlay on icons when opened in edit mode.
- *
- * @param tag The tag instance.
- * @param apps The list of applications associated with this tag.
- * @param offset Touch coordinate offset where the tag folder icon was tapped.
- * @param isEditMode True if opened in app removal/edit mode.
- * @param onAppClick Callback when an application is tapped.
- * @param onAppLongClick Callback when an application is long-pressed.
- * @param onRemoveAppFromTag Callback when removing an app from tag (tagId, componentKey).
- * @param onEditTag Callback to edit tag properties.
- * @param onDismiss Callback to dismiss the folder popup.
- * @param primaryTextColor User selected text color setting.
- * @param showShadows True if drop shadows are enabled.
- * @param accentColor Active UI accent color.
+ * Popup dialog showing all applications within a tag folder with edit and management actions.
  */
 @Composable
 fun TagFolderPopup(
@@ -243,50 +216,94 @@ fun TagFolderPopup(
                 .padding(16.dp)
         ) {
             Column {
-                // Header with Tag Name, Pencil Edit Icon, and Count
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Box(
                             modifier = Modifier
-                                .size(12.dp)
+                                .size(10.dp)
                                 .clip(CircleShape)
                                 .background(tag.color)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = tag.name,
-                            color = popupTheme.contentColor,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        )
+                        BoxWithConstraints(modifier = Modifier.weight(1f)) {
+                            var fontSize by remember(tag.name, maxWidth) { mutableStateOf(17.sp) }
+                            var readyToDraw by remember(tag.name, maxWidth) { mutableStateOf(tag.name.length <= 10) }
+
+                            Text(
+                                text = tag.name,
+                                color = if (readyToDraw) popupTheme.contentColor else Color.Transparent,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = fontSize,
+                                maxLines = 2,
+                                lineHeight = (fontSize.value * 1.15f).sp,
+                                overflow = TextOverflow.Ellipsis,
+                                softWrap = true,
+                                onTextLayout = { textLayoutResult ->
+                                    if (textLayoutResult.hasVisualOverflow && fontSize.value > 11f) {
+                                        fontSize = (fontSize.value * 0.88f).sp
+                                    } else {
+                                        readyToDraw = true
+                                    }
+                                }
+                            )
+                        }
                     }
 
-                    // Top center Pencil icon to trigger TagEditDialog
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .clickable { onEditTag(tag) }
-                            .padding(4.dp),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Edit,
-                            contentDescription = "Edit Tag",
-                            tint = popupTheme.secondaryContentColor,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .clickable { onEditTag(tag) }
+                                .padding(4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (showShadows) {
+                                val shadowSettings = LocalShadowSettings.current
+                                Icon(
+                                    imageVector = Icons.Outlined.Edit,
+                                    contentDescription = null,
+                                    tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.25f),
+                                    modifier = Modifier
+                                        .size(17.dp)
+                                        .offset(1.dp, 1.dp)
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Outlined.Edit,
+                                contentDescription = "Edit Tag",
+                                tint = popupTheme.secondaryContentColor,
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
 
-                    Text(
-                        text = "${apps.size}",
-                        color = tag.color,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 13.sp
-                    )
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(tag.color.copy(alpha = 0.15f))
+                                .border(0.8.dp, tag.color.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "${apps.size}",
+                                color = tag.color,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -378,7 +395,6 @@ private fun TagFolderAppItem(
                 onLongClick = { currentOnLongClick(it) }
             )
 
-            // Minus icon overlay in center with 38% opacity when in edit mode
             if (isEditMode) {
                 Box(
                     modifier = Modifier
@@ -413,12 +429,7 @@ private fun TagFolderAppItem(
 }
 
 /**
- * A compact folder-styled preview icon representing a custom tag folder in the Favorites section.
- *
- * @param tag The tag instance.
- * @param apps The list of applications assigned to this tag.
- * @param size The size of the icon in dp (defaults to 48dp to match AppIconItem).
- * @param modifier Modifier for UI configurations and gestures.
+ * Preview icon representing a tag folder within the Favorites section.
  */
 @Composable
 fun TagFolderIcon(
@@ -443,7 +454,6 @@ fun TagFolderIcon(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxSize()
         ) {
-            // Row 1 (up to 2 icons)
             Row(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
@@ -460,7 +470,6 @@ fun TagFolderIcon(
                     Spacer(modifier = Modifier.size(14.dp))
                 }
             }
-            // Row 2 (up to 2 icons)
             if (previewApps.size > 2) {
                 Row(
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -484,18 +493,7 @@ fun TagFolderIcon(
 }
 
 /**
- * Context action menu for a tag folder, offering options to edit the group
- * (remove items) or toggle its favorite status.
- *
- * @param tag The tag instance.
- * @param isFavorite Current favorite status of the tag folder.
- * @param offset The touch input position where the menu was triggered.
- * @param onDismiss Callback to close the menu.
- * @param onEditGroup Callback when the user selects to edit the group.
- * @param onToggleFavorite Callback when the user toggles favorite status.
- * @param accentColor The active UI accent color.
- * @param primaryTextColor The primary text color.
- * @param popupTheme The popup theme setting (DARK or LIGHT).
+ * Context action menu for tag folders (edit group, toggle favorite).
  */
 @Composable
 fun TagFolderActionMenu(

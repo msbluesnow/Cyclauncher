@@ -49,17 +49,7 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
- * A custom interactive alphabet wheel arranged in a rectangular path around the screen.
- * Displays letters from A to Z and '#', allowing drag gestures to choose active letters
- * and selecting applications starting with that letter.
- *
- * @param scrollOffset The animating scroll position value of the wheel.
- * @param onLetterSelected Callback when a new letter becomes active.
- * @param apps The list of applications that match the active letter.
- * @param onAppClick Callback when an application icon inside the wheel is tapped.
- * @param onAppLongClick Callback when an application icon is long-pressed (provides coordinates).
- * @param accentColor The active UI accent color.
- * @param modifier Modifier for configuration.
+ * Interactive rectangular alphabet wheel displaying letters A-Z and '#' with drag-to-scroll selection.
  */
 @Composable
 fun RectangularAlphabetWheel(
@@ -83,7 +73,6 @@ fun RectangularAlphabetWheel(
     var wheelPosition by remember { mutableStateOf(Offset.Zero) }
 
     BoxWithConstraints(modifier = modifier) {
-        // Dynamic scaling based on screen width, reduced by exactly 7% as requested
         val baseWidth = 360.dp
         val scaleFactor = ((maxWidth / baseWidth).coerceIn(0.7f, 1.2f)) * 0.93f
         
@@ -136,7 +125,6 @@ fun RectangularAlphabetWheel(
             }
         }
 
-        // Precompute distances for perfect dot synchronization
         val segmentDistances = remember(density, s, offsetDist) {
             val o = offsetDist
             val hLeft = -s + with(density) { (10.dp * scaleFactor).toPx() }
@@ -147,15 +135,15 @@ fun RectangularAlphabetWheel(
 
             FloatArray(27) { i ->
                 when (i) {
-                    in 0..8 -> s // A-J
-                    9 -> (rX - getIndicatorPoint(9).x) + (getIndicatorPoint(10).y - tY) // J-K Corner
-                    in 10..12 -> s // K-N
-                    13 -> (bY - getIndicatorPoint(13).y) + (rX - getIndicatorPoint(14).x) // N-O Corner
-                    in 14..21 -> s // O-W
-                    22 -> (getIndicatorPoint(22).x - lX) + (bY - getIndicatorPoint(23).y) // W-X Corner
-                    23, 24 -> s // X-Z
-                    25 -> (getIndicatorPoint(25).x - hLeft) + (getIndicatorPoint(25).y - tY) + (getIndicatorPoint(26).x - hLeft) // Z-#
-                    26 -> (getIndicatorPoint(0).x - getIndicatorPoint(26).x) // #-A
+                    in 0..8 -> s
+                    9 -> (rX - getIndicatorPoint(9).x) + (getIndicatorPoint(10).y - tY)
+                    in 10..12 -> s
+                    13 -> (bY - getIndicatorPoint(13).y) + (rX - getIndicatorPoint(14).x)
+                    in 14..21 -> s
+                    22 -> (getIndicatorPoint(22).x - lX) + (bY - getIndicatorPoint(23).y)
+                    23, 24 -> s
+                    25 -> (getIndicatorPoint(25).x - hLeft) + (getIndicatorPoint(25).y - tY) + (getIndicatorPoint(26).x - hLeft)
+                    26 -> (getIndicatorPoint(0).x - getIndicatorPoint(26).x)
                     else -> 0f
                 }
             }
@@ -199,9 +187,6 @@ fun RectangularAlphabetWheel(
         val pathMeasure = remember(indicatorPath) { PathMeasure().apply { setPath(indicatorPath, false) } }
         val totalLength = pathMeasure.length
 
-        // Threshold for slow speed detection in dp/s (converted to px/ms for per-frame computation)
-        val slowSpeedThresholdPxPerMs = remember(density) { with(density) { 1000.dp.toPx() } } / 1000f
-
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
@@ -210,11 +195,10 @@ fun RectangularAlphabetWheel(
                 .alphabetWheelDragGesture(scrollOffset, density, stepSize),
             contentAlignment = Alignment.Center
         ) {
-            // Internal container for the wheel to keep it centered and shifted for #
             Box(
                 modifier = Modifier
                     .size(stepSize * 10, stepSize * 5)
-                    .graphicsLayer { translationX = s / 2f } // Shift right to accommodate #
+                    .graphicsLayer { translationX = s / 2f }
                     .drawWithCache {
                         val paint = Paint().apply {
                             isAntiAlias = true
@@ -264,7 +248,6 @@ fun RectangularAlphabetWheel(
                         }
                     }
             ) {
-                // Letter rendering
                 alphabet.forEachIndexed { index, letter ->
                     AlphabetLetterItem(
                         letter = letter,
@@ -295,8 +278,7 @@ fun RectangularAlphabetWheel(
 }
 
 /**
- * Renders the grid of application icons centered inside the rectangular alphabet wheel.
- * Dynamically adjusts icon size and column count based on the number of apps to display.
+ * Grid of app icons centered inside the rectangular alphabet wheel.
  */
 @Composable
 fun AppsGrid(
@@ -476,9 +458,7 @@ private fun AlphabetLetterItem(
 }
 
 /**
- * Reusable drag gesture modifier for alphabet wheel scrolling.
- * Employs dual-layer speed estimation (VelocityTracker + Activity EMA) to eliminate 1D direction-reversal zero crossings,
- * and DP-aware linear scaling for consistent 6x slow-down across all screens and gesture types.
+ * Drag gesture modifier for scrolling the alphabet wheel with speed-adaptive deceleration.
  */
 fun Modifier.alphabetWheelDragGesture(
     scrollOffset: Animatable<Float, AnimationVector1D>,
@@ -511,8 +491,6 @@ fun Modifier.alphabetWheelDragGesture(
                     val instantSpeedPxPerMs = abs(dragAmount) / dtMs.toFloat()
                     smoothedSpeedPxPerMs = smoothedSpeedPxPerMs * 0.7f + instantSpeedPxPerMs * 0.3f
 
-                    // 6x deceleration threshold: < 600dp/s is 100% FULL 6x decelerated (1/6x speed).
-                    // > 1500dp/s is 100% normal speed (1.0x).
                     val scaleFactor = when {
                         smoothedSpeedPxPerMs <= slowThresholdPxPerMs -> 1f / 6f
                         smoothedSpeedPxPerMs >= fastThresholdPxPerMs -> 1f
@@ -522,7 +500,6 @@ fun Modifier.alphabetWheelDragGesture(
                         }
                     }
 
-                    // Linear dp-aware letter delta
                     val deltaLetters = (dragAmount / (s * 1.2f)) * scaleFactor
                     position -= deltaLetters
 
@@ -531,7 +508,6 @@ fun Modifier.alphabetWheelDragGesture(
                     }
                 }
 
-                // Snap to nearest letter on drag end
                 launch {
                     if (animationsEnabled) {
                         scrollOffset.animateTo(

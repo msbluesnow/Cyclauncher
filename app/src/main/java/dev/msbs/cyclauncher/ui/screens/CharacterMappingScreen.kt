@@ -50,12 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Screen providing user customization of first-character and emoji mappings to alphabet search buckets.
- * Mappings are organized on a per-letter basis (one single line per Latin alphabet letter with overflow badges).
- * Supports JSON and text file import/export and inherits the Adaptive Shadows setting across all UI components.
- *
- * @param viewModel The view model supplying state data and update operations.
- * @param onBack Callback when pressing back to return to Settings.
+ * Screen for customizing first-character and emoji mappings to alphabet search buckets.
  */
 @Composable
 fun CharacterMappingScreen(
@@ -114,7 +109,6 @@ fun CharacterMappingScreen(
             .navigationBarsPadding(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Top Header
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -162,7 +156,6 @@ fun CharacterMappingScreen(
                 .padding(horizontal = 24.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Explanation card
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.05f)),
@@ -186,7 +179,6 @@ fun CharacterMappingScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Add / Edit Mapping Card
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.05f)),
@@ -207,7 +199,6 @@ fun CharacterMappingScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Input Symbol Field
                         OutlinedTextField(
                             value = inputSymbol,
                             onValueChange = { inputSymbol = it },
@@ -246,7 +237,6 @@ fun CharacterMappingScreen(
                             style = TextStyle(shadow = shadow)
                         )
 
-                        // Target Letter Selector Box
                         Box(modifier = Modifier.weight(1f)) {
                             Row(
                                 modifier = Modifier
@@ -358,7 +348,6 @@ fun CharacterMappingScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Backup & Share / Import & Export Card
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.05f)),
@@ -387,7 +376,6 @@ fun CharacterMappingScreen(
                     }
 
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Export Button
                         OutlinedButton(
                             onClick = { exportCharMappingsLauncher.launch("cyclauncher_character_mappings.json") },
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
@@ -419,7 +407,6 @@ fun CharacterMappingScreen(
                             )
                         }
 
-                        // Import Button
                         OutlinedButton(
                             onClick = { importCharMappingsLauncher.launch("*/*") },
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
@@ -456,7 +443,6 @@ fun CharacterMappingScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Quick Presets Section
             Text(
                 text = "Quick Presets",
                 color = primaryTextColor.color,
@@ -472,7 +458,6 @@ fun CharacterMappingScreen(
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Preset: Cyrillic
                 PresetChip(
                     label = "Cyrillic / Кириллица (А, Б, В, Г...)",
                     accentColor = accentColor,
@@ -498,7 +483,6 @@ fun CharacterMappingScreen(
                     }
                 )
 
-                // Preset: Common Emojis
                 PresetChip(
                     label = "Popular Emojis (🤗, 🎮, 🎵...)",
                     accentColor = accentColor,
@@ -515,7 +499,6 @@ fun CharacterMappingScreen(
                     }
                 )
 
-                // Preset: German / Nordic
                 PresetChip(
                     label = "German / Nordic (Ä, Ö, Ü, ß...)",
                     accentColor = accentColor,
@@ -532,7 +515,6 @@ fun CharacterMappingScreen(
                     }
                 )
 
-                // Preset: Arabic
                 PresetChip(
                     label = "Arabic Alphabet (ا, ب, ت...)",
                     accentColor = accentColor,
@@ -554,7 +536,6 @@ fun CharacterMappingScreen(
                     }
                 )
 
-                // Preset: French / Spanish
                 PresetChip(
                     label = "French / Spanish (À, É, Ç, Ñ...)",
                     accentColor = accentColor,
@@ -577,7 +558,6 @@ fun CharacterMappingScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Active Mappings Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -687,7 +667,6 @@ fun CharacterMappingScreen(
         }
     }
 
-    // Detail dialog when user clicks overflow or letter row to view all mapped symbols
     viewingLetterDetail?.let { targetChar ->
         val symbols = groupedMappings[targetChar] ?: emptyList()
         AlertDialog(
@@ -722,7 +701,6 @@ fun CharacterMappingScreen(
                     if (symbols.isEmpty()) {
                         Text("No symbols mapped to '$targetChar'", color = popupTheme.secondaryContentColor)
                     } else {
-                        // Flow grid of all symbols
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             symbols.chunked(3).forEach { chunk ->
                                 Row(
@@ -771,7 +749,6 @@ fun CharacterMappingScreen(
                                             }
                                         }
                                     }
-                                    // Filler for incomplete rows
                                     repeat(3 - chunk.size) {
                                         Spacer(modifier = Modifier.weight(1f))
                                     }
@@ -838,7 +815,7 @@ fun CharacterMappingScreen(
 }
 
 /**
- * A single row representing one Latin alphabet letter and its mapped symbols (with overflow badge +N).
+ * Row displaying a target Latin character and its mapped symbol chips with an overflow counter.
  */
 @Composable
 private fun LetterMappingRow(
@@ -873,7 +850,6 @@ private fun LetterMappingRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            // Target Letter Badge
             Box(
                 modifier = Modifier
                     .size(34.dp)
@@ -899,7 +875,6 @@ private fun LetterMappingRow(
                 style = TextStyle(shadow = shadow)
             )
 
-            // Visible symbol chips
             visibleSymbols.forEach { symbol ->
                 Row(
                     modifier = Modifier
@@ -937,7 +912,6 @@ private fun LetterMappingRow(
                 }
             }
 
-            // Overflow circle badge (+N)
             if (overflowCount > 0) {
                 Box(
                     modifier = Modifier
@@ -959,7 +933,6 @@ private fun LetterMappingRow(
             }
         }
 
-        // Quick add to this letter button
         IconButton(
             onClick = onAddSymbolClick,
             modifier = Modifier.size(30.dp)

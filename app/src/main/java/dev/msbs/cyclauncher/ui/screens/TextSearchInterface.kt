@@ -25,12 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /**
- * Layout representing the full-text keyboard-based search screen.
- * Displays a search text field and a dynamic scrollable list of matched applications.
- *
- * @param viewModel The view model supplying state data.
- * @param onAppClick Callback when an application is clicked.
- * @param onAppLongClick Callback when an application is long-pressed.
+ * Full-text keyboard-based search screen.
  */
 @Composable
 fun TextSearchInterface(

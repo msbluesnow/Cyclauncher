@@ -19,8 +19,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -33,19 +39,7 @@ import androidx.compose.ui.window.PopupProperties
 import kotlin.math.roundToInt
 
 /**
- * A popup context menu offering actions for a specific application (e.g. favorite toggle, uninstall, tag management, system info).
- * Correctly repositions itself to avoid screen boundary clipping.
- *
- * @param app The application metadata info.
- * @param isFavorite Current favorite status of the application.
- * @param offset The touch input position where the menu was triggered.
- * @param onDismiss Callback to close the menu.
- * @param onToggleFavorite Callback when the user toggles favorite status.
- * @param onUninstall Callback when the user requests to uninstall the application.
- * @param onInfo Callback when the user requests to view system app info.
- * @param onRename Callback when the user requests to rename the application.
- * @param onTagsClick Callback when the user requests to manage application tags.
- * @param accentColor The active theme accent color.
+ * Context action menu for an application item (favorites, tags, rename, info, uninstall).
  */
 @Composable
 fun AppActionMenu(
@@ -165,19 +159,7 @@ fun AppActionMenu(
 }
 
 /**
- * Context action menu for the history section, offering options to edit the history list
- * (remove items) or toggle whether history recording is paused.
- *
- * @param isHistoryPaused Current paused status of history recording.
- * @param hasHistoryItems True if there is at least one item in history.
- * @param offset The touch input position where the menu was triggered.
- * @param onDismiss Callback to close the menu.
- * @param onEditHistory Callback when the user selects to edit history.
- * @param onTogglePause Callback when the user toggles history recording pause status.
- * @param onClearHistory Callback when the user selects to clear all history items.
- * @param accentColor The active UI accent color.
- * @param primaryTextColor The primary text color.
- * @param popupTheme The popup theme setting (DARK or LIGHT).
+ * Context action menu for the history section (edit mode, pause/resume recording, clear).
  */
 @Composable
 fun HistoryActionMenu(
@@ -297,9 +279,6 @@ fun HistoryActionMenu(
     }
 }
 
-/**
- * A standard menu item used within the AppActionMenu popup.
- */
 @Composable
 private fun MenuItem(
     text: String,
@@ -331,18 +310,7 @@ private fun MenuItem(
 }
 
 /**
- * A dialog allowing the user to view, edit, select, or create tags for a specific application.
- *
- * @param app The target application info.
- * @param allTags The list of all created tags.
- * @param assignedTagIds The list of tag IDs currently assigned to this app.
- * @param onToggleTag Callback triggered when toggling a tag's assignment.
- * @param onCreateTag Callback triggered when a new tag is created.
- * @param onUpdateTag Callback triggered when a tag is edited.
- * @param onDeleteTag Callback triggered when a tag is deleted.
- * @param onDismiss Callback to close the dialog.
- * @param accentColor The active UI accent color.
- * @param popupTheme The popup theme setting (DARK or LIGHT).
+ * Dialog for managing tags assigned to an application.
  */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -462,15 +430,8 @@ fun TagSelectionDialog(
 }
 
 /**
- * A dialog allowing the user to create a new tag or modify/delete an existing one.
- * Includes a text field for name input and a color selection grid.
- *
- * @param tag The tag instance being edited, or null if creating a new tag.
- * @param onDismiss Callback to close the dialog.
- * @param onConfirm Callback when saving or creating a tag (supplying name and color).
- * @param onDelete Callback when deleting this tag.
- * @param accentColor The active UI accent color.
- * @param popupTheme The popup theme setting (DARK or LIGHT).
+ * Dialog for creating, editing, or deleting a tag.
+ * Supports presets and an interactive custom color picker.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -482,13 +443,36 @@ fun TagEditDialog(
     accentColor: AccentColor,
     popupTheme: PopupTheme = PopupTheme.DARK
 ) {
+    val quickSwatches = remember {
+        listOf(
+            Color(0xFFF44336), Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF673AB7),
+            Color(0xFF3F51B5), Color(0xFF2196F3), Color(0xFF03A9F4), Color(0xFF00BCD4),
+            Color(0xFF009688), Color(0xFF4CAF50), Color(0xFF8BC34A), Color(0xFFCDDC39),
+            Color(0xFFFFEB3B), Color(0xFFFFC107), Color(0xFFFF9800), Color(0xFFFF5722)
+        )
+    }
+
     var name by remember { mutableStateOf(tag?.name ?: "") }
-    val colors = listOf(
-        Color(0xFFEF4444), Color(0xFFF97316), Color(0xFFFACC15),
-        Color(0xFF4ADE80), Color(0xFF2DD4BF), Color(0xFF3B82F6),
-        Color(0xFF8B5CF6), Color(0xFFD946EF), Color(0xFF94A3B8)
-    )
-    var selectedColor by remember { mutableStateOf(tag?.color ?: colors[0]) }
+    var selectedColor by remember { mutableStateOf(tag?.color ?: quickSwatches[0]) }
+
+    val isInitialCustom = remember(tag?.color) {
+        tag?.color != null && !quickSwatches.contains(tag.color)
+    }
+    var selectedTab by remember { mutableIntStateOf(if (isInitialCustom) 1 else 0) }
+
+    val initialHsv = remember(selectedColor) {
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(selectedColor.toArgb(), hsv)
+        hsv
+    }
+    var currentHue by remember { mutableFloatStateOf(initialHsv[0]) }
+    var currentSat by remember { mutableFloatStateOf(initialHsv[1].coerceAtLeast(0.1f)) }
+    var currentVal by remember { mutableFloatStateOf(initialHsv[2].coerceAtLeast(0.1f)) }
+
+    var hexInputText by remember {
+        val argb = selectedColor.toArgb()
+        mutableStateOf(String.format("%06X", 0xFFFFFF and argb))
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -498,52 +482,302 @@ fun TagEditDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(if (tag == null) "Create New Tag" else "Edit Tag", color = popupTheme.contentColor)
+                Text(
+                    text = if (tag == null) "Create New Tag" else "Edit Tag",
+                    color = popupTheme.contentColor,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
                 if (onDelete != null) {
                     IconButton(onClick = onDelete) {
-                        Icon(Icons.Outlined.Delete, contentDescription = "Delete", tint = Color(0xFFEF4444))
+                        Icon(
+                            imageVector = Icons.Outlined.Delete,
+                            contentDescription = "Delete Tag",
+                            tint = Color(0xFFEF4444)
+                        )
                     }
                 }
             }
         },
         text = {
             val animationsEnabled = LocalAnimationsEnabled.current
-            Column {
-                TextField(
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(selectedColor.copy(alpha = 0.12f))
+                        .border(1.dp, selectedColor.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f).padding(end = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .clip(CircleShape)
+                                .background(selectedColor)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (name.isBlank()) "Tag Preview" else name,
+                            color = popupTheme.contentColor,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(selectedColor.copy(alpha = 0.2f))
+                            .border(0.8.dp, selectedColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "#",
+                            color = selectedColor,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
+                OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    placeholder = { Text("Tag Name", color = popupTheme.secondaryContentColor) },
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
+                    label = { Text("Tag Name", color = popupTheme.secondaryContentColor) },
+                    placeholder = { Text("e.g. Games, Work, Social", color = popupTheme.secondaryContentColor.copy(alpha = 0.6f)) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = selectedColor,
+                        unfocusedBorderColor = popupTheme.contentColor.copy(alpha = 0.2f),
                         focusedTextColor = popupTheme.contentColor,
                         unfocusedTextColor = popupTheme.contentColor,
-                        cursorColor = if (animationsEnabled) accentColor.color else Color.Transparent,
-                        focusedIndicatorColor = accentColor.color
+                        cursorColor = if (animationsEnabled) selectedColor else Color.Transparent
                     ),
+                    shape = RoundedCornerShape(10.dp),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Select Color:", color = popupTheme.contentColor, fontSize = 14.sp)
-                Spacer(modifier = Modifier.height(8.dp))
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(popupTheme.contentColor.copy(alpha = 0.08f))
+                        .padding(3.dp)
                 ) {
-                    colors.forEach { color ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (selectedTab == 0) popupTheme.contentColor.copy(alpha = 0.16f) else Color.Transparent)
+                            .clickable { selectedTab = 0 }
+                            .padding(vertical = 7.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Presets",
+                            fontSize = 12.sp,
+                            fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
+                            color = if (selectedTab == 0) popupTheme.contentColor else popupTheme.secondaryContentColor
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (selectedTab == 1) popupTheme.contentColor.copy(alpha = 0.16f) else Color.Transparent)
+                            .clickable { selectedTab = 1 }
+                            .padding(vertical = 7.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Custom Color",
+                            fontSize = 12.sp,
+                            fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
+                            color = if (selectedTab == 1) popupTheme.contentColor else popupTheme.secondaryContentColor
+                        )
+                    }
+                }
+
+                if (selectedTab == 0) {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        quickSwatches.forEach { color ->
+                            val isSelected = selectedColor == color
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(color)
+                                    .border(
+                                        width = if (isSelected) 2.5.dp else 1.dp,
+                                        color = if (isSelected) popupTheme.contentColor else Color.Black.copy(alpha = 0.2f),
+                                        shape = CircleShape
+                                    )
+                                    .clickable {
+                                        selectedColor = color
+                                        val hsv = FloatArray(3)
+                                        android.graphics.Color.colorToHSV(color.toArgb(), hsv)
+                                        currentHue = hsv[0]
+                                        currentSat = hsv[1]
+                                        currentVal = hsv[2]
+                                        hexInputText = String.format("%06X", 0xFFFFFF and color.toArgb())
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Check,
+                                        contentDescription = "Selected",
+                                        tint = if (color.luminance() > 0.5f) Color.Black else Color.White,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        quickSwatches.forEach { swatch ->
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(swatch)
+                                    .border(
+                                        width = if (selectedColor == swatch) 2.dp else 1.dp,
+                                        color = if (selectedColor == swatch) popupTheme.contentColor else Color.Black.copy(alpha = 0.2f),
+                                        shape = CircleShape
+                                    )
+                                    .clickable {
+                                        val hsv = FloatArray(3)
+                                        android.graphics.Color.colorToHSV(swatch.toArgb(), hsv)
+                                        currentHue = hsv[0]
+                                        currentSat = hsv[1]
+                                        currentVal = hsv[2]
+                                        val argb = swatch.toArgb()
+                                        hexInputText = String.format("%06X", 0xFFFFFF and argb)
+                                        selectedColor = swatch
+                                    }
+                            )
+                        }
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("Hue (${currentHue.toInt()}°)", fontSize = 11.sp, color = popupTheme.secondaryContentColor)
+                        TagHueSlider(
+                            hue = currentHue,
+                            onHueChange = {
+                                currentHue = it
+                                val hsv = floatArrayOf(currentHue, currentSat, currentVal)
+                                val col = Color(android.graphics.Color.HSVToColor(hsv))
+                                hexInputText = String.format("%06X", 0xFFFFFF and col.toArgb())
+                                selectedColor = col
+                            }
+                        )
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("Saturation (${(currentSat * 100).toInt()}%)", fontSize = 11.sp, color = popupTheme.secondaryContentColor)
+                        Slider(
+                            value = currentSat,
+                            onValueChange = {
+                                currentSat = it
+                                val hsv = floatArrayOf(currentHue, currentSat, currentVal)
+                                val col = Color(android.graphics.Color.HSVToColor(hsv))
+                                hexInputText = String.format("%06X", 0xFFFFFF and col.toArgb())
+                                selectedColor = col
+                            },
+                            valueRange = 0.05f..1f,
+                            colors = SliderDefaults.colors(
+                                thumbColor = selectedColor,
+                                activeTrackColor = selectedColor,
+                                inactiveTrackColor = popupTheme.contentColor.copy(alpha = 0.15f)
+                            )
+                        )
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("Brightness (${(currentVal * 100).toInt()}%)", fontSize = 11.sp, color = popupTheme.secondaryContentColor)
+                        Slider(
+                            value = currentVal,
+                            onValueChange = {
+                                currentVal = it
+                                val hsv = floatArrayOf(currentHue, currentSat, currentVal)
+                                val col = Color(android.graphics.Color.HSVToColor(hsv))
+                                hexInputText = String.format("%06X", 0xFFFFFF and col.toArgb())
+                                selectedColor = col
+                            },
+                            valueRange = 0.05f..1f,
+                            colors = SliderDefaults.colors(
+                                thumbColor = selectedColor,
+                                activeTrackColor = selectedColor,
+                                inactiveTrackColor = popupTheme.contentColor.copy(alpha = 0.15f)
+                            )
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                         Box(
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(40.dp)
                                 .clip(CircleShape)
-                                .background(color)
-                                .border(
-                                    width = if (selectedColor == color) 2.dp else 0.dp,
-                                    color = popupTheme.contentColor,
-                                    shape = CircleShape
-                                )
-                                .clickable { selectedColor = color }
+                                .background(selectedColor)
+                                .border(1.5.dp, popupTheme.contentColor.copy(alpha = 0.3f), CircleShape)
+                        )
+                        OutlinedTextField(
+                            value = hexInputText,
+                            onValueChange = { input ->
+                                val filtered = input.filter { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }.take(6).uppercase()
+                                hexInputText = filtered
+                                if (filtered.length == 6) {
+                                    try {
+                                        val parsed = filtered.toLong(16)
+                                        val col = Color((0xFF000000 or parsed).toInt())
+                                        val hsv = FloatArray(3)
+                                        android.graphics.Color.colorToHSV(col.toArgb(), hsv)
+                                        currentHue = hsv[0]
+                                        currentSat = hsv[1]
+                                        currentVal = hsv[2]
+                                        selectedColor = col
+                                    } catch (_: Exception) {}
+                                }
+                            },
+                            prefix = { Text("#", color = popupTheme.contentColor, fontWeight = FontWeight.Bold) },
+                            singleLine = true,
+                            label = { Text("HEX Code", color = popupTheme.secondaryContentColor) },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = selectedColor,
+                                unfocusedBorderColor = popupTheme.contentColor.copy(alpha = 0.2f),
+                                focusedTextColor = popupTheme.contentColor,
+                                unfocusedTextColor = popupTheme.contentColor
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
@@ -551,28 +785,63 @@ fun TagEditDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { if (name.isNotBlank()) onConfirm(name, selectedColor) },
+                onClick = { if (name.isNotBlank()) onConfirm(name.trim(), selectedColor) },
                 enabled = name.isNotBlank()
             ) {
-                Text(if (tag == null) "Create" else "Save", fontWeight = FontWeight.Bold, color = accentColor.color)
+                Text(
+                    text = if (tag == null) "Create" else "Save",
+                    fontWeight = FontWeight.Bold,
+                    color = selectedColor
+                )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel", color = popupTheme.secondaryContentColor) }
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = popupTheme.secondaryContentColor)
+            }
         },
         containerColor = popupTheme.solidBackgroundColor,
-        textContentColor = popupTheme.contentColor
+        textContentColor = popupTheme.contentColor,
+        shape = RoundedCornerShape(20.dp)
+    )
+}
+
+@Composable
+private fun TagHueSlider(
+    hue: Float,
+    onHueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val hueColors = remember {
+        listOf(
+            Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red
+        )
+    }
+
+    Slider(
+        value = hue,
+        onValueChange = onHueChange,
+        valueRange = 0f..360f,
+        modifier = modifier.drawBehind {
+            val trackHeight = 8.dp.toPx()
+            val top = (size.height - trackHeight) / 2
+            drawRoundRect(
+                brush = Brush.horizontalGradient(hueColors),
+                topLeft = Offset(0f, top),
+                size = Size(size.width, trackHeight),
+                cornerRadius = CornerRadius(trackHeight / 2, trackHeight / 2)
+            )
+        },
+        colors = SliderDefaults.colors(
+            thumbColor = Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, 1f, 1f))),
+            activeTrackColor = Color.Transparent,
+            inactiveTrackColor = Color.Transparent
+        )
     )
 }
 
 /**
- * A dialog displaying a single text field to rename an application.
- *
- * @param initialValue The original/current name of the application.
- * @param accentColor The active UI accent color.
- * @param popupTheme The popup theme setting (DARK or LIGHT).
- * @param onDismiss Callback to close the dialog.
- * @param onConfirm Callback when confirming the new name.
+ * Dialog for renaming an application label.
  */
 @Composable
 fun RenameDialog(

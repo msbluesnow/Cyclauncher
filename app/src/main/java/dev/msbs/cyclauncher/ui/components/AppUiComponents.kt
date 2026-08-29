@@ -37,13 +37,7 @@ import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 
 /**
- * A custom text component that automatically scales down its font size to prevent visual horizontal overflow.
- *
- * @param text The text string to render.
- * @param targetFontSize The preferred font size in sp.
- * @param textAlign The alignment of the text.
- * @param modifier Modifier for configuration.
- * @param showShadows Whether to apply drop shadows.
+ * Text component that automatically scales down font size to prevent horizontal visual overflow.
  */
 @Composable
 fun AutoResizingText(
@@ -84,12 +78,7 @@ fun AutoResizingText(
 }
 
 /**
- * Resolves an app icon as a Coil-backed [Painter]. Modelled on [AppIconKey] so Coil always
- * routes to [dev.msbs.cyclauncher.coil.AppIconFetcher] and never tries the network fetcher.
- *
- * [sizeDp] is promoted to px and passed to the request so Coil decodes at the right resolution
- * instead of always rasterizing the full-density source drawable.
- * Disk cache is explicitly disabled as local app icons are already available from PackageManager.
+ * Loads an app icon asynchronously via Coil.
  */
 @Composable
 fun rememberAppIconPainter(iconKey: String, sizeDp: Int = 48): Painter {
@@ -109,17 +98,7 @@ fun rememberAppIconPainter(iconKey: String, sizeDp: Int = 48): Painter {
 }
 
 /**
- * A circular image icon representation of an application package.
- * Supports basic tap and long-press haptic gestures.
- *
- * The icon is loaded asynchronously by Coil from [AppInfo.iconKey] (a `"pkg/activity"` string).
- * Coil owns the memory + disk cache, so decoded bitmaps live only while visible and are evicted
- * under memory pressure — they no longer pin process memory for the launcher's lifetime.
- *
- * @param app The application info.
- * @param size The size of the icon in dp.
- * @param onClick Triggered on quick tap.
- * @param onLongClick Triggered on long-press (provides absolute Offset coordinate).
+ * Circular app icon with click and long-press gestures.
  */
 @Composable
 fun AppIconItem(
@@ -135,8 +114,6 @@ fun AppIconItem(
 
     val painter: Painter = rememberAppIconPainter(app.iconKey, size)
 
-    // Always reserve the icon cell so tap targets and layout are stable even while the
-    // bitmap is still being decoded/loaded from cache.
     Image(
         painter = painter,
         contentDescription = app.label,
@@ -155,14 +132,7 @@ fun AppIconItem(
 }
 
 /**
- * A text-only list item representing an application label.
- * Supports click events and auto-resizing capabilities.
- *
- * @param app The application info.
- * @param onClick Triggered on item tap.
- * @param onLongClick Triggered on item long-press (provides coordinate Offset).
- * @param textAlign Horizontal alignment of the label.
- * @param showShadows True to show adaptive drop shadows.
+ * Text-only app list item with auto-resizing label.
  */
 @Composable
 fun AppListItem(
@@ -206,19 +176,7 @@ fun AppListItem(
 }
 
 /**
- * A composite list item presenting both the application icon and its text label in a horizontal layout.
- * Supports different layout orientations depending on preferred hand side, and an optional update badge.
- *
- * @param app The application info.
- * @param handSide Layout orientation side (left/right hand).
- * @param fontSize Preferred font size in sp.
- * @param iconSize Preferred icon size in dp.
- * @param isRecentlyUpdated True if the app was recently installed or updated and has not yet been launched.
- * @param accentColor Active UI accent color used for the update indicator icon.
- * @param onClick Triggered on item tap.
- * @param onLongClick Triggered on item long-press (provides absolute coordinate Offset).
- * @param primaryTextColor User selectable primary text color setting.
- * @param showShadows True to show text drop shadows.
+ * App list item displaying an icon and text label with hand-side alignment and optional update indicator.
  */
 @Composable
 fun AppListItemWithIcon(

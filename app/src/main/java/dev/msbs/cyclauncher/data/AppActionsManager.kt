@@ -20,45 +20,30 @@ import java.util.UUID
 import dev.msbs.cyclauncher.utils.getSafeStorageContext
 
 /**
- * Manages persisted user actions, including favorite apps, launch history, custom app labels,
- * and custom tags with their application assignments.
- *
- * @param context The application context used to load shared preferences and access resources.
+ * Manages persisted user actions: favorites, launch history, custom labels, custom character mappings, and tags.
  */
 class AppActionsManager(context: Context) {
     private val context: Context = context.getSafeStorageContext()
     private val prefs: SharedPreferences = this.context.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
 
     private val _favorites = MutableStateFlow<List<String>>(loadList("favorites"))
-    /** Stream of favorite application component keys. */
     val favorites: StateFlow<List<String>> = _favorites
 
     private val _history = MutableStateFlow<List<String>>(loadList("history"))
-    /** Stream of recently launched application component keys. */
     val history: StateFlow<List<String>> = _history
 
     private val _customLabels = MutableStateFlow<Map<String, String>>(loadMap("custom_labels"))
-    /** Stream of custom user-defined labels mapped by application component keys. */
     val customLabels: StateFlow<Map<String, String>> = _customLabels
 
     private val _tags = MutableStateFlow<List<Tag>>(loadTags())
-    /** Stream of all created tags. */
     val tags: StateFlow<List<Tag>> = _tags
 
     private val _appTags = MutableStateFlow<Map<String, List<String>>>(loadAppTags())
-    /** Stream mapping application component keys to a list of assigned tag IDs. */
     val appTags: StateFlow<Map<String, List<String>>> = _appTags
 
     private val _customCharMappings = MutableStateFlow<Map<String, Char>>(loadCustomCharMappings())
-    /** Stream of custom first-character to search-letter mappings. */
     val customCharMappings: StateFlow<Map<String, Char>> = _customCharMappings
 
-    /**
-     * Toggles the favorite status of the specified application or tag folder.
-     * Shows a confirmation toast and updates persistence.
-     *
-     * @param componentKey The unique application key (formatted as "packageName/activityName") or tag key ("tag:$tagId").
-     */
     fun toggleFavorite(componentKey: String) {
         val current = _favorites.value.toMutableList()
         val isTag = componentKey.startsWith("tag:")
@@ -80,12 +65,6 @@ class AppActionsManager(context: Context) {
         saveList("favorites", current)
     }
 
-    /**
-     * Reorders the list of favorite applications by moving an item from [fromIndex] to [toIndex].
-     *
-     * @param fromIndex The original index of the item.
-     * @param toIndex The new target index for the item.
-     */
     fun reorderFavorites(fromIndex: Int, toIndex: Int) {
         val current = _favorites.value.toMutableList()
         if (fromIndex in current.indices && toIndex in current.indices) {
@@ -96,26 +75,13 @@ class AppActionsManager(context: Context) {
         }
     }
 
-    /**
-     * Checks if the specified application is in the favorites list.
-     *
-     * @param componentKey The application key.
-     * @return true if the application is favorited, false otherwise.
-     */
     fun isFavorite(componentKey: String): Boolean {
         return _favorites.value.contains(componentKey)
     }
 
     private val _isHistoryPaused = MutableStateFlow<Boolean>(prefs.getBoolean("is_history_paused", false))
-    /** Stream indicating whether recording app launches to history is paused. */
     val isHistoryPaused: StateFlow<Boolean> = _isHistoryPaused
 
-    /**
-     * Toggles whether recording application launches to history is paused.
-     * Shows a confirmation toast and updates persistence.
-     *
-     * @return The new paused state (true if paused, false if active).
-     */
     fun toggleHistoryPaused(): Boolean {
         val newVal = !_isHistoryPaused.value
         _isHistoryPaused.value = newVal
@@ -129,7 +95,6 @@ class AppActionsManager(context: Context) {
     }
 
     private val _recentlyUpdated = MutableStateFlow<Set<String>>(loadRecentlyUpdated())
-    /** Stream of application component keys that were recently installed or updated and have not yet been launched. */
     val recentlyUpdated: StateFlow<Set<String>> = _recentlyUpdated
 
     private fun loadRecentlyUpdated(): Set<String> {
@@ -154,14 +119,6 @@ class AppActionsManager(context: Context) {
         } catch (_: Exception) {}
     }
 
-    /**
-     * Logs an application launch event. Updates the recent history list,
-     * placing the app at the top and maintaining a size limit of 15.
-     * Also clears the "recently updated" badge once the app is launched.
-     * Ignored if history recording is currently paused.
-     *
-     * @param componentKey The application key.
-     */
     fun logAppLaunch(componentKey: String) {
         if (_recentlyUpdated.value.contains(componentKey)) {
             val updatedSet = _recentlyUpdated.value - componentKey
@@ -177,13 +134,6 @@ class AppActionsManager(context: Context) {
         saveList("history", limited)
     }
 
-    /**
-     * Records a newly installed or updated application in the launch history list.
-     * Places the app at the top of the history list (up to max 15 items) and marks it as recently updated.
-     * Ignored if history recording is currently paused.
-     *
-     * @param componentKey The application key (formatted as "packageName/activityName").
-     */
     fun onAppInstalledOrUpdated(componentKey: String) {
         val updatedSet = _recentlyUpdated.value + componentKey
         _recentlyUpdated.value = updatedSet
@@ -198,11 +148,6 @@ class AppActionsManager(context: Context) {
         saveList("history", limited)
     }
 
-    /**
-     * Records multiple installed or updated applications in chronological order.
-     *
-     * @param componentKeys List of application keys ordered from oldest to newest update.
-     */
     fun onAppsInstalledOrUpdated(componentKeys: List<String>) {
         if (componentKeys.isNotEmpty()) {
             val updatedSet = _recentlyUpdated.value + componentKeys
@@ -221,11 +166,6 @@ class AppActionsManager(context: Context) {
         saveList("history", limited)
     }
 
-    /**
-     * Initializes default history on fresh install without marking apps as recently updated.
-     *
-     * @param componentKeys List of application keys ordered from oldest to newest.
-     */
     fun setInitialHistory(componentKeys: List<String>) {
         if (_history.value.isEmpty() && componentKeys.isNotEmpty()) {
             val limited = componentKeys.reversed().take(15)
@@ -234,12 +174,6 @@ class AppActionsManager(context: Context) {
         }
     }
 
-    /**
-     * Removes the specified application from the launch history.
-     * Shows a confirmation toast and updates persistence.
-     *
-     * @param componentKey The application key.
-     */
     fun removeFromHistory(componentKey: String) {
         val current = _history.value.toMutableList()
         current.remove(componentKey)
@@ -254,10 +188,6 @@ class AppActionsManager(context: Context) {
         Toast.makeText(context, "Removed \"$label\" from History", Toast.LENGTH_SHORT).show()
     }
 
-    /**
-     * Clears all entries from the launch history.
-     * Shows a confirmation toast and updates persistence.
-     */
     fun clearHistory() {
         _history.value = emptyList()
         saveList("history", emptyList())
@@ -266,13 +196,6 @@ class AppActionsManager(context: Context) {
         Toast.makeText(context, "History cleared", Toast.LENGTH_SHORT).show()
     }
 
-    /**
-     * Renames an application with a custom user-defined label.
-     * If the new label is blank, the custom label is removed.
-     *
-     * @param componentKey The application key.
-     * @param newLabel The new custom name for the app.
-     */
     fun renameApp(componentKey: String, newLabel: String) {
         val current = _customLabels.value.toMutableMap()
         if (newLabel.isBlank()) {
@@ -284,11 +207,6 @@ class AppActionsManager(context: Context) {
         saveMap("custom_labels", current)
     }
 
-    /**
-     * Creates a new tag and persists it.
-     *
-     * @param tag The tag instance to create.
-     */
     fun createTag(tag: Tag) {
         val current = _tags.value.toMutableList()
         current.add(tag)
@@ -296,28 +214,17 @@ class AppActionsManager(context: Context) {
         saveTags(current)
     }
 
-    /**
-     * Updates an existing tag with new property values (e.g. name or color).
-     *
-     * @param updatedTag The tag instance with updated properties.
-     */
     fun updateTag(updatedTag: Tag) {
         val current = _tags.value.map { if (it.id == updatedTag.id) updatedTag else it }
         _tags.value = current
         saveTags(current)
     }
 
-    /**
-     * Deletes a tag, updates persistence, and cleans up any references in application assignments.
-     *
-     * @param tagId The unique identifier of the tag to delete.
-     */
     fun deleteTag(tagId: String) {
         val currentTags = _tags.value.filter { it.id != tagId }
         _tags.value = currentTags
         saveTags(currentTags)
 
-        // Also remove from favorites if favorited
         val tagKey = "tag:$tagId"
         if (_favorites.value.contains(tagKey)) {
             val currentFavorites = _favorites.value.filter { it != tagKey }
@@ -325,7 +232,6 @@ class AppActionsManager(context: Context) {
             saveList("favorites", currentFavorites)
         }
 
-        // Also remove assignments
         val currentAppTags = _appTags.value.toMutableMap()
         currentAppTags.forEach { (key, list) ->
             if (list.contains(tagId)) {
@@ -336,12 +242,6 @@ class AppActionsManager(context: Context) {
         saveAppTags(currentAppTags)
     }
 
-    /**
-     * Toggles the assignment of a tag to a specific application.
-     *
-     * @param componentKey The application key.
-     * @param tagId The unique identifier of the tag.
-     */
     fun toggleTagForApp(componentKey: String, tagId: String) {
         val current = _appTags.value.toMutableMap()
         val list = current[componentKey]?.toMutableList() ?: mutableListOf()
@@ -355,13 +255,6 @@ class AppActionsManager(context: Context) {
         saveAppTags(current)
     }
     
-    /**
-     * Handles package removal events.
-     * Preserves custom labels, tags, favorites, and history so that user configurations
-     * are not lost during package update cycles (e.g. F-Droid, APK updates, or reinstallation).
-     *
-     * @param packageName The package name of the removed application.
-     */
     fun onPackageRemoved(packageName: String) {
         val newRecent = _recentlyUpdated.value.filterNot { it.startsWith("$packageName/") || it == packageName }.toSet()
         if (newRecent.size != _recentlyUpdated.value.size) {
@@ -669,13 +562,6 @@ class AppActionsManager(context: Context) {
         writeStringToUri(uri, json)
     }
 
-    /**
-     * Exports the list of installed apps to a plain-text file at the specified URI,
-     * formatting each line as "Label — package".
-     *
-     * @param uri The destination URI.
-     * @param apps The list of applications to export.
-     */
     fun exportAppNamesToUriAsText(uri: Uri, apps: List<dev.msbs.cyclauncher.model.AppInfo>) {
         val text = buildString {
             apps.forEach { app ->
@@ -689,12 +575,7 @@ class AppActionsManager(context: Context) {
     }
 
     /**
-     * Imports custom app labels and favorite flags from a JSON or text file at the given URI.
-     * Supports multiple JSON structures (arrays, key-value maps, nested objects) and plain text.
-     *
-     * @param uri The source URI.
-     * @param currentApps The current list of installed applications.
-     * @return Result containing imported labels map and list of favorited component keys.
+     * Imports custom app labels and favorite flags from a JSON or text file.
      */
     fun importAppNamesFromUri(uri: Uri, currentApps: List<dev.msbs.cyclauncher.model.AppInfo>): AppNamesImportResult {
         val raw = readStringFromUri(uri)
@@ -818,7 +699,6 @@ class AppActionsManager(context: Context) {
                 }
             }
         } else {
-            // Plain text lines format ("Label — package" or "package: Label" or "package = Label")
             trimmed.lines().forEach { line ->
                 val l = line.trim()
                 if (l.contains("—")) {
@@ -855,9 +735,6 @@ class AppActionsManager(context: Context) {
         )
     }
 
-    /**
-     * Imports a list of favorite application component keys, adding them without duplicates.
-     */
     fun importFavorites(favoritesToImport: List<String>) {
         if (favoritesToImport.isEmpty()) return
         val current = _favorites.value.toMutableList()
@@ -870,11 +747,6 @@ class AppActionsManager(context: Context) {
         saveList("favorites", current)
     }
 
-    /**
-     * Merges a map of custom labels into the database and updates flows.
-     *
-     * @param map The map containing customized application labels.
-     */
     fun applyAppLabels(map: Map<String, String>) {
         val current = _customLabels.value.toMutableMap()
         current.putAll(map)
@@ -882,14 +754,8 @@ class AppActionsManager(context: Context) {
         saveMap("custom_labels", current)
     }
 
-    // Unified Backup export / import (tags + assignments + labels + favorites + apps).
-
     /**
-     * Exports a comprehensive backup (tags, tag assignments, custom labels, favorites,
-     * and app metadata) to a JSON file written to [uri].
-     *
-     * @param uri The destination URI.
-     * @param apps Optional list of apps to include in the backup.
+     * Exports a backup (tags, assignments, custom labels, favorites, and app metadata) to JSON at [uri].
      */
     fun exportTagsBackupToUri(uri: Uri, apps: List<dev.msbs.cyclauncher.model.AppInfo> = emptyList()) {
         val idToName = _tags.value.associate { it.id to it.name }
@@ -901,7 +767,6 @@ class AppActionsManager(context: Context) {
             tagsArray.put(obj)
         }
 
-        // Map componentKey -> tag names (only keep tags that still exist).
         val assignments = JSONObject()
         _appTags.value.forEach { (componentKey, tagIds) ->
             val names = tagIds.mapNotNull { idToName[it] }
@@ -956,10 +821,6 @@ class AppActionsManager(context: Context) {
 
     /**
      * Parses a backup or AI-tagged JSON file into a preview without applying changes yet.
-     * Supports unified backup format, AutoTags format, and tag dictionary format.
-     *
-     * @param uri The source URI of the backup file.
-     * @return A [TagsBackupPreview] containing parsed data.
      */
     fun parseTagsBackup(uri: Uri): TagsBackupPreview {
         val raw = readStringFromUri(uri) ?: throw IllegalArgumentException("Cannot read file")
@@ -982,7 +843,6 @@ class AppActionsManager(context: Context) {
         }
 
         if (trimmed.startsWith("[")) {
-            // AutoTags array format: [{"package": "...", "label": "...", "tag": "...", "color": "...", "is_favorite": true}]
             val array = JSONArray(trimmed)
             val packageToTagNames = mutableMapOf<String, MutableList<String>>()
             val tagColors = mutableMapOf<String, Color>()
@@ -1119,7 +979,6 @@ class AppActionsManager(context: Context) {
                     }
                 }
             } else {
-                // Dictionary format {"TagName": ["pkg1", "pkg2"]}
                 val packageToTagNames = mutableMapOf<String, MutableList<String>>()
                 root.keys().forEach { tagName ->
                     if (tagName in setOf("custom_labels", "labels", "favorites", "apps", "version")) return@forEach
@@ -1157,8 +1016,7 @@ class AppActionsManager(context: Context) {
     }
 
     /**
-     * Applies a previously-parsed [TagsBackupPreview]: creates missing tags,
-     * wires up every assignment (matched by tag name), restores custom labels and favorites.
+     * Applies a [TagsBackupPreview] by creating tags, updating assignments, labels, and favorites.
      */
     fun applyTagsBackup(preview: TagsBackupPreview, installedApps: List<dev.msbs.cyclauncher.model.AppInfo> = emptyList()) {
         val currentTags = _tags.value.toMutableList()
@@ -1287,12 +1145,7 @@ class AppActionsManager(context: Context) {
     }
 
     /**
-     * Parses an AI-generated tagged application JSON file to create a preview mapping.
-     * Supports both array and unified backup JSON structures.
-     *
-     * @param uri The URI of the JSON file containing the tagged results.
-     * @param apps The current list of installed apps to match against.
-     * @return An [AutoTagsPreview] detailing match metrics and tag metadata.
+     * Parses an AI-generated tagged application JSON file to create a preview.
      */
     fun parseAutoTags(uri: Uri, apps: List<dev.msbs.cyclauncher.model.AppInfo>): AutoTagsPreview {
         val jsonString = readStringFromUri(uri)
@@ -1360,7 +1213,6 @@ class AppActionsManager(context: Context) {
             }
         }
 
-        // Build componentKey -> tagName mapping for apps that exist on device
         val componentTagMap = mutableMapOf<String, String>()
         val matchedPackages = mutableSetOf<String>()
         apps.forEach { app ->
@@ -1384,10 +1236,7 @@ class AppActionsManager(context: Context) {
     }
 
     /**
-     * Applies the matched auto-tags preview by creating non-existent tags and assigning
-     * them to their corresponding applications.
-     *
-     * @param preview The auto-tags preview to apply.
+     * Applies the matched auto-tags preview by creating tags and updating app assignments.
      */
     fun applyAutoTags(preview: AutoTagsPreview) {
         val currentTags = _tags.value.toMutableList()

@@ -61,8 +61,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
 /**
- * The main activity of Cyclauncher, handling launcher setups, edge-to-edge layout,
- * broadcast receivers for package changes, and managing user interface navigation paths (horizontal/vertical pagers).
+ * Main activity of Cyclauncher, managing edge-to-edge layout, receivers, and navigation pagers.
  */
 class MainActivity : ComponentActivity() {
 
@@ -71,10 +70,6 @@ class MainActivity : ComponentActivity() {
     private var isDefaultLauncherCached = false
     private var wallpaperColorsListener: Any? = null
 
-    /**
-     * BroadcastReceiver to dynamically refresh the app list when applications are installed,
-     * uninstalled, or updated.
-     */
     private val packageReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val action = intent?.action
@@ -91,10 +86,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * BroadcastReceiver for system events such as Direct Boot unlock (ACTION_USER_UNLOCKED)
-     * and external storage app availability.
-     */
     private val systemReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             viewModel.refreshApps()
@@ -150,7 +141,6 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
 
-        // Keep Android Open initiative warning check (FreeDroidWarn)
         try {
             val currentVersionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                 packageManager.getPackageInfo(packageName, 0).longVersionCode.toInt()
@@ -177,8 +167,8 @@ class MainActivity : ComponentActivity() {
                         updateStatusBarVisibility(hideStatusBar)
                     }
 
-                    val horizontalPagerState = rememberPagerState { 2 } // [MainCluster, Settings]
-                    val verticalPagerState = rememberPagerState { 2 } // [Main, Search]
+                    val horizontalPagerState = rememberPagerState { 2 }
+                    val verticalPagerState = rememberPagerState { 2 }
                     val scope = rememberCoroutineScope()
                     val fastAnimSpec = remember { tween<Float>(durationMillis = 150, easing = FastOutSlowInEasing) }
                     
@@ -490,14 +480,6 @@ class MainActivity : ComponentActivity() {
         viewModel.requestHistoryScrollToBottom()
     }
 
-    /**
-     * Attempts to open the application represented by the given component key.
-     * Prioritizes the system [android.content.pm.LauncherApps] API for native multi-profile (Work profile) support,
-     * falling back to explicit component and package launch intents.
-     * Logs the application launch event inside the view model.
-     *
-     * @param componentKey The component key (formatted as "packageName/activityName" or package name).
-     */
     private fun openApp(componentKey: String) {
         val parts = componentKey.split("/")
         if (parts.size == 2) {
@@ -540,11 +522,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * Launches the system delete package intent to uninstall the specified application.
-     *
-     * @param packageName The application package name to uninstall.
-     */
     private fun uninstallApp(packageName: String) {
         try {
             val uninstallIntent = Intent(Intent.ACTION_DELETE).apply {
@@ -558,11 +535,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * Launches the system application details settings intent to open App Info for the specified package.
-     *
-     * @param packageName The application package name.
-     */
     private fun openAppInfo(packageName: String) {
         try {
             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -575,9 +547,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * Expands the system notification panel reflection-style (requires EXPAND_STATUS_BAR permission).
-     */
     @SuppressLint("WrongConstant")
     private fun openNotifications() {
         try {
@@ -601,15 +570,11 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/**
- * Custom MaterialTheme theme wrapper for Cyclauncher.
- */
 @Composable
 private fun CyclauncherTheme(content: @Composable () -> Unit) {
     MaterialTheme { content() }
 }
 
-/** Confirmation dialog for applying auto-generated AI application tags. */
 @Composable
 private fun AutoTagsConfirmDialog(
     preview: AutoTagsPreview,
@@ -679,9 +644,6 @@ private fun AutoTagsConfirmDialog(
     )
 }
 
-/**
- * Dialog prompting confirmation before restoring tag configurations from backup.
- */
 @Composable
 private fun TagsBackupConfirmDialog(
     preview: TagsBackupPreview,
@@ -729,9 +691,9 @@ private fun TagsBackupConfirmDialog(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(12.dp)
-                                    .clip(CircleShape)
-                                    .background(tagInfo.color)
+                                .size(12.dp)
+                                .clip(CircleShape)
+                                .background(tagInfo.color)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(

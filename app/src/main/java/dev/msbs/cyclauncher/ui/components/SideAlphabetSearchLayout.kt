@@ -40,14 +40,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
 
 /**
- * A one-handed search layout with a side-aligned alphabet grid occupying a fixed 40.45% of screen width.
- * The outer swap semi-circle button floats on the screen edge without overlapping content.
- * The app list occupies the remaining space and dynamically resizes text labels using AutoResizingText.
- *
- * @param viewModel The launcher ViewModel.
- * @param handSide User preferred hand side layout.
- * @param onAppClick Callback when an application item is tapped.
- * @param onAppLongClick Callback when an application item is long-pressed.
+ * One-handed search layout with a side-aligned alphabet grid and dynamic app list.
  */
 @Composable
 fun SideAlphabetSearchLayout(
@@ -66,7 +59,6 @@ fun SideAlphabetSearchLayout(
     val savedYRatio by viewModel.sideAlphabetButtonYRatio.collectAsState()
     var localYRatio by remember(savedYRatio) { mutableStateOf(savedYRatio) }
 
-    // Temporary local layout swap state (resets automatically when exiting SearchScreen)
     var isLayoutSwapped by remember { mutableStateOf(false) }
 
     val alphabet = remember { listOf('#') + ('A'..'Z').toList() }
@@ -96,7 +88,6 @@ fun SideAlphabetSearchLayout(
         val fixedAlphabetWidth = totalWidth * 0.4045f
 
         Box(modifier = Modifier.fillMaxSize()) {
-            // Main content column padded by swapIconWidth on the outer edge matching handSide
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -105,7 +96,6 @@ fun SideAlphabetSearchLayout(
                         end = if (handSide == HandSide.RIGHT) swapIconWidth else 0.dp
                     )
             ) {
-                // Main content split into fixed 40.45% alphabet grid and dynamic app list
                 Row(
                     modifier = Modifier
                         .weight(1f)
@@ -113,7 +103,6 @@ fun SideAlphabetSearchLayout(
                     verticalAlignment = Alignment.Bottom
                 ) {
                     if (effectiveLettersOnLeft) {
-                        // Letters on Left side (fixed 40.45% W), App list on Right (dynamic remaining W)
                         Box(
                             modifier = Modifier
                                 .width(fixedAlphabetWidth)
@@ -131,7 +120,6 @@ fun SideAlphabetSearchLayout(
                             )
                         }
 
-                        // Right side: App List with dynamic text scaling
                         Box(
                             modifier = Modifier
                                 .weight(1f)
@@ -147,7 +135,6 @@ fun SideAlphabetSearchLayout(
                             )
                         }
                     } else {
-                        // App List on Left (dynamic remaining W), Letters on Right (fixed 40.45% W)
                         Box(
                             modifier = Modifier
                                 .weight(1f)
@@ -182,7 +169,6 @@ fun SideAlphabetSearchLayout(
                     }
                 }
 
-                // Bottom toggle bar allowing switching to text keyboard mode
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -200,7 +186,6 @@ fun SideAlphabetSearchLayout(
                 }
             }
 
-            // Semi-circle swap button ALWAYS attached to outer edge matching handSide
             Box(
                 modifier = Modifier
                     .align(if (handSide == HandSide.LEFT) Alignment.BottomStart else Alignment.BottomEnd)
@@ -232,8 +217,7 @@ fun SideAlphabetSearchLayout(
 }
 
 /**
- * Semi-circle swap button attached to the screen edge matching handSide.
- * Supports tap to swap layout orientation and vertical drag gesture to move the button along the Y axis.
+ * Floating semi-circle button for swapping grid/list sides and adjusting vertical offset.
  */
 @Composable
 private fun SwapSemiCircleButton(

@@ -35,10 +35,7 @@ enum class HandSide { LEFT, RIGHT }
 enum class SearchMethod { WHEEL, SIDE_ALPHABET, TEXT }
 
 /**
- * The main ViewModel for the launcher, providing application state, user preferences,
- * search queries, custom tag assignments, and backup actions to the UI.
- *
- * @param application The android Application instance context.
+ * Main ViewModel for the launcher, exposing state, settings, search, and app actions.
  */
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -48,85 +45,64 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
     
     private val _selectedLetter = MutableStateFlow('A')
-    /** The character currently selected on the alphabet wheel. */
     val selectedLetter: StateFlow<Char> = _selectedLetter
 
     private val _searchListAlignment = MutableStateFlow(TextAlign.Start)
-    /** Text alignment for the search app list, dynamic based on the preferred hand side. */
     val searchListAlignment: StateFlow<TextAlign> = _searchListAlignment
 
     private val _handSide = MutableStateFlow(HandSide.LEFT)
-    /** The user's hand side layout preference. */
     val handSide: StateFlow<HandSide> = _handSide
 
     private val _accentColor = MutableStateFlow(AccentColor.SKY)
-    /** The selected UI theme accent color. */
     val accentColor: StateFlow<AccentColor> = _accentColor
 
     private val _primaryTextColor = MutableStateFlow(PrimaryTextColor.WHITE)
-    /** The selected primary (non-accent) text color theme. */
     val primaryTextColor: StateFlow<PrimaryTextColor> = _primaryTextColor
 
     private val _buttonTextColor = MutableStateFlow(PrimaryTextColor.BLACK)
-    /** The selected button text color (White or Black). */
     val buttonTextColor: StateFlow<PrimaryTextColor> = _buttonTextColor
 
     private val _popupTheme = MutableStateFlow(PopupTheme.DARK)
-    /** The selected background theme for popups and dialogs (Dark or Light). */
     val popupTheme: StateFlow<PopupTheme> = _popupTheme
 
     private val _showShadows = MutableStateFlow(true)
-    /** Whether adaptive text/icon drop shadows are enabled. */
     val showShadows: StateFlow<Boolean> = _showShadows
 
     private val _shadowColor = MutableStateFlow(PrimaryTextColor.BLACK)
-    /** The selected shadow color override (WHITE = white shadow, BLACK = black shadow). */
     val shadowColor: StateFlow<PrimaryTextColor> = _shadowColor
 
     private val _hideStatusBar = MutableStateFlow(false)
-    /** Controls whether the Android system status bar is hidden for an immersive fullscreen launcher layout. */
     val hideStatusBar: StateFlow<Boolean> = _hideStatusBar
 
     private val _animationsEnabled = MutableStateFlow(true)
-    /** Controls whether animations and cursor blinking are enabled throughout the launcher. */
     val animationsEnabled: StateFlow<Boolean> = _animationsEnabled
 
     private val _searchMethod = MutableStateFlow(SearchMethod.SIDE_ALPHABET)
-    /** The active application search layout method. */
     val searchMethod: StateFlow<SearchMethod> = _searchMethod
 
     private var lastAlphabetSearchMethod: SearchMethod = SearchMethod.SIDE_ALPHABET
 
     private val _sideAlphabetButtonYRatio = MutableStateFlow(0.23f)
-    /** Vertical screen position ratio for the side alphabet grid toggle button (0.05f..0.85f). */
     val sideAlphabetButtonYRatio: StateFlow<Float> = _sideAlphabetButtonYRatio
 
     private val _isTextSearchMode = MutableStateFlow(false)
-    /** Whether keyboard-based text search mode is active. */
     val isTextSearchMode: StateFlow<Boolean> = _isTextSearchMode
 
     private val _searchText = MutableStateFlow("")
-    /** The current keyboard search text query. */
     val searchText: StateFlow<String> = _searchText
 
-    /** List of all custom tags. */
     val tags: StateFlow<List<Tag>> = actionsManager.tags
-    /** Map linking application component keys to assigned tag IDs. */
     val appTags: StateFlow<Map<String, List<String>>> = actionsManager.appTags
 
     private val _autoTagsPreview = MutableStateFlow<AutoTagsPreview?>(null)
-    /** Holds the preview state of the AI auto-tagging process before it is applied. */
     val autoTagsPreview: StateFlow<AutoTagsPreview?> = _autoTagsPreview
 
     private val _resetRequest = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    /** Flow signaling that the UI should scroll back to the main home screen. */
     val resetRequest = _resetRequest.asSharedFlow()
 
     private val _historyScrollToBottomTrigger = MutableStateFlow(0L)
-    /** Trigger signaling that the recent history list should scroll to the bottom. */
     val historyScrollToBottomTrigger: StateFlow<Long> = _historyScrollToBottomTrigger
 
-    /** Requests the home screen UI to reset to the main cluster and page, exiting text search mode if active. */
     fun requestReset() {
         if (_isTextSearchMode.value) {
             _isTextSearchMode.value = false
@@ -137,12 +113,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _resetRequest.tryEmit(Unit)
     }
 
-    /** Requests the recent history list to scroll to the bottom. */
     fun requestHistoryScrollToBottom() {
         _historyScrollToBottomTrigger.value = System.currentTimeMillis()
     }
 
-    /** List of all installed applications with custom labels and search indexing applied. */
     val apps: StateFlow<List<AppInfo>> = combine(_apps, actionsManager.customLabels, actionsManager.customCharMappings) { all, customLabels, customMappings ->
         all.map { app ->
             val customLabel = customLabels[app.componentKey]
@@ -157,24 +131,19 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Applications filtered for the currently selected search letter. */
     val filteredApps: StateFlow<List<AppInfo>> = combine(apps, _selectedLetter) { all, letter ->
         all.filter { it.searchChar == letter }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** List of all favorite keys (app component keys and "tag:$tagId" entries). */
     val favorites: StateFlow<List<String>> = actionsManager.favorites
 
-    /** Recent application list in order of launch. */
     val historyApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.history) { all, ids ->
         val appMap = all.associateBy { it.componentKey }
         ids.mapNotNull { id -> appMap[id] }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    /** Set of application component keys that were recently installed or updated and not yet launched. */
     val recentlyUpdatedApps: StateFlow<Set<String>> = actionsManager.recentlyUpdated
 
-    /** Ordered list of favorite items (both applications and tag folders). */
     val favoriteItems: StateFlow<List<FavoriteItem>> = combine(
         apps,
         tags,
@@ -203,22 +172,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Favorite applications (filtered for backwards compatibility). */
     val favoriteApps: StateFlow<List<AppInfo>> = favoriteItems.map { items ->
         items.mapNotNull { (it as? FavoriteItem.App)?.appInfo }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Applications filtered by the active text search query. */
     val textFilteredApps: StateFlow<List<AppInfo>> = combine(apps, _searchText) { all, query ->
         if (query.isEmpty()) all
         else all.filter { it.label.contains(query, ignoreCase = true) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Controls whether the interactive tutorial overlay is visible. */
     private val _showTutorial = MutableStateFlow(false)
     val showTutorial: StateFlow<Boolean> = _showTutorial
 
-    /** Current active step in the tutorial sequence (0..4). */
     private val _tutorialStep = MutableStateFlow(0)
     val tutorialStep: StateFlow<Int> = _tutorialStep
 
@@ -272,18 +237,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _searchListAlignment.value = if (_handSide.value == HandSide.LEFT) TextAlign.End else TextAlign.Start
     }
 
-    /** Starts or restarts the interactive tutorial from step 0. */
     fun startTutorial() {
         _tutorialStep.value = 0
         _showTutorial.value = true
     }
 
-    /** Sets the current step of the tutorial. */
     fun setTutorialStep(step: Int) {
         _tutorialStep.value = step.coerceIn(0, 5)
     }
 
-    /** Advances to the next tutorial step, or completes if on the last step. */
     fun nextTutorialStep() {
         if (_tutorialStep.value < 5) {
             _tutorialStep.value += 1
@@ -292,7 +254,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /** Marks the tutorial as completed and hides the overlay. */
     fun completeTutorial() {
         _showTutorial.value = false
         _tutorialStep.value = 0
@@ -300,18 +261,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         prefs.edit().putBoolean("is_tutorial_completed", true).apply()
     }
 
-    /**
-     * Sets the active selected letter on the alphabet wheel.
-     *
-     * @param letter The character chosen by the user.
-     */
     fun setSelectedLetter(letter: Char) { _selectedLetter.value = letter }
 
-    /**
-     * Sets the vertical position ratio for the side alphabet grid toggle button and persists it.
-     *
-     * @param ratio Vertical position ratio between 0.05f and 0.85f.
-     */
     fun setSideAlphabetButtonYRatio(ratio: Float) {
         val clamped = ratio.coerceIn(0.05f, 0.85f)
         _sideAlphabetButtonYRatio.value = clamped
@@ -319,11 +270,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         prefs.edit().putFloat("side_alphabet_button_y_ratio", clamped).apply()
     }
 
-    /**
-     * Sets the active search layout method and persists the preference.
-     *
-     * @param method The selected [SearchMethod].
-     */
     fun setSearchMethod(method: SearchMethod) {
         _searchMethod.value = method
         if (method != SearchMethod.TEXT) {
@@ -340,9 +286,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             .apply()
     }
 
-    /**
-     * Toggles the keyboard text search mode on/off and persists the active search layout state.
-     */
     fun toggleTextSearchMode() {
         val nextMethod = if (_searchMethod.value == SearchMethod.TEXT) {
             lastAlphabetSearchMethod
@@ -352,18 +295,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         setSearchMethod(nextMethod)
     }
 
-    /**
-     * Updates the keyboard search filter text.
-     *
-     * @param text The new search query string.
-     */
     fun setSearchText(text: String) { _searchText.value = text }
 
-    /**
-     * Sets the hand side preference layout and saves it to local settings.
-     *
-     * @param side The hand preference (LEFT or RIGHT).
-     */
     fun setHandSide(side: HandSide) {
         _handSide.value = side
         _searchListAlignment.value = if (side == HandSide.LEFT) {
@@ -375,42 +308,24 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         prefs.edit().putString("hand_side", side.name).apply()
     }
 
-    /**
-     * Sets whether the Android system status bar should be hidden for an immersive launcher layout and persists the setting.
-     *
-     * @param hide True to hide status bar, false to show it.
-     */
     fun setHideStatusBar(hide: Boolean) {
         _hideStatusBar.value = hide
         val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putBoolean("hide_status_bar", hide).apply()
     }
 
-    /**
-     * Sets whether launcher animations and cursor blinking should be enabled and persists the setting.
-     *
-     * @param enabled True to enable animations, false to disable them.
-     */
     fun setAnimationsEnabled(enabled: Boolean) {
         _animationsEnabled.value = enabled
         val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putBoolean("animations_enabled", enabled).apply()
     }
 
-    /**
-     * Sets the UI theme accent color preference and persists it.
-     *
-     * @param color The chosen [AccentColor] instance.
-     */
     fun setAccentColor(color: AccentColor) {
         _accentColor.value = color
         val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putString("accent_color", color.name).apply()
     }
 
-    /**
-     * Refreshes the dynamic wallpaper accent color if the current theme is set to WALLPAPER.
-     */
     fun refreshDynamicWallpaperColor(context: Context) {
         if (_accentColor.value.isDynamicWallpaper) {
             val updated = AccentColor.wallpaper(context)
@@ -420,142 +335,75 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /**
-     * Sets the primary text color preference (White or Black) and persists it.
-     *
-     * @param color The chosen [PrimaryTextColor] instance.
-     */
     fun setPrimaryTextColor(color: PrimaryTextColor) {
         _primaryTextColor.value = color
         val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putString("primary_text_color", color.name).apply()
     }
 
-    /**
-     * Sets the button text color preference (White or Black) and persists it.
-     *
-     * @param color The chosen [PrimaryTextColor] instance.
-     */
     fun setButtonTextColor(color: PrimaryTextColor) {
         _buttonTextColor.value = color
         val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putString("button_text_color", color.name).apply()
     }
 
-    /**
-     * Sets the popup and dialog background theme (Dark or Light) and persists it.
-     *
-     * @param theme The chosen [PopupTheme] instance.
-     */
     fun setPopupTheme(theme: PopupTheme) {
         _popupTheme.value = theme
         val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putString("popup_theme", theme.name).apply()
     }
 
-    /**
-     * Sets the visibility preference for drop shadows on text/icons and persists it.
-     *
-     * @param enabled True to show shadows, false to hide.
-     */
     fun setShowShadows(enabled: Boolean) {
         _showShadows.value = enabled
         val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putBoolean("show_shadows", enabled).apply()
     }
 
-    /**
-     * Sets the shadow color override (WHITE = white shadow, BLACK = black shadow) and persists it.
-     *
-     * @param color The chosen [PrimaryTextColor] instance for shadow.
-     */
     fun setShadowColor(color: PrimaryTextColor) {
         _shadowColor.value = color
         val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putString("shadow_color", color.name).apply()
     }
 
-    /**
-     * Logs an application launch to update historical order.
-     *
-     * @param componentKey The application key.
-     */
     fun logAppLaunch(componentKey: String) {
         actionsManager.logAppLaunch(componentKey)
     }
 
-    /**
-     * Toggles the favorite state of an application.
-     *
-     * @param componentKey The application key.
-     */
     fun toggleFavorite(componentKey: String) {
         actionsManager.toggleFavorite(componentKey)
     }
 
-    /**
-     * Reorders the list of favorite applications by moving an item from [fromIndex] to [toIndex].
-     *
-     * @param fromIndex The original index of the item.
-     * @param toIndex The new target index for the item.
-     */
     fun reorderFavorites(fromIndex: Int, toIndex: Int) {
         actionsManager.reorderFavorites(fromIndex, toIndex)
     }
     
-    /** Stream indicating whether recording app launches to history is paused. */
     val isHistoryPaused: StateFlow<Boolean> = actionsManager.isHistoryPaused
 
-    /** Toggles whether recording application launches to history is paused. */
     fun toggleHistoryPaused() {
         actionsManager.toggleHistoryPaused()
     }
 
-    /** Clears all entries from the launch history. */
     fun clearHistory() {
         actionsManager.clearHistory()
     }
 
-    /**
-     * Removes an application from the launch history.
-     *
-     * @param componentKey The application key.
-     */
     fun removeFromHistory(componentKey: String) {
         actionsManager.removeFromHistory(componentKey)
     }
 
-    /**
-     * Renames an application with a custom user-defined label.
-     *
-     * @param componentKey The application key.
-     * @param newLabel The new label for the application.
-     */
     fun renameApp(componentKey: String, newLabel: String) {
         actionsManager.renameApp(componentKey, newLabel)
     }
 
-    /** Creates a new custom tag. */
     fun createTag(tag: Tag) = actionsManager.createTag(tag)
-    /** Updates properties of an existing tag. */
     fun updateTag(tag: Tag) = actionsManager.updateTag(tag)
-    /** Deletes a tag by its ID. */
     fun deleteTag(tagId: String) = actionsManager.deleteTag(tagId)
-    /** Toggles tag assignment for a given application component. */
     fun toggleTagForApp(componentKey: String, tagId: String) = actionsManager.toggleTagForApp(componentKey, tagId)
 
-    /**
-     * Refreshes the list of installed applications.
-     */
     fun refreshApps() {
         loadInstalledApps()
     }
 
-    /**
-     * Launches the system intent to uninstall the specified application package.
-     *
-     * @param packageName The Android package name to uninstall.
-     */
     fun uninstallApp(packageName: String) {
         try {
             val intent = Intent(Intent.ACTION_DELETE).apply {
@@ -568,14 +416,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /** Checks if an application is favorited. */
     fun isFavorite(componentKey: String): Boolean = actionsManager.isFavorite(componentKey)
 
-    /**
-     * Checks if Cyclauncher is currently configured as the default device launcher.
-     *
-     * @return True if Cyclauncher is default, false otherwise.
-     */
     fun isDefaultLauncher(): Boolean {
         val context = getApplication<Application>()
         val intent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }
@@ -594,9 +436,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         return false
     }
 
-    /**
-     * Resolves the current default device launcher package name if it is not Cyclauncher.
-     */
     fun getDefaultLauncherPackage(): String? {
         val context = getApplication<Application>()
         val intent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }
@@ -605,9 +444,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         return if (pkg != context.packageName) pkg else null
     }
 
-    /**
-     * Navigates out of Cyclauncher to the system default home launcher screen.
-     */
     fun exitToSystemHome(context: Context) {
         val defaultPkg = getDefaultLauncherPackage()
         if (defaultPkg != null) {
@@ -618,12 +454,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     context.startActivity(launchIntent)
                     return
                 } catch (e: Exception) {
-                    // fallback below
                 }
             }
         }
 
-        // Generic HOME intent fallback
         try {
             val homeIntent = Intent(Intent.ACTION_MAIN).apply {
                 addCategory(Intent.CATEGORY_HOME)
@@ -632,7 +466,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             context.startActivity(homeIntent)
             return
         } catch (e: Exception) {
-            // fallback below
         }
 
         val activity = context as? android.app.Activity
@@ -643,14 +476,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /**
-     * Opens system settings to choose the default home launcher application.
-     * Follows Lawnchair / AOSP Launcher3 standard intent resolution cascade.
-     */
     fun openDefaultLauncherSettings(context: Context) {
         val activity = context as? android.app.Activity
 
-        // 1. Primary standard: ACTION_HOME_SETTINGS (supported across Android 7 - 15)
         val homeSettingsIntent = Intent(android.provider.Settings.ACTION_HOME_SETTINGS)
         if (activity == null) {
             homeSettingsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -663,10 +491,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             }
             return
         } catch (e: Exception) {
-            // Fallback to RoleManager or generic settings if OEM overrides ACTION_HOME_SETTINGS
         }
 
-        // 2. Secondary fallback: RoleManager (Android 10 - 12)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             try {
                 val roleManager = context.getSystemService(android.app.role.RoleManager::class.java)
@@ -683,11 +509,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     return
                 }
             } catch (e: Exception) {
-                // Fallback to generic Settings below
             }
         }
 
-        // 3. Ultimate fallback: System Settings
         val fallbackIntent = Intent(android.provider.Settings.ACTION_SETTINGS)
         if (activity == null) {
             fallbackIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -699,11 +523,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 context.startActivity(fallbackIntent)
             }
         } catch (e: Exception) {
-            // Ignore
         }
     }
 
-    /** Opens the external Tribute contribution/support page in a browser. */
     fun openSupportPage() {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://web.tribute.tg/e/1dW")).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -711,7 +533,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         getApplication<Application>().startActivity(intent)
     }
 
-    /** Opens the project GitHub page in a browser. */
     fun openGitHubPage() {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/msbluesnow/Cyclauncher")).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -719,7 +540,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         getApplication<Application>().startActivity(intent)
     }
 
-    /** Opens the project Discord support server in a browser. */
     fun openDiscordPage() {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://discord.gg/Zw4EBe92Qn")).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -727,7 +547,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         getApplication<Application>().startActivity(intent)
     }
 
-    /** Opens the Keep Android Open initiative website in a browser. */
     fun openKeepAndroidOpenPage() {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://keepandroidopen.org/")).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -735,7 +554,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         getApplication<Application>().startActivity(intent)
     }
 
-    /** Exports installed application names to JSON format at the given URI. */
     fun exportAppNamesJson(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -752,7 +570,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /** Exports installed application names to plain text format at the given URI. */
     fun exportAppNamesText(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -769,7 +586,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /** Imports custom app labels and favorites from JSON/text and applies them. */
     fun importAppNamesPreview(uri: Uri, onResult: (labelCount: Int, favCount: Int) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -791,7 +607,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /** Loads and parses AI-generated auto-tagging preview details. */
     fun loadAutoTagsPreview(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -807,7 +622,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /** Applies the currently loaded auto-tagging configurations. */
     fun applyAutoTags() {
         _autoTagsPreview.value?.let { preview ->
             actionsManager.applyAutoTags(preview)
@@ -815,18 +629,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /** Discards the active auto-tagging preview data. */
     fun dismissAutoTagsPreview() {
         _autoTagsPreview.value = null
     }
 
-    // ---- Tags backup (tags + assignments), unified across Settings & AutoTags) ----
-
     private val _tagsBackupPreview = MutableStateFlow<TagsBackupPreview?>(null)
-    /** Holds the preview state of tags backup file import. */
     val tagsBackupPreview: StateFlow<TagsBackupPreview?> = _tagsBackupPreview
 
-    /** Exports tags and assignments to a JSON file at the given URI. */
     fun exportTagsBackup(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -843,7 +652,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /** Loads and parses a tags backup JSON file to prepare import details. */
     fun loadTagsBackupPreview(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -859,7 +667,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /** Applies the currently loaded tags backup configuration. */
     fun applyTagsBackup() {
         _tagsBackupPreview.value?.let { preview ->
             actionsManager.applyTagsBackup(preview, apps.value)
@@ -867,49 +674,32 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /** Discards the active tags backup preview data. */
     fun dismissTagsBackupPreview() {
         _tagsBackupPreview.value = null
     }
 
-    /** Stream of custom first-character to search-letter mappings. */
     val customCharMappings: StateFlow<Map<String, Char>> = actionsManager.customCharMappings
 
-    /**
-     * Adds or updates a custom character mapping and re-indexes installed apps.
-     */
     fun addOrUpdateCharMapping(symbol: String, targetChar: Char) {
         val updated = actionsManager.addOrUpdateCharMapping(symbol, targetChar)
         reindexApps(updated)
     }
 
-    /**
-     * Adds multiple character mappings at once and re-indexes installed apps.
-     */
     fun addCharMappings(mappings: Map<String, Char>) {
         val updated = actionsManager.addCharMappings(mappings)
         reindexApps(updated)
     }
 
-    /**
-     * Removes a custom character mapping and re-indexes installed apps.
-     */
     fun removeCharMapping(symbol: String) {
         val updated = actionsManager.removeCharMapping(symbol)
         reindexApps(updated)
     }
 
-    /**
-     * Resets all custom character mappings to default and re-indexes installed apps.
-     */
     fun resetCharMappings() {
         val updated = actionsManager.resetCharMappings()
         reindexApps(updated)
     }
 
-    /**
-     * Exports all custom character mappings to a JSON file at [uri].
-     */
     fun exportCharMappingsJson(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -926,9 +716,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /**
-     * Imports custom character mappings from the specified [uri] and re-indexes apps.
-     */
     fun importCharMappingsJson(uri: Uri, merge: Boolean = true, onResult: (Result<Int>) -> Unit = {}) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -945,9 +732,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /**
-     * Re-calculates searchChar for all loaded apps in-place using the given mappings.
-     */
     private fun reindexApps(customMappings: Map<String, Char> = actionsManager.customCharMappings.value) {
         val currentApps = _apps.value
         if (currentApps.isEmpty()) return
@@ -964,8 +748,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
-     * Extracts the first graphical symbol, emoji, or character from a string.
-     * Uses [java.text.BreakIterator] to properly handle surrogate pairs and composite emoji sequences.
+     * Extracts the first symbol or character from a string using BreakIterator.
      */
     fun extractFirstSymbol(text: String): String {
         val trimmed = text.trim()
@@ -977,21 +760,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
-     * Maps a character, emoji, or foreign language symbol to an alphabet index ('A'..'Z' or '#').
-     * Prioritizes custom user-defined mappings before falling back to built-in rules.
-     *
-     * @param symbol The raw symbol string (character or emoji).
-     * @param customMappings Active custom character mapping table.
-     * @return The resolved character ('A'..'Z' or '#').
+     * Maps a symbol to an alphabet index ('A'..'Z' or '#'), checking custom mappings first.
      */
     fun mapToSearchChar(symbol: String, customMappings: Map<String, Char> = actionsManager.customCharMappings.value): Char {
         if (symbol.isEmpty()) return '#'
 
-        // 1. Direct user custom mapping lookup (exact symbol or uppercase)
         customMappings[symbol]?.let { return it }
         customMappings[symbol.uppercase()]?.let { return it }
 
-        // 2. Fallback single character mapping (Cyrillic to Latin & standard uppercase)
         if (symbol.length == 1) {
             val char = symbol[0]
             val mapped = when (char.uppercaseChar()) {
@@ -1009,22 +785,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         return '#'
     }
 
-    /**
-     * Called when an application package is explicitly removed/uninstalled from the device.
-     *
-     * @param packageName The package name of the uninstalled app.
-     */
     fun onPackageRemoved(packageName: String) {
         invalidateIconCache(packageName)
         actionsManager.onPackageRemoved(packageName)
         refreshApps()
     }
 
-    /**
-     * Called when an application package is installed or updated on the device.
-     *
-     * @param packageName The package name of the newly installed or updated app.
-     */
     fun onPackageAddedOrUpdated(packageName: String) {
         invalidateIconCache(packageName)
         viewModelScope.launch(Dispatchers.IO) {
@@ -1039,9 +805,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /**
-     * Evicts cached icon bitmaps for the given package from Coil's memory cache.
-     */
     private fun invalidateIconCache(packageName: String) {
         try {
             val imageLoader = coil3.SingletonImageLoader.get(getApplication())
@@ -1056,13 +819,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private var loadAppsJob: kotlinx.coroutines.Job? = null
 
-    /**
-     * Loads installed launchable applications asynchronously, resolving their display labels,
-     * package names, activity names, and starting index characters. Icons are intentionally
-     * not loaded here — they are fetched on demand by Coil in the UI layer, which keeps this
-     * list lightweight and lets the OS evict bitmaps under memory pressure.
-     * Also detects newly installed or updated applications and adds them to recent history.
-     */
     private fun loadInstalledApps() {
         loadAppsJob?.cancel()
         loadAppsJob = viewModelScope.launch(Dispatchers.IO) {
@@ -1085,7 +841,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             }
 
             val currentUpdateTimes = mutableMapOf<String, Long>()
-            val newlyInstalledOrUpdated = mutableListOf<Pair<String, Long>>() // componentKey to updateTime
+            val newlyInstalledOrUpdated = mutableListOf<Pair<String, Long>>()
 
             val prevUpdateTimes = actionsManager.loadAppUpdateTimes()
             val isFirstTimeTracking = prevUpdateTimes.isEmpty()
@@ -1139,13 +895,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             _apps.value = appList
 
             if (!isFirstTimeTracking && newlyInstalledOrUpdated.isNotEmpty()) {
-                // Sort by updateTime ascending so that the newest ends up at index 0 of history
                 val sortedKeys = newlyInstalledOrUpdated
                     .sortedBy { it.second }
                     .map { it.first }
                 actionsManager.onAppsInstalledOrUpdated(sortedKeys)
             } else if (isFirstTimeTracking && actionsManager.history.value.isEmpty()) {
-                // On first run, populate history with the most recently installed/updated apps without badge
                 val topRecent = resolvedInfos
                     .mapNotNull { info ->
                         val pkg = info.activityInfo.packageName

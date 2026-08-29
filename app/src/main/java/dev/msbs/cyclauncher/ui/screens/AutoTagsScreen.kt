@@ -42,11 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Screen providing tag backup (import/export) and AI-driven categorization helpers.
- * Guides the user through a 3-step AI categorizing process: exporting app lists, copying the prompt, and uploading tags.
- *
- * @param viewModel The view model supplying state data.
- * @param onBack Callback when pressing back to return to Settings.
+ * Screen guiding users through AI-assisted app tagging and categorization.
  */
 @Composable
 fun AutoTagsScreen(
@@ -66,7 +62,6 @@ fun AutoTagsScreen(
     var copiedToClipboard by remember { mutableStateOf(false) }
     var showExportFormatDialog by remember { mutableStateOf(false) }
 
-    // Step 1 — Export the installed app list (JSON machine-friendly, TXT human-readable)
     val exportJsonLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri -> uri?.let { viewModel.exportAppNamesJson(it) } }
@@ -75,7 +70,6 @@ fun AutoTagsScreen(
         ActivityResultContracts.CreateDocument("text/plain")
     ) { uri -> uri?.let { viewModel.exportAppNamesText(it) } }
 
-    // Step 3 — Import the AI-returned tagged JSON or full backup.
     val importTaggedLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri -> uri?.let { viewModel.loadTagsBackupPreview(it) } }
@@ -155,7 +149,6 @@ fun AutoTagsScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
 
-                    // Step 1: Export
                     StepHeader(1, "Export App List", accentColor, primaryTextColor, buttonTextColor, shadow)
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -188,7 +181,6 @@ fun AutoTagsScreen(
                         modifier = Modifier.padding(vertical = 16.dp)
                     )
 
-                    // Step 2: Send to AI
                     StepHeader(2, "Send to AI", accentColor, primaryTextColor, buttonTextColor, shadow)
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -201,7 +193,6 @@ fun AutoTagsScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Prompt box
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -262,7 +253,6 @@ fun AutoTagsScreen(
                         modifier = Modifier.padding(vertical = 16.dp)
                     )
 
-                    // Step 3: Import Tagged Apps
                     StepHeader(3, "Import Tagged Apps", accentColor, primaryTextColor, buttonTextColor, shadow)
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -314,7 +304,7 @@ fun AutoTagsScreen(
 private enum class ExportFormat { JSON, TXT }
 
 /**
- * Dialog prompting the user to choose the app list format to export (JSON or TXT).
+ * Dialog prompting user to choose between JSON and TXT format for exporting app list.
  */
 @Composable
 private fun ExportFormatDialog(
@@ -371,9 +361,6 @@ private fun ExportFormatDialog(
     )
 }
 
-/**
- * A layout representing a numbered header for each setup stage.
- */
 @Composable
 private fun StepHeader(
     stepNumber: Int,
@@ -410,9 +397,6 @@ private fun StepHeader(
     }
 }
 
-/**
- * Copies the specified text string to the system clipboard.
- */
 private fun copyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
     clipboard.setPrimaryClip(ClipData.newPlainText("AI Prompt", text))

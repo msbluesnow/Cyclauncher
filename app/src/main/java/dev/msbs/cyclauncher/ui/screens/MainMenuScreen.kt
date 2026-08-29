@@ -67,16 +67,7 @@ import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.LayoutDirection
 
 /**
- * The default launcher home screen, hosting favorite application shortcuts and a scrollable recent launch history list.
- * Supports swipe gestures (up for search screen, down to pull notifications) and long press to open settings.
- *
- * @param viewModel The view model supplying state data.
- * @param isActive True if this screen is current active page in horizontal and vertical pagers.
- * @param onAppClick Callback when an application is clicked.
- * @param onAppLongClick Callback when an application is long-pressed (provides coordinates).
- * @param onSwipeUp Callback when a swipe up gesture is detected.
- * @param onSwipeDown Callback when a swipe down gesture is detected.
- * @param onSettingsClick Callback to transition to the Settings screen.
+ * Main launcher home screen displaying favorite apps and recent launch history.
  */
 @Composable
 fun MainMenuScreen(
@@ -233,7 +224,6 @@ fun MainMenuScreen(
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-        // Background touch layer - handles empty wallpaper long-press (Settings) and vertical swipes (Search / Notifications)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -478,29 +468,7 @@ fun MainMenuScreen(
 }
 
 /**
- * Section dedicated to recent history and popular tags.
- * Supports swapping positions of history and popular tags through upward and downward drag gestures.
- *
- * @param viewModel Launcher view model.
- * @param modifier Layout modifier.
- * @param history List of recent launched applications.
- * @param popularTags Tag list paired with tagged applications.
- * @param recentlyUpdatedApps Set of package keys of recently updated apps.
- * @param handSide Layout orientation preference.
- * @param primaryTextColor User selectable primary text color.
- * @param showShadows True to render drop shadows.
- * @param accentColor Active UI accent color.
- * @param isHistoryPaused True if history recording is paused.
- * @param isHistoryEditMode True if history edit mode is active.
- * @param setHistoryEditMode Callback to enter/exit history edit mode.
- * @param onRemoveFromHistory Callback to remove an app from history.
- * @param onHistoryIconClick Callback when the history icon is clicked.
- * @param onAppClick Callback when a history app is clicked.
- * @param onAppLongClick Callback when a history app is long-pressed.
- * @param onTagFolderClick Callback when a tag folder is clicked.
- * @param onTagFolderLongClick Callback when a tag folder is long-pressed.
- * @param onSettingsClick Callback to transition to the Settings screen on empty space tap.
- * @param isActive True if this page is active.
+ * Section displaying recent app history and popular tag folders.
  */
 @Composable
 private fun HistorySection(
@@ -1023,23 +991,7 @@ private fun ColumnScope.HistoryContentBlock(
 }
 
 /**
- * Renders the favorites section containing custom layout grid of favorite application icons.
- * Also handles drag gestures for reordering items when in edit/reorder mode.
- *
- * @param modifier Modifier for UI configurations.
- * @param favorites The list of favorite applications.
- * @param accentColor Theme accent color.
- * @param showShadows Whether to apply drop shadows.
- * @param isReorderMode True if reorder (edit) mode is active.
- * @param setReorderMode Callback to enable/disable reorder mode.
- * @param onReorder Callback to swap positions of favorite items.
- * @param onToggleFavorite Callback to remove/add a favorite item.
- * @param onAppClick Callback when a favorite app icon is clicked.
- * @param onAppLongClick Callback when a favorite app icon is long-pressed.
- * @param onSwipeUp Callback when a swipe up gesture is detected.
- * @param onSwipeDown Callback when a swipe down gesture is detected.
- * @param onSettingsClick Callback to transition to the Settings screen on empty space tap.
- * @param isActive True if this page is currently active.
+ * Section displaying favorite apps and folders with drag-to-reorder support.
  */
 @Composable
 private fun FavoritesSection(
@@ -1076,7 +1028,6 @@ private fun FavoritesSection(
     val currentIsReorderMode by rememberUpdatedState(isReorderMode)
     val currentOnReorder by rememberUpdatedState(onReorder)
 
-    // Reset dragging state if reorder mode is exited
     LaunchedEffect(isReorderMode) {
         if (!isReorderMode) {
             draggingKey = null
@@ -1145,7 +1096,6 @@ private fun FavoritesSection(
                     val itemKey = item.key
                     val isDraggingThis = draggingKey == itemKey
 
-                    // Track the current index and list size to avoid stale closures during drag
                     val currentIndex by rememberUpdatedState(index)
                     val currentSize by rememberUpdatedState(favorites.size)
 

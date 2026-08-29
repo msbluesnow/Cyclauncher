@@ -69,8 +69,7 @@ enum class GestureType {
 }
 
 /**
- * Full-screen interactive tutorial overlay demonstrating launcher gestures in English.
- * Performs real screen switches (Main Screen <-> Search Screen) during gesture walkthrough steps.
+ * Interactive tutorial overlay demonstrating launcher gestures.
  */
 @Composable
 fun TutorialOverlay(
@@ -149,7 +148,6 @@ fun TutorialOverlay(
         }
     }
 
-    // Capture system Back button gesture on step 1 (Side Back) to advance tutorial & navigate home automatically
     if (showTutorial && currentStep.gestureType == GestureType.SIDE_BACK) {
         BackHandler {
             triggerSuccessAndNext()
@@ -208,7 +206,6 @@ fun TutorialOverlay(
                     }
                 }
         ) {
-            // Animated Gesture Visualizer
             GestureAnimationCanvas(
                 gestureType = currentStep.gestureType,
                 handSide = handSide,
@@ -217,7 +214,6 @@ fun TutorialOverlay(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Header Controls: Step Indicator & Skip Button
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -226,7 +222,6 @@ fun TutorialOverlay(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Step Dots
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -244,7 +239,6 @@ fun TutorialOverlay(
                     }
                 }
 
-                // Skip Button
                 TextButton(
                     onClick = {
                         viewModel.completeTutorial()
@@ -262,7 +256,6 @@ fun TutorialOverlay(
                 }
             }
 
-            // Bottom Information Card
             Card(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -300,7 +293,6 @@ fun TutorialOverlay(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Pulsing interactive hint badge
                     Surface(
                         shape = RoundedCornerShape(50),
                         color = accentColor.copy(alpha = if (popupTheme == PopupTheme.LIGHT) 0.12f else 0.2f),
@@ -328,7 +320,6 @@ fun TutorialOverlay(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Next / Finish Controls
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -385,7 +376,7 @@ fun TutorialOverlay(
 }
 
 /**
- * Animated Canvas drawing hand gesture guidance pointers and theme icon previews for the tutorial.
+ * Animated Canvas drawing hand gesture guidance pointers for the tutorial.
  */
 @Composable
 private fun GestureAnimationCanvas(
@@ -413,7 +404,6 @@ private fun GestureAnimationCanvas(
     }
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        // Overlay Canvas for gesture paths, pointers, and rings
         Canvas(modifier = Modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
@@ -556,12 +546,10 @@ private fun GestureAnimationCanvas(
                     val boxHeight = 60.dp.toPx()
                     val boxLeft = centerX - boxWidth / 2f
 
-                    // Animate history block moving from bottom to top
                     val startBoxY = height * 0.62f
                     val endBoxY = height * 0.28f
                     val currentBoxY = startBoxY + (endBoxY - startBoxY) * progress
 
-                    // History container mock
                     drawRoundRect(
                         color = accentColor.copy(alpha = 0.2f),
                         topLeft = Offset(boxLeft, currentBoxY),
@@ -576,7 +564,6 @@ private fun GestureAnimationCanvas(
                         style = Stroke(width = 2.dp.toPx())
                     )
 
-                    // Directional Up Arrow
                     drawLine(
                         color = accentColor.copy(alpha = alpha * 0.6f),
                         start = Offset(centerX, startBoxY + boxHeight / 2f),
@@ -584,7 +571,6 @@ private fun GestureAnimationCanvas(
                         strokeWidth = 4.dp.toPx()
                     )
 
-                    // Touch Indicator
                     drawCircle(
                         color = accentColor.copy(alpha = alpha * 0.3f),
                         radius = 26.dp.toPx(),
@@ -599,7 +585,6 @@ private fun GestureAnimationCanvas(
             }
         }
 
-        // Dedicated UI elements preview for Favorites & History step
         if (gestureType == GestureType.FAVORITES_HISTORY) {
             Row(
                 modifier = Modifier
@@ -607,7 +592,6 @@ private fun GestureAnimationCanvas(
                 horizontalArrangement = Arrangement.spacedBy(24.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Favorites Icon Card
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
                         modifier = Modifier
@@ -634,7 +618,6 @@ private fun GestureAnimationCanvas(
                     )
                 }
 
-                // History Icon Card
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
                         modifier = Modifier
@@ -661,7 +644,6 @@ private fun GestureAnimationCanvas(
                     )
                 }
 
-                // Tag Folder Card (Rounded Rectangle with Tag Icon in Center)
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
                         modifier = Modifier

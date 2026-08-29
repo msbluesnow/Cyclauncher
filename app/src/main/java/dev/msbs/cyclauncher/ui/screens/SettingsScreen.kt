@@ -62,11 +62,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
 /**
- * The settings screen of the launcher, presenting preferences for UI alignment (hand orientation),
- * color theme, adaptive drop shadow toggles, default launcher selection, backup actions, and support links.
- *
- * @param viewModel The view model supplying state data.
- * @param onBack Callback when pressing back or exiting settings.
+ * Main settings screen with preferences for layout, theme, colors, backup, and community links.
  */
 @Composable
 fun SettingsScreen(
@@ -93,7 +89,6 @@ fun SettingsScreen(
     val customCharMappings by viewModel.customCharMappings.collectAsState()
     var currentIsDefault by remember { mutableStateOf(viewModel.isDefaultLauncher()) }
 
-    // Unified Backup export / import (JSON: tags, assignments, custom labels, favorites, app list)
     val exportBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri -> uri?.let { viewModel.exportTagsBackup(it) } }
@@ -190,13 +185,11 @@ fun SettingsScreen(
             border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = 0.12f))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                // Combined Hand Side and Search Method Row
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Left Side: Preferred Hand
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1.1f)
@@ -229,13 +222,11 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Vertical Separator
                     VerticalDivider(
                         modifier = Modifier.height(24.dp).padding(horizontal = 8.dp),
                         color = primaryTextColor.color.copy(alpha = 0.15f)
                     )
 
-                    // Right Side: Search Method
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.End,
@@ -285,13 +276,11 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Hide Status Bar & Animations in a single row
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Hide Status Bar (Fullscreen Mode)
                     Row(
                         modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically,
@@ -328,7 +317,6 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Animations Toggle
                     Row(
                         modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically,
@@ -354,7 +342,6 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Character Mapping (Custom First-Letter / Emoji / Language indexing)
                 SettingsRow(label = "Character Mapping:", textColor = primaryTextColor.color, shadow = shadow) {
                     Row(
                         modifier = Modifier
@@ -393,20 +380,17 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Theme Accent & Adaptive Shadows in a single row
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Theme Accent Selector (50%)
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Theme Accent:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 15.sp))
                         Spacer(modifier = Modifier.height(8.dp))
                         AccentColorDropdown(accentColor, primaryTextColor, popupTheme) { viewModel.setAccentColor(it) }
                     }
 
-                    // Adaptive Shadows (50%)
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Adaptive Shadows:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 15.sp))
                         Spacer(modifier = Modifier.height(8.dp))
@@ -434,13 +418,11 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Main Color, Button Text, and Popup Theme all 3 in a single row
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Main Color Selector
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             "Main Color:",
@@ -453,7 +435,6 @@ fun SettingsScreen(
                         MainColorSelector(primaryTextColor, primaryTextColor) { viewModel.setPrimaryTextColor(it) }
                     }
 
-                    // Button Text Color Selector
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             "Button Text:",
@@ -466,7 +447,6 @@ fun SettingsScreen(
                         MainColorSelector(buttonTextColor, primaryTextColor) { viewModel.setButtonTextColor(it) }
                     }
 
-                    // Popup Theme Selector
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             "Popup Theme:",
@@ -482,7 +462,6 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Unified Backup & AI AutoTags Pills Row (Option 1)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -490,7 +469,6 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Left Pill: Backup & Restore (Centered with Accent Border)
                     Surface(
                         modifier = Modifier
                             .weight(1f)
@@ -557,7 +535,6 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Right Pill: AI AutoTags (Centered with Accent Border)
                     Surface(
                         onClick = { showAutoTagsScreen = true },
                         modifier = Modifier
@@ -602,7 +579,6 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Default Launcher & Relaunch App Row (50/50 split)
                 DefaultLauncherAndRelaunchRow(
                     isDefault = currentIsDefault,
                     accentColor = accentColor,
@@ -626,7 +602,6 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Tutorial Button
                 Button(
                     onClick = {
                         viewModel.startTutorial()
@@ -665,7 +640,6 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
 
-                // Support & Community Section
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -757,7 +731,6 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Keep Android Open Countdown Banner
         KeepAndroidOpenBanner(
             accentColor = accentColor,
             primaryTextColor = primaryTextColor,
@@ -769,7 +742,6 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // App Version Section (outside Card)
         val versionName = remember {
             try {
                 val pm = context.packageManager
@@ -819,9 +791,6 @@ fun SettingsScreen(
     }
 }
 
-/**
- * A layout row presenting a label and a custom configuration content side-by-side.
- */
 @Composable
 private fun SettingsRow(label: String, textColor: Color = Color.White, shadow: Shadow?, content: @Composable () -> Unit) {
     Row(
@@ -925,11 +894,8 @@ private fun CommunityButton(
 }
 
 /**
- * Dropdown selector for picking the theme accent color.
- */
-/**
  * Selector button and dialog for picking the theme accent color.
- * Supports preset pairs, dynamic Material You wallpaper color, and a custom interactive color picker.
+ * Supports preset pairs, dynamic Material You wallpaper color, and custom color picker.
  */
 @Composable
 private fun AccentColorDropdown(
@@ -1002,10 +968,7 @@ private fun AccentColorDropdown(
 }
 
 /**
- * Modern modal dialog allowing the user to select theme accents from:
- * 1. Dynamic Wallpaper color (Material You)
- * 2. Curated Presets (Light & Dark pairs)
- * 3. Custom Color Picker with interactive Hue/Saturation sliders, swatches palette, and HEX input
+ * Modal dialog for selecting theme accent: Material You, curated presets, or interactive color picker.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -1020,7 +983,6 @@ private fun AccentColorDialog(
 
     val wallpaperColor = remember(context) { AccentColor.getWallpaperAccentColor(context) }
 
-    // State for Custom Color Picker
     val initialHsv = remember(selectedColor) {
         val hsv = FloatArray(3)
         android.graphics.Color.colorToHSV(selectedColor.color.toArgb(), hsv)
@@ -1073,7 +1035,6 @@ private fun AccentColorDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Tab Row (Presets & Wallpaper vs Custom Color)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1081,7 +1042,6 @@ private fun AccentColorDialog(
                         .background(popupTheme.contentColor.copy(alpha = 0.08f))
                         .padding(3.dp)
                 ) {
-                    // Tab 0
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -1098,7 +1058,6 @@ private fun AccentColorDialog(
                             color = if (selectedTab == 0) popupTheme.contentColor else popupTheme.secondaryContentColor
                         )
                     }
-                    // Tab 1
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -1118,7 +1077,6 @@ private fun AccentColorDialog(
                 }
 
                 if (selectedTab == 0) {
-                    // Section 1: Dynamic Wallpaper Color (Material You)
                     Text(
                         "Wallpaper Accent (Material You)",
                         fontSize = 13.sp,
@@ -1191,7 +1149,6 @@ private fun AccentColorDialog(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Section 2: Echo Icon Theme Presets Grid
                     Text(
                         "Echo Icon Theme Presets",
                         fontSize = 13.sp,
@@ -1225,7 +1182,6 @@ private fun AccentColorDialog(
                         }
                     }
                 } else {
-                    // Custom Color Tab
                     Text(
                         "Interactive Color Picker",
                         fontSize = 13.sp,
@@ -1233,7 +1189,6 @@ private fun AccentColorDialog(
                         color = popupTheme.secondaryContentColor
                     )
 
-                    // Quick Swatches
                     val quickSwatches = remember {
                         listOf(
                             Color(0xFFF44336), Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF673AB7),
@@ -1275,7 +1230,6 @@ private fun AccentColorDialog(
                         }
                     }
 
-                    // Hue Slider
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1294,7 +1248,6 @@ private fun AccentColorDialog(
                         )
                     }
 
-                    // Saturation Slider
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Saturation (${(currentSat * 100).toInt()}%)", fontSize = 11.sp, color = popupTheme.secondaryContentColor)
                         Slider(
@@ -1314,7 +1267,6 @@ private fun AccentColorDialog(
                         )
                     }
 
-                    // Brightness (Value) Slider
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Brightness (${(currentVal * 100).toInt()}%)", fontSize = 11.sp, color = popupTheme.secondaryContentColor)
                         Slider(
@@ -1334,7 +1286,6 @@ private fun AccentColorDialog(
                         )
                     }
 
-                    // Live Preview & HEX Input
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1399,9 +1350,6 @@ private fun AccentColorDialog(
     )
 }
 
-/**
- * Rainbow gradient Hue slider (0°..360°).
- */
 @Composable
 private fun HueSlider(
     hue: Float,
@@ -1436,9 +1384,6 @@ private fun HueSlider(
     )
 }
 
-/**
- * Preset accent color selection chip.
- */
 @Composable
 private fun PresetColorChip(
     accent: AccentColor,
@@ -1480,7 +1425,7 @@ private fun PresetColorChip(
 }
 
 /**
- * Section block representing default launcher preferences and app relaunch options, split 50/50.
+ * Row presenting default launcher preferences and app relaunch action.
  */
 @Composable
 private fun DefaultLauncherAndRelaunchRow(
@@ -1498,7 +1443,6 @@ private fun DefaultLauncherAndRelaunchRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.Top
     ) {
-        // Left Column: Default Launcher (50% width)
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 "Default Launcher",
@@ -1532,7 +1476,6 @@ private fun DefaultLauncherAndRelaunchRow(
             }
         }
 
-        // Right Column: Relaunch App (50% width)
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 "Relaunch App",
@@ -1566,9 +1509,6 @@ private fun DefaultLauncherAndRelaunchRow(
     }
 }
 
-/**
- * Radio button option representing hand orientation choice (LEFT or RIGHT).
- */
 @Composable
 private fun HandOption(label: String, isSelected: Boolean, accentColor: AccentColor, shadow: Shadow?, onClick: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onClick() }) {
@@ -1577,11 +1517,6 @@ private fun HandOption(label: String, isSelected: Boolean, accentColor: AccentCo
     }
 }
 
-/**
- * Compact icon button representing search method layout choice.
- * Horizontal rectangle (width > height) for Wheel layout.
- * Vertical rectangle (height > width) for Side Alphabet Grid layout.
- */
 @Composable
 private fun SearchMethodIconOption(
     isHorizontal: Boolean,
@@ -1607,7 +1542,6 @@ private fun SearchMethodIconOption(
         contentAlignment = Alignment.Center
     ) {
         if (isHorizontal) {
-            // Horizontal bar inside horizontal rectangle (Wheel icon)
             Box(
                 modifier = Modifier
                     .width(20.dp)
@@ -1616,7 +1550,6 @@ private fun SearchMethodIconOption(
                     .background(if (isSelected) accentColor.color else primaryTextColor.color.copy(alpha = 0.6f))
             )
         } else {
-            // Vertical side bar inside vertical rectangle (Side grid icon)
             Row(
                 modifier = Modifier.fillMaxSize().padding(3.dp),
                 horizontalArrangement = if (handSide == HandSide.RIGHT) Arrangement.End else Arrangement.Start
@@ -1634,7 +1567,7 @@ private fun SearchMethodIconOption(
 }
 
 /**
- * Selector for Primary Text Color (Main Color).
+ * Selector for Primary Text Color (Main Color) using a split black/white capsule design.
  */
 @Composable
 private fun MainColorSelector(
@@ -1670,9 +1603,7 @@ private fun MainColorSelector(
                 .fillMaxWidth(0.85f)
                 .height(16.dp)
         ) {
-            // Background halves
             Row(modifier = Modifier.fillMaxSize()) {
-                // Left half (Black)
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -1680,8 +1611,6 @@ private fun MainColorSelector(
                         .clipToBounds()
                         .drawBehind {
                             val cornerRadius = 3.dp.toPx()
-                            
-                            // Draw background (extends to the right)
                             drawRoundRect(
                                 color = Color.Black,
                                 topLeft = Offset.Zero,
@@ -1690,7 +1619,6 @@ private fun MainColorSelector(
                             )
                         }
                 )
-                // Right half (White)
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -1698,8 +1626,6 @@ private fun MainColorSelector(
                         .clipToBounds()
                         .drawBehind {
                             val cornerRadius = 3.dp.toPx()
-                            
-                            // Draw background (extends to the left)
                             drawRoundRect(
                                 color = Color.White,
                                 topLeft = Offset(-cornerRadius, 0f),
@@ -1710,7 +1636,6 @@ private fun MainColorSelector(
                 )
             }
 
-            // Thumb
             val thumbSize = 6.5.dp
             val startOffset = (maxWidth * 0.25f) - (thumbSize / 2)
             val endOffset = (maxWidth * 0.75f) - (thumbSize / 2)
@@ -1729,8 +1654,7 @@ private fun MainColorSelector(
 }
 
 /**
- * Selector for Popup Background Theme (Dark / Light).
- * Reuses the split black/white capsule badge design matching MainColorSelector.
+ * Selector for Popup Theme (Dark / Light).
  */
 @Composable
 private fun PopupThemeSelector(
@@ -1766,9 +1690,7 @@ private fun PopupThemeSelector(
                 .fillMaxWidth(0.85f)
                 .height(16.dp)
         ) {
-            // Background halves
             Row(modifier = Modifier.fillMaxSize()) {
-                // Left half (Dark / Black)
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -1784,7 +1706,6 @@ private fun PopupThemeSelector(
                             )
                         }
                 )
-                // Right half (Light / White)
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -1802,7 +1723,6 @@ private fun PopupThemeSelector(
                 )
             }
 
-            // Thumb
             val thumbSize = 6.5.dp
             val startOffset = (maxWidth * 0.25f) - (thumbSize / 2)
             val endOffset = (maxWidth * 0.75f) - (thumbSize / 2)

@@ -38,13 +38,12 @@ import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
 /**
- * Calculates remaining days until Google's mandatory developer verification
- * lockdown takes full effect (Target: January 2, 2027 UTC matching keepandroidopen.org).
+ * Calculates remaining days until Google's mandatory developer verification lockdown (Target: Jan 2, 2027 UTC).
  */
 fun calculateKeepAndroidOpenDays(): Long {
     val target = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
         set(Calendar.YEAR, 2027)
-        set(Calendar.MONTH, Calendar.JANUARY) // January
+        set(Calendar.MONTH, Calendar.JANUARY)
         set(Calendar.DAY_OF_MONTH, 2)
         set(Calendar.HOUR_OF_DAY, 0)
         set(Calendar.MINUTE, 0)
@@ -59,7 +58,7 @@ private val WarningRed = Color(0xFFD32F2F)
 private val DarkWarningRed = Color(0xFFB71C1C)
 
 /**
- * A modern, beautiful countdown card for the "Keep Android Open" initiative.
+ * Countdown card for the "Keep Android Open" initiative.
  */
 @Composable
 fun KeepAndroidOpenBanner(
@@ -76,7 +75,6 @@ fun KeepAndroidOpenBanner(
     val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
     val animationsEnabled = LocalAnimationsEnabled.current
 
-    // Subtle pulsing animation for the countdown badge
     val pulseScale = if (animationsEnabled) {
         val infiniteTransition = rememberInfiniteTransition(label = "pulse")
         val scale by infiniteTransition.animateFloat(
@@ -119,7 +117,6 @@ fun KeepAndroidOpenBanner(
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Header Row: Title & Countdown Badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -164,7 +161,6 @@ fun KeepAndroidOpenBanner(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Days Countdown Pill
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
@@ -197,7 +193,6 @@ fun KeepAndroidOpenBanner(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Informational Summary
             Text(
                 text = "Starting in 2027, Google will block every Android app whose developer hasn't registered with Google and submitted government ID.",
                 color = primaryTextColor.color.copy(alpha = 0.85f),
@@ -206,13 +201,11 @@ fun KeepAndroidOpenBanner(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Learn More button
                 Button(
                     onClick = onLearnMoreClick,
                     modifier = Modifier
@@ -238,7 +231,6 @@ fun KeepAndroidOpenBanner(
                     )
                 }
 
-                // Official website / petition button
                 Button(
                     onClick = onWebsiteClick,
                     modifier = Modifier
@@ -269,8 +261,7 @@ fun KeepAndroidOpenBanner(
 }
 
 /**
- * Detailed modal dialog explaining the Keep Android Open movement,
- * developer verification implications, arguments, and alternative solutions.
+ * Detailed modal dialog explaining the Keep Android Open movement.
  */
 @Composable
 fun KeepAndroidOpenDialog(
@@ -299,7 +290,6 @@ fun KeepAndroidOpenDialog(
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Top Icon & Title
                 Box(
                     modifier = Modifier
                         .size(52.dp)
@@ -335,7 +325,6 @@ fun KeepAndroidOpenDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Prominent Countdown Card matching keepandroidopen.org
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -369,7 +358,6 @@ fun KeepAndroidOpenDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Main explanation card
                 Surface(
                     shape = RoundedCornerShape(14.dp),
                     color = popupTheme.backgroundColor,
@@ -395,7 +383,6 @@ fun KeepAndroidOpenDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Key Arguments List
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -425,7 +412,6 @@ fun KeepAndroidOpenDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Alternative systems note
                 Text(
                     text = "Free & de-Googled alternatives: LineageOS, GrapheneOS, /e/OS, CalyxOS.",
                     color = popupTheme.secondaryContentColor,
@@ -435,7 +421,6 @@ fun KeepAndroidOpenDialog(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // Dialog Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
