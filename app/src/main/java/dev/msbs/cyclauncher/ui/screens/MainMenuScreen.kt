@@ -415,19 +415,20 @@ fun MainMenuScreen(
         }
 
         selectedTagForMenu?.let { (tag, taggedApps, offset) ->
+            val currentTag = tags.find { it.id == tag.id } ?: tag
             TagFolderActionMenu(
-                tag = tag,
-                isFavorite = viewModel.isFavorite("tag:${tag.id}"),
+                tag = currentTag,
+                isFavorite = viewModel.isFavorite("tag:${currentTag.id}"),
                 offset = offset,
                 onDismiss = { selectedTagForMenu = null },
                 onEditGroup = {
                     selectedTagForMenu = null
                     isTagPopupEditMode = true
-                    selectedTagForPopup = Triple(tag, taggedApps, offset)
+                    selectedTagForPopup = Triple(currentTag, taggedApps, offset)
                 },
                 onToggleFavorite = {
                     selectedTagForMenu = null
-                    viewModel.toggleFavorite("tag:${tag.id}")
+                    viewModel.toggleFavorite("tag:${currentTag.id}")
                 },
                 accentColor = accentColor,
                 primaryTextColor = primaryTextColor,
@@ -436,15 +437,16 @@ fun MainMenuScreen(
         }
 
         selectedTagForPopup?.let { (tag, _, offset) ->
-            val currentTaggedApps = remember(tags, appTags, apps, tag.id) {
+            val currentTag = tags.find { it.id == tag.id } ?: tag
+            val currentTaggedApps = remember(tags, appTags, apps, currentTag.id) {
                 apps.filter { app ->
                     val tagIds = appTags[app.componentKey] ?: appTags[app.packageName] ?: emptyList()
-                    tagIds.contains(tag.id)
+                    tagIds.contains(currentTag.id)
                 }
             }
 
             TagFolderPopup(
-                tag = tag,
+                tag = currentTag,
                 apps = currentTaggedApps,
                 offset = offset,
                 isEditMode = isTagPopupEditMode,
@@ -1190,6 +1192,7 @@ private fun FavoritesSection(
                         ) {
                             when (item) {
                                 is FavoriteItem.App -> {
+                                    val currentAppItem by rememberUpdatedState(item)
                                     AppIconItem(
                                         app = item.appInfo,
                                         onClick = {
@@ -1197,13 +1200,14 @@ private fun FavoritesSection(
                                             else onAppClick(itemKey)
                                         },
                                         onLongClick = { offset ->
-                                            if (!isReorderMode) onAppLongClick(item.appInfo, offset)
+                                            if (!isReorderMode) onAppLongClick(currentAppItem.appInfo, offset)
                                         }
                                     )
                                 }
 
                                 is FavoriteItem.TagFolder -> {
                                     var folderPosition by remember { mutableStateOf(Offset.Zero) }
+                                    val currentTagItem by rememberUpdatedState(item)
                                     val currentOnTagFolderClick by rememberUpdatedState(onTagFolderClick)
                                     val currentOnTagFolderLongClick by rememberUpdatedState(onTagFolderLongClick)
                                     val currentIsReorderMode by rememberUpdatedState(isReorderMode)
@@ -1219,16 +1223,16 @@ private fun FavoritesSection(
                                                     onTap = {
                                                         if (currentIsReorderMode) currentSetReorderMode(false)
                                                         else currentOnTagFolderClick(
-                                                            item.tag,
-                                                            item.apps,
+                                                            currentTagItem.tag,
+                                                            currentTagItem.apps,
                                                             folderPosition + it
                                                         )
                                                     },
                                                     onLongPress = {
                                                         if (!currentIsReorderMode) {
                                                             currentOnTagFolderLongClick(
-                                                                item.tag,
-                                                                item.apps,
+                                                                currentTagItem.tag,
+                                                                currentTagItem.apps,
                                                                 folderPosition + it
                                                             )
                                                         }

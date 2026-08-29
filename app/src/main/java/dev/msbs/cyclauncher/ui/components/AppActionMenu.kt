@@ -324,6 +324,7 @@ fun TagSelectionDialog(
     onDeleteTag: (String) -> Unit,
     onDismiss: () -> Unit,
     accentColor: AccentColor = AccentColor.SKY,
+    buttonTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     popupTheme: PopupTheme = PopupTheme.DARK
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -407,6 +408,7 @@ fun TagSelectionDialog(
                 showCreateDialog = false
             },
             accentColor = accentColor,
+            buttonTextColor = buttonTextColor,
             popupTheme = popupTheme
         )
     }
@@ -424,6 +426,7 @@ fun TagSelectionDialog(
                 tagToEdit = null
             },
             accentColor = accentColor,
+            buttonTextColor = buttonTextColor,
             popupTheme = popupTheme
         )
     }
@@ -441,6 +444,7 @@ fun TagEditDialog(
     onConfirm: (String, Color) -> Unit,
     onDelete: (() -> Unit)? = null,
     accentColor: AccentColor,
+    buttonTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     popupTheme: PopupTheme = PopupTheme.DARK
 ) {
     val quickSwatches = remember {
@@ -784,19 +788,29 @@ fun TagEditDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = { if (name.isNotBlank()) onConfirm(name.trim(), selectedColor) },
-                enabled = name.isNotBlank()
+                enabled = name.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = accentColor.color,
+                    contentColor = buttonTextColor.color,
+                    disabledContainerColor = accentColor.color.copy(alpha = 0.35f),
+                    disabledContentColor = buttonTextColor.color.copy(alpha = 0.45f)
+                ),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
                     text = if (tag == null) "Create" else "Save",
                     fontWeight = FontWeight.Bold,
-                    color = selectedColor
+                    fontSize = 14.sp
                 )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp)
+            ) {
                 Text("Cancel", color = popupTheme.secondaryContentColor)
             }
         },

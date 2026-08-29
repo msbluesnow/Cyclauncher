@@ -229,6 +229,7 @@ class MainActivity : ComponentActivity() {
                     
                     val handSide by viewModel.handSide.collectAsState()
                     val accentColor by viewModel.accentColor.collectAsState()
+                    val buttonTextColor by viewModel.buttonTextColor.collectAsState()
                     val popupTheme by viewModel.popupTheme.collectAsState()
                     val allTags by viewModel.tags.collectAsState()
                     val appTagsMap by viewModel.appTags.collectAsState()
@@ -367,6 +368,7 @@ class MainActivity : ComponentActivity() {
                                     onDeleteTag = { tagId -> viewModel.deleteTag(tagId) },
                                     onDismiss = { showTagDialogFor = null },
                                     accentColor = accentColor,
+                                    buttonTextColor = buttonTextColor,
                                     popupTheme = popupTheme
                                 )
                             }
@@ -384,6 +386,7 @@ class MainActivity : ComponentActivity() {
                                         tagToEditForDialog = null
                                     },
                                     accentColor = accentColor,
+                                    buttonTextColor = buttonTextColor,
                                     popupTheme = popupTheme
                                 )
                             }

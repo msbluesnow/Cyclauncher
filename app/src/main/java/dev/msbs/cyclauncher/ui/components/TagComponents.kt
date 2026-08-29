@@ -364,6 +364,8 @@ private fun TagFolderAppItem(
     val currentOnClick by rememberUpdatedState(onClick)
     val currentOnLongClick by rememberUpdatedState(onLongClick)
     val currentOnRemoveApp by rememberUpdatedState(onRemoveAppFromTag)
+    val currentIsEditMode by rememberUpdatedState(isEditMode)
+    val currentTagId by rememberUpdatedState(tagId)
     val appKey = "${app.packageName}/${app.activityName}"
 
     Column(
@@ -374,8 +376,8 @@ private fun TagFolderAppItem(
             .pointerInput(appKey) {
                 detectTapGestures(
                     onTap = {
-                        if (isEditMode) {
-                            currentOnRemoveApp(tagId, appKey)
+                        if (currentIsEditMode) {
+                            currentOnRemoveApp(currentTagId, appKey)
                         } else {
                             currentOnClick()
                         }

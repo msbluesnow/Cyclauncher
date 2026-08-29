@@ -51,7 +51,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -81,6 +83,7 @@ fun SettingsScreen(
     val hideStatusBar by viewModel.hideStatusBar.collectAsState()
     val animationsEnabled by viewModel.animationsEnabled.collectAsState()
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
 
     var showDefaultLauncherDialog by remember { mutableStateOf(false) }
     var showAutoTagsScreen by remember { mutableStateOf(false) }
@@ -175,7 +178,7 @@ fun SettingsScreen(
                 color = accentColor.color
             )
         }
-        
+
         Spacer(modifier = Modifier.height(24.dp))
 
         Card(
@@ -274,7 +277,10 @@ fun SettingsScreen(
                     }
                 }
 
-                HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
+                HorizontalDivider(
+                    color = primaryTextColor.color.copy(alpha = 0.08f),
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -293,7 +299,8 @@ fun SettingsScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        val visibilityIcon = if (hideStatusBar) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility
+                        val visibilityIcon =
+                            if (hideStatusBar) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility
                         IconButton(
                             onClick = { viewModel.setHideStatusBar(!hideStatusBar) },
                             modifier = Modifier.size(36.dp)
@@ -340,7 +347,10 @@ fun SettingsScreen(
                     }
                 }
 
-                HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
+                HorizontalDivider(
+                    color = primaryTextColor.color.copy(alpha = 0.08f),
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
 
                 SettingsRow(label = "Character Mapping:", textColor = primaryTextColor.color, shadow = shadow) {
                     Row(
@@ -378,7 +388,10 @@ fun SettingsScreen(
                     }
                 }
 
-                HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
+                HorizontalDivider(
+                    color = primaryTextColor.color.copy(alpha = 0.08f),
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -386,13 +399,21 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Theme Accent:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 15.sp))
+                        Text(
+                            "Theme Accent:",
+                            color = primaryTextColor.color,
+                            style = TextStyle(shadow = shadow, fontSize = 15.sp)
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
                         AccentColorDropdown(accentColor, primaryTextColor, popupTheme) { viewModel.setAccentColor(it) }
                     }
 
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Adaptive Shadows:", color = primaryTextColor.color, style = TextStyle(shadow = shadow, fontSize = 15.sp))
+                        Text(
+                            "Adaptive Shadows:",
+                            color = primaryTextColor.color,
+                            style = TextStyle(shadow = shadow, fontSize = 15.sp)
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(
                             modifier = Modifier
@@ -410,17 +431,23 @@ fun SettingsScreen(
                                 )
                             )
                             Box(modifier = Modifier.weight(1f)) {
-                                MainColorSelector(shadowColorOverride, primaryTextColor) { viewModel.setShadowColor(it) }
+                                MainColorSelector(
+                                    shadowColorOverride,
+                                    primaryTextColor
+                                ) { viewModel.setShadowColor(it) }
                             }
                         }
                     }
                 }
 
-                HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
+                HorizontalDivider(
+                    color = primaryTextColor.color.copy(alpha = 0.08f),
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
@@ -447,6 +474,45 @@ fun SettingsScreen(
                         MainColorSelector(buttonTextColor, primaryTextColor) { viewModel.setButtonTextColor(it) }
                     }
 
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        val isLightAccent = accentColor.color.luminance() > 0.5f
+                        val iconTint = if (isLightAccent) Color.Black else Color.White
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(accentColor.color)
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    val targetBtnText =
+                                        if (isLightAccent) PrimaryTextColor.BLACK else PrimaryTextColor.WHITE
+                                    val targetPopupTheme = if (isLightAccent) PopupTheme.LIGHT else PopupTheme.DARK
+                                    viewModel.setButtonTextColor(targetBtnText)
+                                    viewModel.setPopupTheme(targetPopupTheme)
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (showShadows) {
+                                Icon(
+                                    imageVector = Icons.Outlined.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                                    modifier = Modifier.size(16.dp).offset(1.dp, 1.dp)
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Outlined.AutoAwesome,
+                                contentDescription = "Auto Contrast",
+                                tint = iconTint,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             "Popup Theme:",
@@ -460,7 +526,10 @@ fun SettingsScreen(
                     }
                 }
 
-                HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
+                HorizontalDivider(
+                    color = primaryTextColor.color.copy(alpha = 0.08f),
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
 
                 Row(
                     modifier = Modifier
@@ -499,7 +568,8 @@ fun SettingsScreen(
                                         Icon(
                                             imageVector = Icons.Outlined.Upload,
                                             contentDescription = null,
-                                            tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                                            tint = primaryTextColor.getShadowColor(shadowColorOverride)
+                                                .copy(alpha = 0.25f),
                                             modifier = Modifier.size(22.dp).offset(1.dp, 1.dp)
                                         )
                                     }
@@ -520,7 +590,8 @@ fun SettingsScreen(
                                         Icon(
                                             imageVector = Icons.Outlined.Download,
                                             contentDescription = null,
-                                            tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                                            tint = primaryTextColor.getShadowColor(shadowColorOverride)
+                                                .copy(alpha = 0.25f),
                                             modifier = Modifier.size(22.dp).offset(1.dp, 1.dp)
                                         )
                                     }
@@ -577,7 +648,10 @@ fun SettingsScreen(
                     }
                 }
 
-                HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
+                HorizontalDivider(
+                    color = primaryTextColor.color.copy(alpha = 0.08f),
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
 
                 DefaultLauncherAndRelaunchRow(
                     isDefault = currentIsDefault,
@@ -600,7 +674,10 @@ fun SettingsScreen(
                     }
                 )
 
-                HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
+                HorizontalDivider(
+                    color = primaryTextColor.color.copy(alpha = 0.08f),
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
 
                 Button(
                     onClick = {
@@ -638,7 +715,10 @@ fun SettingsScreen(
                     )
                 }
 
-                HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 12.dp))
+                HorizontalDivider(
+                    color = primaryTextColor.color.copy(alpha = 0.08f),
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
 
                 Column(
                     modifier = Modifier
@@ -778,13 +858,28 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { showDefaultLauncherDialog = false },
             title = { Text("Default Launcher", color = accentColor.color) },
-            text = { Text(if (currentIsDefault) "Cyclauncher is now your default launcher!" else "Cyclauncher is not set as default. Try again?", color = popupTheme.contentColor) },
+            text = {
+                Text(
+                    if (currentIsDefault) "Cyclauncher is now your default launcher!" else "Cyclauncher is not set as default. Try again?",
+                    color = popupTheme.contentColor
+                )
+            },
             confirmButton = {
-                TextButton(onClick = { if (!currentIsDefault) viewModel.openDefaultLauncherSettings(context) else showDefaultLauncherDialog = false }) {
+                TextButton(onClick = {
+                    if (!currentIsDefault) viewModel.openDefaultLauncherSettings(context) else showDefaultLauncherDialog =
+                        false
+                }) {
                     Text(if (currentIsDefault) "Great!" else "Set Default", color = accentColor.color)
                 }
             },
-            dismissButton = { TextButton(onClick = { showDefaultLauncherDialog = false }) { Text("Cancel", color = popupTheme.secondaryContentColor) } },
+            dismissButton = {
+                TextButton(onClick = { showDefaultLauncherDialog = false }) {
+                    Text(
+                        "Cancel",
+                        color = popupTheme.secondaryContentColor
+                    )
+                }
+            },
             containerColor = popupTheme.solidBackgroundColor,
             textContentColor = popupTheme.contentColor
         )
@@ -792,7 +887,12 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsRow(label: String, textColor: Color = Color.White, shadow: Shadow?, content: @Composable () -> Unit) {
+private fun SettingsRow(
+    label: String,
+    textColor: Color = Color.White,
+    shadow: Shadow?,
+    content: @Composable () -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -852,7 +952,11 @@ private fun CommunityButton(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(if (isHighlight) accentColor.color.copy(alpha = 0.2f) else primaryTextColor.color.copy(alpha = 0.08f)),
+                    .background(
+                        if (isHighlight) accentColor.color.copy(alpha = 0.2f) else primaryTextColor.color.copy(
+                            alpha = 0.08f
+                        )
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 if (showShadows) {
@@ -1094,7 +1198,9 @@ private fun AccentColorDialog(
                             )
                             .border(
                                 width = if (selectedColor.isDynamicWallpaper) 1.5.dp else 1.dp,
-                                color = if (selectedColor.isDynamicWallpaper) wallpaperColor else popupTheme.contentColor.copy(alpha = 0.12f),
+                                color = if (selectedColor.isDynamicWallpaper) wallpaperColor else popupTheme.contentColor.copy(
+                                    alpha = 0.12f
+                                ),
                                 shape = RoundedCornerShape(12.dp)
                             )
                             .clickable {
@@ -1213,7 +1319,9 @@ private fun AccentColorDialog(
                                         .background(swatch)
                                         .border(
                                             width = if (customPickedColor == swatch) 2.dp else 1.dp,
-                                            color = if (customPickedColor == swatch) popupTheme.contentColor else Color.Black.copy(alpha = 0.2f),
+                                            color = if (customPickedColor == swatch) popupTheme.contentColor else Color.Black.copy(
+                                                alpha = 0.2f
+                                            ),
                                             shape = CircleShape
                                         )
                                         .clickable {
@@ -1235,7 +1343,11 @@ private fun AccentColorDialog(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Hue (${currentHue.toInt()}°)", fontSize = 11.sp, color = popupTheme.secondaryContentColor)
+                            Text(
+                                "Hue (${currentHue.toInt()}°)",
+                                fontSize = 11.sp,
+                                color = popupTheme.secondaryContentColor
+                            )
                         }
                         HueSlider(
                             hue = currentHue,
@@ -1249,7 +1361,11 @@ private fun AccentColorDialog(
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Saturation (${(currentSat * 100).toInt()}%)", fontSize = 11.sp, color = popupTheme.secondaryContentColor)
+                        Text(
+                            "Saturation (${(currentSat * 100).toInt()}%)",
+                            fontSize = 11.sp,
+                            color = popupTheme.secondaryContentColor
+                        )
                         Slider(
                             value = currentSat,
                             onValueChange = {
@@ -1268,7 +1384,11 @@ private fun AccentColorDialog(
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Brightness (${(currentVal * 100).toInt()}%)", fontSize = 11.sp, color = popupTheme.secondaryContentColor)
+                        Text(
+                            "Brightness (${(currentVal * 100).toInt()}%)",
+                            fontSize = 11.sp,
+                            color = popupTheme.secondaryContentColor
+                        )
                         Slider(
                             value = currentVal,
                             onValueChange = {
@@ -1301,7 +1421,8 @@ private fun AccentColorDialog(
                         OutlinedTextField(
                             value = hexInputText,
                             onValueChange = { input ->
-                                val filtered = input.filter { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }.take(6).uppercase()
+                                val filtered = input.filter { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }.take(6)
+                                    .uppercase()
                                 hexInputText = filtered
                                 if (filtered.length == 6) {
                                     try {
@@ -1312,7 +1433,8 @@ private fun AccentColorDialog(
                                         currentHue = hsv[0]
                                         currentSat = hsv[1]
                                         currentVal = hsv[2]
-                                    } catch (_: Exception) {}
+                                    } catch (_: Exception) {
+                                    }
                                 }
                             },
                             prefix = { Text("#", color = popupTheme.contentColor, fontWeight = FontWeight.Bold) },
@@ -1510,10 +1632,27 @@ private fun DefaultLauncherAndRelaunchRow(
 }
 
 @Composable
-private fun HandOption(label: String, isSelected: Boolean, accentColor: AccentColor, shadow: Shadow?, onClick: () -> Unit) {
+private fun HandOption(
+    label: String,
+    isSelected: Boolean,
+    accentColor: AccentColor,
+    shadow: Shadow?,
+    onClick: () -> Unit
+) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onClick() }) {
-        RadioButton(selected = isSelected, onClick = onClick, colors = RadioButtonDefaults.colors(selectedColor = accentColor.color, unselectedColor = accentColor.color.copy(alpha = 0.3f)))
-        Text(label, color = if (isSelected) accentColor.color else accentColor.color.copy(alpha = 0.4f), style = TextStyle(shadow = shadow))
+        RadioButton(
+            selected = isSelected,
+            onClick = onClick,
+            colors = RadioButtonDefaults.colors(
+                selectedColor = accentColor.color,
+                unselectedColor = accentColor.color.copy(alpha = 0.3f)
+            )
+        )
+        Text(
+            label,
+            color = if (isSelected) accentColor.color else accentColor.color.copy(alpha = 0.4f),
+            style = TextStyle(shadow = shadow)
+        )
     }
 }
 
