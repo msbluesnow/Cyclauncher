@@ -638,12 +638,22 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .height(46.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.School,
-                        contentDescription = null,
-                        tint = buttonTextColor.color,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        if (showShadows) {
+                            Icon(
+                                imageVector = Icons.Outlined.School,
+                                contentDescription = null,
+                                tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                                modifier = Modifier.size(18.dp).offset(1.dp, 1.dp)
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Outlined.School,
+                            contentDescription = null,
+                            tint = buttonTextColor.color,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Tutorial",
@@ -665,12 +675,22 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Favorite,
-                            contentDescription = null,
-                            tint = accentColor.color,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            if (showShadows) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Favorite,
+                                    contentDescription = null,
+                                    tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                                    modifier = Modifier.size(18.dp).offset(1.dp, 1.dp)
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Outlined.Favorite,
+                                contentDescription = null,
+                                tint = accentColor.color,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                         Text(
                             text = "Support & Community",
                             color = primaryTextColor.color,
@@ -695,6 +715,8 @@ fun SettingsScreen(
                             accentColor = accentColor,
                             primaryTextColor = primaryTextColor,
                             shadow = shadow,
+                            showShadows = showShadows,
+                            shadowColorOverride = shadowColorOverride,
                             isHighlight = false,
                             onClick = { viewModel.openGitHubPage() },
                             modifier = Modifier.weight(1f)
@@ -707,6 +729,8 @@ fun SettingsScreen(
                             accentColor = accentColor,
                             primaryTextColor = primaryTextColor,
                             shadow = shadow,
+                            showShadows = showShadows,
+                            shadowColorOverride = shadowColorOverride,
                             isHighlight = false,
                             onClick = { viewModel.openDiscordPage() },
                             modifier = Modifier.weight(1f)
@@ -719,6 +743,8 @@ fun SettingsScreen(
                             accentColor = accentColor,
                             primaryTextColor = primaryTextColor,
                             shadow = shadow,
+                            showShadows = showShadows,
+                            shadowColorOverride = shadowColorOverride,
                             isHighlight = true,
                             onClick = { viewModel.openSupportPage() },
                             modifier = Modifier.weight(1f)
@@ -819,6 +845,8 @@ private fun CommunityButton(
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     shadow: Shadow?,
+    showShadows: Boolean = false,
+    shadowColorOverride: PrimaryTextColor? = null,
     isHighlight: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -858,6 +886,14 @@ private fun CommunityButton(
                     .background(if (isHighlight) accentColor.color.copy(alpha = 0.2f) else primaryTextColor.color.copy(alpha = 0.08f)),
                 contentAlignment = Alignment.Center
             ) {
+                if (showShadows) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                        modifier = Modifier.size(18.dp).offset(1.dp, 1.dp)
+                    )
+                }
                 Icon(
                     imageVector = icon,
                     contentDescription = title,

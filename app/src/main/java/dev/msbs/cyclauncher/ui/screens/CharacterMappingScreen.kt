@@ -267,11 +267,22 @@ fun CharacterMappingScreen(
                                     fontWeight = FontWeight.Bold,
                                     style = TextStyle(shadow = shadow)
                                 )
-                                Icon(
-                                    imageVector = Icons.Outlined.ArrowDropDown,
-                                    contentDescription = "Select target letter",
-                                    tint = primaryTextColor.color.copy(alpha = 0.6f)
-                                )
+                                Box(contentAlignment = Alignment.Center) {
+                                    if (showShadows) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.ArrowDropDown,
+                                            contentDescription = null,
+                                            tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.25f),
+                                            modifier = Modifier.size(24.dp).offset(1.dp, 1.dp)
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Outlined.ArrowDropDown,
+                                        contentDescription = "Select target letter",
+                                        tint = primaryTextColor.color.copy(alpha = 0.6f),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
 
                             DropdownMenu(
@@ -317,12 +328,22 @@ fun CharacterMappingScreen(
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth().height(44.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Add,
-                            contentDescription = null,
-                            tint = accentColor.color,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            if (showShadows) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Add,
+                                    contentDescription = null,
+                                    tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.25f),
+                                    modifier = Modifier.size(18.dp).offset(1.dp, 1.dp)
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Outlined.Add,
+                                contentDescription = null,
+                                tint = accentColor.color,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Add Mapping",
@@ -374,11 +395,21 @@ fun CharacterMappingScreen(
                             border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.5f)),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = accentColor.color)
                         ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Upload,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
+                            Box(contentAlignment = Alignment.Center) {
+                                if (showShadows) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Upload,
+                                        contentDescription = null,
+                                        tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.25f),
+                                        modifier = Modifier.size(16.dp).offset(1.dp, 1.dp)
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.Outlined.Upload,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "Export",
@@ -396,11 +427,21 @@ fun CharacterMappingScreen(
                             border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.5f)),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = accentColor.color)
                         ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Download,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
+                            Box(contentAlignment = Alignment.Center) {
+                                if (showShadows) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Download,
+                                        contentDescription = null,
+                                        tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.25f),
+                                        modifier = Modifier.size(16.dp).offset(1.dp, 1.dp)
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.Outlined.Download,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "Import",
@@ -546,12 +587,22 @@ fun CharacterMappingScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.List,
-                        contentDescription = "Letter Rows",
-                        tint = primaryTextColor.color,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        if (showShadows) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Outlined.List,
+                                contentDescription = null,
+                                tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.25f),
+                                modifier = Modifier.size(20.dp).offset(1.dp, 1.dp)
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.List,
+                            contentDescription = "Letter Rows",
+                            tint = primaryTextColor.color,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                     Text(
                         text = "(${groupedMappings.size} letters, ${customMappings.size} rules)",
                         color = primaryTextColor.color.copy(alpha = 0.75f),
@@ -564,12 +615,22 @@ fun CharacterMappingScreen(
                         onClick = { showResetConfirmDialog = true },
                         modifier = Modifier.size(32.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.RestartAlt,
-                            contentDescription = "Reset All Mappings",
-                            tint = Color.Red.copy(alpha = 0.85f),
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            if (showShadows) {
+                                Icon(
+                                    imageVector = Icons.Outlined.RestartAlt,
+                                    contentDescription = null,
+                                    tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.25f),
+                                    modifier = Modifier.size(20.dp).offset(1.dp, 1.dp)
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Outlined.RestartAlt,
+                                contentDescription = "Reset All Mappings",
+                                tint = Color.Red.copy(alpha = 0.85f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -604,6 +665,8 @@ fun CharacterMappingScreen(
                             accentColor = accentColor,
                             primaryTextColor = primaryTextColor,
                             shadow = shadow,
+                            showShadows = showShadows,
+                            shadowColorOverride = shadowSettings.shadowColorOverride,
                             onRemoveSymbol = { symbol ->
                                 viewModel.removeCharMapping(symbol)
                                 Toast.makeText(context, "Removed '$symbol'", Toast.LENGTH_SHORT).show()
@@ -689,12 +752,22 @@ fun CharacterMappingScreen(
                                                 },
                                                 modifier = Modifier.size(24.dp)
                                             ) {
-                                                Icon(
-                                                    imageVector = Icons.Outlined.Close,
-                                                    contentDescription = "Delete",
-                                                    tint = Color.Red.copy(alpha = 0.8f),
-                                                    modifier = Modifier.size(14.dp)
-                                                )
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    if (showShadows) {
+                                                        Icon(
+                                                            imageVector = Icons.Outlined.Close,
+                                                            contentDescription = null,
+                                                            tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.25f),
+                                                            modifier = Modifier.size(14.dp).offset(1.dp, 1.dp)
+                                                        )
+                                                    }
+                                                    Icon(
+                                                        imageVector = Icons.Outlined.Close,
+                                                        contentDescription = "Delete",
+                                                        tint = Color.Red.copy(alpha = 0.8f),
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -774,6 +847,8 @@ private fun LetterMappingRow(
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     shadow: Shadow?,
+    showShadows: Boolean = false,
+    shadowColorOverride: PrimaryTextColor? = null,
     onRemoveSymbol: (String) -> Unit,
     onAddSymbolClick: () -> Unit,
     onOpenDetails: () -> Unit
@@ -843,12 +918,22 @@ private fun LetterMappingRow(
                         fontWeight = FontWeight.Medium,
                         style = TextStyle(shadow = shadow)
                     )
-                    Icon(
-                        imageVector = Icons.Outlined.Close,
-                        contentDescription = "Remove $symbol",
-                        tint = primaryTextColor.color.copy(alpha = 0.45f),
-                        modifier = Modifier.size(11.dp)
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        if (showShadows) {
+                            Icon(
+                                imageVector = Icons.Outlined.Close,
+                                contentDescription = null,
+                                tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                                modifier = Modifier.size(11.dp).offset(1.dp, 1.dp)
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Outlined.Close,
+                            contentDescription = "Remove $symbol",
+                            tint = primaryTextColor.color.copy(alpha = 0.45f),
+                            modifier = Modifier.size(11.dp)
+                        )
+                    }
                 }
             }
 
@@ -879,12 +964,22 @@ private fun LetterMappingRow(
             onClick = onAddSymbolClick,
             modifier = Modifier.size(30.dp)
         ) {
-            Icon(
-                imageVector = Icons.Outlined.Add,
-                contentDescription = "Add symbol to '$targetChar'",
-                tint = accentColor.color.copy(alpha = 0.8f),
-                modifier = Modifier.size(16.dp)
-            )
+            Box(contentAlignment = Alignment.Center) {
+                if (showShadows) {
+                    Icon(
+                        imageVector = Icons.Outlined.Add,
+                        contentDescription = null,
+                        tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                        modifier = Modifier.size(16.dp).offset(1.dp, 1.dp)
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Outlined.Add,
+                    contentDescription = "Add symbol to '$targetChar'",
+                    tint = accentColor.color.copy(alpha = 0.8f),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
     }
 }
