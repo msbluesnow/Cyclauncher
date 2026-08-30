@@ -1,0 +1,8 @@
+- Added comprehensive theming: full HSV color picker, curated Echo theme presets, and dynamic wallpaper palette matching.
+- Added smart Auto Contrast optimizer in Settings and independent Light/Dark popup themes.
+- Added full support for third-party Icon Packs (Nova, Lawnchair, Apex, ADW, etc.) with real-time icon updates.
+- Added automatic detection of active system icon themes on custom ROMs and AOSP ThemePicker.
+- Redesigned Settings: Character Mapping and Icon Pack are now organized into a 2-column layout with live previews.
+- Enhanced Tags with custom tag colors, refined folder views, and unified JSON backup/restore.
+- Standardized action dialog buttons to modern rounded shapes with solid accent fills.
+- Optimized icon caching, background XML parsing, and overall memory usage.

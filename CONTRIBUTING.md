@@ -99,7 +99,7 @@ app/src/main/java/dev/msbs/cyclauncher/
 ## 🐛 Reporting Issues
 
 When filing a bug report in our [GitHub Issues](https://github.com/msbluesnow/Cyclauncher/issues), please ensure you provide the following to help us resolve it quickly:
-1. **App Version**: Always specify the exact version name or build code of the application you are running (e.g. `v0.8.3-alpha` or `15`). You can find this in the Settings screen or build config.
+1. **App Version**: Always specify the exact version name or build code of the application you are running (e.g. `v0.9.0-alpha` or `16`). You can find this in the Settings screen or build config.
 2. **Detailed Reproducing Steps**: Provide a step-by-step description of what triggers the issue.
 3. **Screen Recording (Highly Recommended)**: We highly prefer that you attach a screen recording/video showing the full process of reproducing the issue from start to finish. Visual context is incredibly helpful for tracing touch coordinates, gestures, and layout states.
 

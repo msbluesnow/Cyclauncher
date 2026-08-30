@@ -30,7 +30,7 @@ Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**,
 > **Alpha Version**: This project is currently in early development. Features are subject to change, and bugs may be encountered as the experience is refined.
 
 > [!TIP]
-> **Get the Latest Build**: Download the latest signed APK (**v0.8.3-alpha**, Build 15) directly from [GitHub Releases](https://github.com/msbluesnow/Cyclauncher/releases/tag/v0.8.3-alpha).
+> **Get the Latest Build**: Download the latest signed APK (**v0.9.0-alpha**, Build 16) directly from [GitHub Releases](https://github.com/msbluesnow/Cyclauncher/releases/tag/v0.9.0-alpha).
 
 ## 📽️ Demo Showcases
 
