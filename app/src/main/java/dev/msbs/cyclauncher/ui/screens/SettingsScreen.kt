@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.Chat
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -474,45 +475,6 @@ fun SettingsScreen(
                         MainColorSelector(buttonTextColor, primaryTextColor) { viewModel.setButtonTextColor(it) }
                     }
 
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Spacer(modifier = Modifier.height(24.dp))
-                        val isLightAccent = accentColor.color.luminance() > 0.5f
-                        val iconTint = if (isLightAccent) Color.Black else Color.White
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(accentColor.color)
-                                .clickable {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    val targetBtnText =
-                                        if (isLightAccent) PrimaryTextColor.BLACK else PrimaryTextColor.WHITE
-                                    val targetPopupTheme = if (isLightAccent) PopupTheme.LIGHT else PopupTheme.DARK
-                                    viewModel.setButtonTextColor(targetBtnText)
-                                    viewModel.setPopupTheme(targetPopupTheme)
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (showShadows) {
-                                Icon(
-                                    imageVector = Icons.Outlined.AutoAwesome,
-                                    contentDescription = null,
-                                    tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
-                                    modifier = Modifier.size(16.dp).offset(1.dp, 1.dp)
-                                )
-                            }
-                            Icon(
-                                imageVector = Icons.Outlined.AutoAwesome,
-                                contentDescription = "Auto Contrast",
-                                tint = iconTint,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             "Popup Theme:",
@@ -523,6 +485,91 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         PopupThemeSelector(popupTheme, primaryTextColor) { viewModel.setPopupTheme(it) }
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        val isLightAccent = accentColor.color.luminance() > 0.5f
+                        val isWpDark by viewModel.isWallpaperDark.collectAsState()
+                        val recommendedMainColor =
+                            if (isWpDark) PrimaryTextColor.WHITE else PrimaryTextColor.BLACK
+                        val recommendedShadowColor =
+                            if (recommendedMainColor == PrimaryTextColor.BLACK) PrimaryTextColor.WHITE else PrimaryTextColor.BLACK
+                        val recommendedBtnText =
+                            if (isLightAccent) PrimaryTextColor.BLACK else PrimaryTextColor.WHITE
+                        val recommendedPopupTheme =
+                            if (recommendedBtnText == PrimaryTextColor.BLACK) PopupTheme.DARK else PopupTheme.LIGHT
+
+                        val isAutoMatched = (primaryTextColor == recommendedMainColor) &&
+                                (shadowColorOverride == recommendedShadowColor) &&
+                                (buttonTextColor == recommendedBtnText) &&
+                                (popupTheme == recommendedPopupTheme)
+
+                        val inactiveBaseColor = if (isWpDark) Color.White else Color.Black
+                        val autoButtonBg by animateColorAsState(
+                            targetValue = if (isAutoMatched) accentColor.color else inactiveBaseColor.copy(alpha = 0.08f),
+                            animationSpec = if (animationsEnabled) spring() else snap(),
+                            label = "autoButtonBg"
+                        )
+                        val autoButtonBorderColor by animateColorAsState(
+                            targetValue = if (isAutoMatched) accentColor.color else inactiveBaseColor.copy(alpha = 0.25f),
+                            animationSpec = if (animationsEnabled) spring() else snap(),
+                            label = "autoButtonBorderColor"
+                        )
+                        val autoIconTint by animateColorAsState(
+                            targetValue = if (isAutoMatched) (if (isLightAccent) Color.Black else Color.White) else inactiveBaseColor,
+                            animationSpec = if (animationsEnabled) spring() else snap(),
+                            label = "autoIconTint"
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(autoButtonBg)
+                                .border(BorderStroke(1.dp, autoButtonBorderColor), CircleShape)
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    val currentWpDark = isWpDark
+                                    val targetMainColor =
+                                        if (currentWpDark) PrimaryTextColor.WHITE else PrimaryTextColor.BLACK
+                                    val targetShadowColor =
+                                        if (targetMainColor == PrimaryTextColor.BLACK) PrimaryTextColor.WHITE else PrimaryTextColor.BLACK
+                                    val targetBtnText =
+                                        if (isLightAccent) PrimaryTextColor.BLACK else PrimaryTextColor.WHITE
+                                    val targetPopupTheme =
+                                        if (targetBtnText == PrimaryTextColor.BLACK) PopupTheme.DARK else PopupTheme.LIGHT
+
+                                    viewModel.setPrimaryTextColor(targetMainColor)
+                                    viewModel.setShadowColor(targetShadowColor)
+                                    viewModel.setButtonTextColor(targetBtnText)
+                                    viewModel.setPopupTheme(targetPopupTheme)
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (showShadows) {
+                                val shadowTint = if (isAutoMatched) {
+                                    primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f)
+                                } else {
+                                    if (isWpDark) Color.Black.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.35f)
+                                }
+                                Icon(
+                                    imageVector = if (isAutoMatched) Icons.Filled.AutoFixHigh else Icons.Outlined.AutoFixHigh,
+                                    contentDescription = null,
+                                    tint = shadowTint,
+                                    modifier = Modifier.size(16.dp).offset(1.dp, 1.dp)
+                                )
+                            }
+                            Icon(
+                                imageVector = if (isAutoMatched) Icons.Filled.AutoFixHigh else Icons.Outlined.AutoFixHigh,
+                                contentDescription = "Auto Action",
+                                tint = autoIconTint,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
 
@@ -1084,8 +1131,8 @@ private fun AccentColorDialog(
 ) {
     val context = LocalContext.current
     var selectedTab by remember { mutableStateOf(if (selectedColor.isCustom) 1 else 0) }
-
-    val wallpaperColor = remember(context) { AccentColor.getWallpaperAccentColor(context) }
+    val isWpDark = AccentColor.isWallpaperDark(context)
+    val wallpaperColor = remember(context, isWpDark, selectedColor) { AccentColor.getWallpaperAccentColor(context) }
 
     val initialHsv = remember(selectedColor) {
         val hsv = FloatArray(3)
@@ -1231,25 +1278,18 @@ private fun AccentColorDialog(
                             }
                             Column {
                                 Text(
-                                    "Dynamic Wallpaper Color",
+                                    "Hue Angle Shift",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = popupTheme.contentColor
                                 )
                                 Text(
-                                    "Matches system wallpaper theme",
+                                    if (isWpDark) "Luminous highlight for dark wallpaper"
+                                    else "Deep dark shade for light wallpaper",
                                     fontSize = 11.sp,
                                     color = popupTheme.secondaryContentColor
                                 )
                             }
-                        }
-                        if (selectedColor.isDynamicWallpaper) {
-                            Icon(
-                                imageVector = Icons.Outlined.Check,
-                                contentDescription = "Selected",
-                                tint = wallpaperColor,
-                                modifier = Modifier.size(20.dp)
-                            )
                         }
                     }
 
@@ -1575,7 +1615,7 @@ private fun DefaultLauncherAndRelaunchRow(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 if (isDefault) "Set as default" else "Not set",
-                color = if (isDefault) Color.Green else Color.Gray,
+                color = if (isDefault) Color.Green else accentColor.color.copy(alpha = 0.69f),
                 fontSize = 12.sp,
                 style = TextStyle(shadow = shadow)
             )
@@ -1608,7 +1648,7 @@ private fun DefaultLauncherAndRelaunchRow(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 "May fix some issues",
-                color = Color.Gray,
+                color = accentColor.color.copy(alpha = 0.69f),
                 fontSize = 12.sp,
                 style = TextStyle(shadow = shadow)
             )
@@ -1645,12 +1685,12 @@ private fun HandOption(
             onClick = onClick,
             colors = RadioButtonDefaults.colors(
                 selectedColor = accentColor.color,
-                unselectedColor = accentColor.color.copy(alpha = 0.3f)
+                unselectedColor = accentColor.color.copy(alpha = 0.69f)
             )
         )
         Text(
             label,
-            color = if (isSelected) accentColor.color else accentColor.color.copy(alpha = 0.4f),
+            color = if (isSelected) accentColor.color else accentColor.color.copy(alpha = 0.69f),
             style = TextStyle(shadow = shadow)
         )
     }

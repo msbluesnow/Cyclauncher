@@ -1,5 +1,6 @@
 package dev.msbs.cyclauncher.ui.theme
 
+import android.app.WallpaperColors
 import android.app.WallpaperManager
 import android.content.Context
 import android.content.res.Configuration
@@ -7,6 +8,7 @@ import android.os.Build
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 
 /**
@@ -99,24 +101,96 @@ data class AccentColor(
         )
 
         /**
-         * Extracts the primary dynamic accent color from current wallpaper / Material You theme.
+         * Applies the Color Hue Angle Shift algorithm:
+         * - On dark wallpapers: shifts toward warm luminous highlights (~55° Gold/Amber) with high brightness for contrast.
+         * - On light wallpapers: shifts toward cool deep shadows (~260° Indigo/Violet) with deep rich shade for contrast.
+         */
+        fun applyAdaptiveHueShift(baseColor: Color, isDarkWallpaper: Boolean): Color {
+            val hsv = FloatArray(3)
+            android.graphics.Color.colorToHSV(baseColor.toArgb(), hsv)
+            val hue = hsv[0]
+            val sat = hsv[1]
+            val value = hsv[2]
+
+            val effectiveHue = if (sat < 0.08f) {
+                if (isDarkWallpaper) 200f else 220f
+            } else hue
+
+            if (isDarkWallpaper) {
+                // Highlight shift toward warm luminous tones (~55° Gold/Amber)
+                val warmAnchor = 55f
+                val diff = (warmAnchor - effectiveHue + 540f) % 360f - 180f
+                val shiftAmount = (diff * 0.28f).coerceIn(-35f, 35f)
+                val shiftedHue = (effectiveHue + shiftAmount + 360f) % 360f
+
+                val brightSat = if (sat < 0.08f) 0.35f else sat.coerceIn(0.40f, 0.85f)
+                val brightVal = (value * 1.30f).coerceIn(0.85f, 1.0f)
+
+                return Color(android.graphics.Color.HSVToColor(floatArrayOf(shiftedHue, brightSat, brightVal)))
+            } else {
+                // Shadow shift toward cool deep tones (~260° Indigo/Violet)
+                val coolAnchor = 260f
+                val diff = (coolAnchor - effectiveHue + 540f) % 360f - 180f
+                val shiftAmount = (diff * 0.28f).coerceIn(-35f, 35f)
+                val shiftedHue = (effectiveHue + shiftAmount + 360f) % 360f
+
+                val richSat = if (sat < 0.08f) 0.40f else (sat * 1.25f).coerceIn(0.50f, 0.95f)
+                val deepVal = (value * 0.65f).coerceIn(0.35f, 0.68f)
+
+                return Color(android.graphics.Color.HSVToColor(floatArrayOf(shiftedHue, richSat, deepVal)))
+            }
+        }
+
+        /**
+         * Extracts the dynamic accent color from current wallpaper / Material You theme
+         * using adaptive Hue Angle Shift (bright tone on dark wallpapers, dark tone on light wallpapers).
          */
         fun getWallpaperAccentColor(context: Context): Color {
-            try {
+            val isWpDark = isWallpaperDark(context)
+            val rawColor = try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    val isDark = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-                    val scheme = if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-                    return scheme.primary
+                    val scheme = if (isWpDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+                    scheme.primary
                 } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
                     val wpManager = context.getSystemService(Context.WALLPAPER_SERVICE) as? WallpaperManager
                     val colors = wpManager?.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
                     val primary = colors?.primaryColor
                     if (primary != null) {
-                        return Color(primary.toArgb())
+                        Color(primary.toArgb())
+                    } else {
+                        Color(0xFF19AEFF)
+                    }
+                } else {
+                    Color(0xFF19AEFF)
+                }
+            } catch (_: Exception) {
+                Color(0xFF19AEFF)
+            }
+            return applyAdaptiveHueShift(rawColor, isWpDark)
+        }
+
+        /**
+         * Determines if the current wallpaper is dark.
+         */
+        fun isWallpaperDark(context: Context): Boolean {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                    val wpManager = context.getSystemService(Context.WALLPAPER_SERVICE) as? WallpaperManager
+                    val colors = wpManager?.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
+                    if (colors != null) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            val supportsDarkText = (colors.colorHints and WallpaperColors.HINT_SUPPORTS_DARK_TEXT) != 0
+                            return !supportsDarkText
+                        }
+                        val primary = colors.primaryColor
+                        return Color(primary.toArgb()).luminance() < 0.5f
                     }
                 }
-            } catch (_: Exception) {}
-            return Color(0xFF19AEFF)
+                val isNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+                return isNight
+            } catch (_: Exception) {
+                return true
+            }
         }
 
         /**
@@ -126,7 +200,7 @@ data class AccentColor(
             val dynamicColor = getWallpaperAccentColor(context)
             return AccentColor(
                 name = "WALLPAPER",
-                displayName = "Wallpaper Color",
+                displayName = "Hue Angle Shift",
                 color = dynamicColor,
                 glowColor = dynamicColor.copy(alpha = 0.2f),
                 isDynamicWallpaper = true
@@ -170,7 +244,7 @@ data class AccentColor(
             if (name == "WALLPAPER") {
                 return if (context != null) wallpaper(context) else AccentColor(
                     name = "WALLPAPER",
-                    displayName = "Wallpaper Color",
+                    displayName = "Hue Angle Shift",
                     color = Color(0xFF19AEFF),
                     glowColor = Color(0x3319AEFF),
                     isDynamicWallpaper = true

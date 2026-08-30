@@ -77,6 +77,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _animationsEnabled = MutableStateFlow(true)
     val animationsEnabled: StateFlow<Boolean> = _animationsEnabled
 
+    private val _isWallpaperDark = MutableStateFlow(AccentColor.isWallpaperDark(safeContext))
+    val isWallpaperDark: StateFlow<Boolean> = _isWallpaperDark
+
     private val _searchMethod = MutableStateFlow(SearchMethod.SIDE_ALPHABET)
     val searchMethod: StateFlow<SearchMethod> = _searchMethod
 
@@ -327,6 +330,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun refreshDynamicWallpaperColor(context: Context) {
+        val currentDark = AccentColor.isWallpaperDark(context)
+        if (_isWallpaperDark.value != currentDark) {
+            _isWallpaperDark.value = currentDark
+        }
         if (_accentColor.value.isDynamicWallpaper) {
             val updated = AccentColor.wallpaper(context)
             if (_accentColor.value.color != updated.color) {
