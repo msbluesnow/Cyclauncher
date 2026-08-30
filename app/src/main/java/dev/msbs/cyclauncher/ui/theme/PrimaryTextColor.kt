@@ -64,3 +64,6 @@ val LocalShadowSettings = compositionLocalOf { ShadowSettings() }
 
 /** Global setting for launcher animations (enabled/disabled), provided via CompositionLocal. */
 val LocalAnimationsEnabled = compositionLocalOf { true }
+
+/** Global version tracker for active icon pack changes, provided via CompositionLocal. */
+val LocalIconPackVersion = compositionLocalOf { 0L }

@@ -7,6 +7,8 @@ import dev.msbs.cyclauncher.data.TagsBackupPreview
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.model.FavoriteItem
 import dev.msbs.cyclauncher.model.Tag
+import dev.msbs.cyclauncher.icons.IconPackInfo
+import dev.msbs.cyclauncher.icons.IconPackManager
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
@@ -99,6 +101,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private val _autoTagsPreview = MutableStateFlow<AutoTagsPreview?>(null)
     val autoTagsPreview: StateFlow<AutoTagsPreview?> = _autoTagsPreview
+
+    private val _selectedIconPack = MutableStateFlow<String?>(null)
+    val selectedIconPack: StateFlow<String?> = _selectedIconPack
+
+    private val _installedIconPacks = MutableStateFlow<List<IconPackInfo>>(emptyList())
+    val installedIconPacks: StateFlow<List<IconPackInfo>> = _installedIconPacks
+
+    private val _iconPackVersion = MutableStateFlow(0L)
+    val iconPackVersion: StateFlow<Long> = _iconPackVersion
 
     private val _resetRequest = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val resetRequest = _resetRequest.asSharedFlow()
@@ -236,6 +247,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             _tutorialStep.value = 0
         }
 
+        val savedIconPack = prefs.getString("icon_pack_package", null)?.takeIf { it.isNotBlank() }
+        _selectedIconPack.value = savedIconPack
+        viewModelScope.launch {
+            _installedIconPacks.value = IconPackManager.getInstalledIconPacks(safeContext)
+            if (savedIconPack != null) {
+                IconPackManager.loadIconPack(safeContext, savedIconPack)
+                _iconPackVersion.value = System.currentTimeMillis()
+            }
+        }
+
         loadInstalledApps()
         _searchListAlignment.value = if (_handSide.value == HandSide.LEFT) TextAlign.End else TextAlign.Start
     }
@@ -370,6 +391,37 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _shadowColor.value = color
         val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putString("shadow_color", color.name).apply()
+    }
+
+    fun setIconPack(packageName: String?) {
+        val newPackage = packageName?.takeIf { it.isNotBlank() }
+        if (_selectedIconPack.value == newPackage) return
+        _selectedIconPack.value = newPackage
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
+        if (newPackage != null) {
+            prefs.edit().putString("icon_pack_package", newPackage).apply()
+        } else {
+            prefs.edit().remove("icon_pack_package").apply()
+        }
+        viewModelScope.launch {
+            IconPackManager.loadIconPack(safeContext, newPackage)
+            try {
+                val imageLoader = coil3.SingletonImageLoader.get(getApplication())
+                imageLoader.memoryCache?.clear()
+            } catch (_: Exception) {}
+            _iconPackVersion.value = System.currentTimeMillis()
+        }
+    }
+
+    fun reloadInstalledIconPacks() {
+        viewModelScope.launch {
+            val packs = IconPackManager.getInstalledIconPacks(safeContext)
+            _installedIconPacks.value = packs
+            val active = _selectedIconPack.value
+            if (active != null && packs.none { it.packageName == active }) {
+                setIconPack(null)
+            }
+        }
     }
 
     fun logAppLaunch(componentKey: String) {
@@ -795,11 +847,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun onPackageRemoved(packageName: String) {
         invalidateIconCache(packageName)
         actionsManager.onPackageRemoved(packageName)
+        reloadInstalledIconPacks()
         refreshApps()
     }
 
     fun onPackageAddedOrUpdated(packageName: String) {
         invalidateIconCache(packageName)
+        reloadInstalledIconPacks()
         viewModelScope.launch(Dispatchers.IO) {
             val pm = getApplication<Application>().packageManager
             val launchIntent = pm.getLaunchIntentForPackage(packageName)

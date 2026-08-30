@@ -6,6 +6,8 @@ import dev.msbs.cyclauncher.SearchMethod
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
+import dev.msbs.cyclauncher.icons.IconPackInfo
+import dev.msbs.cyclauncher.icons.IconPackManager
 import dev.msbs.cyclauncher.ui.components.KeepAndroidOpenBanner
 import dev.msbs.cyclauncher.ui.components.KeepAndroidOpenDialog
 
@@ -47,7 +49,9 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
@@ -89,6 +93,7 @@ fun SettingsScreen(
     var showDefaultLauncherDialog by remember { mutableStateOf(false) }
     var showAutoTagsScreen by remember { mutableStateOf(false) }
     var showCharacterMappingScreen by remember { mutableStateOf(false) }
+    var showIconPackDialog by remember { mutableStateOf(false) }
     var showKeepAndroidOpenDialog by remember { mutableStateOf(false) }
     val customCharMappings by viewModel.customCharMappings.collectAsState()
     var currentIsDefault by remember { mutableStateOf(viewModel.isDefaultLauncher()) }
@@ -353,38 +358,138 @@ fun SettingsScreen(
                     modifier = Modifier.padding(vertical = 12.dp)
                 )
 
-                SettingsRow(label = "Character Mapping:", textColor = primaryTextColor.color, shadow = shadow) {
-                    Row(
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left column: Character Mapping
+                    val charMappingSummary = remember(customCharMappings) {
+                        getCharMappingSummary(customCharMappings)
+                    }
+
+                    Column(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(primaryTextColor.color.copy(alpha = 0.1f))
-                            .clickable { showCharacterMappingScreen = true }
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            .weight(1f)
+                            .padding(end = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = if (customCharMappings.isEmpty()) "Default" else "${customCharMappings.size} active",
-                            color = accentColor.color,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            style = TextStyle(shadow = shadow)
+                            "Char Mapping:",
+                            color = primaryTextColor.color,
+                            style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                        Box(contentAlignment = Alignment.Center) {
-                            if (showShadows) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(primaryTextColor.color.copy(alpha = 0.1f))
+                                .clickable { showCharacterMappingScreen = true }
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = charMappingSummary,
+                                color = accentColor.color,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = TextStyle(shadow = shadow),
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                            Box(contentAlignment = Alignment.Center) {
+                                if (showShadows) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Tune,
+                                        contentDescription = null,
+                                        tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                                        modifier = Modifier.size(16.dp).offset(1.dp, 1.dp)
+                                    )
+                                }
                                 Icon(
                                     imageVector = Icons.Outlined.Tune,
-                                    contentDescription = null,
-                                    tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
-                                    modifier = Modifier.size(18.dp).offset(1.dp, 1.dp)
+                                    contentDescription = "Configure character mappings",
+                                    tint = accentColor.color,
+                                    modifier = Modifier.size(16.dp)
                                 )
                             }
-                            Icon(
-                                imageVector = Icons.Outlined.Tune,
-                                contentDescription = "Configure character mappings",
-                                tint = accentColor.color,
-                                modifier = Modifier.size(18.dp)
-                            )
+                        }
+                    }
+
+                    // Vertical Separator
+                    Box(
+                        modifier = Modifier
+                            .height(48.dp)
+                            .width(1.dp)
+                            .background(primaryTextColor.color.copy(alpha = 0.15f))
+                    )
+
+                    // Right column: Icon Pack
+                    val selectedIconPack by viewModel.selectedIconPack.collectAsState()
+                    val installedIconPacks by viewModel.installedIconPacks.collectAsState()
+                    val activePack = remember(selectedIconPack, installedIconPacks) {
+                        if (selectedIconPack != null) {
+                            installedIconPacks.find { it.packageName == selectedIconPack }
+                        } else {
+                            val sysPkg = IconPackManager.getSystemIconPackPackage(context)
+                            if (sysPkg != null) installedIconPacks.find { it.packageName == sysPkg } else null
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            "Icon Pack:",
+                            color = primaryTextColor.color,
+                            style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(primaryTextColor.color.copy(alpha = 0.1f))
+                                .clickable {
+                                    viewModel.reloadInstalledIconPacks()
+                                    showIconPackDialog = true
+                                }
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            if (activePack?.icon != null) {
+                                DrawableIcon(
+                                    drawable = activePack.icon,
+                                    modifier = Modifier.size(20.dp).clip(CircleShape)
+                                )
+                            } else {
+                                Box(contentAlignment = Alignment.Center) {
+                                    if (showShadows) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Apps,
+                                            contentDescription = null,
+                                            tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                                            modifier = Modifier.size(20.dp).offset(1.dp, 1.dp)
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Outlined.Apps,
+                                        contentDescription = "Select Icon Pack",
+                                        tint = accentColor.color,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -898,6 +1003,20 @@ fun SettingsScreen(
             accentColor = accentColor,
             onDismiss = { showKeepAndroidOpenDialog = false },
             onOpenWebsite = { viewModel.openKeepAndroidOpenPage() }
+        )
+    }
+
+    if (showIconPackDialog) {
+        val selectedIconPack by viewModel.selectedIconPack.collectAsState()
+        val installedIconPacks by viewModel.installedIconPacks.collectAsState()
+        IconPackSelectionDialog(
+            installedIconPacks = installedIconPacks,
+            selectedPackageName = selectedIconPack,
+            accentColor = accentColor,
+            buttonTextColor = buttonTextColor,
+            popupTheme = popupTheme,
+            onSelect = { viewModel.setIconPack(it) },
+            onDismiss = { showIconPackDialog = false }
         )
     }
 
@@ -1918,3 +2037,237 @@ private fun PopupThemeSelector(
         }
     }
 }
+
+/**
+ * Dialog prompting user to choose from installed icon packs or system default.
+ */
+@Composable
+private fun IconPackSelectionDialog(
+    installedIconPacks: List<IconPackInfo>,
+    selectedPackageName: String?,
+    accentColor: AccentColor,
+    buttonTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    popupTheme: PopupTheme = PopupTheme.DARK,
+    onSelect: (String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                "Icon Pack",
+                color = accentColor.color,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // Option 1: Default (System)
+                val isDefaultSelected = selectedPackageName == null
+                val context = LocalContext.current
+                val systemPackPkg = remember { IconPackManager.getSystemIconPackPackage(context) }
+                val systemPackName = remember(systemPackPkg, installedIconPacks) {
+                    if (systemPackPkg != null) {
+                        installedIconPacks.find { it.packageName == systemPackPkg }?.name ?: systemPackPkg
+                    } else null
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isDefaultSelected) accentColor.color.copy(alpha = 0.15f) else Color.Transparent)
+                        .clickable {
+                            onSelect(null)
+                            onDismiss()
+                        }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(accentColor.color.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Apps,
+                                contentDescription = null,
+                                tint = accentColor.color,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                "System Default",
+                                color = popupTheme.contentColor,
+                                fontWeight = if (isDefaultSelected) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 15.sp
+                            )
+                            Text(
+                                text = if (systemPackName != null) "Auto: $systemPackName (ROM theme)" else "Original application icons",
+                                color = popupTheme.secondaryContentColor,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                    if (isDefaultSelected) {
+                        Icon(
+                            imageVector = Icons.Outlined.Check,
+                            contentDescription = null,
+                            tint = accentColor.color,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                if (installedIconPacks.isNotEmpty()) {
+                    HorizontalDivider(
+                        color = popupTheme.contentColor.copy(alpha = 0.1f),
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                } else {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "No third-party icon packs found installed on your device.",
+                        color = popupTheme.secondaryContentColor,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+                    )
+                }
+
+                // Options 2..N: Installed Icon Packs
+                for (pack in installedIconPacks) {
+                    val isSelected = selectedPackageName == pack.packageName
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isSelected) accentColor.color.copy(alpha = 0.15f) else Color.Transparent)
+                            .clickable {
+                                onSelect(pack.packageName)
+                                onDismiss()
+                            }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                DrawableIcon(drawable = pack.icon, modifier = Modifier.size(36.dp))
+                            }
+                            Column {
+                                Text(
+                                    text = pack.name,
+                                    color = popupTheme.contentColor,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    fontSize = 15.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = pack.packageName,
+                                    color = popupTheme.secondaryContentColor,
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Outlined.Check,
+                                contentDescription = null,
+                                tint = accentColor.color,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Close", color = popupTheme.secondaryContentColor)
+            }
+        },
+        containerColor = popupTheme.solidBackgroundColor,
+        textContentColor = popupTheme.contentColor,
+        shape = RoundedCornerShape(20.dp)
+    )
+}
+
+@Composable
+private fun DrawableIcon(drawable: android.graphics.drawable.Drawable?, modifier: Modifier = Modifier) {
+    if (drawable == null) return
+    val imageBitmap: ImageBitmap = remember(drawable) {
+        val w = drawable.intrinsicWidth.takeIf { it > 0 } ?: 96
+        val h = drawable.intrinsicHeight.takeIf { it > 0 } ?: 96
+        val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bmp)
+        drawable.setBounds(0, 0, w, h)
+        drawable.draw(canvas)
+        bmp.asImageBitmap()
+    }
+    androidx.compose.foundation.Image(
+        bitmap = imageBitmap,
+        contentDescription = null,
+        modifier = modifier
+    )
+}
+
+/**
+ * Computes a human-readable summary of the currently active custom character mappings.
+ */
+private fun getCharMappingSummary(mappings: Map<String, Char>): String {
+    if (mappings.isEmpty()) return "Default"
+
+    val activeCategories = mutableListOf<String>()
+    val keys = mappings.keys
+
+    val hasCyrillic = keys.any { it.any { c -> c in 'А'..'я' || c in "ЁёҐґЄєІіЇїЎў" } }
+    val hasEmoji = keys.any { it.any { c -> Character.getType(c) == Character.SURROGATE.toInt() || Character.getType(c) == Character.OTHER_SYMBOL.toInt() || c in "🤗🎮🎵📷💬⚙️🌐🛒📅📁❤️⭐" } }
+    val hasUmlauts = keys.any { it.any { c -> c in "ÄäÖöÜüßÅåÆæØø" } }
+    val hasArabic = keys.any { it.any { c -> c in '\u0600'..'\u06FF' } }
+    val hasRomance = keys.any { it.any { c -> c in "ÀàÂâÉéÈèÊêËëÎîÏïÔôÇçÑñÙù" } }
+
+    if (hasCyrillic) activeCategories.add("Cyrillic")
+    if (hasEmoji) activeCategories.add("Emoji")
+    if (hasUmlauts) activeCategories.add("German")
+    if (hasArabic) activeCategories.add("Arabic")
+    if (hasRomance) activeCategories.add("Romance")
+
+    return when {
+        activeCategories.size == 1 -> activeCategories[0]
+        activeCategories.size == 2 -> "${activeCategories[0]}, ${activeCategories[1]}"
+        activeCategories.size > 2 -> "${activeCategories[0]} +${activeCategories.size - 1}"
+        else -> "${mappings.size} active"
+    }
+}
+
+

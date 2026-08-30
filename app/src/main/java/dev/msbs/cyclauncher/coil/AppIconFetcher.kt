@@ -18,6 +18,8 @@ import coil3.toUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+import dev.msbs.cyclauncher.icons.IconPackManager
+
 /** Key representing an application icon in "packageName/activityName" format. */
 data class AppIconKey(val componentKey: String)
 
@@ -38,7 +40,13 @@ internal class AppIconFetcher private constructor(
         if (parts.size != 2) return@withContext null
         val (pkg, activity) = parts
 
-        val drawable: Drawable = try {
+        val iconPackDrawable: Drawable? = try {
+            IconPackManager.getIcon(key.componentKey)
+        } catch (_: Exception) {
+            null
+        }
+
+        val drawable: Drawable = iconPackDrawable ?: try {
             resolveIcon(pm, pkg, activity)
         } catch (_: Exception) {
             try {

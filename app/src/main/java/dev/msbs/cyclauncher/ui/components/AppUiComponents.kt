@@ -5,6 +5,7 @@ import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
+import dev.msbs.cyclauncher.ui.theme.LocalIconPackVersion
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -84,8 +85,9 @@ fun AutoResizingText(
 fun rememberAppIconPainter(iconKey: String, sizeDp: Int = 48): Painter {
     val context = LocalContext.current
     val density = androidx.compose.ui.platform.LocalDensity.current
+    val iconPackVersion = LocalIconPackVersion.current
     return rememberAsyncImagePainter(
-        model = remember(iconKey, sizeDp, density) {
+        model = remember(iconKey, sizeDp, density, iconPackVersion) {
             val px = with(density) { sizeDp.dp.roundToPx() }.coerceAtLeast(1)
             ImageRequest.Builder(context)
                 .data(dev.msbs.cyclauncher.coil.AppIconKey(iconKey))

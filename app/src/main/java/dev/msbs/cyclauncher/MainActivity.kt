@@ -6,6 +6,7 @@ import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
+import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.components.AppActionMenu
 import dev.msbs.cyclauncher.ui.components.RenameDialog
 import dev.msbs.cyclauncher.ui.components.TagEditDialog
@@ -40,7 +41,10 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -158,10 +162,12 @@ class MainActivity : ComponentActivity() {
                 val animationsEnabled by viewModel.animationsEnabled.collectAsState()
                 val showShadows by viewModel.showShadows.collectAsState()
                 val shadowColorOverride by viewModel.shadowColor.collectAsState()
+                val iconPackVersion by viewModel.iconPackVersion.collectAsState()
 
                 CompositionLocalProvider(
                     dev.msbs.cyclauncher.ui.theme.LocalShadowSettings provides dev.msbs.cyclauncher.ui.theme.ShadowSettings(showShadows, shadowColorOverride),
-                    dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled provides animationsEnabled
+                    dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled provides animationsEnabled,
+                    dev.msbs.cyclauncher.ui.theme.LocalIconPackVersion provides iconPackVersion
                 ) {
                     LaunchedEffect(hideStatusBar) {
                         updateStatusBarVisibility(hideStatusBar)
@@ -347,6 +353,7 @@ class MainActivity : ComponentActivity() {
                                 RenameDialog(
                                     initialValue = app.label,
                                     accentColor = accentColor,
+                                    buttonTextColor = buttonTextColor,
                                     popupTheme = popupTheme,
                                     onDismiss = { showRenameDialogFor = null },
                                     onConfirm = { newName ->
@@ -395,6 +402,7 @@ class MainActivity : ComponentActivity() {
                                 AutoTagsConfirmDialog(
                                     preview = preview,
                                     accentColor = accentColor,
+                                    buttonTextColor = buttonTextColor,
                                     popupTheme = popupTheme,
                                     onConfirm = { viewModel.applyAutoTags() },
                                     onDismiss = { viewModel.dismissAutoTagsPreview() }
@@ -405,6 +413,7 @@ class MainActivity : ComponentActivity() {
                                 TagsBackupConfirmDialog(
                                     preview = preview,
                                     accentColor = accentColor,
+                                    buttonTextColor = buttonTextColor,
                                     popupTheme = popupTheme,
                                     onConfirm = { viewModel.applyTagsBackup() },
                                     onDismiss = { viewModel.dismissTagsBackupPreview() }
@@ -582,6 +591,7 @@ private fun CyclauncherTheme(content: @Composable () -> Unit) {
 private fun AutoTagsConfirmDialog(
     preview: AutoTagsPreview,
     accentColor: AccentColor,
+    buttonTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     popupTheme: PopupTheme = PopupTheme.DARK,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
@@ -633,17 +643,28 @@ private fun AutoTagsConfirmDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text("Apply", color = accentColor.color, fontWeight = FontWeight.Bold)
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = accentColor.color,
+                    contentColor = buttonTextColor.color
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Apply", color = buttonTextColor.color, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp)
+            ) {
                 Text("Cancel", color = popupTheme.secondaryContentColor)
             }
         },
         containerColor = popupTheme.solidBackgroundColor,
-        textContentColor = popupTheme.contentColor
+        textContentColor = popupTheme.contentColor,
+        shape = RoundedCornerShape(20.dp)
     )
 }
 
@@ -651,6 +672,7 @@ private fun AutoTagsConfirmDialog(
 private fun TagsBackupConfirmDialog(
     preview: TagsBackupPreview,
     accentColor: AccentColor,
+    buttonTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     popupTheme: PopupTheme = PopupTheme.DARK,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
@@ -718,16 +740,27 @@ private fun TagsBackupConfirmDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text("Import", color = accentColor.color, fontWeight = FontWeight.Bold)
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = accentColor.color,
+                    contentColor = buttonTextColor.color
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Import", color = buttonTextColor.color, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp)
+            ) {
                 Text("Cancel", color = popupTheme.secondaryContentColor)
             }
         },
         containerColor = popupTheme.solidBackgroundColor,
-        textContentColor = popupTheme.contentColor
+        textContentColor = popupTheme.contentColor,
+        shape = RoundedCornerShape(20.dp)
     )
 }

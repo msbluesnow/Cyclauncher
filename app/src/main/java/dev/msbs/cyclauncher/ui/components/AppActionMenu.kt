@@ -382,17 +382,38 @@ fun TagSelectionDialog(
         },
         confirmButton = {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = { showCreateDialog = true }) {
-                    Icon(Icons.Outlined.Add, null, modifier = Modifier.size(18.dp), tint = accentColor.color)
+                Button(
+                    onClick = { showCreateDialog = true },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = accentColor.color,
+                        contentColor = buttonTextColor.color
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = buttonTextColor.color
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("New Tag", color = accentColor.color)
+                    Text("New Tag", fontWeight = FontWeight.Bold, color = buttonTextColor.color, fontSize = 14.sp)
                 }
-                TextButton(onClick = onDismiss) {
-                    Text("Done", fontWeight = FontWeight.Bold, color = accentColor.color)
+                Button(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = accentColor.color,
+                        contentColor = buttonTextColor.color
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Done", fontWeight = FontWeight.Bold, color = buttonTextColor.color, fontSize = 14.sp)
                 }
             }
         },
@@ -863,6 +884,7 @@ fun RenameDialog(
     accentColor: AccentColor,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
+    buttonTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     popupTheme: PopupTheme = PopupTheme.DARK
 ) {
     var text by remember { mutableStateOf(initialValue) }
@@ -888,16 +910,30 @@ fun RenameDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(text) }) {
-                Text("Rename", color = accentColor.color, fontWeight = FontWeight.Bold)
+            Button(
+                onClick = { if (text.isNotBlank()) onConfirm(text.trim()) },
+                enabled = text.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = accentColor.color,
+                    contentColor = buttonTextColor.color,
+                    disabledContainerColor = accentColor.color.copy(alpha = 0.35f),
+                    disabledContentColor = buttonTextColor.color.copy(alpha = 0.45f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Rename", color = buttonTextColor.color, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp)
+            ) {
                 Text("Cancel", color = popupTheme.secondaryContentColor)
             }
         },
         containerColor = popupTheme.solidBackgroundColor,
-        textContentColor = popupTheme.contentColor
+        textContentColor = popupTheme.contentColor,
+        shape = RoundedCornerShape(20.dp)
     )
 }

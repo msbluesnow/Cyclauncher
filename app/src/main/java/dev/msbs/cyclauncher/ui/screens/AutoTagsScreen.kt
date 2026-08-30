@@ -287,6 +287,7 @@ fun AutoTagsScreen(
     if (showExportFormatDialog) {
         ExportFormatDialog(
             accentColor = accentColor,
+            buttonTextColor = buttonTextColor,
             primaryTextColor = primaryTextColor,
             popupTheme = popupTheme,
             onDismiss = { showExportFormatDialog = false },
@@ -309,6 +310,7 @@ private enum class ExportFormat { JSON, TXT }
 @Composable
 private fun ExportFormatDialog(
     accentColor: AccentColor,
+    buttonTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     popupTheme: PopupTheme = PopupTheme.DARK,
     onDismiss: () -> Unit,
@@ -331,11 +333,14 @@ private fun ExportFormatDialog(
                 ) {
                     Button(
                         onClick = { onSelect(ExportFormat.JSON) },
-                        colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = accentColor.color,
+                            contentColor = buttonTextColor.color
+                        ),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f).height(48.dp)
                     ) {
-                        Text("JSON", color = Color.Black, fontWeight = FontWeight.Bold)
+                        Text("JSON", color = buttonTextColor.color, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                     Button(
                         onClick = { onSelect(ExportFormat.TXT) },
@@ -343,7 +348,7 @@ private fun ExportFormatDialog(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f).height(48.dp)
                     ) {
-                        Text("TXT", color = accentColor.color, fontWeight = FontWeight.Bold)
+                        Text("TXT", color = accentColor.color, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -355,9 +360,17 @@ private fun ExportFormatDialog(
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = popupTheme.secondaryContentColor) } },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Cancel", color = popupTheme.secondaryContentColor)
+            }
+        },
         containerColor = popupTheme.solidBackgroundColor,
-        textContentColor = popupTheme.contentColor
+        textContentColor = popupTheme.contentColor,
+        shape = RoundedCornerShape(20.dp)
     )
 }
 

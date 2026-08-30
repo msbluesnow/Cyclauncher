@@ -205,7 +205,7 @@ fun CharacterMappingScreen(
                             placeholder = {
                                 Text(
                                     text = "e.g. 🤗, ب, Ö",
-                                    color = primaryTextColor.color.copy(alpha = 0.35f),
+                                    color = accentColor.color.copy(alpha = 0.69f),
                                     fontSize = 14.sp,
                                     style = TextStyle(shadow = shadow)
                                 )
