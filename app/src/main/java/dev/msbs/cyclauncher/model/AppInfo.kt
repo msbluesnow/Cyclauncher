@@ -10,7 +10,8 @@ data class AppInfo(
     val packageName: String,
     val activityName: String,
     val iconKey: String,
-    val searchChar: Char = ' '
+    val searchChar: Char = ' ',
+    val normalizedLabel: String = label.lowercase().trim()
 ) {
     val componentKey: String get() = "$packageName/$activityName"
 }

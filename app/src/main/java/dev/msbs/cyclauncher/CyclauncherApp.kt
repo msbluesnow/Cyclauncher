@@ -43,13 +43,11 @@ class CyclauncherApp : Application(), SingletonImageLoader.Factory {
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         try {
-            val cache = imageLoader?.memoryCache ?: SingletonImageLoader.get(this).memoryCache
-            if (level >= TRIM_MEMORY_COMPLETE) {
-                cache?.clear()
-            } else if (level >= TRIM_MEMORY_RUNNING_CRITICAL || level >= TRIM_MEMORY_MODERATE) {
-                cache?.let { c ->
-                    c.trimToSize(c.size / 2)
-                }
+            val cache = imageLoader?.memoryCache ?: SingletonImageLoader.get(this).memoryCache ?: return
+            if (level >= TRIM_MEMORY_RUNNING_CRITICAL) {
+                cache.clear()
+            } else if (level >= TRIM_MEMORY_BACKGROUND || level >= TRIM_MEMORY_MODERATE || level >= TRIM_MEMORY_COMPLETE) {
+                cache.trimToSize(cache.size / 2)
             }
         } catch (_: Exception) {}
     }

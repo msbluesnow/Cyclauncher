@@ -143,18 +143,22 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 app
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    val filteredApps: StateFlow<List<AppInfo>> = combine(apps, _selectedLetter) { all, letter ->
-        all.filter { it.searchChar == letter }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    private val alphabetBuckets: StateFlow<Map<Char, List<AppInfo>>> = apps.map { all ->
+        all.groupBy { it.searchChar }
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyMap())
+
+    val filteredApps: StateFlow<List<AppInfo>> = combine(alphabetBuckets, _selectedLetter) { buckets, letter ->
+        buckets[letter] ?: emptyList()
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val favorites: StateFlow<List<String>> = actionsManager.favorites
 
     val historyApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.history) { all, ids ->
         val appMap = all.associateBy { it.componentKey }
         ids.mapNotNull { id -> appMap[id] }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val recentlyUpdatedApps: StateFlow<Set<String>> = actionsManager.recentlyUpdated
 
@@ -184,16 +188,37 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 FavoriteItem.App(app)
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val favoriteApps: StateFlow<List<AppInfo>> = favoriteItems.map { items ->
         items.mapNotNull { (it as? FavoriteItem.App)?.appInfo }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val textFilteredApps: StateFlow<List<AppInfo>> = combine(apps, _searchText) { all, query ->
-        if (query.isEmpty()) all
-        else all.filter { it.label.contains(query, ignoreCase = true) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        val trimmed = query.trim().lowercase()
+        if (trimmed.isEmpty()) all
+        else all.filter { it.normalizedLabel.contains(trimmed) }
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    val popularTagsWithApps: StateFlow<List<Pair<Tag, List<AppInfo>>>> = combine(
+        tags,
+        appTags,
+        apps,
+        favoriteItems
+    ) { allTags, allAppTags, allApps, favItems ->
+        val favoritedTagIds = favItems.mapNotNull { (it as? FavoriteItem.TagFolder)?.tag?.id }.toSet()
+        val tagToAppsMap = mutableMapOf<String, MutableList<AppInfo>>()
+        allApps.forEach { app ->
+            val tagIds = allAppTags[app.componentKey] ?: allAppTags[app.packageName] ?: emptyList()
+            tagIds.forEach { tagId ->
+                tagToAppsMap.getOrPut(tagId) { mutableListOf() }.add(app)
+            }
+        }
+        allTags
+            .filter { tag -> tag.id !in favoritedTagIds }
+            .map { tag -> tag to (tagToAppsMap[tag.id] ?: emptyList()) }
+            .sortedByDescending { it.second.size }
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     private val _showTutorial = MutableStateFlow(false)
     val showTutorial: StateFlow<Boolean> = _showTutorial
@@ -258,6 +283,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
 
         loadInstalledApps()
+        updateDefaultLauncherStatus()
         _searchListAlignment.value = if (_handSide.value == HandSide.LEFT) TextAlign.End else TextAlign.Start
     }
 
@@ -351,14 +377,17 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun refreshDynamicWallpaperColor(context: Context) {
-        val currentDark = AccentColor.isWallpaperDark(context)
-        if (_isWallpaperDark.value != currentDark) {
-            _isWallpaperDark.value = currentDark
-        }
-        if (_accentColor.value.isDynamicWallpaper) {
-            val updated = AccentColor.wallpaper(context)
-            if (_accentColor.value.color != updated.color) {
-                _accentColor.value = updated
+        val appContext = context.applicationContext
+        viewModelScope.launch(Dispatchers.IO) {
+            val currentDark = AccentColor.isWallpaperDark(appContext)
+            if (_isWallpaperDark.value != currentDark) {
+                _isWallpaperDark.value = currentDark
+            }
+            if (_accentColor.value.isDynamicWallpaper) {
+                val updated = AccentColor.wallpaper(appContext)
+                if (_accentColor.value.color != updated.color) {
+                    _accentColor.value = updated
+                }
             }
         }
     }
@@ -477,8 +506,21 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun isFavorite(componentKey: String): Boolean = actionsManager.isFavorite(componentKey)
 
-    fun isDefaultLauncher(): Boolean {
-        val context = getApplication<Application>()
+    private val _isDefaultLauncher = MutableStateFlow(false)
+    val isDefaultLauncherState: StateFlow<Boolean> = _isDefaultLauncher
+
+    fun isDefaultLauncher(): Boolean = _isDefaultLauncher.value
+
+    fun updateDefaultLauncherStatus() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val isDefault = checkIsDefaultLauncher(getApplication())
+            if (_isDefaultLauncher.value != isDefault) {
+                _isDefaultLauncher.value = isDefault
+            }
+        }
+    }
+
+    private fun checkIsDefaultLauncher(context: Context): Boolean {
         val intent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }
         val resolveInfo = context.packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
         if (resolveInfo?.activityInfo?.packageName == context.packageName) {
@@ -976,6 +1018,33 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             }
 
             actionsManager.saveAppUpdateTimes(currentUpdateTimes)
+
+            val keysToPrewarm = (actionsManager.favorites.value + actionsManager.history.value).distinct()
+            prewarmIcons(keysToPrewarm)
+        }
+    }
+
+    /**
+     * Preloads favorite and recent icons asynchronously on a low-priority background dispatcher
+     * so that returning to the home screen has 0ms icon pop-in delay.
+     */
+    fun prewarmIcons(componentKeys: Collection<String>) {
+        if (componentKeys.isEmpty()) return
+        viewModelScope.launch(Dispatchers.IO.limitedParallelism(2)) {
+            try {
+                val app = getApplication<Application>()
+                val imageLoader = coil3.SingletonImageLoader.get(app)
+                val density = app.resources.displayMetrics.density
+                val px = (48 * density).toInt().coerceAtLeast(1)
+                for (key in componentKeys.take(40)) {
+                    if (key.startsWith("tag:")) continue
+                    val request = coil3.request.ImageRequest.Builder(app)
+                        .data(dev.msbs.cyclauncher.coil.AppIconKey(key))
+                        .size(px)
+                        .build()
+                    imageLoader.enqueue(request)
+                }
+            } catch (_: Exception) {}
         }
     }
 }

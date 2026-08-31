@@ -60,6 +60,7 @@ object IconPackManager {
     private var activeResources: Resources? = null
     private val componentToDrawableMap = ConcurrentHashMap<String, String>()
     private val packageToDrawableMap = ConcurrentHashMap<String, String>()
+    private val drawableToResIdMap = ConcurrentHashMap<String, Int>()
 
     /**
      * Attempts to auto-detect the active icon pack package configured in the system / custom ROM settings.
@@ -210,6 +211,7 @@ object IconPackManager {
             activeResources = null
             componentToDrawableMap.clear()
             packageToDrawableMap.clear()
+            drawableToResIdMap.clear()
             return@withContext
         }
 
@@ -242,6 +244,7 @@ object IconPackManager {
             componentToDrawableMap.putAll(compMap)
             packageToDrawableMap.clear()
             packageToDrawableMap.putAll(pkgMap)
+            drawableToResIdMap.clear()
             activeResources = res
             activePackageName = targetPackage
         } catch (_: Exception) {
@@ -249,6 +252,7 @@ object IconPackManager {
             activeResources = null
             componentToDrawableMap.clear()
             packageToDrawableMap.clear()
+            drawableToResIdMap.clear()
         }
     }
 
@@ -342,7 +346,9 @@ object IconPackManager {
             ?: packageToDrawableMap[componentKey.substringBefore('/')]
             ?: return null
 
-        val resId = res.getIdentifier(drawableName, "drawable", pkgName)
+        val resId = drawableToResIdMap.getOrPut(drawableName) {
+            res.getIdentifier(drawableName, "drawable", pkgName)
+        }
         if (resId == 0) return null
 
         return try {

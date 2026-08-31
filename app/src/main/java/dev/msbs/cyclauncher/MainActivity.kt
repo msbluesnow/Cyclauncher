@@ -73,26 +73,19 @@ class MainActivity : ComponentActivity() {
 
     private var isDefaultLauncherCached = false
     private var wallpaperColorsListener: Any? = null
-
-    private val packageReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            val action = intent?.action
-            val packageName = intent?.data?.schemeSpecificPart
-            val isReplacing = intent?.getBooleanExtra(Intent.EXTRA_REPLACING, false) ?: false
-
-            if (action == Intent.ACTION_PACKAGE_REMOVED && !isReplacing && !packageName.isNullOrEmpty()) {
-                viewModel.onPackageRemoved(packageName)
-            } else if (!packageName.isNullOrEmpty() && (action == Intent.ACTION_PACKAGE_ADDED || action == Intent.ACTION_PACKAGE_REPLACED)) {
-                viewModel.onPackageAddedOrUpdated(packageName)
-            } else {
-                viewModel.refreshApps()
-            }
-        }
-    }
+    private var launcherAppsHandlerThread: android.os.HandlerThread? = null
+    private var launcherAppsCallback: android.content.pm.LauncherApps.Callback? = null
 
     private val systemReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            viewModel.refreshApps()
+            val action = intent?.action
+            if (action == Intent.ACTION_USER_UNLOCKED) {
+                if (viewModel.apps.value.isEmpty()) {
+                    viewModel.refreshApps()
+                }
+            } else {
+                viewModel.refreshApps()
+            }
         }
     }
 
@@ -108,17 +101,30 @@ class MainActivity : ComponentActivity() {
         }
         onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
         
-        val packageFilter = IntentFilter().apply {
-            addAction(Intent.ACTION_PACKAGE_ADDED)
-            addAction(Intent.ACTION_PACKAGE_REMOVED)
-            addAction(Intent.ACTION_PACKAGE_REPLACED)
-            addAction(Intent.ACTION_PACKAGE_CHANGED)
-            addDataScheme("package")
-        }
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(packageReceiver, packageFilter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(packageReceiver, packageFilter)
+        val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
+        if (launcherApps != null) {
+            val thread = android.os.HandlerThread("LauncherAppsCallbackThread").apply { start() }
+            launcherAppsHandlerThread = thread
+            val handler = android.os.Handler(thread.looper)
+            val callback = object : android.content.pm.LauncherApps.Callback() {
+                override fun onPackageAdded(packageName: String, user: android.os.UserHandle) {
+                    viewModel.onPackageAddedOrUpdated(packageName)
+                }
+                override fun onPackageChanged(packageName: String, user: android.os.UserHandle) {
+                    viewModel.onPackageAddedOrUpdated(packageName)
+                }
+                override fun onPackageRemoved(packageName: String, user: android.os.UserHandle) {
+                    viewModel.onPackageRemoved(packageName)
+                }
+                override fun onPackagesAvailable(packageNames: Array<out String>, user: android.os.UserHandle, replacing: Boolean) {
+                    viewModel.refreshApps()
+                }
+                override fun onPackagesUnavailable(packageNames: Array<out String>, user: android.os.UserHandle, replacing: Boolean) {
+                    viewModel.refreshApps()
+                }
+            }
+            launcherAppsCallback = callback
+            launcherApps.registerCallback(callback, handler)
         }
 
         val systemFilter = IntentFilter().apply {
@@ -192,13 +198,11 @@ class MainActivity : ComponentActivity() {
                             showRenameDialogFor = null
                             showTagDialogFor = null
                             tagToEditForDialog = null
-                            scope.launch {
-                                if (horizontalPagerState.currentPage != 0) {
-                                    horizontalPagerState.scrollToPage(0)
-                                }
-                                if (verticalPagerState.currentPage != 0) {
-                                    verticalPagerState.scrollToPage(0)
-                                }
+                            if (horizontalPagerState.currentPage != 0) {
+                                horizontalPagerState.scrollToPage(0)
+                            }
+                            if (verticalPagerState.currentPage != 0) {
+                                verticalPagerState.scrollToPage(0)
                             }
                         }
                     }
@@ -250,7 +254,7 @@ class MainActivity : ComponentActivity() {
                             HorizontalPager(
                                 state = horizontalPagerState,
                                 modifier = Modifier.fillMaxSize(),
-                                beyondViewportPageCount = 1,
+                                beyondViewportPageCount = 0,
                                 userScrollEnabled = false 
                             ) { hIndex ->
                                 if (hIndex == 0) {
@@ -452,12 +456,20 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         viewModel.refreshDynamicWallpaperColor(this)
         updateStatusBarVisibility(viewModel.hideStatusBar.value)
+        viewModel.updateDefaultLauncherStatus()
         isDefaultLauncherCached = viewModel.isDefaultLauncher()
         if (viewModel.apps.value.isEmpty()) {
             viewModel.refreshApps()
         }
-        viewModel.requestReset()
-        viewModel.requestHistoryScrollToBottom()
+        window.decorView.postInvalidateOnAnimation()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            updateStatusBarVisibility(viewModel.hideStatusBar.value)
+            window.decorView.postInvalidateOnAnimation()
+        }
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
@@ -467,8 +479,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        unregisterReceiver(packageReceiver)
         unregisterReceiver(systemReceiver)
+        launcherAppsCallback?.let { cb ->
+            val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
+            try {
+                launcherApps?.unregisterCallback(cb)
+            } catch (_: Exception) {}
+        }
+        launcherAppsHandlerThread?.quitSafely()
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1 && wallpaperColorsListener != null) {
             val wpManager = getSystemService(android.app.WallpaperManager::class.java)
             try {
@@ -481,6 +499,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        viewModel.updateDefaultLauncherStatus()
         isDefaultLauncherCached = viewModel.isDefaultLauncher()
         if (intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_HOME)) {
             if (!isDefaultLauncherCached) {
@@ -494,6 +513,15 @@ class MainActivity : ComponentActivity() {
 
     private fun openApp(componentKey: String) {
         val parts = componentKey.split("/")
+        val decor = window.decorView
+        val width = decor.width.coerceAtLeast(1)
+        val height = decor.height.coerceAtLeast(1)
+        val optionsBundle = try {
+            android.app.ActivityOptions.makeClipRevealAnimation(decor, width / 2, height / 2, width, height).toBundle()
+        } catch (_: Exception) {
+            null
+        }
+
         if (parts.size == 2) {
             val packageName = parts[0]
             val activityName = parts[1]
@@ -506,7 +534,7 @@ class MainActivity : ComponentActivity() {
             var launched = false
             if (launcherApps != null) {
                 try {
-                    launcherApps.startMainActivity(componentName, android.os.Process.myUserHandle(), null, null)
+                    launcherApps.startMainActivity(componentName, android.os.Process.myUserHandle(), null, optionsBundle)
                     launched = true
                 } catch (_: Exception) {}
             }
@@ -518,10 +546,10 @@ class MainActivity : ComponentActivity() {
                         component = componentName
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
                     }
-                    startActivity(intent)
+                    startActivity(intent, optionsBundle)
                 } catch (e: Exception) {
                     packageManager.getLaunchIntentForPackage(packageName)?.let { intent ->
-                        startActivity(intent)
+                        startActivity(intent, optionsBundle)
                     }
                 }
             }
@@ -529,7 +557,7 @@ class MainActivity : ComponentActivity() {
             viewModel.logAppLaunch(componentKey)
             viewModel.requestHistoryScrollToBottom()
             packageManager.getLaunchIntentForPackage(componentKey)?.let { intent ->
-                startActivity(intent)
+                startActivity(intent, optionsBundle)
             }
         }
     }

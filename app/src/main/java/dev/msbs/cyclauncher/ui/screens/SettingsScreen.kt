@@ -59,7 +59,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -96,7 +96,7 @@ fun SettingsScreen(
     var showIconPackDialog by remember { mutableStateOf(false) }
     var showKeepAndroidOpenDialog by remember { mutableStateOf(false) }
     val customCharMappings by viewModel.customCharMappings.collectAsState()
-    var currentIsDefault by remember { mutableStateOf(viewModel.isDefaultLauncher()) }
+    val currentIsDefault by viewModel.isDefaultLauncherState.collectAsState()
 
     val exportBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -110,7 +110,7 @@ fun SettingsScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                currentIsDefault = viewModel.isDefaultLauncher()
+                viewModel.updateDefaultLauncherStatus()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)

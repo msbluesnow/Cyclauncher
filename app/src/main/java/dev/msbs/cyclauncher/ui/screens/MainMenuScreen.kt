@@ -100,20 +100,7 @@ fun MainMenuScreen(
     var selectedHistoryMenuOffset by remember { mutableStateOf<Offset?>(null) }
     var isTagPopupEditMode by remember { mutableStateOf(false) }
 
-    val popularTagsWithApps = remember(tags, appTags, apps, favoriteItems) {
-        val favoritedTagIds = favoriteItems.mapNotNull { (it as? FavoriteItem.TagFolder)?.tag?.id }.toSet()
-        val tagToAppsMap = mutableMapOf<String, MutableList<AppInfo>>()
-        apps.forEach { app ->
-            val tagIds = appTags[app.componentKey] ?: appTags[app.packageName] ?: emptyList()
-            tagIds.forEach { tagId ->
-                tagToAppsMap.getOrPut(tagId) { mutableListOf() }.add(app)
-            }
-        }
-        tags
-            .filter { tag -> tag.id !in favoritedTagIds }
-            .map { tag -> tag to (tagToAppsMap[tag.id] ?: emptyList()) }
-            .sortedByDescending { it.second.size }
-    }
+    val popularTagsWithApps by viewModel.popularTagsWithApps.collectAsState()
 
     LaunchedEffect(isActive) {
         if (!isActive) {
@@ -150,9 +137,6 @@ fun MainMenuScreen(
                 selectedTagForMenu = null
                 selectedHistoryMenuOffset = null
                 isTagPopupEditMode = false
-            }
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                viewModel.requestHistoryScrollToBottom()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
