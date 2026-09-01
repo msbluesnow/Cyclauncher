@@ -223,6 +223,56 @@ class AppActionsManager(context: Context) {
         saveTags(current)
     }
 
+    fun reorderTags(fromIndex: Int, toIndex: Int) {
+        val current = _tags.value.toMutableList()
+        if (fromIndex in current.indices && toIndex in current.indices && fromIndex != toIndex) {
+            val item = current.removeAt(fromIndex)
+            current.add(toIndex, item)
+            _tags.value = current
+            saveTags(current)
+        }
+    }
+
+    fun reorderTagById(fromTagId: String, toTagId: String) {
+        val current = _tags.value.toMutableList()
+        val fromIndex = current.indexOfFirst { it.id == fromTagId }
+        val toIndex = current.indexOfFirst { it.id == toTagId }
+        if (fromIndex != -1 && toIndex != -1 && fromIndex != toIndex) {
+            val item = current.removeAt(fromIndex)
+            current.add(toIndex, item)
+            _tags.value = current
+            saveTags(current)
+        }
+    }
+
+    fun sortTagsByName(ascending: Boolean = true) {
+        val current = _tags.value.toMutableList()
+        val sorted = if (ascending) {
+            current.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+        } else {
+            current.sortedWith(compareByDescending(String.CASE_INSENSITIVE_ORDER) { it.name })
+        }
+        _tags.value = sorted
+        saveTags(sorted)
+    }
+
+    fun sortTagsByAppCount(ascending: Boolean = false) {
+        val current = _tags.value.toMutableList()
+        val tagCounts = mutableMapOf<String, Int>()
+        _appTags.value.values.forEach { list ->
+            list.forEach { tagId ->
+                tagCounts[tagId] = (tagCounts[tagId] ?: 0) + 1
+            }
+        }
+        val sorted = if (ascending) {
+            current.sortedBy { tagCounts[it.id] ?: 0 }
+        } else {
+            current.sortedByDescending { tagCounts[it.id] ?: 0 }
+        }
+        _tags.value = sorted
+        saveTags(sorted)
+    }
+
     fun deleteTag(tagId: String) {
         val currentTags = _tags.value.filter { it.id != tagId }
         _tags.value = currentTags

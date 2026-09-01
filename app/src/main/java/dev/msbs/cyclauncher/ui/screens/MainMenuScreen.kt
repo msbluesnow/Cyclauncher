@@ -12,13 +12,28 @@ import dev.msbs.cyclauncher.ui.components.AppListItemWithIcon
 import dev.msbs.cyclauncher.ui.components.AppIconItem
 import dev.msbs.cyclauncher.ui.components.TagFolderIcon
 import dev.msbs.cyclauncher.ui.components.TagFolderActionMenu
+import dev.msbs.cyclauncher.ui.components.TagSectionActionMenu
+import dev.msbs.cyclauncher.ui.components.TagSortPopup
 import dev.msbs.cyclauncher.ui.components.TagFolderItem
 import dev.msbs.cyclauncher.ui.components.TagFolderPopup
 import dev.msbs.cyclauncher.ui.components.HistoryActionMenu
+import dev.msbs.cyclauncher.ui.components.rememberAppIconPainter
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import kotlin.math.roundToInt
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -32,7 +47,9 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -41,6 +58,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.RemoveCircle
+import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.HistoryToggleOff
 import androidx.compose.material3.Icon
@@ -96,19 +114,29 @@ fun MainMenuScreen(
     val recentlyUpdatedApps by viewModel.recentlyUpdatedApps.collectAsState()
     var isReorderMode by remember { mutableStateOf(false) }
     var isHistoryEditMode by remember { mutableStateOf(false) }
+    var isTagFolderReorderMode by remember { mutableStateOf(false) }
     var selectedTagForPopup by remember { mutableStateOf<Triple<Tag, List<AppInfo>, Offset>?>(null) }
     var selectedTagForMenu by remember { mutableStateOf<Triple<Tag, List<AppInfo>, Offset>?>(null) }
+    var selectedTagSectionMenuOffset by remember { mutableStateOf<Offset?>(null) }
+    var selectedTagSortPopupOffset by remember { mutableStateOf<Offset?>(null) }
     var selectedHistoryMenuOffset by remember { mutableStateOf<Offset?>(null) }
     var isTagPopupEditMode by remember { mutableStateOf(false) }
 
     val popularTagsWithApps by viewModel.popularTagsWithApps.collectAsState()
 
+    BackHandler(enabled = isTagFolderReorderMode) {
+        isTagFolderReorderMode = false
+    }
+
     LaunchedEffect(isActive) {
         if (!isActive) {
             isReorderMode = false
             isHistoryEditMode = false
+            isTagFolderReorderMode = false
             selectedTagForPopup = null
             selectedTagForMenu = null
+            selectedTagSectionMenuOffset = null
+            selectedTagSortPopupOffset = null
             selectedHistoryMenuOffset = null
             isTagPopupEditMode = false
         }
@@ -118,8 +146,11 @@ fun MainMenuScreen(
         if (isActionMenuOpen) {
             isReorderMode = false
             isHistoryEditMode = false
+            isTagFolderReorderMode = false
             selectedTagForPopup = null
             selectedTagForMenu = null
+            selectedTagSectionMenuOffset = null
+            selectedTagSortPopupOffset = null
             selectedHistoryMenuOffset = null
             isTagPopupEditMode = false
         }
@@ -134,8 +165,11 @@ fun MainMenuScreen(
             ) {
                 isReorderMode = false
                 isHistoryEditMode = false
+                isTagFolderReorderMode = false
                 selectedTagForPopup = null
                 selectedTagForMenu = null
+                selectedTagSectionMenuOffset = null
+                selectedTagSortPopupOffset = null
                 selectedHistoryMenuOffset = null
                 isTagPopupEditMode = false
             }
@@ -150,8 +184,11 @@ fun MainMenuScreen(
         viewModel.resetRequest.collect {
             isReorderMode = false
             isHistoryEditMode = false
+            isTagFolderReorderMode = false
             selectedTagForPopup = null
             selectedTagForMenu = null
+            selectedTagSectionMenuOffset = null
+            selectedTagSortPopupOffset = null
             selectedHistoryMenuOffset = null
             isTagPopupEditMode = false
         }
@@ -169,8 +206,11 @@ fun MainMenuScreen(
         markItemAction()
         isReorderMode = false
         isHistoryEditMode = false
+        isTagFolderReorderMode = false
         selectedTagForPopup = null
         selectedTagForMenu = null
+        selectedTagSectionMenuOffset = null
+        selectedTagSortPopupOffset = null
         selectedHistoryMenuOffset = null
         isTagPopupEditMode = false
         onAppLongClick(app, offset)
@@ -179,6 +219,8 @@ fun MainMenuScreen(
     val handleTagFolderClick: (Tag, List<AppInfo>, Offset) -> Unit = { tag, taggedApps, offset ->
         markItemAction()
         selectedTagForMenu = null
+        selectedTagSectionMenuOffset = null
+        selectedTagSortPopupOffset = null
         selectedHistoryMenuOffset = null
         isTagPopupEditMode = false
         selectedTagForPopup = Triple(tag, taggedApps, offset)
@@ -187,15 +229,18 @@ fun MainMenuScreen(
     val handleTagFolderLongClick: (Tag, List<AppInfo>, Offset) -> Unit = { tag, taggedApps, offset ->
         markItemAction()
         selectedTagForPopup = null
+        selectedTagSectionMenuOffset = null
+        selectedTagSortPopupOffset = null
         selectedHistoryMenuOffset = null
         isTagPopupEditMode = false
         isReorderMode = false
         isHistoryEditMode = false
+        isTagFolderReorderMode = false
         selectedTagForMenu = Triple(tag, taggedApps, offset)
     }
 
     val isAnyEditMode =
-        isReorderMode || isHistoryEditMode || selectedTagForPopup != null || selectedTagForMenu != null || selectedHistoryMenuOffset != null
+        isReorderMode || isHistoryEditMode || isTagFolderReorderMode || selectedTagForPopup != null || selectedTagForMenu != null || selectedTagSectionMenuOffset != null || selectedTagSortPopupOffset != null || selectedHistoryMenuOffset != null
     val currentOnSettingsClick by rememberUpdatedState(onSettingsClick)
     val currentOnSwipeUp by rememberUpdatedState(onSwipeUp)
     val currentOnSwipeDown by rememberUpdatedState(onSwipeDown)
@@ -318,12 +363,27 @@ fun MainMenuScreen(
                     isHistoryPaused = isHistoryPaused,
                     isHistoryEditMode = isHistoryEditMode,
                     setHistoryEditMode = { isHistoryEditMode = it },
+                    isTagFolderReorderMode = isTagFolderReorderMode,
+                    setTagFolderReorderMode = { isTagFolderReorderMode = it },
+                    onReorderTag = { from, to ->
+                        if (from in popularTagsWithApps.indices && to in popularTagsWithApps.indices) {
+                            viewModel.reorderTagById(popularTagsWithApps[from].first.id, popularTagsWithApps[to].first.id)
+                        }
+                    },
                     onRemoveFromHistory = { viewModel.removeFromHistory(it) },
                     onHistoryIconClick = { offset ->
                         markItemAction()
                         selectedTagForMenu = null
                         selectedTagForPopup = null
+                        selectedTagSectionMenuOffset = null
                         selectedHistoryMenuOffset = offset
+                    },
+                    onTagSectionIconClick = { offset ->
+                        markItemAction()
+                        selectedTagForMenu = null
+                        selectedTagForPopup = null
+                        selectedHistoryMenuOffset = null
+                        selectedTagSectionMenuOffset = offset
                     },
                     onAppClick = handleAppClick,
                     onAppLongClick = handleAppLongClick,
@@ -346,12 +406,27 @@ fun MainMenuScreen(
                     isHistoryPaused = isHistoryPaused,
                     isHistoryEditMode = isHistoryEditMode,
                     setHistoryEditMode = { isHistoryEditMode = it },
+                    isTagFolderReorderMode = isTagFolderReorderMode,
+                    setTagFolderReorderMode = { isTagFolderReorderMode = it },
+                    onReorderTag = { from, to ->
+                        if (from in popularTagsWithApps.indices && to in popularTagsWithApps.indices) {
+                            viewModel.reorderTagById(popularTagsWithApps[from].first.id, popularTagsWithApps[to].first.id)
+                        }
+                    },
                     onRemoveFromHistory = { viewModel.removeFromHistory(it) },
                     onHistoryIconClick = { offset ->
                         markItemAction()
                         selectedTagForMenu = null
                         selectedTagForPopup = null
+                        selectedTagSectionMenuOffset = null
                         selectedHistoryMenuOffset = offset
+                    },
+                    onTagSectionIconClick = { offset ->
+                        markItemAction()
+                        selectedTagForMenu = null
+                        selectedTagForPopup = null
+                        selectedHistoryMenuOffset = null
+                        selectedTagSectionMenuOffset = offset
                     },
                     onAppClick = handleAppClick,
                     onAppLongClick = handleAppLongClick,
@@ -430,6 +505,51 @@ fun MainMenuScreen(
             )
         }
 
+        selectedTagSectionMenuOffset?.let { offset ->
+            TagSectionActionMenu(
+                offset = offset,
+                onDismiss = { selectedTagSectionMenuOffset = null },
+                onReorderFolders = {
+                    selectedTagSectionMenuOffset = null
+                    isTagFolderReorderMode = true
+                },
+                onOpenSortMenu = {
+                    val curOffset = offset
+                    selectedTagSectionMenuOffset = null
+                    selectedTagSortPopupOffset = curOffset
+                },
+                accentColor = accentColor,
+                primaryTextColor = primaryTextColor,
+                popupTheme = popupTheme
+            )
+        }
+
+        selectedTagSortPopupOffset?.let { offset ->
+            TagSortPopup(
+                offset = offset,
+                onDismiss = { selectedTagSortPopupOffset = null },
+                onSortByNameAsc = {
+                    selectedTagSortPopupOffset = null
+                    viewModel.sortTagsByName(true)
+                },
+                onSortByNameDesc = {
+                    selectedTagSortPopupOffset = null
+                    viewModel.sortTagsByName(false)
+                },
+                onSortByAppCountDesc = {
+                    selectedTagSortPopupOffset = null
+                    viewModel.sortTagsByAppCount(false)
+                },
+                onSortByAppCountAsc = {
+                    selectedTagSortPopupOffset = null
+                    viewModel.sortTagsByAppCount(true)
+                },
+                accentColor = accentColor,
+                primaryTextColor = primaryTextColor,
+                popupTheme = popupTheme
+            )
+        }
+
         selectedTagForPopup?.let { (tag, _, offset) ->
             val currentTag = tags.find { it.id == tag.id } ?: tag
             val currentTaggedApps = remember(tags, appTags, tagAppOrders, apps, currentTag.id) {
@@ -488,8 +608,12 @@ private fun HistorySection(
     isHistoryPaused: Boolean,
     isHistoryEditMode: Boolean,
     setHistoryEditMode: (Boolean) -> Unit,
+    isTagFolderReorderMode: Boolean = false,
+    setTagFolderReorderMode: (Boolean) -> Unit = {},
+    onReorderTag: (Int, Int) -> Unit = { _, _ -> },
     onRemoveFromHistory: (String) -> Unit,
     onHistoryIconClick: (Offset) -> Unit,
+    onTagSectionIconClick: (Offset) -> Unit = {},
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit,
     onTagFolderClick: (Tag, List<AppInfo>, Offset) -> Unit,
@@ -508,6 +632,7 @@ private fun HistorySection(
         if (isActive) {
             isHistoryShiftedUp = false
             setHistoryEditMode(false)
+            setTagFolderReorderMode(false)
             if (history.isNotEmpty() && (listState.firstVisibleItemIndex != 0 || listState.firstVisibleItemScrollOffset != 0)) {
                 listState.scrollToItem(0)
             }
@@ -561,7 +686,7 @@ private fun HistorySection(
                     .fillMaxHeight()
                     .sectionBottomGestures(
                         isAtEdge = { tagGridState.firstVisibleItemIndex == 0 && tagGridState.firstVisibleItemScrollOffset == 0 },
-                        isEditMode = isHistoryEditMode,
+                        isEditMode = isHistoryEditMode || isTagFolderReorderMode,
                         touchSlop = viewConfiguration.touchSlop,
                         onSwipeUp = { isHistoryShiftedUp = false }
                     ),
@@ -574,6 +699,11 @@ private fun HistorySection(
                     handSide = handSide,
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
+                    accentColor = accentColor,
+                    isReorderMode = isTagFolderReorderMode,
+                    setReorderMode = setTagFolderReorderMode,
+                    onReorderTag = onReorderTag,
+                    onTagSectionIconClick = onTagSectionIconClick,
                     onSettingsClick = currentOnSettingsClick,
                     onTagFolderClick = onTagFolderClick,
                     onTagFolderLongClick = onTagFolderLongClick
@@ -593,6 +723,11 @@ private fun HistorySection(
                     handSide = handSide,
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
+                    accentColor = accentColor,
+                    isReorderMode = isTagFolderReorderMode,
+                    setReorderMode = setTagFolderReorderMode,
+                    onReorderTag = onReorderTag,
+                    onTagSectionIconClick = onTagSectionIconClick,
                     onSettingsClick = currentOnSettingsClick,
                     onTagFolderClick = onTagFolderClick,
                     onTagFolderLongClick = onTagFolderLongClick
@@ -605,7 +740,7 @@ private fun HistorySection(
                     .fillMaxWidth()
                     .sectionBottomGestures(
                         isAtEdge = { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 },
-                        isEditMode = isHistoryEditMode,
+                        isEditMode = isHistoryEditMode || isTagFolderReorderMode,
                         touchSlop = viewConfiguration.touchSlop,
                         onSwipeUp = { isHistoryShiftedUp = true }
                     ),
@@ -676,6 +811,11 @@ private fun ColumnScope.TagsContentBlock(
     handSide: HandSide,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
+    accentColor: AccentColor,
+    isReorderMode: Boolean = false,
+    setReorderMode: (Boolean) -> Unit = {},
+    onReorderTag: (Int, Int) -> Unit = { _, _ -> },
+    onTagSectionIconClick: (Offset) -> Unit = {},
     onSettingsClick: () -> Unit,
     onTagFolderClick: (Tag, List<AppInfo>, Offset) -> Unit,
     onTagFolderLongClick: (Tag, List<AppInfo>, Offset) -> Unit
@@ -683,35 +823,304 @@ private fun ColumnScope.TagsContentBlock(
     if (popularTags.isEmpty()) return
 
     val layoutDirection = if (handSide == HandSide.RIGHT) LayoutDirection.Rtl else LayoutDirection.Ltr
+    val isRtl = handSide == HandSide.RIGHT
+    val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
+    val animationsEnabled = LocalAnimationsEnabled.current
+
+    val infiniteTransition = rememberInfiniteTransition(label = "tag_shake")
+    val shakeRotation by infiniteTransition.animateFloat(
+        initialValue = -3.5f,
+        targetValue = 3.5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 105, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "shake_rot"
+    )
+    val shakeTranslation by infiniteTransition.animateFloat(
+        initialValue = -1.5f,
+        targetValue = 1.5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 125, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "shake_trans"
+    )
+
+    var draggingTagId by remember { mutableStateOf<String?>(null) }
+    var dragOffset by remember { mutableStateOf(Offset.Zero) }
+    var itemWidthPx by remember { mutableFloatStateOf(0f) }
+    var itemHeightPx by remember { mutableFloatStateOf(0f) }
+
+    val localPopularTags = remember(popularTags) { mutableStateListOf(*popularTags.toTypedArray()) }
+    LaunchedEffect(popularTags, draggingTagId) {
+        if (draggingTagId == null) {
+            localPopularTags.clear()
+            localPopularTags.addAll(popularTags)
+        }
+    }
+
+    val currentOnReorderTag by rememberUpdatedState(onReorderTag)
+
+    LaunchedEffect(isReorderMode) {
+        if (!isReorderMode) {
+            draggingTagId = null
+            dragOffset = Offset.Zero
+        }
+    }
+
+    val colSpacingPx = with(density) { 8.dp.toPx() }
+    val rowSpacingPx = with(density) { 8.dp.toPx() }
 
     CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = false)
                 .padding(bottom = 8.dp),
-            contentAlignment = if (handSide == HandSide.RIGHT) Alignment.BottomEnd else Alignment.BottomStart
+            horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start,
+            verticalArrangement = Arrangement.Bottom
         ) {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
                 state = gridState,
                 verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Bottom),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false),
                 reverseLayout = true,
                 userScrollEnabled = true
             ) {
-                items(popularTags, key = { it.first.id }) { (tag, taggedApps) ->
-                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                        TagFolderItem(
-                            tag = tag,
-                            apps = taggedApps,
-                            onClick = { offset -> onTagFolderClick(tag, taggedApps, offset) },
-                            onLongClick = { offset -> onTagFolderLongClick(tag, taggedApps, offset) },
-                            primaryTextColor = primaryTextColor,
-                            showShadows = showShadows
-                        )
+                itemsIndexed(localPopularTags, key = { _, item -> item.first.id }) { index, (tag, taggedApps) ->
+                    val isDraggingThis = draggingTagId == tag.id
+
+                    val scale by animateFloatAsState(
+                        targetValue = if (isDraggingThis) 1.15f else 1.0f,
+                        animationSpec = if (animationsEnabled) spring() else snap(),
+                        label = "tag_scale"
+                    )
+                    val alpha by animateFloatAsState(
+                        targetValue = if (isDraggingThis) 0.82f else 1.0f,
+                        animationSpec = if (animationsEnabled) spring() else snap(),
+                        label = "tag_alpha"
+                    )
+
+                    val itemAnimModifier = if (animationsEnabled && !isDraggingThis) Modifier.animateItem() else Modifier
+
+                    val itemRotation = if (isReorderMode && !isDraggingThis) {
+                        if (index % 2 == 0) shakeRotation else -shakeRotation
+                    } else 0f
+
+                    val itemTranslation = if (isReorderMode && !isDraggingThis) {
+                        if ((index / 2) % 2 == 0) shakeTranslation else -shakeTranslation
+                    } else 0f
+
+                    val gestureModifier = if (isReorderMode) {
+                        Modifier.pointerInput(tag.id, localPopularTags.size) {
+                            detectDragGestures(
+                                onDragStart = {
+                                    draggingTagId = tag.id
+                                    dragOffset = Offset.Zero
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    dragOffset += dragAmount
+
+                                    if (itemWidthPx > 0f && itemHeightPx > 0f) {
+                                        val colStep = itemWidthPx + colSpacingPx
+                                        val rowStep = itemHeightPx + rowSpacingPx
+
+                                        val effectiveDx = if (isRtl) -dragOffset.x else dragOffset.x
+                                        val effectiveDy = -dragOffset.y
+
+                                        val colDelta = (effectiveDx / colStep).roundToInt()
+                                        val rowDelta = (effectiveDy / rowStep).roundToInt()
+
+                                        val curIndex = localPopularTags.indexOfFirst { it.first.id == tag.id }
+                                        if (curIndex != -1) {
+                                            val curCol = curIndex % 3
+                                            val curRow = curIndex / 3
+                                            val targetCol = (curCol + colDelta).coerceIn(0, 2)
+                                            val targetRow = (curRow + rowDelta).coerceAtLeast(0)
+                                            val targetIndex = (targetRow * 3 + targetCol).coerceIn(0, localPopularTags.size - 1)
+
+                                            if (targetIndex != curIndex && targetIndex in localPopularTags.indices) {
+                                                val actualColChange = targetCol - curCol
+                                                val actualRowChange = targetRow - curRow
+
+                                                val dxToSub = if (isRtl) -actualColChange * colStep else actualColChange * colStep
+                                                val dyToSub = -actualRowChange * rowStep
+
+                                                dragOffset = Offset(dragOffset.x - dxToSub, dragOffset.y - dyToSub)
+                                                val moved = localPopularTags.removeAt(curIndex)
+                                                localPopularTags.add(targetIndex, moved)
+                                                currentOnReorderTag(curIndex, targetIndex)
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            }
+                                        }
+                                    }
+                                },
+                                onDragEnd = {
+                                    draggingTagId = null
+                                    dragOffset = Offset.Zero
+                                },
+                                onDragCancel = {
+                                    draggingTagId = null
+                                    dragOffset = Offset.Zero
+                                }
+                            )
+                        }
+                    } else {
+                        Modifier
                     }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(itemAnimModifier)
+                            .zIndex(if (isDraggingThis) 10f else 1f)
+                            .onGloballyPositioned { coordinates ->
+                                if (itemWidthPx == 0f && coordinates.size.width > 0) {
+                                    itemWidthPx = coordinates.size.width.toFloat()
+                                    itemHeightPx = coordinates.size.height.toFloat()
+                                }
+                            }
+                            .graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                                this.alpha = alpha
+                                if (isDraggingThis) {
+                                    translationX = dragOffset.x
+                                    translationY = dragOffset.y
+                                    rotationZ = 0f
+                                } else if (isReorderMode) {
+                                    rotationZ = itemRotation
+                                    translationX = itemTranslation
+                                    translationY = if (index % 2 == 0) itemTranslation * 0.4f else -itemTranslation * 0.4f
+                                }
+                            }
+                            .then(gestureModifier),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                            TagFolderItem(
+                                tag = tag,
+                                apps = taggedApps,
+                                onClick = { offset ->
+                                    if (!isReorderMode) {
+                                        onTagFolderClick(tag, taggedApps, offset)
+                                    }
+                                },
+                                onLongClick = { offset ->
+                                    if (!isReorderMode) {
+                                        onTagFolderLongClick(tag, taggedApps, offset)
+                                    }
+                                },
+                                primaryTextColor = primaryTextColor,
+                                showShadows = showShadows
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = if (handSide == HandSide.RIGHT) Arrangement.End else Arrangement.Start,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                val showPaddingOnLeft = handSide == HandSide.RIGHT
+                val showPaddingOnRight = handSide == HandSide.LEFT
+
+                if (showPaddingOnLeft) {
+                    Box(
+                        modifier = Modifier.size(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {}
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
+
+                var tagIconPosition by remember { mutableStateOf(Offset.Zero) }
+
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 4.dp)
+                        .size(44.dp)
+                        .onGloballyPositioned { tagIconPosition = it.positionInRoot() }
+                        .pointerInput(isReorderMode) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    if (!isReorderMode) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        onTagSectionIconClick(tagIconPosition + it)
+                                    }
+                                },
+                                onTap = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    if (isReorderMode) {
+                                        setReorderMode(false)
+                                    } else {
+                                        onTagSectionIconClick(tagIconPosition + it)
+                                    }
+                                }
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isReorderMode) {
+                        Box(contentAlignment = Alignment.Center) {
+                            if (showShadows) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = null,
+                                    tint = Color.Black.copy(alpha = 0.6f),
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .offset(1.dp, 1.dp)
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Exit Tag Reorder Mode",
+                                tint = accentColor.color,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    } else {
+                        Box(contentAlignment = Alignment.Center) {
+                            val tagIcon = Icons.Outlined.Folder
+                            if (showShadows) {
+                                val shadowSettings = LocalShadowSettings.current
+                                Icon(
+                                    imageVector = tagIcon,
+                                    contentDescription = null,
+                                    tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .offset(1.dp, 1.dp)
+                                )
+                            }
+                            Icon(
+                                imageVector = tagIcon,
+                                contentDescription = "Tag Folders",
+                                tint = accentColor.color,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                }
+
+                if (showPaddingOnRight) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Box(
+                        modifier = Modifier.size(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {}
                 }
             }
         }
@@ -987,6 +1396,14 @@ private fun FavoritesSection(
     var dragVerticalOffset by remember { mutableStateOf(0f) }
     var itemHeightPx by remember { mutableStateOf(0f) }
 
+    val localFavorites = remember(favorites) { mutableStateListOf(*favorites.toTypedArray()) }
+    LaunchedEffect(favorites, draggingKey) {
+        if (draggingKey == null) {
+            localFavorites.clear()
+            localFavorites.addAll(favorites)
+        }
+    }
+
     val currentSetReorderMode by rememberUpdatedState(setReorderMode)
     val currentOnReorder by rememberUpdatedState(onReorder)
     LaunchedEffect(isReorderMode) {
@@ -1098,12 +1515,9 @@ private fun FavoritesSection(
                 reverseLayout = true,
                 userScrollEnabled = isReorderMode
             ) {
-                itemsIndexed(favorites, key = { _, item -> item.key }) { index, item ->
+                itemsIndexed(localFavorites, key = { _, item -> item.key }) { index, item ->
                     val itemKey = item.key
                     val isDraggingThis = draggingKey == itemKey
-
-                    val currentIndex by rememberUpdatedState(index)
-                    val currentSize by rememberUpdatedState(favorites.size)
 
                     val animationsEnabled = LocalAnimationsEnabled.current
                     val scale by animateFloatAsState(
@@ -1119,8 +1533,51 @@ private fun FavoritesSection(
 
                     val density = LocalDensity.current
                     val fallbackItemHeightPx = with(density) { 48.dp.toPx() }
+                    val spacingPx = with(density) { 12.dp.toPx() }
 
-                    val itemAnimModifier = if (animationsEnabled) Modifier.animateItem() else Modifier
+                    val itemAnimModifier = if (animationsEnabled && !isDraggingThis) Modifier.animateItem() else Modifier
+
+                    val gestureModifier = if (isReorderMode) {
+                        Modifier.pointerInput(itemKey, localFavorites.size) {
+                            detectDragGestures(
+                                onDragStart = {
+                                    dragVerticalOffset = 0f
+                                    draggingKey = itemKey
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                },
+                                onDragEnd = {
+                                    draggingKey = null
+                                    dragVerticalOffset = 0f
+                                },
+                                onDragCancel = {
+                                    draggingKey = null
+                                    dragVerticalOffset = 0f
+                                },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    dragVerticalOffset += dragAmount.y
+
+                                    val stepHeight = (if (itemHeightPx > 0f) itemHeightPx else fallbackItemHeightPx) + spacingPx
+                                    val effectiveDy = -dragVerticalOffset
+                                    val rowDelta = (effectiveDy / stepHeight).roundToInt()
+
+                                    val curIndex = localFavorites.indexOfFirst { it.key == itemKey }
+                                    if (curIndex != -1) {
+                                        val targetIndex = (curIndex + rowDelta).coerceIn(0, localFavorites.size - 1)
+                                        if (targetIndex != curIndex) {
+                                            val actualChange = targetIndex - curIndex
+                                            val dyToSub = -actualChange * stepHeight
+                                            dragVerticalOffset -= dyToSub
+                                            val moved = localFavorites.removeAt(curIndex)
+                                            localFavorites.add(targetIndex, moved)
+                                            currentOnReorder(curIndex, targetIndex)
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    } else Modifier
 
                     Box(
                         modifier = Modifier
@@ -1139,67 +1596,33 @@ private fun FavoritesSection(
                                 if (isDraggingThis) {
                                     translationY = dragVerticalOffset
                                 }
-                            },
+                            }
+                            .then(gestureModifier),
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
-                            modifier = if (isReorderMode) {
-                                Modifier.pointerInput(itemKey, favorites.size) {
-                                    var accumulatedDragForSwap = 0f
-                                    detectDragGestures(
-                                        onDragStart = {
-                                            accumulatedDragForSwap = 0f
-                                            dragVerticalOffset = 0f
-                                            draggingKey = itemKey
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        },
-                                        onDragEnd = {
-                                            draggingKey = null
-                                            dragVerticalOffset = 0f
-                                        },
-                                        onDragCancel = {
-                                            draggingKey = null
-                                            dragVerticalOffset = 0f
-                                        },
-                                        onDrag = { change, dragAmount ->
-                                            change.consume()
-                                            dragVerticalOffset += dragAmount.y
-                                            accumulatedDragForSwap += dragAmount.y
-
-                                            val targetHeight =
-                                                if (itemHeightPx > 0f) itemHeightPx else fallbackItemHeightPx
-                                            val swapThreshold = targetHeight * 0.5f
-
-                                            if (accumulatedDragForSwap < -swapThreshold && currentIndex < currentSize - 1) {
-                                                currentOnReorder(currentIndex, currentIndex + 1)
-                                                accumulatedDragForSwap = 0f
-                                                dragVerticalOffset += targetHeight
-                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            } else if (accumulatedDragForSwap > swapThreshold && currentIndex > 0) {
-                                                currentOnReorder(currentIndex, currentIndex - 1)
-                                                accumulatedDragForSwap = 0f
-                                                dragVerticalOffset -= targetHeight
-                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            }
-                                        }
-                                    )
-                                }
-                            } else Modifier,
                             contentAlignment = Alignment.Center
                         ) {
                             when (item) {
                                 is FavoriteItem.App -> {
                                     val currentAppItem by rememberUpdatedState(item)
-                                    AppIconItem(
-                                        app = item.appInfo,
-                                        onClick = {
-                                            if (isReorderMode) setReorderMode(false)
-                                            else onAppClick(itemKey)
-                                        },
-                                        onLongClick = { offset ->
-                                            if (!isReorderMode) onAppLongClick(currentAppItem.appInfo, offset)
-                                        }
-                                    )
+                                    if (isReorderMode) {
+                                        val painter = rememberAppIconPainter(item.appInfo.iconKey, 48)
+                                        Image(
+                                            painter = painter,
+                                            contentDescription = item.appInfo.label,
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier
+                                                .size(48.dp)
+                                                .clip(CircleShape)
+                                        )
+                                    } else {
+                                        AppIconItem(
+                                            app = item.appInfo,
+                                            onClick = { onAppClick(itemKey) },
+                                            onLongClick = { offset -> onAppLongClick(currentAppItem.appInfo, offset) }
+                                        )
+                                    }
                                 }
 
                                 is FavoriteItem.TagFolder -> {
@@ -1207,35 +1630,36 @@ private fun FavoritesSection(
                                     val currentTagItem by rememberUpdatedState(item)
                                     val currentOnTagFolderClick by rememberUpdatedState(onTagFolderClick)
                                     val currentOnTagFolderLongClick by rememberUpdatedState(onTagFolderLongClick)
-                                    val currentIsReorderMode by rememberUpdatedState(isReorderMode)
-                                    val currentSetReorderMode by rememberUpdatedState(setReorderMode)
 
-                                    TagFolderIcon(
-                                        tag = item.tag,
-                                        apps = item.apps,
-                                        modifier = Modifier
+                                    val tagModifier = if (!isReorderMode) {
+                                        Modifier
                                             .onGloballyPositioned { folderPosition = it.positionInRoot() }
-                                            .pointerInput(itemKey, isReorderMode) {
+                                            .pointerInput(itemKey) {
                                                 detectTapGestures(
                                                     onTap = {
-                                                        if (currentIsReorderMode) currentSetReorderMode(false)
-                                                        else currentOnTagFolderClick(
+                                                        currentOnTagFolderClick(
                                                             currentTagItem.tag,
                                                             currentTagItem.apps,
                                                             folderPosition + it
                                                         )
                                                     },
                                                     onLongPress = {
-                                                        if (!currentIsReorderMode) {
-                                                            currentOnTagFolderLongClick(
-                                                                currentTagItem.tag,
-                                                                currentTagItem.apps,
-                                                                folderPosition + it
-                                                            )
-                                                        }
+                                                        currentOnTagFolderLongClick(
+                                                            currentTagItem.tag,
+                                                            currentTagItem.apps,
+                                                            folderPosition + it
+                                                        )
                                                     }
                                                 )
                                             }
+                                    } else {
+                                        Modifier
+                                    }
+
+                                    TagFolderIcon(
+                                        tag = item.tag,
+                                        apps = item.apps,
+                                        modifier = tagModifier
                                     )
                                 }
                             }

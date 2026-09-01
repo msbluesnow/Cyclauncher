@@ -848,7 +848,7 @@ fun TagEditDialog(
                                     modifier = Modifier.clickable { emojiText = "" }
                                 ) {
                                     Text(
-                                        text = "Reset (4 apps)",
+                                        text = "Restore",
                                         fontSize = 11.sp,
                                         color = Color(0xFFEF4444),
                                         fontWeight = FontWeight.Bold,

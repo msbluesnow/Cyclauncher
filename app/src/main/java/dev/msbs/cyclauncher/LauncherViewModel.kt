@@ -225,7 +225,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 val orderedApps = orderTagApps(taggedApps, allTagOrders[tag.id])
                 tag to orderedApps
             }
-            .sortedByDescending { it.second.size }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     private val _showTutorial = MutableStateFlow(false)
@@ -475,6 +474,22 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun reorderAppInTag(tagId: String, fromIndex: Int, toIndex: Int, currentApps: List<AppInfo>) {
         actionsManager.reorderAppInTag(tagId, fromIndex, toIndex, currentApps)
+    }
+
+    fun reorderTags(fromIndex: Int, toIndex: Int) {
+        actionsManager.reorderTags(fromIndex, toIndex)
+    }
+
+    fun reorderTagById(fromTagId: String, toTagId: String) {
+        actionsManager.reorderTagById(fromTagId, toTagId)
+    }
+
+    fun sortTagsByName(ascending: Boolean = true) {
+        actionsManager.sortTagsByName(ascending)
+    }
+
+    fun sortTagsByAppCount(ascending: Boolean = false) {
+        actionsManager.sortTagsByAppCount(ascending)
     }
     
     val isHistoryPaused: StateFlow<Boolean> = actionsManager.isHistoryPaused

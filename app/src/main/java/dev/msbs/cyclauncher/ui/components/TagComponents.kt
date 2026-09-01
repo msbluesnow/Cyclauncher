@@ -1,8 +1,14 @@
 package dev.msbs.cyclauncher.ui.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -14,13 +20,20 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.OpenWith
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -425,13 +438,44 @@ fun TagFolderPopup(
                     val colSpacingPx = with(density) { 8.dp.toPx() }
                     val rowSpacingPx = with(density) { 12.dp.toPx() }
 
+                    val infiniteTransition = rememberInfiniteTransition(label = "tag_popup_shake")
+                    val shakeRotation by infiniteTransition.animateFloat(
+                        initialValue = -3.2f,
+                        targetValue = 3.2f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(durationMillis = 110, easing = LinearEasing),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "popup_shake_rot"
+                    )
+                    val shakeTranslation by infiniteTransition.animateFloat(
+                        initialValue = -1.2f,
+                        targetValue = 1.2f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(durationMillis = 130, easing = LinearEasing),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "popup_shake_trans"
+                    )
+
+                    val localApps = remember(apps) { mutableStateListOf(*apps.toTypedArray()) }
+                    LaunchedEffect(apps, draggingKey) {
+                        if (draggingKey == null) {
+                            localApps.clear()
+                            localApps.addAll(apps)
+                        }
+                    }
+
+                    val gridState = rememberLazyGridState()
+
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(3),
+                        state = gridState,
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        itemsIndexed(apps, key = { _, item -> "${item.packageName}/${item.activityName}" }) { index, app ->
+                        itemsIndexed(localApps, key = { _, item -> "${item.packageName}/${item.activityName}" }) { index, app ->
                             val appKey = "${app.packageName}/${app.activityName}"
                             val isDraggingThis = draggingKey == appKey
 
@@ -447,6 +491,79 @@ fun TagFolderPopup(
                             )
 
                             val itemAnimModifier = if (animationsEnabled && !isDraggingThis) Modifier.animateItem() else Modifier
+
+                            val itemRotation = if (isEditMode && !isDraggingThis) {
+                                if (index % 2 == 0) shakeRotation else -shakeRotation
+                            } else 0f
+
+                            val itemTranslation = if (isEditMode && !isDraggingThis) {
+                                if ((index / 2) % 2 == 0) shakeTranslation else -shakeTranslation
+                            } else 0f
+
+                            val gestureModifier = if (isEditMode) {
+                                Modifier.pointerInput(appKey, localApps.size) {
+                                    detectDragGestures(
+                                        onDragStart = {
+                                            draggingKey = appKey
+                                            dragOffset = Offset.Zero
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        },
+                                        onDrag = { change, dragAmount ->
+                                            change.consume()
+                                            dragOffset += dragAmount
+
+                                            if (currentOnReorderApp != null) {
+                                                val visibleItems = gridState.layoutInfo.visibleItemsInfo
+                                                val curIndex = localApps.indexOfFirst { "${it.packageName}/${it.activityName}" == appKey }
+                                                val draggedItem = visibleItems.firstOrNull { it.index == curIndex }
+
+                                                if (draggedItem != null && curIndex != -1) {
+                                                    val draggedCenterX = draggedItem.offset.x + draggedItem.size.width / 2f + dragOffset.x
+                                                    val draggedCenterY = draggedItem.offset.y + draggedItem.size.height / 2f + dragOffset.y
+
+                                                    val targetItem = visibleItems
+                                                        .filter { it.index != curIndex && it.index in localApps.indices }
+                                                        .minByOrNull { item ->
+                                                            val itemCenterX = item.offset.x + item.size.width / 2f
+                                                            val itemCenterY = item.offset.y + item.size.height / 2f
+                                                            val dx = draggedCenterX - itemCenterX
+                                                            val dy = draggedCenterY - itemCenterY
+                                                            dx * dx + dy * dy
+                                                        }
+
+                                                    if (targetItem != null) {
+                                                        val targetCenterX = targetItem.offset.x + targetItem.size.width / 2f
+                                                        val targetCenterY = targetItem.offset.y + targetItem.size.height / 2f
+                                                        val distSq = (draggedCenterX - targetCenterX) * (draggedCenterX - targetCenterX) +
+                                                                     (draggedCenterY - targetCenterY) * (draggedCenterY - targetCenterY)
+
+                                                        val threshold = (targetItem.size.width.coerceAtLeast(targetItem.size.height) * 0.65f)
+                                                        if (distSq < threshold * threshold) {
+                                                            val deltaX = (targetItem.offset.x - draggedItem.offset.x).toFloat()
+                                                            val deltaY = (targetItem.offset.y - draggedItem.offset.y).toFloat()
+                                                            dragOffset = Offset(dragOffset.x - deltaX, dragOffset.y - deltaY)
+                                                            val item = localApps.removeAt(curIndex)
+                                                            localApps.add(targetItem.index, item)
+                                                            currentOnReorderApp?.invoke(curIndex, targetItem.index)
+                                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        onDragEnd = {
+                                            draggingKey = null
+                                            dragOffset = Offset.Zero
+                                        },
+                                        onDragCancel = {
+                                            draggingKey = null
+                                            dragOffset = Offset.Zero
+                                        }
+                                    )
+                                }
+                            } else {
+                                Modifier
+                            }
 
                             Box(
                                 modifier = Modifier
@@ -466,57 +583,32 @@ fun TagFolderPopup(
                                         if (isDraggingThis) {
                                             translationX = dragOffset.x
                                             translationY = dragOffset.y
+                                            rotationZ = 0f
+                                        } else if (isEditMode) {
+                                            rotationZ = itemRotation
+                                            translationX = itemTranslation
+                                            translationY = if (index % 2 == 0) itemTranslation * 0.4f else -itemTranslation * 0.4f
                                         }
                                     }
+                                    .then(gestureModifier)
                             ) {
                                 TagFolderAppItem(
                                     app = app,
                                     isEditMode = isEditMode,
                                     isDragging = isDraggingThis,
                                     onClick = {
-                                        onAppClick("${app.packageName}/${app.activityName}")
-                                        onDismiss()
-                                    },
-                                    onLongClick = { appOffset ->
-                                        onDismiss()
-                                        onAppLongClick(app, Offset(x, y) + appOffset)
-                                    },
-                                    onRemoveAppFromTag = onRemoveAppFromTag,
-                                    onDragStart = {
-                                        draggingKey = appKey
-                                        dragOffset = Offset.Zero
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    },
-                                    onDrag = { dragAmount ->
-                                        dragOffset += dragAmount
-                                        if (cellWidthPx > 0f && cellHeightPx > 0f && currentOnReorderApp != null) {
-                                            val colStep = cellWidthPx + colSpacingPx
-                                            val rowStep = cellHeightPx + rowSpacingPx
-                                            val colDelta = (dragOffset.x / colStep).roundToInt()
-                                            val rowDelta = (dragOffset.y / rowStep).roundToInt()
-
-                                            val curCol = index % 3
-                                            val curRow = index / 3
-                                            val targetCol = (curCol + colDelta).coerceIn(0, 2)
-                                            val targetRow = (curRow + rowDelta).coerceAtLeast(0)
-                                            val targetIndex = (targetRow * 3 + targetCol).coerceIn(0, currentApps.size - 1)
-
-                                            if (targetIndex != index && targetIndex in currentApps.indices) {
-                                                val swappedColDelta = targetCol - curCol
-                                                val swappedRowDelta = targetRow - curRow
-                                                dragOffset = Offset(
-                                                    dragOffset.x - swappedColDelta * colStep,
-                                                    dragOffset.y - swappedRowDelta * rowStep
-                                                )
-                                                currentOnReorderApp?.invoke(index, targetIndex)
-                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            }
+                                        if (!isEditMode) {
+                                            onAppClick("${app.packageName}/${app.activityName}")
+                                            onDismiss()
                                         }
                                     },
-                                    onDragEnd = {
-                                        draggingKey = null
-                                        dragOffset = Offset.Zero
+                                    onLongClick = { appOffset ->
+                                        if (!isEditMode) {
+                                            onDismiss()
+                                            onAppLongClick(app, Offset(x, y) + appOffset)
+                                        }
                                     },
+                                    onRemoveAppFromTag = onRemoveAppFromTag,
                                     tagId = tag.id,
                                     primaryTextColor = primaryTextColor,
                                     showShadows = showShadows,
@@ -539,9 +631,6 @@ private fun TagFolderAppItem(
     onClick: () -> Unit,
     onLongClick: (Offset) -> Unit,
     onRemoveAppFromTag: (String, String) -> Unit,
-    onDragStart: () -> Unit = {},
-    onDrag: (Offset) -> Unit = {},
-    onDragEnd: () -> Unit = {},
     tagId: String,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
@@ -551,47 +640,37 @@ private fun TagFolderAppItem(
     val currentOnClick by rememberUpdatedState(onClick)
     val currentOnLongClick by rememberUpdatedState(onLongClick)
     val currentOnRemoveApp by rememberUpdatedState(onRemoveAppFromTag)
-    val currentIsEditMode by rememberUpdatedState(isEditMode)
-    val currentTagId by rememberUpdatedState(tagId)
-    val currentOnDragStart by rememberUpdatedState(onDragStart)
-    val currentOnDrag by rememberUpdatedState(onDrag)
-    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
     val appKey = "${app.packageName}/${app.activityName}"
 
-    val gestureModifier = if (isEditMode) {
-        Modifier.pointerInput(appKey) {
-            detectDragGestures(
-                onDragStart = { currentOnDragStart() },
-                onDrag = { _, dragAmount -> currentOnDrag(dragAmount) },
-                onDragEnd = { currentOnDragEnd() },
-                onDragCancel = { currentOnDragEnd() }
-            )
-        }
-    } else {
+    val itemTapModifier = if (!isEditMode) {
         Modifier.pointerInput(appKey) {
             detectTapGestures(
                 onTap = { currentOnClick() },
                 onLongPress = { currentOnLongClick(itemPosition + it) }
             )
         }
+    } else {
+        Modifier
     }
+
+    val iconPainter = rememberAppIconPainter(app.iconKey, 48)
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
             .onGloballyPositioned { itemPosition = it.positionInRoot() }
-            .then(gestureModifier)
+            .then(itemTapModifier)
             .padding(4.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
-            AppIconItem(
-                app = app,
-                size = 48,
-                onClick = {
-                    if (isEditMode) currentOnRemoveApp(tagId, appKey) else currentOnClick()
-                },
-                onLongClick = { currentOnLongClick(it) }
+            Image(
+                painter = iconPainter,
+                contentDescription = app.label,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
             )
 
             if (isEditMode) {
@@ -803,6 +882,319 @@ fun TagFolderActionMenu(
                         color = popupTheme.contentColor,
                         style = MaterialTheme.typography.bodyLarge
                     )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Context action menu for the Tag Folders section icon (Reorder Folders, Sort by...).
+ */
+@Composable
+fun TagSectionActionMenu(
+    offset: Offset,
+    onDismiss: () -> Unit,
+    onReorderFolders: () -> Unit,
+    onOpenSortMenu: () -> Unit,
+    accentColor: AccentColor = AccentColor.SKY,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    popupTheme: PopupTheme = PopupTheme.DARK
+) {
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
+
+    val menuWidth = 240.dp
+    val menuWidthPx = with(density) { menuWidth.toPx() }
+
+    val itemsCount = 2
+    val menuHeightPx = with(density) { (60 + itemsCount * 48).dp.toPx() }
+    val borderPadding = with(density) { 16.dp.toPx() }
+
+    var x = offset.x
+    var y = offset.y
+
+    if (x + menuWidthPx > screenWidthPx) x = screenWidthPx - menuWidthPx - borderPadding
+    if (x < borderPadding) x = borderPadding
+    if (y + menuHeightPx > screenHeightPx) y = screenHeightPx - menuHeightPx - borderPadding
+    if (y < borderPadding) y = borderPadding
+
+    Popup(
+        offset = IntOffset(x.roundToInt(), y.roundToInt()),
+        onDismissRequest = onDismiss,
+        properties = PopupProperties(focusable = true)
+    ) {
+        Box(
+            modifier = Modifier
+                .width(menuWidth)
+                .clip(RoundedCornerShape(16.dp))
+                .background(popupTheme.backgroundColor)
+                .border(1.dp, accentColor.color.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                .padding(vertical = 8.dp)
+        ) {
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Folder,
+                        contentDescription = null,
+                        tint = accentColor.color,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Tag Folders",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = popupTheme.contentColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onDismiss()
+                            onReorderFolders()
+                        }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.OpenWith,
+                        contentDescription = null,
+                        tint = accentColor.color,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Reorder Folders",
+                        color = popupTheme.contentColor,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onDismiss()
+                            onOpenSortMenu()
+                        }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.Sort,
+                        contentDescription = null,
+                        tint = accentColor.color,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Sort by...",
+                        color = popupTheme.contentColor,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Compact Popup for sorting tag folders (By Name, By App Count with ascending & descending icon buttons).
+ */
+@Composable
+fun TagSortPopup(
+    offset: Offset,
+    onDismiss: () -> Unit,
+    onSortByNameAsc: () -> Unit,
+    onSortByNameDesc: () -> Unit,
+    onSortByAppCountDesc: () -> Unit,
+    onSortByAppCountAsc: () -> Unit,
+    accentColor: AccentColor = AccentColor.SKY,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    popupTheme: PopupTheme = PopupTheme.DARK
+) {
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
+
+    val menuWidth = 260.dp
+    val menuWidthPx = with(density) { menuWidth.toPx() }
+
+    val menuHeightPx = with(density) { 170.dp.toPx() }
+    val borderPadding = with(density) { 16.dp.toPx() }
+
+    var x = offset.x
+    var y = offset.y
+
+    if (x + menuWidthPx > screenWidthPx) x = screenWidthPx - menuWidthPx - borderPadding
+    if (x < borderPadding) x = borderPadding
+    if (y + menuHeightPx > screenHeightPx) y = screenHeightPx - menuHeightPx - borderPadding
+    if (y < borderPadding) y = borderPadding
+
+    Popup(
+        offset = IntOffset(x.roundToInt(), y.roundToInt()),
+        onDismissRequest = onDismiss,
+        properties = PopupProperties(focusable = true)
+    ) {
+        Box(
+            modifier = Modifier
+                .width(menuWidth)
+                .clip(RoundedCornerShape(16.dp))
+                .background(popupTheme.backgroundColor)
+                .border(1.dp, accentColor.color.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                .padding(vertical = 12.dp, horizontal = 14.dp)
+        ) {
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.Sort,
+                        contentDescription = null,
+                        tint = accentColor.color,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Sort Folders",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = popupTheme.contentColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = popupTheme.secondaryContentColor.copy(alpha = 0.2f),
+                    modifier = Modifier.padding(bottom = 10.dp)
+                )
+
+                // Row 1: By Name
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "By Name",
+                        color = popupTheme.contentColor,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(popupTheme.contentColor.copy(alpha = 0.08f))
+                                .clickable {
+                                    onDismiss()
+                                    onSortByNameAsc()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.KeyboardArrowUp,
+                                contentDescription = "Name A to Z",
+                                tint = accentColor.color,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(popupTheme.contentColor.copy(alpha = 0.08f))
+                                .clickable {
+                                    onDismiss()
+                                    onSortByNameDesc()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.KeyboardArrowDown,
+                                contentDescription = "Name Z to A",
+                                tint = accentColor.color,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Row 2: By App Count
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "By App Count",
+                        color = popupTheme.contentColor,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(popupTheme.contentColor.copy(alpha = 0.08f))
+                                .clickable {
+                                    onDismiss()
+                                    onSortByAppCountDesc()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.KeyboardArrowDown,
+                                contentDescription = "App Count High to Low",
+                                tint = accentColor.color,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(popupTheme.contentColor.copy(alpha = 0.08f))
+                                .clickable {
+                                    onDismiss()
+                                    onSortByAppCountAsc()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.KeyboardArrowUp,
+                                contentDescription = "App Count Low to High",
+                                tint = accentColor.color,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
