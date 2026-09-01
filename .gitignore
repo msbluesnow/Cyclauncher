@@ -29,3 +29,6 @@ Thumbs.db
 
 # F-Droid status script state
 scripts/fdroid_state.json
+
+# AI Agent Local Customizations & Skills
+.agents/
