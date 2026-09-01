@@ -1,0 +1,88 @@
+name: Release & Reproducible Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag to release (leave empty to use current commit)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Full history is required for AGP to embed correct version-control-info and tags
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag_name || github.ref }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Build Release APK
+        # Clean build with no daemon to ensure deterministic build reproducibility
+        run: ./gradlew clean assembleRelease --no-daemon --no-build-cache
+
+      - name: Locate Build Tools & Sign APK
+        env:
+          SIGNING_KEY_BASE64: ${{ secrets.SIGNING_KEY_BASE64 }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$SIGNING_KEY_BASE64" ]; then
+            echo "::warning::SIGNING_KEY_BASE64 secret is not set! Release APK will remain unsigned."
+            exit 0
+          fi
+
+          echo "$SIGNING_KEY_BASE64" | base64 --decode > /tmp/release.keystore
+
+          APK_FILE=$(find app/build/outputs/apk/release -type f -name "*.apk" | head -n 1)
+          if [ -z "$APK_FILE" ]; then
+            echo "::error::No APK found in app/build/outputs/apk/release"
+            exit 1
+          fi
+
+          echo "Found APK: $APK_FILE"
+
+          # Find the latest apksigner in Android SDK
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
+          echo "Using apksigner: $APKSIGNER"
+
+          $APKSIGNER sign \
+            --ks /tmp/release.keystore \
+            --ks-key-alias "$SIGNING_KEY_ALIAS" \
+            --ks-pass "pass:$KEYSTORE_PASSWORD" \
+            --key-pass "pass:${KEY_PASSWORD:-$KEYSTORE_PASSWORD}" \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --v4-signing-enabled false \
+            "$APK_FILE"
+
+          $APKSIGNER verify --verbose "$APK_FILE"
+          rm -f /tmp/release.keystore
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
+          files: app/build/outputs/apk/release/*.apk
+          generate_release_notes: true
