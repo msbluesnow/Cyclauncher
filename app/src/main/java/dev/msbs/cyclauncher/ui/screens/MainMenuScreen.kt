@@ -499,10 +499,10 @@ private fun HistorySection(
         if (isActive) {
             isHistoryShiftedUp = false
             setHistoryEditMode(false)
-            if (history.isNotEmpty()) {
+            if (history.isNotEmpty() && (listState.firstVisibleItemIndex != 0 || listState.firstVisibleItemScrollOffset != 0)) {
                 listState.scrollToItem(0)
             }
-            if (popularTags.isNotEmpty()) {
+            if (popularTags.isNotEmpty() && (tagGridState.firstVisibleItemIndex != 0 || tagGridState.firstVisibleItemScrollOffset != 0)) {
                 tagGridState.scrollToItem(0)
             }
         }

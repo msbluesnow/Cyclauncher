@@ -46,7 +46,7 @@ class CyclauncherApp : Application(), SingletonImageLoader.Factory {
             val cache = imageLoader?.memoryCache ?: SingletonImageLoader.get(this).memoryCache ?: return
             if (level >= TRIM_MEMORY_RUNNING_CRITICAL) {
                 cache.clear()
-            } else if (level >= TRIM_MEMORY_BACKGROUND || level >= TRIM_MEMORY_MODERATE || level >= TRIM_MEMORY_COMPLETE) {
+            } else if (level >= TRIM_MEMORY_COMPLETE) {
                 cache.trimToSize(cache.size / 2)
             }
         } catch (_: Exception) {}

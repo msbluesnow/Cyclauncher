@@ -460,15 +460,15 @@ class MainActivity : ComponentActivity() {
         isDefaultLauncherCached = viewModel.isDefaultLauncher()
         if (viewModel.apps.value.isEmpty()) {
             viewModel.refreshApps()
+        } else {
+            viewModel.prewarmActiveIcons()
         }
-        window.decorView.postInvalidateOnAnimation()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
             updateStatusBarVisibility(viewModel.hideStatusBar.value)
-            window.decorView.postInvalidateOnAnimation()
         }
     }
 
@@ -499,7 +499,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        viewModel.updateDefaultLauncherStatus()
+        setIntent(intent)
         isDefaultLauncherCached = viewModel.isDefaultLauncher()
         if (intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_HOME)) {
             if (!isDefaultLauncherCached) {
@@ -507,8 +507,8 @@ class MainActivity : ComponentActivity() {
                 return
             }
         }
+        viewModel.updateDefaultLauncherStatus()
         viewModel.requestReset()
-        viewModel.requestHistoryScrollToBottom()
     }
 
     private fun openApp(componentKey: String) {

@@ -1025,6 +1025,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
+     * Prewarms icons for currently active favorites and recent history items.
+     */
+    fun prewarmActiveIcons() {
+        val keys = (actionsManager.favorites.value + actionsManager.history.value).distinct()
+        prewarmIcons(keys)
+    }
+
+    /**
      * Preloads favorite and recent icons asynchronously on a low-priority background dispatcher
      * so that returning to the home screen has 0ms icon pop-in delay.
      */
