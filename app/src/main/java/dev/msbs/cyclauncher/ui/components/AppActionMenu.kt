@@ -23,13 +23,26 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationEndReason
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -57,13 +70,13 @@ fun AppActionMenu(
 ) {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
-    
+
     val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
     val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
-    
+
     val menuWidth = 240.dp
     val menuWidthPx = with(density) { menuWidth.toPx() }
-    
+
     val itemsCount = 5
     val menuHeightPx = with(density) { (60 + itemsCount * 48).dp.toPx() }
     val borderPadding = with(density) { 16.dp.toPx() }
@@ -96,9 +109,9 @@ fun AppActionMenu(
                     style = MaterialTheme.typography.titleSmall,
                     color = accentColor.color
                 )
-                
+
                 Spacer(modifier = Modifier.height(4.dp))
-                
+
                 MenuItem(
                     text = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
                     icon = if (isFavorite) Icons.Outlined.Star else Icons.Outlined.StarOutline,
@@ -319,7 +332,7 @@ fun TagSelectionDialog(
     allTags: List<Tag>,
     assignedTagIds: List<String>,
     onToggleTag: (String) -> Unit,
-    onCreateTag: (String, Color) -> Unit,
+    onCreateTag: (String, Color, String?) -> Unit,
     onUpdateTag: (Tag) -> Unit,
     onDeleteTag: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -357,19 +370,37 @@ fun TagSelectionDialog(
                                     onLongClick = { tagToEdit = tag }
                                 ),
                                 shape = CircleShape,
-                                color = if (isAssigned) tag.color.copy(alpha = 0.12f) else popupTheme.contentColor.copy(alpha = 0.04f),
+                                color = if (isAssigned) tag.color.copy(alpha = 0.12f) else popupTheme.contentColor.copy(
+                                    alpha = 0.04f
+                                ),
                                 border = BorderStroke(
-                                    width = 1.dp, 
+                                    width = 1.dp,
                                     color = if (isAssigned) tag.color else tag.color.copy(alpha = 0.38f)
                                 )
                             ) {
-                                Box(
+                                Row(
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                    contentAlignment = Alignment.Center
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    val vectorIcon = TagIconRegistry.getVectorIcon(tag.emoji)
+                                    if (vectorIcon != null) {
+                                        Icon(
+                                            imageVector = vectorIcon,
+                                            contentDescription = null,
+                                            tint = if (isAssigned) tag.color else popupTheme.contentColor,
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(5.dp))
+                                    } else if (!tag.emoji.isNullOrBlank()) {
+                                        Text(
+                                            text = tag.emoji,
+                                            fontSize = 13.sp
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                    }
                                     Text(
-                                        text = tag.name, 
-                                        color = if (isAssigned) tag.color else popupTheme.contentColor, 
+                                        text = tag.name,
+                                        color = if (isAssigned) tag.color else popupTheme.contentColor,
                                         fontSize = 13.sp,
                                         fontWeight = if (isAssigned) FontWeight.Bold else FontWeight.Medium
                                     )
@@ -424,8 +455,8 @@ fun TagSelectionDialog(
     if (showCreateDialog) {
         TagEditDialog(
             onDismiss = { showCreateDialog = false },
-            onConfirm = { name, color ->
-                onCreateTag(name, color)
+            onConfirm = { name, color, emoji ->
+                onCreateTag(name, color, emoji)
                 showCreateDialog = false
             },
             accentColor = accentColor,
@@ -438,8 +469,8 @@ fun TagSelectionDialog(
         TagEditDialog(
             tag = tag,
             onDismiss = { tagToEdit = null },
-            onConfirm = { name, color ->
-                onUpdateTag(tag.copy(name = name, color = color))
+            onConfirm = { name, color, emoji ->
+                onUpdateTag(tag.copy(name = name, color = color, emoji = emoji))
                 tagToEdit = null
             },
             onDelete = {
@@ -454,15 +485,116 @@ fun TagSelectionDialog(
 }
 
 /**
+ * Header for TagEditDialog showing title, smooth 2.3-second progress line, and trash icon.
+ * Holding the trash icon animates the line from the title text towards the trash icon.
+ */
+@Composable
+private fun TagEditHeader(
+    title: String,
+    titleColor: Color,
+    onDelete: (() -> Unit)?,
+    holdDurationMs: Long = 1800L,
+    deleteColor: Color = Color(0xFFEF4444)
+) {
+    val haptic = LocalHapticFeedback.current
+    var isPressed by remember { mutableStateOf(false) }
+    val progress = remember { Animatable(0f) }
+
+    LaunchedEffect(isPressed) {
+        if (isPressed && onDelete != null) {
+            val result = progress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = holdDurationMs.toInt(),
+                    easing = LinearEasing
+                )
+            )
+            if (result.endReason == AnimationEndReason.Finished && progress.value >= 0.99f) {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onDelete()
+            }
+        } else {
+            progress.snapTo(0f)
+        }
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            color = titleColor,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp
+        )
+
+        if (onDelete != null) {
+            // Animated progress line connecting the title to the trash icon
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 10.dp)
+                    .height(3.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                if (progress.value > 0f) {
+                    // Subtle background track
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight()
+                            .clip(CircleShape)
+                            .background(deleteColor.copy(alpha = 0.18f))
+                    )
+                    // Active filling line from title to trash icon
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(progress.value)
+                            .fillMaxHeight()
+                            .clip(CircleShape)
+                            .background(deleteColor)
+                    )
+                }
+            }
+
+            // Trash Icon Button
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(if (progress.value > 0f) deleteColor.copy(alpha = 0.15f) else Color.Transparent)
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            isPressed = true
+                            waitForUpOrCancellation()
+                            isPressed = false
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = "Hold 2.3s to delete",
+                    tint = if (progress.value > 0f) deleteColor else deleteColor.copy(alpha = 0.85f),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+    }
+}
+
+/**
  * Dialog for creating, editing, or deleting a tag.
- * Supports presets and an interactive custom color picker.
+ * Supports Vector Icons (tints with tag color), Emojis, and interactive color picker.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TagEditDialog(
     tag: Tag? = null,
     onDismiss: () -> Unit,
-    onConfirm: (String, Color) -> Unit,
+    onConfirm: (String, Color, String?) -> Unit,
     onDelete: (() -> Unit)? = null,
     accentColor: AccentColor,
     buttonTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
@@ -477,8 +609,20 @@ fun TagEditDialog(
         )
     }
 
+    val emojiPresets = remember {
+        listOf(
+            "📁", "🎮", "💼", "💬", "🎵", "📸", "🌐", "🛒",
+            "📚", "⚙️", "🎬", "🚀", "💰", "💡", "🍔", "⭐",
+            "❤️", "🔥", "⚡", "🏠", "🔒", "🎨", "🛠️", "🎧"
+        )
+    }
+
     var name by remember { mutableStateOf(tag?.name ?: "") }
     var selectedColor by remember { mutableStateOf(tag?.color ?: quickSwatches[0]) }
+    var emojiText by remember { mutableStateOf(tag?.emoji ?: "") }
+    var showEmojiPicker by remember { mutableStateOf(true) }
+    var showAllIconsDialog by remember { mutableStateOf(false) }
+    var iconTab by remember { mutableIntStateOf(if (TagIconRegistry.isVectorIcon(tag?.emoji) || tag?.emoji.isNullOrBlank()) 0 else 1) }
 
     val isInitialCustom = remember(tag?.color) {
         tag?.color != null && !quickSwatches.contains(tag.color)
@@ -499,30 +643,16 @@ fun TagEditDialog(
         mutableStateOf(String.format("%06X", 0xFFFFFF and argb))
     }
 
+    val previewVectorIcon = remember(emojiText) { TagIconRegistry.getVectorIcon(emojiText) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = if (tag == null) "Create New Tag" else "Edit Tag",
-                    color = popupTheme.contentColor,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-                if (onDelete != null) {
-                    IconButton(onClick = onDelete) {
-                        Icon(
-                            imageVector = Icons.Outlined.Delete,
-                            contentDescription = "Delete Tag",
-                            tint = Color(0xFFEF4444)
-                        )
-                    }
-                }
-            }
+            TagEditHeader(
+                title = if (tag == null) "Create New Tag" else "Edit Tag",
+                titleColor = popupTheme.contentColor,
+                onDelete = onDelete
+            )
         },
         text = {
             val animationsEnabled = LocalAnimationsEnabled.current
@@ -532,6 +662,7 @@ fun TagEditDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
+                // Live Tag Preview Box
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -546,13 +677,29 @@ fun TagEditDialog(
                         modifier = Modifier.weight(1f).padding(end = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(12.dp)
-                                .clip(CircleShape)
-                                .background(selectedColor)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        if (previewVectorIcon != null) {
+                            Icon(
+                                imageVector = previewVectorIcon,
+                                contentDescription = null,
+                                tint = selectedColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        } else if (emojiText.isNotBlank()) {
+                            Text(
+                                text = emojiText.trim(),
+                                fontSize = 18.sp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .clip(CircleShape)
+                                    .background(selectedColor)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                         Text(
                             text = if (name.isBlank()) "Tag Preview" else name,
                             color = popupTheme.contentColor,
@@ -570,31 +717,321 @@ fun TagEditDialog(
                             .padding(horizontal = 6.dp, vertical = 2.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "#",
-                            color = selectedColor,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
+                        if (previewVectorIcon != null) {
+                            Icon(
+                                imageVector = previewVectorIcon,
+                                contentDescription = null,
+                                tint = selectedColor,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        } else if (emojiText.isNotBlank()) {
+                            Text(
+                                text = emojiText.trim(),
+                                fontSize = 13.sp
+                            )
+                        } else {
+                            Text(
+                                text = "#",
+                                color = selectedColor,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
                     }
                 }
 
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Tag Name", color = popupTheme.secondaryContentColor) },
-                    placeholder = { Text("e.g. Games, Work, Social", color = popupTheme.secondaryContentColor.copy(alpha = 0.6f)) },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = selectedColor,
-                        unfocusedBorderColor = popupTheme.contentColor.copy(alpha = 0.2f),
-                        focusedTextColor = popupTheme.contentColor,
-                        unfocusedTextColor = popupTheme.contentColor,
-                        cursorColor = if (animationsEnabled) selectedColor else Color.Transparent
-                    ),
-                    shape = RoundedCornerShape(10.dp),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // Row: Icon Selector Button + Tag Name Field
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Min),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Custom Icon / Emoji Button
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                if (emojiText.isNotBlank()) selectedColor.copy(alpha = 0.15f) else popupTheme.contentColor.copy(
+                                    alpha = 0.08f
+                                )
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (emojiText.isNotBlank()) selectedColor else popupTheme.contentColor.copy(
+                                    alpha = 0.2f
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable { showEmojiPicker = !showEmojiPicker },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (previewVectorIcon != null) {
+                            Icon(
+                                imageVector = previewVectorIcon,
+                                contentDescription = "Vector Icon",
+                                tint = selectedColor,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else if (emojiText.isNotBlank()) {
+                            Text(
+                                text = emojiText.trim(),
+                                fontSize = 22.sp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Outlined.Folder,
+                                contentDescription = "Choose Icon",
+                                tint = popupTheme.secondaryContentColor,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+
+                    // Tag Name Field
+                    AppOutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Tag Name", color = popupTheme.secondaryContentColor) },
+                        placeholder = {
+                            Text(
+                                "e.g. Games, Work",
+                                color = popupTheme.secondaryContentColor.copy(alpha = 0.6f)
+                            )
+                        },
+                        textStyle = TextStyle(color = popupTheme.contentColor, fontSize = 15.sp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = selectedColor,
+                            unfocusedBorderColor = popupTheme.contentColor.copy(alpha = 0.2f),
+                            focusedTextColor = popupTheme.contentColor,
+                            unfocusedTextColor = popupTheme.contentColor
+                        ),
+                        cursorColor = selectedColor,
+                        shape = RoundedCornerShape(10.dp),
+                        singleLine = true,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                    )
+                }
+
+                // Expandable Icon & Emoji Picker Panel
+                if (showEmojiPicker) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(popupTheme.contentColor.copy(alpha = 0.05f))
+                            .border(1.dp, popupTheme.contentColor.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                            .padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Folder Icon",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = popupTheme.secondaryContentColor
+                            )
+                            if (emojiText.isNotBlank()) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color(0xFFEF4444).copy(alpha = 0.14f),
+                                    border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.45f)),
+                                    modifier = Modifier.clickable { emojiText = "" }
+                                ) {
+                                    Text(
+                                        text = "Reset (4 apps)",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFFEF4444),
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Tab Switcher between Vector Icons and Emoji (themed with accentColor)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(popupTheme.contentColor.copy(alpha = 0.08f))
+                                .padding(2.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (iconTab == 0) accentColor.color.copy(alpha = 0.22f) else Color.Transparent)
+                                    .clickable { iconTab = 0 }
+                                    .padding(vertical = 5.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Vector Icons",
+                                    fontSize = 11.sp,
+                                    fontWeight = if (iconTab == 0) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (iconTab == 0) accentColor.color else popupTheme.secondaryContentColor
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (iconTab == 1) accentColor.color.copy(alpha = 0.22f) else Color.Transparent)
+                                    .clickable { iconTab = 1 }
+                                    .padding(vertical = 5.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Emoji",
+                                    fontSize = 11.sp,
+                                    fontWeight = if (iconTab == 1) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (iconTab == 1) accentColor.color else popupTheme.secondaryContentColor
+                                )
+                            }
+                        }
+
+                        if (iconTab == 0) {
+                            // Material Vector Icons Grid (tinted with accentColor)
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                TagIconRegistry.PRIMARY_ICONS.forEach { vectorItem ->
+                                    val formattedKey = TagIconRegistry.formatKey(vectorItem.key)
+                                    val isSelected = emojiText == formattedKey || emojiText == vectorItem.key
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(
+                                                if (isSelected) accentColor.color.copy(alpha = 0.22f) else popupTheme.contentColor.copy(
+                                                    alpha = 0.04f
+                                                )
+                                            )
+                                            .border(
+                                                width = if (isSelected) 1.5.dp else 0.5.dp,
+                                                color = if (isSelected) accentColor.color else popupTheme.contentColor.copy(
+                                                    alpha = 0.15f
+                                                ),
+                                                shape = RoundedCornerShape(8.dp)
+                                            )
+                                            .clickable {
+                                                emojiText = if (isSelected) "" else formattedKey
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = vectorItem.icon,
+                                            contentDescription = vectorItem.name,
+                                            tint = if (isSelected) accentColor.color else popupTheme.contentColor.copy(
+                                                alpha = 0.85f
+                                            ),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+
+                                // More Icons button "+"
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(accentColor.color.copy(alpha = 0.14f))
+                                        .border(
+                                            width = 1.dp,
+                                            color = accentColor.color.copy(alpha = 0.5f),
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                        .clickable {
+                                            showAllIconsDialog = true
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Add,
+                                        contentDescription = "More Icons",
+                                        tint = accentColor.color,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        } else {
+                            // Emoji Tab (strictly 1 valid emoji or unicode symbol)
+                            val currentEmojiValue = if (TagIconRegistry.isVectorIcon(emojiText)) "" else emojiText
+                            AppOutlinedTextField(
+                                value = currentEmojiValue,
+                                onValueChange = { input ->
+                                    if (input.isEmpty()) {
+                                        emojiText = ""
+                                    } else {
+                                        val singleEmoji = EmojiUtils.extractSingleEmoji(input)
+                                        if (singleEmoji != null) {
+                                            emojiText = singleEmoji
+                                        }
+                                    }
+                                },
+                                placeholder = {
+                                    Text(
+                                        "Type or paste 1 emoji",
+                                        fontSize = 12.sp,
+                                        color = popupTheme.secondaryContentColor.copy(alpha = 0.6f)
+                                    )
+                                },
+                                textStyle = TextStyle(color = popupTheme.contentColor, fontSize = 15.sp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = accentColor.color,
+                                    unfocusedBorderColor = popupTheme.contentColor.copy(alpha = 0.2f),
+                                    focusedTextColor = popupTheme.contentColor,
+                                    unfocusedTextColor = popupTheme.contentColor
+                                ),
+                                cursorColor = accentColor.color,
+                                shape = RoundedCornerShape(8.dp),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                emojiPresets.forEach { preset ->
+                                    val isSelected = emojiText == preset
+                                    Box(
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) accentColor.color.copy(alpha = 0.25f) else Color.Transparent)
+                                            .border(
+                                                width = if (isSelected) 1.5.dp else 0.5.dp,
+                                                color = if (isSelected) accentColor.color else popupTheme.contentColor.copy(
+                                                    alpha = 0.15f
+                                                ),
+                                                shape = RoundedCornerShape(8.dp)
+                                            )
+                                            .clickable {
+                                                emojiText = if (emojiText == preset) "" else preset
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(text = preset, fontSize = 18.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
                 Row(
                     modifier = Modifier
@@ -691,7 +1128,9 @@ fun TagEditDialog(
                                     .background(swatch)
                                     .border(
                                         width = if (selectedColor == swatch) 2.dp else 1.dp,
-                                        color = if (selectedColor == swatch) popupTheme.contentColor else Color.Black.copy(alpha = 0.2f),
+                                        color = if (selectedColor == swatch) popupTheme.contentColor else Color.Black.copy(
+                                            alpha = 0.2f
+                                        ),
                                         shape = CircleShape
                                     )
                                     .clickable {
@@ -723,7 +1162,11 @@ fun TagEditDialog(
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("Saturation (${(currentSat * 100).toInt()}%)", fontSize = 11.sp, color = popupTheme.secondaryContentColor)
+                        Text(
+                            "Saturation (${(currentSat * 100).toInt()}%)",
+                            fontSize = 11.sp,
+                            color = popupTheme.secondaryContentColor
+                        )
                         Slider(
                             value = currentSat,
                             onValueChange = {
@@ -743,7 +1186,11 @@ fun TagEditDialog(
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("Brightness (${(currentVal * 100).toInt()}%)", fontSize = 11.sp, color = popupTheme.secondaryContentColor)
+                        Text(
+                            "Brightness (${(currentVal * 100).toInt()}%)",
+                            fontSize = 11.sp,
+                            color = popupTheme.secondaryContentColor
+                        )
                         Slider(
                             value = currentVal,
                             onValueChange = {
@@ -774,10 +1221,11 @@ fun TagEditDialog(
                                 .background(selectedColor)
                                 .border(1.5.dp, popupTheme.contentColor.copy(alpha = 0.3f), CircleShape)
                         )
-                        OutlinedTextField(
+                        AppOutlinedTextField(
                             value = hexInputText,
                             onValueChange = { input ->
-                                val filtered = input.filter { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }.take(6).uppercase()
+                                val filtered = input.filter { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }.take(6)
+                                    .uppercase()
                                 hexInputText = filtered
                                 if (filtered.length == 6) {
                                     try {
@@ -789,18 +1237,21 @@ fun TagEditDialog(
                                         currentSat = hsv[1]
                                         currentVal = hsv[2]
                                         selectedColor = col
-                                    } catch (_: Exception) {}
+                                    } catch (_: Exception) {
+                                    }
                                 }
                             },
                             prefix = { Text("#", color = popupTheme.contentColor, fontWeight = FontWeight.Bold) },
                             singleLine = true,
                             label = { Text("HEX Code", color = popupTheme.secondaryContentColor) },
+                            textStyle = TextStyle(color = popupTheme.contentColor, fontSize = 15.sp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = selectedColor,
                                 unfocusedBorderColor = popupTheme.contentColor.copy(alpha = 0.2f),
                                 focusedTextColor = popupTheme.contentColor,
                                 unfocusedTextColor = popupTheme.contentColor
                             ),
+                            cursorColor = accentColor.color,
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(1f)
                         )
@@ -810,7 +1261,12 @@ fun TagEditDialog(
         },
         confirmButton = {
             Button(
-                onClick = { if (name.isNotBlank()) onConfirm(name.trim(), selectedColor) },
+                onClick = {
+                    if (name.isNotBlank()) {
+                        val finalEmoji = emojiText.trim().takeIf { it.isNotBlank() }
+                        onConfirm(name.trim(), selectedColor, finalEmoji)
+                    }
+                },
                 enabled = name.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = accentColor.color,
@@ -838,6 +1294,232 @@ fun TagEditDialog(
         containerColor = popupTheme.solidBackgroundColor,
         textContentColor = popupTheme.contentColor,
         shape = RoundedCornerShape(20.dp)
+    )
+
+    if (showAllIconsDialog) {
+        AllTagVectorIconsDialog(
+            selectedKey = emojiText,
+            selectedColor = selectedColor,
+            popupTheme = popupTheme,
+            accentColor = accentColor,
+            buttonTextColor = buttonTextColor,
+            onSelectIcon = { newKey ->
+                emojiText = newKey
+                showAllIconsDialog = false
+            },
+            onDismiss = { showAllIconsDialog = false }
+        )
+    }
+}
+
+/**
+ * Modal dialog for browsing, filtering by categories, and searching all available Material Vector Icons.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun AllTagVectorIconsDialog(
+    selectedKey: String,
+    selectedColor: Color,
+    popupTheme: PopupTheme,
+    accentColor: AccentColor,
+    buttonTextColor: PrimaryTextColor,
+    onSelectIcon: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedCategoryIndex by remember { mutableIntStateOf(0) }
+
+    val filteredIcons = remember(searchQuery, selectedCategoryIndex) {
+        val q = searchQuery.trim().lowercase()
+        if (q.isNotEmpty()) {
+            TagIconRegistry.ALL_ICONS.filter {
+                it.name.lowercase().contains(q) || it.key.lowercase().contains(q)
+            }
+        } else if (selectedCategoryIndex == 0) {
+            TagIconRegistry.ALL_ICONS
+        } else {
+            TagIconRegistry.CATEGORIES.getOrNull(selectedCategoryIndex - 1)?.icons ?: TagIconRegistry.ALL_ICONS
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Vector Icons",
+                    color = popupTheme.contentColor,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = "Close",
+                        tint = popupTheme.secondaryContentColor
+                    )
+                }
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Search Bar
+                AppOutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = {
+                        Text(
+                            "Search icons...",
+                            fontSize = 13.sp,
+                            color = popupTheme.secondaryContentColor.copy(alpha = 0.6f)
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Search,
+                            contentDescription = null,
+                            tint = popupTheme.secondaryContentColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Close,
+                                    contentDescription = "Clear",
+                                    tint = popupTheme.secondaryContentColor,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    },
+                    textStyle = TextStyle(color = popupTheme.contentColor, fontSize = 14.sp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = accentColor.color,
+                        unfocusedBorderColor = popupTheme.contentColor.copy(alpha = 0.2f),
+                        focusedTextColor = popupTheme.contentColor,
+                        unfocusedTextColor = popupTheme.contentColor
+                    ),
+                    cursorColor = accentColor.color,
+                    shape = RoundedCornerShape(10.dp),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Category Chips (when not searching)
+                if (searchQuery.isEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val categoryTitles = remember { listOf("All") + TagIconRegistry.CATEGORIES.map { it.title } }
+                        categoryTitles.forEachIndexed { index, title ->
+                            val isSelected = selectedCategoryIndex == index
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSelected) accentColor.color.copy(alpha = 0.22f) else popupTheme.contentColor.copy(
+                                    alpha = 0.06f
+                                ),
+                                border = BorderStroke(
+                                    width = if (isSelected) 1.2.dp else 0.5.dp,
+                                    color = if (isSelected) accentColor.color else popupTheme.contentColor.copy(alpha = 0.15f)
+                                ),
+                                modifier = Modifier.clickable { selectedCategoryIndex = index }
+                            ) {
+                                Text(
+                                    text = title,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) accentColor.color else popupTheme.secondaryContentColor,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Icons Grid
+                if (filteredIcons.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No icons found",
+                            color = popupTheme.secondaryContentColor,
+                            fontSize = 13.sp
+                        )
+                    }
+                } else {
+                    FlowRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        filteredIcons.forEach { item ->
+                            val formattedKey = TagIconRegistry.formatKey(item.key)
+                            val isSelected = selectedKey == formattedKey || selectedKey == item.key
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(
+                                        if (isSelected) accentColor.color.copy(alpha = 0.25f) else popupTheme.contentColor.copy(
+                                            alpha = 0.04f
+                                        )
+                                    )
+                                    .border(
+                                        width = if (isSelected) 1.5.dp else 0.5.dp,
+                                        color = if (isSelected) accentColor.color else popupTheme.contentColor.copy(
+                                            alpha = 0.15f
+                                        ),
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
+                                    .clickable {
+                                        onSelectIcon(formattedKey)
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = item.icon,
+                                    contentDescription = item.name,
+                                    tint = if (isSelected) accentColor.color else popupTheme.contentColor.copy(alpha = 0.85f),
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("Close", color = buttonTextColor.color, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            }
+        },
+        containerColor = popupTheme.solidBackgroundColor,
+        textContentColor = popupTheme.contentColor
     )
 }
 
@@ -889,22 +1571,23 @@ fun RenameDialog(
 ) {
     var text by remember { mutableStateOf(initialValue) }
     val animationsEnabled = LocalAnimationsEnabled.current
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Rename Application", color = accentColor.color) },
         text = {
-            TextField(
+            AppTextField(
                 value = text,
                 onValueChange = { text = it },
+                textStyle = TextStyle(color = popupTheme.contentColor, fontSize = 15.sp),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
                     focusedTextColor = popupTheme.contentColor,
                     unfocusedTextColor = popupTheme.contentColor,
-                    cursorColor = if (animationsEnabled) accentColor.color else Color.Transparent,
                     focusedIndicatorColor = accentColor.color
                 ),
+                cursorColor = accentColor.color,
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )

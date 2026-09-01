@@ -151,7 +151,7 @@ private fun SearchTextField(
     val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
     val animationsEnabled = LocalAnimationsEnabled.current
 
-    TextField(
+    dev.msbs.cyclauncher.ui.components.AppTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier.fillMaxWidth(),
@@ -161,10 +161,14 @@ private fun SearchTextField(
                 color = primaryTextColor.color.copy(alpha = 0.6f),
                 textAlign = alignment,
                 modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.bodyLarge.copy(shadow = shadow)
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    color = primaryTextColor.color.copy(alpha = 0.6f),
+                    shadow = shadow
+                )
             ) 
         },
         textStyle = MaterialTheme.typography.bodyLarge.copy(
+            color = primaryTextColor.color,
             textAlign = alignment,
             shadow = shadow
         ),
@@ -173,9 +177,9 @@ private fun SearchTextField(
             unfocusedContainerColor = Color.Transparent,
             focusedTextColor = primaryTextColor.color,
             unfocusedTextColor = primaryTextColor.color,
-            cursorColor = if (animationsEnabled) accentColor.color else Color.Transparent,
             focusedIndicatorColor = accentColor.color
         ),
+        cursorColor = accentColor.color,
         singleLine = true
     )
 }

@@ -199,7 +199,7 @@ fun CharacterMappingScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        OutlinedTextField(
+                        dev.msbs.cyclauncher.ui.components.AppOutlinedTextField(
                             value = inputSymbol,
                             onValueChange = { inputSymbol = it },
                             placeholder = {
@@ -220,9 +220,9 @@ fun CharacterMappingScreen(
                                 focusedTextColor = primaryTextColor.color,
                                 unfocusedTextColor = primaryTextColor.color,
                                 focusedBorderColor = accentColor.color,
-                                unfocusedBorderColor = primaryTextColor.color.copy(alpha = 0.2f),
-                                cursorColor = if (LocalAnimationsEnabled.current) accentColor.color else Color.Transparent
+                                unfocusedBorderColor = primaryTextColor.color.copy(alpha = 0.2f)
                             ),
+                            cursorColor = accentColor.color,
                             modifier = Modifier.weight(1.3f),
                             shape = RoundedCornerShape(10.dp),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),

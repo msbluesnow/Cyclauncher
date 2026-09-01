@@ -764,6 +764,9 @@ class AppActionsManager(context: Context) {
             val obj = JSONObject()
             obj.put("name", tag.name)
             obj.put("color", colorToHex(tag.color))
+            if (!tag.emoji.isNullOrBlank()) {
+                obj.put("emoji", tag.emoji)
+            }
             tagsArray.put(obj)
         }
 
@@ -846,6 +849,7 @@ class AppActionsManager(context: Context) {
             val array = JSONArray(trimmed)
             val packageToTagNames = mutableMapOf<String, MutableList<String>>()
             val tagColors = mutableMapOf<String, Color>()
+            val tagIcons = mutableMapOf<String, String>()
 
             for (i in 0 until array.length()) {
                 val obj = array.optJSONObject(i) ?: continue
@@ -855,6 +859,7 @@ class AppActionsManager(context: Context) {
                 val colorHex = obj.optString("color").trim()
                 val color = if (colorHex.isNotEmpty()) parseHexColor(colorHex) else Color.Unspecified
                 val isFav = extractIsFavorite(obj)
+                val iconVal = (obj.optString("icon").ifEmpty { obj.optString("emoji") }).trim().takeIf { it.isNotEmpty() }
 
                 val tagNames = mutableListOf<String>()
                 val singleTag = obj.optString("tag").ifEmpty { obj.optString("tagName") }.trim()
@@ -870,9 +875,13 @@ class AppActionsManager(context: Context) {
                     if (color != Color.Unspecified && !tagColors.containsKey(lower)) {
                         tagColors[lower] = color
                     }
+                    if (iconVal != null && !tagIcons.containsKey(lower)) {
+                        tagIcons[lower] = iconVal
+                    }
                     if (lower !in existingNames && lower !in createdNamesSet) {
                         val resolvedColor = tagColors[lower] ?: generateTagColor(tagName)
-                        tagsToCreate.add(TagsBackupPreview.TagInfo(name = tagName, color = resolvedColor))
+                        val resolvedIcon = tagIcons[lower]
+                        tagsToCreate.add(TagsBackupPreview.TagInfo(name = tagName, color = resolvedColor, emoji = resolvedIcon))
                         createdNamesSet.add(lower)
                     }
                     val targetKey = component.ifEmpty { pkg }
@@ -952,11 +961,12 @@ class AppActionsManager(context: Context) {
                         val obj = array.optJSONObject(i) ?: continue
                         val name = obj.optString("name").trim()
                         val colorHex = obj.optString("color").trim()
+                        val emoji = (if (obj.has("emoji")) obj.optString("emoji", "") else if (obj.has("icon")) obj.optString("icon", "") else "").trim().takeIf { it.isNotBlank() }
                         if (name.isEmpty()) continue
                         val lower = name.lowercase().trim()
                         if (lower !in existingNames && lower !in createdNamesSet) {
                             val resolvedColor = if (colorHex.isNotEmpty()) parseHexColor(colorHex) else generateTagColor(name)
-                            tagsToCreate.add(TagsBackupPreview.TagInfo(name = name, color = resolvedColor))
+                            tagsToCreate.add(TagsBackupPreview.TagInfo(name = name, color = resolvedColor, emoji = emoji))
                             createdNamesSet.add(lower)
                         }
                     }
@@ -1028,7 +1038,8 @@ class AppActionsManager(context: Context) {
                 val newTag = Tag(
                     id = UUID.randomUUID().toString(),
                     name = info.name,
-                    color = info.color
+                    color = info.color,
+                    emoji = info.emoji
                 )
                 currentTags.add(newTag)
                 nameToId[lower] = newTag.id
@@ -1345,7 +1356,7 @@ data class TagsBackupPreview(
     /**
      * Holds basic tag definition metadata in a backup.
      */
-    data class TagInfo(val name: String, val color: Color)
+    data class TagInfo(val name: String, val color: Color, val emoji: String? = null)
 
     /**
      * Holds assignment mapping of tags to an application component.

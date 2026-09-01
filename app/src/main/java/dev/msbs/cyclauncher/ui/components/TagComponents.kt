@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -88,45 +89,38 @@ fun TagFolderItem(
                 .padding(4.dp),
             contentAlignment = Alignment.Center
         ) {
-            Column(
-                verticalArrangement = Arrangement.SpaceEvenly,
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically,
+            val hasCustomIcon = !tag.emoji.isNullOrBlank()
+            val vectorIcon = TagIconRegistry.getVectorIcon(tag.emoji)
+
+            // Layer 1: App icons in background (dimmed if custom icon is active, or full opacity if default)
+            if (previewApps.isNotEmpty()) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                ) {
-                    if (previewApps.isNotEmpty()) {
-                        MiniAppIconPreview(app = previewApps[0])
-                    }
-                    if (previewApps.size > 1) {
-                        MiniAppIconPreview(app = previewApps[1])
-                    } else if (previewApps.size == 1) {
-                        Spacer(modifier = Modifier.size(16.dp))
-                    }
-                }
-                if (previewApps.size > 2) {
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                    ) {
-                        MiniAppIconPreview(app = previewApps[2])
-                        if (previewApps.size > 3) {
-                            MiniAppIconPreview(app = previewApps[3])
-                        } else {
-                            Spacer(modifier = Modifier.size(16.dp))
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            if (hasCustomIcon) {
+                                alpha = 0.22f
+                            }
                         }
-                    }
-                } else {
-                    Spacer(modifier = Modifier.weight(1f))
+                ) {
+                    TagFolderAppIconsGrid(previewApps = previewApps, iconSizeDp = 16.dp)
                 }
+            }
+
+            // Layer 2: Custom Vector Icon or Emoji on foreground
+            if (vectorIcon != null) {
+                Icon(
+                    imageVector = vectorIcon,
+                    contentDescription = null,
+                    tint = tag.color,
+                    modifier = Modifier.size(28.dp)
+                )
+            } else if (!tag.emoji.isNullOrBlank()) {
+                Text(
+                    text = tag.emoji,
+                    fontSize = 26.sp,
+                    textAlign = TextAlign.Center
+                )
             }
         }
 
@@ -148,13 +142,61 @@ fun TagFolderItem(
 }
 
 @Composable
-private fun MiniAppIconPreview(app: AppInfo) {
-    val painter = rememberAppIconPainter(app.iconKey, 16)
+private fun TagFolderAppIconsGrid(
+    previewApps: List<AppInfo>,
+    iconSizeDp: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        verticalArrangement = Arrangement.SpaceEvenly,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier.fillMaxSize()
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
+            if (previewApps.isNotEmpty()) {
+                MiniAppIconPreview(app = previewApps[0], sizeDp = iconSizeDp)
+            }
+            if (previewApps.size > 1) {
+                MiniAppIconPreview(app = previewApps[1], sizeDp = iconSizeDp)
+            } else if (previewApps.size == 1) {
+                Spacer(modifier = Modifier.size(iconSizeDp))
+            }
+        }
+        if (previewApps.size > 2) {
+            Row(
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                MiniAppIconPreview(app = previewApps[2], sizeDp = iconSizeDp)
+                if (previewApps.size > 3) {
+                    MiniAppIconPreview(app = previewApps[3], sizeDp = iconSizeDp)
+                } else {
+                    Spacer(modifier = Modifier.size(iconSizeDp))
+                }
+            }
+        } else {
+            Spacer(modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun MiniAppIconPreview(app: AppInfo, sizeDp: androidx.compose.ui.unit.Dp = 16.dp) {
+    val painter = rememberAppIconPainter(app.iconKey, sizeDp.value.toInt())
     Image(
         painter = painter,
         contentDescription = null,
         modifier = Modifier
-            .size(16.dp)
+            .size(sizeDp)
             .clip(CircleShape),
         contentScale = ContentScale.Fit
     )
@@ -227,13 +269,30 @@ fun TagFolderPopup(
                             .padding(end = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .clip(CircleShape)
-                                .background(tag.color)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        val vectorIcon = TagIconRegistry.getVectorIcon(tag.emoji)
+                        if (vectorIcon != null) {
+                            Icon(
+                                imageVector = vectorIcon,
+                                contentDescription = null,
+                                tint = tag.color,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                        } else if (!tag.emoji.isNullOrBlank()) {
+                            Text(
+                                text = tag.emoji,
+                                fontSize = 18.sp
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(tag.color)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                         BoxWithConstraints(modifier = Modifier.weight(1f)) {
                             var fontSize by remember(tag.name, maxWidth) { mutableStateOf(17.sp) }
                             var readyToDraw by remember(tag.name, maxWidth) { mutableStateOf(tag.name.length <= 10) }
@@ -451,45 +510,38 @@ fun TagFolderIcon(
             .padding(3.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            verticalArrangement = Arrangement.SpaceEvenly,
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically,
+        val hasCustomIcon = !tag.emoji.isNullOrBlank()
+        val vectorIcon = TagIconRegistry.getVectorIcon(tag.emoji)
+
+        // Layer 1: App icons in background (dimmed if custom icon is active, or full opacity if default)
+        if (previewApps.isNotEmpty()) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) {
-                if (previewApps.isNotEmpty()) {
-                    MiniAppIconPreview(app = previewApps[0])
-                }
-                if (previewApps.size > 1) {
-                    MiniAppIconPreview(app = previewApps[1])
-                } else if (previewApps.size == 1) {
-                    Spacer(modifier = Modifier.size(14.dp))
-                }
-            }
-            if (previewApps.size > 2) {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                ) {
-                    MiniAppIconPreview(app = previewApps[2])
-                    if (previewApps.size > 3) {
-                        MiniAppIconPreview(app = previewApps[3])
-                    } else {
-                        Spacer(modifier = Modifier.size(14.dp))
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        if (hasCustomIcon) {
+                            alpha = 0.22f
+                        }
                     }
-                }
-            } else {
-                Spacer(modifier = Modifier.weight(1f))
+            ) {
+                TagFolderAppIconsGrid(previewApps = previewApps, iconSizeDp = (size * 0.33f).dp)
             }
+        }
+
+        // Layer 2: Custom Vector Icon or Emoji on foreground
+        if (vectorIcon != null) {
+            Icon(
+                imageVector = vectorIcon,
+                contentDescription = null,
+                tint = tag.color,
+                modifier = Modifier.size((size * 0.58f).dp)
+            )
+        } else if (!tag.emoji.isNullOrBlank()) {
+            Text(
+                text = tag.emoji,
+                fontSize = (size * 0.55f).sp,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }

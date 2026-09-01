@@ -421,13 +421,16 @@ Attached or listed below is a list of installed apps (JSON array or text).
 TASK:
 1. Group all apps into 10-15 clean, meaningful, concise categories/tags (e.g. "Social", "Messengers", "Games", "Productivity", "Media", "Finance", "Tools", "Shopping", "Navigation", "System", "News", "Health", etc.).
 2. Assign each category a distinct, aesthetic HEX color code (format: "#RRGGBB").
-3. Output the result strictly as a valid JSON file (a JSON array of objects).
+3. Assign each category an appropriate vector icon key from the list below (preferred for clean auto-tinting) OR an emoji.
+   Available Vector Icon keys: "icon:games", "icon:chat", "icon:music", "icon:video", "icon:web", "icon:shop", "icon:money", "icon:work", "icon:book", "icon:tools", "icon:settings", "icon:star", "icon:heart", "icon:bolt", "icon:home", "icon:lock", "icon:palette", "icon:coffee", "icon:fitness", "icon:cloud", "icon:terminal", "icon:phone", "icon:mail", "icon:idea", "icon:map", "icon:alarm", "icon:folder", "icon:shield", "icon:calendar", "icon:photo", "icon:news", "icon:weather".
+4. Output the result strictly as a valid JSON file (a JSON array of objects).
 
 SCHEMA FOR EACH OBJECT:
 - "package": (string, required) the package name from input
 - "label": (string, optional) the app name/label
 - "tag": (string, required) the category name
 - "color": (string, required) the category HEX color (e.g., "#3B82F6")
+- "icon": (string, optional) the icon key (e.g. "icon:games", "icon:chat") or emoji (e.g. "🎮")
 
 CRITICAL OUTPUT RULES:
 - Output MUST be valid pure JSON.
@@ -436,11 +439,12 @@ CRITICAL OUTPUT RULES:
 
 EXAMPLE OF VALID OUTPUT:
 [
-  {"package": "com.android.chrome", "label": "Chrome", "tag": "Browsers", "color": "#3B82F6"},
-  {"package": "org.telegram.messenger", "label": "Telegram", "tag": "Messengers", "color": "#10B981"},
-  {"package": "com.google.android.youtube", "label": "YouTube", "tag": "Video", "color": "#EF4444"},
-  {"package": "com.spotify.music", "label": "Spotify", "tag": "Music", "color": "#1DB954"},
-  {"package": "com.chess", "label": "Chess", "tag": "Games", "color": "#8B5CF6"}
+  {"package": "com.android.chrome", "label": "Chrome", "tag": "Browsers", "color": "#3B82F6", "icon": "icon:web"},
+  {"package": "org.telegram.messenger", "label": "Telegram", "tag": "Messengers", "color": "#10B981", "icon": "icon:chat"},
+  {"package": "com.google.android.youtube", "label": "YouTube", "tag": "Video", "color": "#EF4444", "icon": "icon:video"},
+  {"package": "com.spotify.music", "label": "Spotify", "tag": "Music", "color": "#1DB954", "icon": "icon:music"},
+  {"package": "com.chess", "label": "Chess", "tag": "Games", "color": "#8B5CF6", "icon": "icon:games"},
+  {"package": "com.binance.dev", "label": "Binance", "tag": "Finance", "color": "#F59E0B", "icon": "icon:money"}
 ]
 
 Paste your exported app list below:"""

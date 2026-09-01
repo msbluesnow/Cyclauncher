@@ -374,7 +374,7 @@ class MainActivity : ComponentActivity() {
                                     allTags = allTags,
                                     assignedTagIds = appTagsMap[key] ?: appTagsMap[app.packageName] ?: emptyList(),
                                     onToggleTag = { tagId -> viewModel.toggleTagForApp(key, tagId) },
-                                    onCreateTag = { name, color -> viewModel.createTag(Tag(name = name, color = color)) },
+                                    onCreateTag = { name, color, emoji -> viewModel.createTag(Tag(name = name, color = color, emoji = emoji)) },
                                     onUpdateTag = { tag -> viewModel.updateTag(tag) },
                                     onDeleteTag = { tagId -> viewModel.deleteTag(tagId) },
                                     onDismiss = { showTagDialogFor = null },
@@ -388,8 +388,8 @@ class MainActivity : ComponentActivity() {
                                 TagEditDialog(
                                     tag = tag,
                                     onDismiss = { tagToEditForDialog = null },
-                                    onConfirm = { name, color ->
-                                        viewModel.updateTag(tag.copy(name = name, color = color))
+                                    onConfirm = { name, color, emoji ->
+                                        viewModel.updateTag(tag.copy(name = name, color = color, emoji = emoji))
                                         tagToEditForDialog = null
                                     },
                                     onDelete = {

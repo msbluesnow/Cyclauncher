@@ -1577,7 +1577,7 @@ private fun AccentColorDialog(
                                 .background(customPickedColor)
                                 .border(1.5.dp, popupTheme.contentColor.copy(alpha = 0.3f), CircleShape)
                         )
-                        OutlinedTextField(
+                        dev.msbs.cyclauncher.ui.components.AppOutlinedTextField(
                             value = hexInputText,
                             onValueChange = { input ->
                                 val filtered = input.filter { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }.take(6)
@@ -1599,12 +1599,14 @@ private fun AccentColorDialog(
                             prefix = { Text("#", color = popupTheme.contentColor, fontWeight = FontWeight.Bold) },
                             singleLine = true,
                             label = { Text("HEX Code", color = popupTheme.secondaryContentColor) },
+                            textStyle = TextStyle(color = popupTheme.contentColor, fontSize = 15.sp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = customPickedColor,
                                 unfocusedBorderColor = popupTheme.contentColor.copy(alpha = 0.2f),
                                 focusedTextColor = popupTheme.contentColor,
                                 unfocusedTextColor = popupTheme.contentColor
                             ),
+                            cursorColor = customPickedColor,
                             modifier = Modifier.weight(1f)
                         )
                     }

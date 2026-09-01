@@ -9,13 +9,17 @@ import java.util.UUID
 data class Tag(
     val id: String = UUID.randomUUID().toString(),
     val name: String,
-    val color: Color
+    val color: Color,
+    val emoji: String? = null
 ) {
     fun toJsonObject(): JSONObject {
         val json = JSONObject()
         json.put("id", id)
         json.put("name", name)
         json.put("color", color.toArgb())
+        if (!emoji.isNullOrBlank()) {
+            json.put("emoji", emoji)
+        }
         return json
     }
 
@@ -24,7 +28,8 @@ data class Tag(
             return Tag(
                 id = json.getString("id"),
                 name = json.getString("name"),
-                color = Color(json.getInt("color"))
+                color = Color(json.getInt("color")),
+                emoji = if (json.has("emoji")) json.optString("emoji", "").takeIf { it.isNotBlank() } else null
             )
         }
     }
