@@ -41,6 +41,9 @@ class AppActionsManager(context: Context) {
     private val _appTags = MutableStateFlow<Map<String, List<String>>>(loadAppTags())
     val appTags: StateFlow<Map<String, List<String>>> = _appTags
 
+    private val _tagAppOrders = MutableStateFlow<Map<String, List<String>>>(loadTagAppOrders())
+    val tagAppOrders: StateFlow<Map<String, List<String>>> = _tagAppOrders
+
     private val _customCharMappings = MutableStateFlow<Map<String, Char>>(loadCustomCharMappings())
     val customCharMappings: StateFlow<Map<String, Char>> = _customCharMappings
 
@@ -240,12 +243,19 @@ class AppActionsManager(context: Context) {
         }
         _appTags.value = currentAppTags
         saveAppTags(currentAppTags)
+
+        val currentOrders = _tagAppOrders.value.toMutableMap()
+        if (currentOrders.remove(tagId) != null) {
+            _tagAppOrders.value = currentOrders
+            saveTagAppOrders(currentOrders)
+        }
     }
 
     fun toggleTagForApp(componentKey: String, tagId: String) {
         val current = _appTags.value.toMutableMap()
         val list = current[componentKey]?.toMutableList() ?: mutableListOf()
-        if (list.contains(tagId)) {
+        val wasAssigned = list.contains(tagId)
+        if (wasAssigned) {
             list.remove(tagId)
         } else {
             list.add(tagId)
@@ -253,6 +263,31 @@ class AppActionsManager(context: Context) {
         current[componentKey] = list
         _appTags.value = current
         saveAppTags(current)
+
+        val orders = _tagAppOrders.value.toMutableMap()
+        val tagOrder = orders[tagId]?.toMutableList()
+        if (tagOrder != null) {
+            if (wasAssigned) {
+                tagOrder.remove(componentKey)
+            } else if (!tagOrder.contains(componentKey)) {
+                tagOrder.add(componentKey)
+            }
+            orders[tagId] = tagOrder
+            _tagAppOrders.value = orders
+            saveTagAppOrders(orders)
+        }
+    }
+
+    fun reorderAppInTag(tagId: String, fromIndex: Int, toIndex: Int, currentApps: List<dev.msbs.cyclauncher.model.AppInfo>) {
+        val currentKeys = currentApps.map { it.componentKey }.toMutableList()
+        if (fromIndex in currentKeys.indices && toIndex in currentKeys.indices && fromIndex != toIndex) {
+            val item = currentKeys.removeAt(fromIndex)
+            currentKeys.add(toIndex, item)
+            val currentMap = _tagAppOrders.value.toMutableMap()
+            currentMap[tagId] = currentKeys
+            _tagAppOrders.value = currentMap
+            saveTagAppOrders(currentMap)
+        }
     }
     
     fun onPackageRemoved(packageName: String) {
@@ -799,6 +834,15 @@ class AppActionsManager(context: Context) {
             root.put("favorites", favoritesArray)
         }
 
+        val tagOrdersObj = JSONObject()
+        _tagAppOrders.value.forEach { (tagId, orderList) ->
+            val tagName = idToName[tagId] ?: tagId
+            tagOrdersObj.put(tagName, JSONArray(orderList))
+        }
+        if (_tagAppOrders.value.isNotEmpty()) {
+            root.put("tag_app_orders", tagOrdersObj)
+        }
+
         if (apps.isNotEmpty()) {
             val favs = _favorites.value.toSet()
             val appsArray = JSONArray()
@@ -1153,6 +1197,27 @@ class AppActionsManager(context: Context) {
             map[k] = List(array.length()) { array.getString(it) }
         }
         return map
+    }
+
+    private fun saveTagAppOrders(map: Map<String, List<String>>) {
+        val json = JSONObject()
+        map.forEach { (k, v) -> json.put(k, JSONArray(v)) }
+        prefs.edit().putString("tag_app_orders", json.toString()).apply()
+    }
+
+    private fun loadTagAppOrders(): Map<String, List<String>> {
+        val jsonString = prefs.getString("tag_app_orders", null) ?: return emptyMap()
+        return try {
+            val json = JSONObject(jsonString)
+            val map = mutableMapOf<String, List<String>>()
+            json.keys().forEach { k ->
+                val array = json.getJSONArray(k)
+                map[k] = List(array.length()) { array.getString(it) }
+            }
+            map
+        } catch (_: Exception) {
+            emptyMap()
+        }
     }
 
     /**

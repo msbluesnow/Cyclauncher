@@ -85,6 +85,7 @@ fun MainMenuScreen(
     val history by viewModel.historyApps.collectAsState()
     val tags by viewModel.tags.collectAsState()
     val appTags by viewModel.appTags.collectAsState()
+    val tagAppOrders by viewModel.tagAppOrders.collectAsState()
     val apps by viewModel.apps.collectAsState()
     val handSide by viewModel.handSide.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
@@ -431,11 +432,12 @@ fun MainMenuScreen(
 
         selectedTagForPopup?.let { (tag, _, offset) ->
             val currentTag = tags.find { it.id == tag.id } ?: tag
-            val currentTaggedApps = remember(tags, appTags, apps, currentTag.id) {
-                apps.filter { app ->
+            val currentTaggedApps = remember(tags, appTags, tagAppOrders, apps, currentTag.id) {
+                val rawApps = apps.filter { app ->
                     val tagIds = appTags[app.componentKey] ?: appTags[app.packageName] ?: emptyList()
                     tagIds.contains(currentTag.id)
                 }
+                dev.msbs.cyclauncher.orderTagApps(rawApps, tagAppOrders[currentTag.id])
             }
 
             TagFolderPopup(
@@ -448,11 +450,18 @@ fun MainMenuScreen(
                 onRemoveAppFromTag = { tagId, componentKey ->
                     viewModel.toggleTagForApp(componentKey, tagId)
                 },
+                onReorderApp = { fromIndex, toIndex ->
+                    viewModel.reorderAppInTag(currentTag.id, fromIndex, toIndex, currentTaggedApps)
+                },
                 onEditTag = { tagToEdit ->
                     selectedTagForPopup = null
                     onEditTag(tagToEdit)
                 },
-                onDismiss = { selectedTagForPopup = null },
+                onExitEditMode = { isTagPopupEditMode = false },
+                onDismiss = {
+                    selectedTagForPopup = null
+                    isTagPopupEditMode = false
+                },
                 primaryTextColor = primaryTextColor,
                 showShadows = showShadows,
                 accentColor = accentColor,

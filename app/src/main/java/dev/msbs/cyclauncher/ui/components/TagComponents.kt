@@ -1,15 +1,19 @@
 package dev.msbs.cyclauncher.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.snap
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,12 +31,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -41,11 +47,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.zIndex
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
+import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import kotlin.math.roundToInt
 
@@ -203,7 +211,7 @@ private fun MiniAppIconPreview(app: AppInfo, sizeDp: androidx.compose.ui.unit.Dp
 }
 
 /**
- * Popup dialog showing all applications within a tag folder with edit and management actions.
+ * Popup dialog showing all applications within a tag folder with edit, reordering, and management actions.
  */
 @Composable
 fun TagFolderPopup(
@@ -214,7 +222,9 @@ fun TagFolderPopup(
     onAppClick: (String) -> Unit = {},
     onAppLongClick: (AppInfo, Offset) -> Unit = { _, _ -> },
     onRemoveAppFromTag: (String, String) -> Unit = { _, _ -> },
+    onReorderApp: ((Int, Int) -> Unit)? = null,
     onEditTag: (Tag) -> Unit = {},
+    onExitEditMode: () -> Unit = {},
     onDismiss: () -> Unit,
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     showShadows: Boolean = false,
@@ -223,6 +233,8 @@ fun TagFolderPopup(
 ) {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
+    val haptic = LocalHapticFeedback.current
+    val animationsEnabled = LocalAnimationsEnabled.current
 
     val popupWidth = 260.dp
     val popupWidthPx = with(density) { popupWidth.toPx() }
@@ -242,6 +254,22 @@ fun TagFolderPopup(
     if (x < borderPadding) x = borderPadding
     if (y + popupHeightPx > screenHeightPx - borderPadding) y = screenHeightPx - popupHeightPx - borderPadding
     if (y < borderPadding) y = borderPadding
+
+    // Reorder drag tracking states
+    var draggingKey by remember { mutableStateOf<String?>(null) }
+    var dragOffset by remember { mutableStateOf(Offset.Zero) }
+    var cellWidthPx by remember { mutableFloatStateOf(0f) }
+    var cellHeightPx by remember { mutableFloatStateOf(0f) }
+
+    val currentOnReorderApp by rememberUpdatedState(onReorderApp)
+    val currentApps by rememberUpdatedState(apps)
+
+    LaunchedEffect(isEditMode) {
+        if (!isEditMode) {
+            draggingKey = null
+            dragOffset = Offset.Zero
+        }
+    }
 
     Popup(
         offset = IntOffset(x.roundToInt(), y.roundToInt()),
@@ -321,30 +349,49 @@ fun TagFolderPopup(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .clickable { onEditTag(tag) }
-                                .padding(4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (showShadows) {
-                                val shadowSettings = LocalShadowSettings.current
-                                Icon(
-                                    imageVector = Icons.Outlined.Edit,
-                                    contentDescription = null,
-                                    tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.25f),
-                                    modifier = Modifier
-                                        .size(17.dp)
-                                        .offset(1.dp, 1.dp)
+                        if (isEditMode) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(accentColor.color.copy(alpha = 0.2f))
+                                    .border(1.dp, accentColor.color, RoundedCornerShape(8.dp))
+                                    .clickable { onExitEditMode() }
+                                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Done",
+                                    color = accentColor.color,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
-                            Icon(
-                                imageVector = Icons.Outlined.Edit,
-                                contentDescription = "Edit Tag",
-                                tint = popupTheme.secondaryContentColor,
-                                modifier = Modifier.size(17.dp)
-                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .clickable { onEditTag(tag) }
+                                    .padding(4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (showShadows) {
+                                    val shadowSettings = LocalShadowSettings.current
+                                    Icon(
+                                        imageVector = Icons.Outlined.Edit,
+                                        contentDescription = null,
+                                        tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.25f),
+                                        modifier = Modifier
+                                            .size(17.dp)
+                                            .offset(1.dp, 1.dp)
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.Outlined.Edit,
+                                    contentDescription = "Edit Tag",
+                                    tint = popupTheme.secondaryContentColor,
+                                    modifier = Modifier.size(17.dp)
+                                )
+                            }
                         }
 
                         Box(
@@ -375,30 +422,107 @@ fun TagFolderPopup(
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
                 } else {
+                    val colSpacingPx = with(density) { 8.dp.toPx() }
+                    val rowSpacingPx = with(density) { 12.dp.toPx() }
+
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(3),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        items(apps, key = { "${it.packageName}/${it.activityName}" }) { app ->
-                            TagFolderAppItem(
-                                app = app,
-                                isEditMode = isEditMode,
-                                onClick = {
-                                    onAppClick("${app.packageName}/${app.activityName}")
-                                    onDismiss()
-                                },
-                                onLongClick = { appOffset ->
-                                    onDismiss()
-                                    onAppLongClick(app, Offset(x, y) + appOffset)
-                                },
-                                onRemoveAppFromTag = onRemoveAppFromTag,
-                                tagId = tag.id,
-                                primaryTextColor = primaryTextColor,
-                                showShadows = showShadows,
-                                popupTheme = popupTheme
+                        itemsIndexed(apps, key = { _, item -> "${item.packageName}/${item.activityName}" }) { index, app ->
+                            val appKey = "${app.packageName}/${app.activityName}"
+                            val isDraggingThis = draggingKey == appKey
+
+                            val scale by animateFloatAsState(
+                                targetValue = if (isDraggingThis) 1.15f else 1.0f,
+                                animationSpec = if (animationsEnabled) spring() else snap(),
+                                label = "scale"
                             )
+                            val alpha by animateFloatAsState(
+                                targetValue = if (isDraggingThis) 0.88f else 1.0f,
+                                animationSpec = if (animationsEnabled) spring() else snap(),
+                                label = "alpha"
+                            )
+
+                            val itemAnimModifier = if (animationsEnabled && !isDraggingThis) Modifier.animateItem() else Modifier
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .then(itemAnimModifier)
+                                    .zIndex(if (isDraggingThis) 10f else 1f)
+                                    .onGloballyPositioned { coordinates ->
+                                        if (cellWidthPx == 0f && coordinates.size.width > 0) {
+                                            cellWidthPx = coordinates.size.width.toFloat()
+                                            cellHeightPx = coordinates.size.height.toFloat()
+                                        }
+                                    }
+                                    .graphicsLayer {
+                                        scaleX = scale
+                                        scaleY = scale
+                                        this.alpha = alpha
+                                        if (isDraggingThis) {
+                                            translationX = dragOffset.x
+                                            translationY = dragOffset.y
+                                        }
+                                    }
+                            ) {
+                                TagFolderAppItem(
+                                    app = app,
+                                    isEditMode = isEditMode,
+                                    isDragging = isDraggingThis,
+                                    onClick = {
+                                        onAppClick("${app.packageName}/${app.activityName}")
+                                        onDismiss()
+                                    },
+                                    onLongClick = { appOffset ->
+                                        onDismiss()
+                                        onAppLongClick(app, Offset(x, y) + appOffset)
+                                    },
+                                    onRemoveAppFromTag = onRemoveAppFromTag,
+                                    onDragStart = {
+                                        draggingKey = appKey
+                                        dragOffset = Offset.Zero
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    },
+                                    onDrag = { dragAmount ->
+                                        dragOffset += dragAmount
+                                        if (cellWidthPx > 0f && cellHeightPx > 0f && currentOnReorderApp != null) {
+                                            val colStep = cellWidthPx + colSpacingPx
+                                            val rowStep = cellHeightPx + rowSpacingPx
+                                            val colDelta = (dragOffset.x / colStep).roundToInt()
+                                            val rowDelta = (dragOffset.y / rowStep).roundToInt()
+
+                                            val curCol = index % 3
+                                            val curRow = index / 3
+                                            val targetCol = (curCol + colDelta).coerceIn(0, 2)
+                                            val targetRow = (curRow + rowDelta).coerceAtLeast(0)
+                                            val targetIndex = (targetRow * 3 + targetCol).coerceIn(0, currentApps.size - 1)
+
+                                            if (targetIndex != index && targetIndex in currentApps.indices) {
+                                                val swappedColDelta = targetCol - curCol
+                                                val swappedRowDelta = targetRow - curRow
+                                                dragOffset = Offset(
+                                                    dragOffset.x - swappedColDelta * colStep,
+                                                    dragOffset.y - swappedRowDelta * rowStep
+                                                )
+                                                currentOnReorderApp?.invoke(index, targetIndex)
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            }
+                                        }
+                                    },
+                                    onDragEnd = {
+                                        draggingKey = null
+                                        dragOffset = Offset.Zero
+                                    },
+                                    tagId = tag.id,
+                                    primaryTextColor = primaryTextColor,
+                                    showShadows = showShadows,
+                                    popupTheme = popupTheme
+                                )
+                            }
                         }
                     }
                 }
@@ -411,9 +535,13 @@ fun TagFolderPopup(
 private fun TagFolderAppItem(
     app: AppInfo,
     isEditMode: Boolean,
+    isDragging: Boolean = false,
     onClick: () -> Unit,
     onLongClick: (Offset) -> Unit,
     onRemoveAppFromTag: (String, String) -> Unit,
+    onDragStart: () -> Unit = {},
+    onDrag: (Offset) -> Unit = {},
+    onDragEnd: () -> Unit = {},
     tagId: String,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
@@ -425,25 +553,35 @@ private fun TagFolderAppItem(
     val currentOnRemoveApp by rememberUpdatedState(onRemoveAppFromTag)
     val currentIsEditMode by rememberUpdatedState(isEditMode)
     val currentTagId by rememberUpdatedState(tagId)
+    val currentOnDragStart by rememberUpdatedState(onDragStart)
+    val currentOnDrag by rememberUpdatedState(onDrag)
+    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
     val appKey = "${app.packageName}/${app.activityName}"
+
+    val gestureModifier = if (isEditMode) {
+        Modifier.pointerInput(appKey) {
+            detectDragGestures(
+                onDragStart = { currentOnDragStart() },
+                onDrag = { _, dragAmount -> currentOnDrag(dragAmount) },
+                onDragEnd = { currentOnDragEnd() },
+                onDragCancel = { currentOnDragEnd() }
+            )
+        }
+    } else {
+        Modifier.pointerInput(appKey) {
+            detectTapGestures(
+                onTap = { currentOnClick() },
+                onLongPress = { currentOnLongClick(itemPosition + it) }
+            )
+        }
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
             .onGloballyPositioned { itemPosition = it.positionInRoot() }
-            .pointerInput(appKey) {
-                detectTapGestures(
-                    onTap = {
-                        if (currentIsEditMode) {
-                            currentOnRemoveApp(currentTagId, appKey)
-                        } else {
-                            currentOnClick()
-                        }
-                    },
-                    onLongPress = { currentOnLongClick(itemPosition + it) }
-                )
-            }
+            .then(gestureModifier)
             .padding(4.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -459,18 +597,20 @@ private fun TagFolderAppItem(
             if (isEditMode) {
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(24.dp)
+                        .align(Alignment.TopEnd)
+                        .offset(x = 4.dp, y = (-4).dp)
                         .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.65f))
-                        .border(1.dp, Color.Red.copy(alpha = 0.6f), CircleShape)
+                        .background(Color(0xFFEF4444))
+                        .border(1.dp, Color.White.copy(alpha = 0.8f), CircleShape)
                         .clickable { currentOnRemoveApp(tagId, appKey) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Remove,
                         contentDescription = "Remove from tag",
-                        tint = Color.White.copy(alpha = 0.38f),
-                        modifier = Modifier.size(20.dp)
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }

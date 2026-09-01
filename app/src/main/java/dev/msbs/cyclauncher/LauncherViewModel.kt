@@ -98,6 +98,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     val tags: StateFlow<List<Tag>> = actionsManager.tags
     val appTags: StateFlow<Map<String, List<String>>> = actionsManager.appTags
+    val tagAppOrders: StateFlow<Map<String, List<String>>> = actionsManager.tagAppOrders
 
     private val _autoTagsPreview = MutableStateFlow<AutoTagsPreview?>(null)
     val autoTagsPreview: StateFlow<AutoTagsPreview?> = _autoTagsPreview
@@ -166,8 +167,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         apps,
         tags,
         appTags,
+        tagAppOrders,
         actionsManager.favorites
-    ) { allApps, allTags, allAppTags, ids ->
+    ) { allApps, allTags, allAppTags, allTagOrders, ids ->
         val appMap = allApps.associateBy { it.componentKey }
         val tagMap = allTags.associateBy { it.id }
         val tagToAppsMap = mutableMapOf<String, MutableList<AppInfo>>()
@@ -182,7 +184,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 val tagId = id.removePrefix("tag:")
                 val tag = tagMap[tagId] ?: return@mapNotNull null
                 val taggedApps = tagToAppsMap[tag.id] ?: emptyList()
-                FavoriteItem.TagFolder(tag, taggedApps)
+                val orderedApps = orderTagApps(taggedApps, allTagOrders[tag.id])
+                FavoriteItem.TagFolder(tag, orderedApps)
             } else {
                 val app = appMap[id] ?: return@mapNotNull null
                 FavoriteItem.App(app)
@@ -203,9 +206,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val popularTagsWithApps: StateFlow<List<Pair<Tag, List<AppInfo>>>> = combine(
         tags,
         appTags,
+        tagAppOrders,
         apps,
         favoriteItems
-    ) { allTags, allAppTags, allApps, favItems ->
+    ) { allTags, allAppTags, allTagOrders, allApps, favItems ->
         val favoritedTagIds = favItems.mapNotNull { (it as? FavoriteItem.TagFolder)?.tag?.id }.toSet()
         val tagToAppsMap = mutableMapOf<String, MutableList<AppInfo>>()
         allApps.forEach { app ->
@@ -216,7 +220,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
         allTags
             .filter { tag -> tag.id !in favoritedTagIds }
-            .map { tag -> tag to (tagToAppsMap[tag.id] ?: emptyList()) }
+            .map { tag ->
+                val taggedApps = tagToAppsMap[tag.id] ?: emptyList()
+                val orderedApps = orderTagApps(taggedApps, allTagOrders[tag.id])
+                tag to orderedApps
+            }
             .sortedByDescending { it.second.size }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
@@ -463,6 +471,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun reorderFavorites(fromIndex: Int, toIndex: Int) {
         actionsManager.reorderFavorites(fromIndex, toIndex)
+    }
+
+    fun reorderAppInTag(tagId: String, fromIndex: Int, toIndex: Int, currentApps: List<AppInfo>) {
+        actionsManager.reorderAppInTag(tagId, fromIndex, toIndex, currentApps)
     }
     
     val isHistoryPaused: StateFlow<Boolean> = actionsManager.isHistoryPaused
@@ -1055,4 +1067,20 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             } catch (_: Exception) {}
         }
     }
+}
+
+/**
+ * Orders a list of [AppInfo] based on a custom persisted order list of component keys.
+ * Newly assigned apps not present in [customOrder] are preserved and appended at the end.
+ */
+fun orderTagApps(apps: List<AppInfo>, customOrder: List<String>?): List<AppInfo> {
+    if (customOrder.isNullOrEmpty()) return apps
+    val appMap = apps.associateBy { it.componentKey }
+    val ordered = mutableListOf<AppInfo>()
+    customOrder.forEach { key ->
+        appMap[key]?.let { ordered.add(it) }
+    }
+    val orderedKeys = ordered.map { it.componentKey }.toSet()
+    apps.filter { it.componentKey !in orderedKeys }.forEach { ordered.add(it) }
+    return ordered
 }
