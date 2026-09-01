@@ -1,0 +1,7 @@
+This release enhances folder tags, optimizes lifecycle transitions, and adds reproducible builds.
+- Added Material Icons and Emojis support for folder tags.
+- Redesigned TagEditDialog with safety hold-to-delete.
+- Added hardware static cursor when animations are off.
+- Eliminated home screen return and unlock UI freezes.
+- Optimized Coil 3 memory policy with background prewarm.
+- Added reproducible release workflow for F-Droid.
