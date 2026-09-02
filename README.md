@@ -36,20 +36,23 @@ Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**,
 
 <table style="width: 100%; border: none;">
   <tr>
-    <td align="center" style="border: none; width: 33%;">
-      <b>Uninstalling apps</b><br><br>
-      <video src="https://github.com/user-attachments/assets/d769d4b5-c7e7-4843-abf8-8f19cb0b5ae6" width="100%" autoplay loop muted playsinline></video>
+    <td align="center" style="border: none; width: 50%;">
+      <video src="https://github.com/user-attachments/assets/eb1c2cab-0e2c-4444-9a7b-c6cf18eff9d0" width="100%" autoplay loop muted playsinline></video>
     </td>
-    <td align="center" style="border: none; width: 33%;">
-      <b>Remove apps from history</b><br><br>
-      <video src="https://github.com/user-attachments/assets/ff1584bd-d147-4c3f-97f9-5dbdfd1145b9" width="100%" autoplay loop muted playsinline></video>
+    <td align="center" style="border: none; width: 50%;">
+      <video src="https://github.com/user-attachments/assets/7ec7a763-8798-4f3c-8036-e4a281db2db4" width="100%" autoplay loop muted playsinline></video>
     </td>
-    <td align="center" style="border: none; width: 33%;">
-      <b>Change accent color and search for applications</b><br><br>
-      <video src="https://github.com/user-attachments/assets/4f253962-1167-4a46-ab79-d45350c8709a" width="100%" autoplay loop muted playsinline></video>
+    </tr>
+    <tr>
+    <td align="center" style="border: none; width: 50%;">
+      <video src="https://github.com/user-attachments/assets/fda8c464-03a9-400e-b248-c7d36b41fd9e" width="100%" autoplay loop muted playsinline></video>
+    </td>
+    <td align="center" style="border: none; width: 50%;">
+      <video src="https://github.com/user-attachments/assets/3a7c2199-4ccf-4e0f-b1dd-0a03fec4fa31" width="100%" autoplay loop muted playsinline></video>
     </td>
   </tr>
-</table>
+</table> 
+
 
 ## ✨ Key Features
 
