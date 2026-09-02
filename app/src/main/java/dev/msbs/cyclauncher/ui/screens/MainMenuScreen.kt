@@ -873,15 +873,15 @@ private fun ColumnScope.TagsContentBlock(
     val colSpacingPx = with(density) { 8.dp.toPx() }
     val rowSpacingPx = with(density) { 8.dp.toPx() }
 
-    CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f, fill = false)
-                .padding(bottom = 8.dp),
-            horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start,
-            verticalArrangement = Arrangement.Bottom
-        ) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .weight(1f, fill = false)
+            .padding(bottom = 8.dp),
+        horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start,
+        verticalArrangement = Arrangement.Bottom
+    ) {
+        CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
                 state = gridState,
@@ -1026,8 +1026,9 @@ private fun ColumnScope.TagsContentBlock(
                     }
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -1125,7 +1126,6 @@ private fun ColumnScope.TagsContentBlock(
             }
         }
     }
-}
 
 @Composable
 private fun ColumnScope.HistoryContentBlock(
