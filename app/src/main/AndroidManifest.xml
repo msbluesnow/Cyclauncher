@@ -1,14 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:installLocation="internalOnly">
 
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
+    <uses-permission android:name="android.permission.BIND_APPWIDGET" tools:ignore="ProtectedPermissions" />
 
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
         </intent>
         <intent>
             <action android:name="org.adw.launcher.THEMES" />
@@ -47,8 +52,7 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="Cyclauncher"
-        android:theme="@style/Theme.Cyclauncher.Transparent"
-        android:directBootAware="true">
+        android:theme="@style/Theme.Cyclauncher.Transparent">
 
         <activity
             android:name=".MainActivity"
@@ -57,7 +61,6 @@
             android:clearTaskOnLaunch="true"
             android:stateNotNeeded="true"
             android:resumeWhilePausing="true"
-            android:directBootAware="true"
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="uiMode|colorMode|screenSize|screenLayout|orientation|keyboardHidden|keyboard|density|fontScale|assetsPaths">

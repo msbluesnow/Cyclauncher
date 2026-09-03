@@ -16,6 +16,7 @@ import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.ui.text.style.TextAlign
@@ -23,8 +24,20 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
+import org.json.JSONArray
+import org.json.JSONObject
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/** Preference key for hand side preference */
+const val PREF_HAND_SIDE = "pref_hand_side"
+
+/** Configuration for an embedded widget on HighlightScreen */
+data class HighlightWidgetConfig(
+    val id: Int,
+    val heightDp: Int = 160,
+    val widthFraction: Float = 1.0f
+)
 
 /**
  * Represents the user's preferred hand orientation for the launcher UI layout.
@@ -162,6 +175,105 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val recentlyUpdatedApps: StateFlow<Set<String>> = actionsManager.recentlyUpdated
+
+    val todayActivity: StateFlow<Pair<List<AppInfo>, List<AppInfo>>> = apps.map { allApps ->
+        withContext(Dispatchers.IO) {
+            val oneDayAgo = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
+            val pm = safeContext.packageManager
+            val installs = mutableListOf<AppInfo>()
+            val updates = mutableListOf<AppInfo>()
+
+            for (app in allApps) {
+                try {
+                    val pInfo = pm.getPackageInfo(app.packageName, 0)
+                    val appInfo = pInfo.applicationInfo ?: continue
+                    val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0 &&
+                            (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0
+                    if (isSystem) continue
+
+                    val firstInstall = pInfo.firstInstallTime
+                    val lastUpdate = pInfo.lastUpdateTime
+
+                    if (firstInstall >= oneDayAgo && (lastUpdate - firstInstall < 60000L || lastUpdate >= oneDayAgo)) {
+                        installs.add(app)
+                    } else if (lastUpdate >= oneDayAgo && lastUpdate > firstInstall + 60000L) {
+                        updates.add(app)
+                    }
+                } catch (_: Exception) {}
+            }
+            Pair(installs, updates)
+        }
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Pair(emptyList(), emptyList()))
+
+    private val _highlightWidgets = MutableStateFlow<List<HighlightWidgetConfig>>(loadHighlightWidgets())
+    val highlightWidgets: StateFlow<List<HighlightWidgetConfig>> = _highlightWidgets
+
+    private fun loadHighlightWidgets(): List<HighlightWidgetConfig> {
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+        val jsonStr = prefs.getString("highlight_widgets_v2", null)
+            ?: prefs.getString("highlight_widgets", "[]") ?: "[]"
+        return try {
+            val jsonArray = JSONArray(jsonStr)
+            val list = mutableListOf<HighlightWidgetConfig>()
+            for (i in 0 until jsonArray.length()) {
+                val item = jsonArray.get(i)
+                if (item is JSONObject) {
+                    val id = item.getInt("id")
+                    val height = item.optInt("heightDp", 160)
+                    val width = item.optDouble("widthFraction", 1.0).toFloat()
+                    list.add(HighlightWidgetConfig(id, height, width))
+                } else if (item is Number) {
+                    list.add(HighlightWidgetConfig(item.toInt(), 160, 1.0f))
+                }
+            }
+            list
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun saveHighlightWidgets(configs: List<HighlightWidgetConfig>) {
+        val jsonArray = JSONArray()
+        configs.forEach { config ->
+            val obj = JSONObject().apply {
+                put("id", config.id)
+                put("heightDp", config.heightDp)
+                put("widthFraction", config.widthFraction.toDouble())
+            }
+            jsonArray.put(obj)
+        }
+        safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+            .edit()
+            .putString("highlight_widgets_v2", jsonArray.toString())
+            .apply()
+    }
+
+    fun addHighlightWidget(widgetId: Int, initialHeightDp: Int = 160, initialWidthFraction: Float = 1.0f) {
+        val current = _highlightWidgets.value.toMutableList()
+        if (current.none { it.id == widgetId }) {
+            current.add(HighlightWidgetConfig(widgetId, initialHeightDp, initialWidthFraction))
+            _highlightWidgets.value = current
+            saveHighlightWidgets(current)
+        }
+    }
+
+    fun updateHighlightWidgetSize(widgetId: Int, heightDp: Int, widthFraction: Float) {
+        val current = _highlightWidgets.value.toMutableList()
+        val index = current.indexOfFirst { it.id == widgetId }
+        if (index != -1) {
+            current[index] = current[index].copy(heightDp = heightDp, widthFraction = widthFraction)
+            _highlightWidgets.value = current
+            saveHighlightWidgets(current)
+        }
+    }
+
+    fun removeHighlightWidget(widgetId: Int) {
+        val current = _highlightWidgets.value.toMutableList()
+        if (current.removeAll { it.id == widgetId }) {
+            _highlightWidgets.value = current
+            saveHighlightWidgets(current)
+        }
+    }
 
     val favoriteItems: StateFlow<List<FavoriteItem>> = combine(
         apps,
@@ -956,40 +1068,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
             val resolvedInfos = pm.queryIntentActivities(mainIntent, 0)
 
-            val distinctPkgs = resolvedInfos.map { it.activityInfo.packageName }.distinct()
-            val updateTimeMap = distinctPkgs.associateWith { pkgName ->
-                try {
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                        pm.getPackageInfo(pkgName, android.content.pm.PackageManager.PackageInfoFlags.of(0)).lastUpdateTime
-                    } else {
-                        @Suppress("DEPRECATION")
-                        pm.getPackageInfo(pkgName, 0).lastUpdateTime
-                    }
-                } catch (_: Exception) {
-                    0L
-                }
-            }
-
-            val currentUpdateTimes = mutableMapOf<String, Long>()
-            val newlyInstalledOrUpdated = mutableListOf<Pair<String, Long>>()
-
-            val prevUpdateTimes = actionsManager.loadAppUpdateTimes()
-            val isFirstTimeTracking = prevUpdateTimes.isEmpty()
-
+            // Immediately map and emit the app list so the launcher UI displays apps in ~20-30ms with 0ms waiting
             val appList = resolvedInfos.map { info ->
                 val pkgName = info.activityInfo.packageName
                 val actName = info.activityInfo.name
                 val compKey = "$pkgName/$actName"
-
-                val updateTime = updateTimeMap[pkgName] ?: 0L
-                currentUpdateTimes[pkgName] = updateTime
-
-                if (!isFirstTimeTracking && updateTime > 0L) {
-                    val prevTime = prevUpdateTimes[pkgName]
-                    if (prevTime == null || updateTime > prevTime) {
-                        newlyInstalledOrUpdated.add(compKey to updateTime)
-                    }
-                }
 
                 try {
                     val label = try {
@@ -1024,30 +1107,67 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
             _apps.value = appList
 
-            if (!isFirstTimeTracking && newlyInstalledOrUpdated.isNotEmpty()) {
-                val sortedKeys = newlyInstalledOrUpdated
-                    .sortedBy { it.second }
-                    .map { it.first }
-                actionsManager.onAppsInstalledOrUpdated(sortedKeys)
-            } else if (isFirstTimeTracking && actionsManager.history.value.isEmpty()) {
-                val topRecent = resolvedInfos
-                    .mapNotNull { info ->
-                        val pkg = info.activityInfo.packageName
-                        val time = currentUpdateTimes[pkg] ?: 0L
-                        if (time > 0L) ("$pkg/${info.activityInfo.name}" to time) else null
-                    }
-                    .sortedBy { it.second }
-                    .takeLast(5)
-                    .map { it.first }
-                if (topRecent.isNotEmpty()) {
-                    actionsManager.setInitialHistory(topRecent)
-                }
-            }
-
-            actionsManager.saveAppUpdateTimes(currentUpdateTimes)
-
             val keysToPrewarm = (actionsManager.favorites.value + actionsManager.history.value).distinct()
             prewarmIcons(keysToPrewarm)
+
+            // In the background without blocking app list presentation, track update timestamps
+            launch(Dispatchers.IO) {
+                val prevUpdateTimes = actionsManager.loadAppUpdateTimes()
+                val isFirstTimeTracking = prevUpdateTimes.isEmpty()
+                val currentUpdateTimes = mutableMapOf<String, Long>()
+                val newlyInstalledOrUpdated = mutableListOf<Pair<String, Long>>()
+
+                val distinctPkgs = resolvedInfos.map { it.activityInfo.packageName }.distinct()
+                for (pkgName in distinctPkgs) {
+                    val updateTime = try {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                            pm.getPackageInfo(pkgName, android.content.pm.PackageManager.PackageInfoFlags.of(0)).lastUpdateTime
+                        } else {
+                            @Suppress("DEPRECATION")
+                            pm.getPackageInfo(pkgName, 0).lastUpdateTime
+                        }
+                    } catch (_: Exception) {
+                        0L
+                    }
+                    currentUpdateTimes[pkgName] = updateTime
+                }
+
+                if (!isFirstTimeTracking) {
+                    for (info in resolvedInfos) {
+                        val pkgName = info.activityInfo.packageName
+                        val compKey = "$pkgName/${info.activityInfo.name}"
+                        val updateTime = currentUpdateTimes[pkgName] ?: 0L
+                        if (updateTime > 0L) {
+                            val prevTime = prevUpdateTimes[pkgName]
+                            if (prevTime == null || updateTime > prevTime) {
+                                newlyInstalledOrUpdated.add(compKey to updateTime)
+                            }
+                        }
+                    }
+
+                    if (newlyInstalledOrUpdated.isNotEmpty()) {
+                        val sortedKeys = newlyInstalledOrUpdated
+                            .sortedBy { it.second }
+                            .map { it.first }
+                        actionsManager.onAppsInstalledOrUpdated(sortedKeys)
+                    }
+                } else if (actionsManager.history.value.isEmpty()) {
+                    val topRecent = resolvedInfos
+                        .mapNotNull { info ->
+                            val pkg = info.activityInfo.packageName
+                            val time = currentUpdateTimes[pkg] ?: 0L
+                            if (time > 0L) ("$pkg/${info.activityInfo.name}" to time) else null
+                        }
+                        .sortedBy { it.second }
+                        .takeLast(5)
+                        .map { it.first }
+                    if (topRecent.isNotEmpty()) {
+                        actionsManager.setInitialHistory(topRecent)
+                    }
+                }
+
+                actionsManager.saveAppUpdateTimes(currentUpdateTimes)
+            }
         }
     }
 

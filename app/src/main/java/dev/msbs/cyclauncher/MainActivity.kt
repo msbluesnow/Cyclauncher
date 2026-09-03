@@ -12,12 +12,17 @@ import dev.msbs.cyclauncher.ui.components.RenameDialog
 import dev.msbs.cyclauncher.ui.components.TagEditDialog
 import dev.msbs.cyclauncher.ui.components.TagSelectionDialog
 import dev.msbs.cyclauncher.ui.components.TutorialOverlay
+import dev.msbs.cyclauncher.ui.screens.HighlightScreen
 import dev.msbs.cyclauncher.ui.screens.MainMenuScreen
 import dev.msbs.cyclauncher.ui.screens.SearchScreen
 import dev.msbs.cyclauncher.ui.screens.SettingsScreen
 
 import android.annotation.SuppressLint
+import android.app.Activity
+import android.appwidget.AppWidgetHost
+import android.appwidget.AppWidgetManager
 import android.content.BroadcastReceiver
+import androidx.compose.animation.togetherWith
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -75,6 +80,13 @@ class MainActivity : ComponentActivity() {
     private var wallpaperColorsListener: Any? = null
     private var launcherAppsHandlerThread: android.os.HandlerThread? = null
     private var launcherAppsCallback: android.content.pm.LauncherApps.Callback? = null
+    private var appWidgetHost: AppWidgetHost? = null
+    private var appWidgetManager: AppWidgetManager? = null
+
+    companion object {
+        private const val REQUEST_CONFIGURE_WIDGET = 1025
+        private const val REQUEST_RECONFIGURE_WIDGET = 1026
+    }
 
     private val systemReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -91,6 +103,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        initAppWidgetsIfUnlocked()
         
         val onBackPressedCallback = object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -183,11 +197,13 @@ class MainActivity : ComponentActivity() {
                     val verticalPagerState = rememberPagerState { 2 }
                     val scope = rememberCoroutineScope()
                     val fastAnimSpec = remember { tween<Float>(durationMillis = 150, easing = FastOutSlowInEasing) }
+                    val slideAnimSpec = remember { tween<androidx.compose.ui.unit.IntOffset>(durationMillis = 180, easing = FastOutSlowInEasing) }
                     
                     var showActionMenuFor by remember { mutableStateOf<AppInfo?>(null) }
                     var showRenameDialogFor by remember { mutableStateOf<AppInfo?>(null) }
                     var showTagDialogFor by remember { mutableStateOf<AppInfo?>(null) }
                     var tagToEditForDialog by remember { mutableStateOf<Tag?>(null) }
+                    var isHighlightScreenVisible by remember { mutableStateOf(false) }
                     
                     var menuSource by remember { mutableStateOf("none") }
                     var menuOffset by remember { mutableStateOf(Offset.Zero) }
@@ -198,6 +214,7 @@ class MainActivity : ComponentActivity() {
                             showRenameDialogFor = null
                             showTagDialogFor = null
                             tagToEditForDialog = null
+                            isHighlightScreenVisible = false
                             if (horizontalPagerState.currentPage != 0) {
                                 horizontalPagerState.scrollToPage(0)
                             }
@@ -207,12 +224,29 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    LaunchedEffect(isHighlightScreenVisible) {
+                        if (isHighlightScreenVisible) {
+                            showActionMenuFor = null
+                            showRenameDialogFor = null
+                            showTagDialogFor = null
+                            tagToEditForDialog = null
+                            try { appWidgetHost?.startListening() } catch (_: Exception) {}
+                        } else {
+                            try { appWidgetHost?.stopListening() } catch (_: Exception) {}
+                        }
+                    }
+
+                    BackHandler(enabled = isHighlightScreenVisible) {
+                        isHighlightScreenVisible = false
+                    }
+
                     val showTutorial by viewModel.showTutorial.collectAsState()
 
                     LaunchedEffect(showTutorial) {
                         if (showTutorial) {
                             horizontalPagerState.scrollToPage(0)
                             verticalPagerState.scrollToPage(0)
+                            isHighlightScreenVisible = false
                         }
                     }
 
@@ -221,7 +255,8 @@ class MainActivity : ComponentActivity() {
                             horizontalPagerState.currentPage == 0 &&
                             verticalPagerState.currentPage == 0 &&
                             horizontalPagerState.targetPage == 0 &&
-                            verticalPagerState.targetPage == 0
+                            verticalPagerState.targetPage == 0 &&
+                            !isHighlightScreenVisible
                         }
                     }
 
@@ -266,37 +301,80 @@ class MainActivity : ComponentActivity() {
                                     ) { vIndex ->
                                         if (vIndex == 0) {
                                             val isActionMenuOpen = showActionMenuFor != null || showRenameDialogFor != null || showTagDialogFor != null || tagToEditForDialog != null
-                                            MainMenuScreen(
-                                                viewModel = viewModel,
-                                                isActive = isOnMainScreen,
-                                                isActionMenuOpen = isActionMenuOpen,
-                                                onAppClick = ::openApp,
-                                                onAppLongClick = { app, offset -> 
-                                                    showActionMenuFor = app
-                                                    menuOffset = offset
-                                                    menuSource = "history_or_favorites" 
-                                                },
-                                                onSwipeUp = {
-                                                    scope.launch {
-                                                        if (animationsEnabled) {
-                                                            verticalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec)
-                                                        } else {
-                                                            verticalPagerState.scrollToPage(1)
-                                                        }
+                                            androidx.compose.animation.AnimatedContent(
+                                                targetState = isHighlightScreenVisible,
+                                                transitionSpec = {
+                                                    if (targetState) {
+                                                        (androidx.compose.animation.slideInHorizontally(
+                                                            initialOffsetX = { fullWidth -> if (handSide == HandSide.RIGHT) fullWidth else -fullWidth },
+                                                            animationSpec = if (animationsEnabled) slideAnimSpec else androidx.compose.animation.core.snap()
+                                                        ) + androidx.compose.animation.fadeIn(animationSpec = if (animationsEnabled) androidx.compose.animation.core.tween(150) else androidx.compose.animation.core.snap()))
+                                                        .togetherWith(
+                                                            androidx.compose.animation.slideOutHorizontally(
+                                                                targetOffsetX = { fullWidth -> if (handSide == HandSide.RIGHT) -fullWidth else fullWidth },
+                                                                animationSpec = if (animationsEnabled) slideAnimSpec else androidx.compose.animation.core.snap()
+                                                            ) + androidx.compose.animation.fadeOut(animationSpec = if (animationsEnabled) androidx.compose.animation.core.tween(150) else androidx.compose.animation.core.snap())
+                                                        )
+                                                    } else {
+                                                        (androidx.compose.animation.slideInHorizontally(
+                                                            initialOffsetX = { fullWidth -> if (handSide == HandSide.RIGHT) -fullWidth else fullWidth },
+                                                            animationSpec = if (animationsEnabled) slideAnimSpec else androidx.compose.animation.core.snap()
+                                                        ) + androidx.compose.animation.fadeIn(animationSpec = if (animationsEnabled) androidx.compose.animation.core.tween(150) else androidx.compose.animation.core.snap()))
+                                                        .togetherWith(
+                                                            androidx.compose.animation.slideOutHorizontally(
+                                                                targetOffsetX = { fullWidth -> if (handSide == HandSide.RIGHT) fullWidth else -fullWidth },
+                                                                animationSpec = if (animationsEnabled) slideAnimSpec else androidx.compose.animation.core.snap()
+                                                            ) + androidx.compose.animation.fadeOut(animationSpec = if (animationsEnabled) androidx.compose.animation.core.tween(150) else androidx.compose.animation.core.snap())
+                                                        )
                                                     }
                                                 },
-                                                onSwipeDown = ::openNotifications,
-                                                onSettingsClick = {
-                                                    scope.launch {
-                                                        if (animationsEnabled) {
-                                                            horizontalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec)
-                                                        } else {
-                                                            horizontalPagerState.scrollToPage(1)
-                                                        }
-                                                    }
-                                                },
-                                                onEditTag = { tag -> tagToEditForDialog = tag }
-                                            )
+                                                label = "MainHighlightScreenTransition"
+                                            ) { showHighlight ->
+                                                if (showHighlight) {
+                                                    HighlightScreen(
+                                                        viewModel = viewModel,
+                                                        appWidgetHost = appWidgetHost,
+                                                        appWidgetManager = appWidgetManager,
+                                                        onClose = { isHighlightScreenVisible = false },
+                                                        onConfigureWidget = ::startWidgetConfiguration
+                                                    )
+                                                } else {
+                                                    MainMenuScreen(
+                                                        viewModel = viewModel,
+                                                        isActive = isOnMainScreen,
+                                                        isActionMenuOpen = isActionMenuOpen,
+                                                        onAppClick = ::openApp,
+                                                        onAppLongClick = { app, offset -> 
+                                                            showActionMenuFor = app
+                                                            menuOffset = offset
+                                                            menuSource = "history_or_favorites" 
+                                                        },
+                                                        onSwipeUp = {
+                                                            scope.launch {
+                                                                if (animationsEnabled) {
+                                                                    verticalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec)
+                                                                } else {
+                                                                    verticalPagerState.scrollToPage(1)
+                                                                }
+                                                            }
+                                                        },
+                                                        onSwipeDown = ::openNotifications,
+                                                        onSettingsClick = {
+                                                            scope.launch {
+                                                                if (animationsEnabled) {
+                                                                    horizontalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec)
+                                                                } else {
+                                                                    horizontalPagerState.scrollToPage(1)
+                                                                }
+                                                            }
+                                                        },
+                                                        onOpenHighlightScreen = {
+                                                            isHighlightScreenVisible = true
+                                                        },
+                                                        onEditTag = { tag -> tagToEditForDialog = tag }
+                                                    )
+                                                }
+                                            }
                                         } else {
                                             SearchScreen(
                                                 viewModel = viewModel,
@@ -449,6 +527,81 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    private fun initAppWidgetsIfUnlocked() {
+        val userManager = getSystemService(Context.USER_SERVICE) as? android.os.UserManager
+        if (userManager == null || userManager.isUserUnlocked) {
+            initAppWidgets()
+        } else {
+            val filter = android.content.IntentFilter(Intent.ACTION_USER_UNLOCKED)
+            registerReceiver(object : android.content.BroadcastReceiver() {
+                override fun onReceive(context: Context?, intent: Intent?) {
+                    if (intent?.action == Intent.ACTION_USER_UNLOCKED) {
+                        try { unregisterReceiver(this) } catch (_: Exception) {}
+                        initAppWidgets()
+                    }
+                }
+            }, filter)
+        }
+    }
+
+    private fun initAppWidgets() {
+        try {
+            if (appWidgetHost == null) {
+                appWidgetHost = dev.msbs.cyclauncher.widget.LauncherAppWidgetHost(this, 1024)
+                appWidgetManager = AppWidgetManager.getInstance(this)
+            }
+        } catch (_: Exception) {}
+    }
+
+    override fun onStart() {
+        super.onStart()
+        try {
+            appWidgetHost?.startListening()
+        } catch (_: Exception) {}
+    }
+
+    override fun onStop() {
+        super.onStop()
+        try {
+            appWidgetHost?.stopListening()
+        } catch (_: Exception) {}
+    }
+
+    private var pendingWidgetConfigureCallback: ((Boolean) -> Unit)? = null
+
+    fun startWidgetConfiguration(widgetId: Int, isReconfigure: Boolean, options: Bundle? = null, callback: (Boolean) -> Unit) {
+        pendingWidgetConfigureCallback = callback
+        val host = appWidgetHost
+        if (host == null) {
+            callback(false)
+            return
+        }
+        val requestCode = if (isReconfigure) REQUEST_RECONFIGURE_WIDGET else REQUEST_CONFIGURE_WIDGET
+        try {
+            host.startAppWidgetConfigureActivityForResult(
+                this,
+                widgetId,
+                0,
+                requestCode,
+                options
+            )
+        } catch (_: Exception) {
+            callback(false)
+            pendingWidgetConfigureCallback = null
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_CONFIGURE_WIDGET || requestCode == REQUEST_RECONFIGURE_WIDGET) {
+            val callback = pendingWidgetConfigureCallback
+            pendingWidgetConfigureCallback = null
+            callback?.invoke(resultCode == Activity.RESULT_OK)
         }
     }
 

@@ -97,6 +97,7 @@ fun MainMenuScreen(
     onSwipeUp: () -> Unit,
     onSwipeDown: () -> Unit,
     onSettingsClick: () -> Unit,
+    onOpenHighlightScreen: () -> Unit = {},
     onEditTag: (Tag) -> Unit = {}
 ) {
     val favoriteItems by viewModel.favoriteItems.collectAsState()
@@ -244,6 +245,10 @@ fun MainMenuScreen(
     val currentOnSettingsClick by rememberUpdatedState(onSettingsClick)
     val currentOnSwipeUp by rememberUpdatedState(onSwipeUp)
     val currentOnSwipeDown by rememberUpdatedState(onSwipeDown)
+    val currentOnOpenHighlightScreen by rememberUpdatedState(onOpenHighlightScreen)
+
+    val density = LocalDensity.current
+    val swipeHighlightThresholdPx = remember(density) { density.run { 55.dp.toPx() } }
 
     val safeOnSettingsClick: () -> Unit = {
         if (isActive && !isActionMenuOpen && !isAnyEditMode && System.currentTimeMillis() - lastItemActionTime > 400L) {
@@ -254,53 +259,72 @@ fun MainMenuScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(isActive, isAnyEditMode, isActionMenuOpen) {
+            .pointerInput(isActive, isAnyEditMode, isActionMenuOpen, handSide) {
                 if (!isActive || isAnyEditMode || isActionMenuOpen) return@pointerInput
                 awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = true)
-                    var isDrag = false
+                    val down = awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
+                    val startX = down.position.x
+                    val screenWidth = size.width.toFloat()
+                    val isCenterStart = startX in (screenWidth * 0.20f)..(screenWidth * 0.80f)
+
+                    var isDragY = false
+                    var isHorizontalDrag = false
+                    var isHighlightTriggered = false
                     var totalDragY = 0f
+                    var totalDragX = 0f
                     var isLongPressHandled = false
 
                     val timeoutMillis = viewConfiguration.longPressTimeoutMillis
 
                     val dragOrTimeout = withTimeoutOrNull(timeoutMillis) {
                         while (true) {
-                            val event = awaitPointerEvent(pass = PointerEventPass.Main)
+                            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
                             val change = event.changes.firstOrNull { it.id == down.id } ?: break
                             if (!change.pressed) break
-                            if (change.isConsumed) {
-                                return@withTimeoutOrNull false
-                            }
 
                             val positionChange = change.positionChange()
                             totalDragY += positionChange.y
+                            totalDragX += positionChange.x
 
-                            if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop) {
-                                isDrag = true
-                                change.consume()
+                            if (!isHorizontalDrag && kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop &&
+                                kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX) * 1.2f
+                            ) {
+                                isDragY = true
+                                return@withTimeoutOrNull true
+                            }
+
+                            if (!isDragY && kotlin.math.abs(totalDragX) > viewConfiguration.touchSlop &&
+                                kotlin.math.abs(totalDragX) > kotlin.math.abs(totalDragY) * 1.2f
+                            ) {
+                                isHorizontalDrag = true
                                 return@withTimeoutOrNull true
                             }
                         }
                         false
                     }
 
-                    if (dragOrTimeout == null && !isDrag) {
-                        safeOnSettingsClick()
-                        isLongPressHandled = true
-                        while (true) {
-                            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                            event.changes.forEach { it.consume() }
-                            if (!event.changes.any { it.pressed }) break
+                    if (dragOrTimeout == null && !isDragY && !isHorizontalDrag) {
+                        val lastEvent = awaitPointerEvent(pass = PointerEventPass.Main)
+                        val change = lastEvent.changes.firstOrNull { it.id == down.id }
+                        val isConsumedByChild = change?.isConsumed == true
+
+                        if (!isConsumedByChild) {
+                            safeOnSettingsClick()
+                            isLongPressHandled = true
+                            while (true) {
+                                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                event.changes.forEach { it.consume() }
+                                if (!event.changes.any { it.pressed }) break
+                            }
                         }
                     }
 
-                    if (isDrag && !isLongPressHandled) {
+                    if (!isLongPressHandled) {
                         while (true) {
-                            val event = awaitPointerEvent()
+                            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
                             val change = event.changes.firstOrNull { it.id == down.id } ?: break
                             if (!change.pressed) {
-                                if (isActive && !isActionMenuOpen && !isAnyEditMode) {
+                                if (isDragY && isActive && !isActionMenuOpen && !isAnyEditMode) {
                                     if (totalDragY > 40f) {
                                         currentOnSwipeDown()
                                     }
@@ -310,7 +334,35 @@ fun MainMenuScreen(
 
                             val positionChange = change.positionChange()
                             totalDragY += positionChange.y
-                            change.consume()
+                            totalDragX += positionChange.x
+
+                            if (!isDragY && !isHorizontalDrag) {
+                                if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop &&
+                                    kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX) * 1.2f
+                                ) {
+                                    isDragY = true
+                                } else if (kotlin.math.abs(totalDragX) > viewConfiguration.touchSlop &&
+                                    kotlin.math.abs(totalDragX) > kotlin.math.abs(totalDragY) * 1.2f
+                                ) {
+                                    isHorizontalDrag = true
+                                }
+                            }
+
+                            if (isHorizontalDrag && isCenterStart && !isHighlightTriggered) {
+                                val isDirectionMatch = when (handSide) {
+                                    HandSide.RIGHT -> totalDragX > swipeHighlightThresholdPx
+                                    HandSide.LEFT -> totalDragX < -swipeHighlightThresholdPx
+                                }
+                                if (isDirectionMatch) {
+                                    isHighlightTriggered = true
+                                    change.consume()
+                                    currentOnOpenHighlightScreen()
+                                }
+                            }
+
+                            if (isHighlightTriggered) {
+                                change.consume()
+                            }
                         }
                     }
                 }
@@ -1427,6 +1479,7 @@ private fun FavoritesSection(
                 awaitEachGesture {
                     val down = awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
                     var isDrag = false
+                    var isHorizontalDrag = false
                     var totalDragY = 0f
                     var totalDragX = 0f
                     var isLongPressHandled = false
@@ -1448,11 +1501,15 @@ private fun FavoritesSection(
                                 change.consume()
                                 return@withTimeoutOrNull true
                             }
+                            if (kotlin.math.abs(totalDragX) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragX) > kotlin.math.abs(totalDragY) * 1.2f) {
+                                isHorizontalDrag = true
+                                return@withTimeoutOrNull false
+                            }
                         }
                         false
                     }
 
-                    if (dragOrTimeout == null && !isDrag) {
+                    if (dragOrTimeout == null && !isDrag && !isHorizontalDrag) {
                         val lastEvent = awaitPointerEvent(pass = PointerEventPass.Main)
                         val change = lastEvent.changes.firstOrNull { it.id == down.id }
                         val isConsumedByChild = change?.isConsumed == true
@@ -1468,7 +1525,7 @@ private fun FavoritesSection(
                         }
                     }
 
-                    if (!isLongPressHandled) {
+                    if (!isLongPressHandled && !isHorizontalDrag) {
                         while (true) {
                             val event = awaitPointerEvent(pass = PointerEventPass.Initial)
                             val change = event.changes.firstOrNull { it.id == down.id } ?: break
@@ -1487,8 +1544,12 @@ private fun FavoritesSection(
                             totalDragY += positionChange.y
                             totalDragX += positionChange.x
 
-                            if (!isDrag && kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX)) {
-                                isDrag = true
+                            if (!isDrag && !isHorizontalDrag) {
+                                if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX)) {
+                                    isDrag = true
+                                } else if (kotlin.math.abs(totalDragX) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragX) > kotlin.math.abs(totalDragY) * 1.2f) {
+                                    isHorizontalDrag = true
+                                }
                             }
 
                             if (isDrag) {
