@@ -125,155 +125,161 @@ fun CustomWidgetPickerSheet(
 
     var searchQuery by remember { mutableStateOf("") }
 
-    // Load and group all installed widget providers by app with package-level resolution
-    val allGroups = remember(apps) {
-        val manager = AppWidgetManager.getInstance(context)
-        val pm = context.packageManager
-        val userManager = context.getSystemService(Context.USER_SERVICE) as? android.os.UserManager
-        val myUserHandle = android.os.Process.myUserHandle()
-        val profiles = userManager?.userProfiles?.ifEmpty { listOf(myUserHandle) } ?: listOf(myUserHandle)
+    // Load and group all installed widget providers by app asynchronously on Dispatchers.IO
+    val allGroupsState = produceState<List<AppWidgetGroup>?>(initialValue = null, key1 = apps) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val manager = AppWidgetManager.getInstance(context)
+            val pm = context.packageManager
+            val userManager = context.getSystemService(Context.USER_SERVICE) as? android.os.UserManager
+            val myUserHandle = android.os.Process.myUserHandle()
+            val profiles = userManager?.userProfiles?.ifEmpty { listOf(myUserHandle) } ?: listOf(myUserHandle)
 
-        val providers = mutableListOf<AppWidgetProviderInfo>()
+            val providers = mutableListOf<AppWidgetProviderInfo>()
 
-        // 1. Initial providers already in AppWidgetManager memory cache across all user profiles
-        for (profile in profiles) {
-            try {
-                manager.getInstalledProvidersForProfile(profile)?.let { providers.addAll(it) }
-            } catch (_: Exception) {}
-        }
-        if (providers.isEmpty()) {
-            try {
-                manager.installedProviders?.let { providers.addAll(it) }
-            } catch (_: Exception) {}
-        }
-
-        // 2. Discover via package-level query for each known installed app.
-        // On modern Android (especially post-reboot), AppWidgetService lazily indexes providers.
-        // Calling getInstalledProvidersForPackage(pkg, profile) forces AppWidgetService
-        // to load providers for that app into the system cache and return them!
-        val packageNames = apps.map { it.packageName }.toSet()
-        val alreadyLoaded = providers.map { it.provider.packageName }.toSet()
-        val pendingPackages = packageNames - alreadyLoaded
-
-        for (pkg in pendingPackages) {
+            // 1. Initial providers already in AppWidgetManager memory cache across all user profiles
             for (profile in profiles) {
                 try {
-                    val pkgProviders = manager.getInstalledProvidersForPackage(pkg, profile)
-                    if (!pkgProviders.isNullOrEmpty()) {
-                        providers.addAll(pkgProviders)
-                    }
+                    manager.getInstalledProvidersForProfile(profile)?.let { providers.addAll(it) }
                 } catch (_: Exception) {}
             }
-        }
+            if (providers.isEmpty()) {
+                try {
+                    manager.installedProviders?.let { providers.addAll(it) }
+                } catch (_: Exception) {}
+            }
 
-        // 3. Complete discovery: query PackageManager for all broadcast receivers declaring ACTION_APPWIDGET_UPDATE
-        val knownComponents = providers.map { it.provider.flattenToString() }.toMutableSet()
-        try {
-            val widgetIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
-            val flags = PackageManager.GET_META_DATA or
-                PackageManager.MATCH_DIRECT_BOOT_AWARE or
-                PackageManager.MATCH_DIRECT_BOOT_UNAWARE
-            val receivers = pm.queryBroadcastReceivers(widgetIntent, flags)
-            for (ri in receivers) {
-                val cn = android.content.ComponentName(ri.activityInfo.packageName, ri.activityInfo.name)
-                val cnKey = cn.flattenToString()
-                if (cnKey !in knownComponents) {
-                    knownComponents.add(cnKey)
-                    val info = AppWidgetProviderInfo().apply {
-                        provider = cn
-                        label = try {
-                            ri.loadLabel(pm)?.toString()?.takeIf { it.isNotBlank() } ?: ri.activityInfo.name
-                        } catch (_: Exception) {
-                            ri.activityInfo.name
+            // 2. Discover via package-level query for each known installed app.
+            // On modern Android (especially post-reboot), AppWidgetService lazily indexes providers.
+            // Calling getInstalledProvidersForPackage(pkg, profile) forces AppWidgetService
+            // to load providers for that app into the system cache and return them!
+            val packageNames = apps.map { it.packageName }.toSet()
+            val alreadyLoaded = providers.map { it.provider.packageName }.toSet()
+            val pendingPackages = packageNames - alreadyLoaded
+
+            for (pkg in pendingPackages) {
+                for (profile in profiles) {
+                    try {
+                        val pkgProviders = manager.getInstalledProvidersForPackage(pkg, profile)
+                        if (!pkgProviders.isNullOrEmpty()) {
+                            providers.addAll(pkgProviders)
                         }
-                        icon = ri.activityInfo.icon
-                        minWidth = 180
-                        minHeight = 110
-                    }
-                    try {
-                        val field = AppWidgetProviderInfo::class.java.getDeclaredField("providerInfo")
-                        field.isAccessible = true
-                        field.set(info, ri.activityInfo)
-                    } catch (_: Throwable) {}
-                    try {
-                        ri.activityInfo.loadXmlMetaData(pm, AppWidgetManager.META_DATA_APPWIDGET_PROVIDER)?.use { parser ->
-                            val res = pm.getResourcesForApplication(ri.activityInfo.applicationInfo)
-                            var eventType = parser.eventType
-                            while (eventType != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
-                                if (eventType == org.xmlpull.v1.XmlPullParser.START_TAG && parser.name == "appwidget-provider") {
-                                    for (i in 0 until parser.attributeCount) {
-                                        when (parser.getAttributeName(i)) {
-                                            "minWidth" -> {
-                                                val resId = parser.getAttributeResourceValue(i, 0)
-                                                info.minWidth = if (resId != 0) res.getDimensionPixelSize(resId) else parser.getAttributeIntValue(i, 180)
-                                            }
-                                            "minHeight" -> {
-                                                val resId = parser.getAttributeResourceValue(i, 0)
-                                                info.minHeight = if (resId != 0) res.getDimensionPixelSize(resId) else parser.getAttributeIntValue(i, 110)
-                                            }
-                                            "configure" -> {
-                                                val confName = parser.getAttributeValue(i)
-                                                if (!confName.isNullOrBlank()) {
-                                                    info.configure = if (confName.startsWith(".")) {
-                                                        android.content.ComponentName(ri.activityInfo.packageName, ri.activityInfo.packageName + confName)
-                                                    } else if (!confName.contains(".")) {
-                                                        android.content.ComponentName(ri.activityInfo.packageName, ri.activityInfo.packageName + "." + confName)
-                                                    } else {
-                                                        android.content.ComponentName(ri.activityInfo.packageName, confName)
+                    } catch (_: Exception) {}
+                }
+            }
+
+            // 3. Complete discovery: query PackageManager for all broadcast receivers declaring ACTION_APPWIDGET_UPDATE
+            val knownComponents = providers.map { it.provider.flattenToString() }.toMutableSet()
+            try {
+                val widgetIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
+                val flags = PackageManager.GET_META_DATA or
+                    PackageManager.MATCH_DIRECT_BOOT_AWARE or
+                    PackageManager.MATCH_DIRECT_BOOT_UNAWARE
+                val receivers = pm.queryBroadcastReceivers(widgetIntent, flags)
+                for (ri in receivers) {
+                    val cn = android.content.ComponentName(ri.activityInfo.packageName, ri.activityInfo.name)
+                    val cnKey = cn.flattenToString()
+                    if (cnKey !in knownComponents) {
+                        knownComponents.add(cnKey)
+                        val info = AppWidgetProviderInfo().apply {
+                            provider = cn
+                            label = try {
+                                ri.loadLabel(pm)?.toString()?.takeIf { it.isNotBlank() } ?: ri.activityInfo.name
+                            } catch (_: Exception) {
+                                ri.activityInfo.name
+                            }
+                            icon = ri.activityInfo.icon
+                            minWidth = 180
+                            minHeight = 110
+                        }
+                        try {
+                            val field = AppWidgetProviderInfo::class.java.getDeclaredField("providerInfo")
+                            field.isAccessible = true
+                            field.set(info, ri.activityInfo)
+                        } catch (_: Throwable) {}
+                        try {
+                            ri.activityInfo.loadXmlMetaData(pm, AppWidgetManager.META_DATA_APPWIDGET_PROVIDER)?.use { parser ->
+                                val res = pm.getResourcesForApplication(ri.activityInfo.applicationInfo)
+                                var eventType = parser.eventType
+                                while (eventType != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
+                                    if (eventType == org.xmlpull.v1.XmlPullParser.START_TAG && parser.name == "appwidget-provider") {
+                                        for (i in 0 until parser.attributeCount) {
+                                            when (parser.getAttributeName(i)) {
+                                                "minWidth" -> {
+                                                    val resId = parser.getAttributeResourceValue(i, 0)
+                                                    info.minWidth = if (resId != 0) res.getDimensionPixelSize(resId) else parser.getAttributeIntValue(i, 180)
+                                                }
+                                                "minHeight" -> {
+                                                    val resId = parser.getAttributeResourceValue(i, 0)
+                                                    info.minHeight = if (resId != 0) res.getDimensionPixelSize(resId) else parser.getAttributeIntValue(i, 110)
+                                                }
+                                                "configure" -> {
+                                                    val confName = parser.getAttributeValue(i)
+                                                    if (!confName.isNullOrBlank()) {
+                                                        info.configure = if (confName.startsWith(".")) {
+                                                            android.content.ComponentName(ri.activityInfo.packageName, ri.activityInfo.packageName + confName)
+                                                        } else if (!confName.contains(".")) {
+                                                            android.content.ComponentName(ri.activityInfo.packageName, ri.activityInfo.packageName + "." + confName)
+                                                        } else {
+                                                            android.content.ComponentName(ri.activityInfo.packageName, confName)
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
+                                        break
                                     }
-                                    break
+                                    eventType = parser.next()
                                 }
-                                eventType = parser.next()
                             }
-                        }
-                    } catch (_: Exception) {}
-                    providers.add(info)
-                }
-            }
-        } catch (_: Exception) {}
-
-        // 4. Group by package and create AppWidgetGroup
-        val appsByPackage = apps.associateBy { it.packageName }
-        providers
-            .distinctBy { it.provider.flattenToString() }
-            .groupBy { it.provider.packageName }
-            .map { (packageName, widgetList) ->
-                val knownApp = appsByPackage[packageName]
-                val firstWidget = widgetList.firstOrNull()
-
-                val appLabel = knownApp?.label ?: try {
-                    val appInfo = pm.getApplicationInfo(packageName, 0)
-                    pm.getApplicationLabel(appInfo).toString()
-                } catch (_: Exception) {
-                    firstWidget?.safeLabel(pm)?.takeIf { it.isNotBlank() } ?: packageName
-                }
-
-                val appIcon = try {
-                    pm.getApplicationIcon(packageName)
-                } catch (_: Exception) {
-                    try {
-                        firstWidget?.loadIcon(context, 0)
-                    } catch (_: Exception) {
-                        null
+                        } catch (_: Exception) {}
+                        providers.add(info)
                     }
                 }
+            } catch (_: Exception) {}
 
-                AppWidgetGroup(
-                    packageName = packageName,
-                    appLabel = appLabel,
-                    appIcon = appIcon,
-                    widgets = widgetList.sortedBy { it.safeLabel(pm) }
-                )
-            }
-            .sortedBy { it.appLabel.lowercase() }
+            // 4. Group by package and create AppWidgetGroup
+            val appsByPackage = apps.associateBy { it.packageName }
+            providers
+                .distinctBy { it.provider.flattenToString() }
+                .groupBy { it.provider.packageName }
+                .map { (packageName, widgetList) ->
+                    val knownApp = appsByPackage[packageName]
+                    val firstWidget = widgetList.firstOrNull()
+
+                    val appLabel = knownApp?.label ?: try {
+                        val appInfo = pm.getApplicationInfo(packageName, 0)
+                        pm.getApplicationLabel(appInfo).toString()
+                    } catch (_: Exception) {
+                        firstWidget?.safeLabel(pm)?.takeIf { it.isNotBlank() } ?: packageName
+                    }
+
+                    val appIcon = try {
+                        pm.getApplicationIcon(packageName)
+                    } catch (_: Exception) {
+                        try {
+                            firstWidget?.loadIcon(context, 0)
+                        } catch (_: Exception) {
+                            null
+                        }
+                    }
+
+                    AppWidgetGroup(
+                        packageName = packageName,
+                        appLabel = appLabel,
+                        appIcon = appIcon,
+                        widgets = widgetList.sortedBy { it.safeLabel(pm).lowercase() }
+                    )
+                }
+                .sortedBy { it.appLabel.lowercase() }
+        }
     }
 
+    val allGroups = allGroupsState.value
+
     val filteredGroups = remember(searchQuery, allGroups) {
-        if (searchQuery.isBlank()) {
+        if (allGroups == null) {
+            emptyList()
+        } else if (searchQuery.isBlank()) {
             allGroups
         } else {
             val query = searchQuery.trim().lowercase()
@@ -438,7 +444,20 @@ fun CustomWidgetPickerSheet(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     // Widgets List
-                    if (filteredGroups.isEmpty()) {
+                    if (allGroups == null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                color = accentColor.color,
+                                modifier = Modifier.size(36.dp),
+                                strokeWidth = 3.dp
+                            )
+                        }
+                    } else if (filteredGroups.isEmpty()) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()

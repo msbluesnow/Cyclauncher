@@ -77,6 +77,7 @@ class MainActivity : ComponentActivity() {
     private val viewModel: LauncherViewModel by viewModels()
 
     private var isDefaultLauncherCached = false
+    private var isHighlightScreenActive = false
     private var wallpaperColorsListener: Any? = null
     private var launcherAppsHandlerThread: android.os.HandlerThread? = null
     private var launcherAppsCallback: android.content.pm.LauncherApps.Callback? = null
@@ -114,6 +115,10 @@ class MainActivity : ComponentActivity() {
             }
         }
         onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
+
+        viewModel.updateDefaultLauncherStatus { isDefault ->
+            isDefaultLauncherCached = isDefault
+        }
         
         val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
         if (launcherApps != null) {
@@ -225,6 +230,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     LaunchedEffect(isHighlightScreenVisible) {
+                        isHighlightScreenActive = isHighlightScreenVisible
                         if (isHighlightScreenVisible) {
                             showActionMenuFor = null
                             showRenameDialogFor = null
@@ -558,9 +564,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        try {
-            appWidgetHost?.startListening()
-        } catch (_: Exception) {}
+        if (isHighlightScreenActive) {
+            try {
+                appWidgetHost?.startListening()
+            } catch (_: Exception) {}
+        }
     }
 
     override fun onStop() {
@@ -609,8 +617,9 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         viewModel.refreshDynamicWallpaperColor(this)
         updateStatusBarVisibility(viewModel.hideStatusBar.value)
-        viewModel.updateDefaultLauncherStatus()
-        isDefaultLauncherCached = viewModel.isDefaultLauncher()
+        viewModel.updateDefaultLauncherStatus { isDefault ->
+            isDefaultLauncherCached = isDefault
+        }
         if (viewModel.apps.value.isEmpty()) {
             viewModel.refreshApps()
         } else {
@@ -660,7 +669,9 @@ class MainActivity : ComponentActivity() {
                 return
             }
         }
-        viewModel.updateDefaultLauncherStatus()
+        viewModel.updateDefaultLauncherStatus { isDefault ->
+            isDefaultLauncherCached = isDefault
+        }
         viewModel.requestReset()
     }
 

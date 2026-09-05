@@ -183,9 +183,21 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val installs = mutableListOf<AppInfo>()
             val updates = mutableListOf<AppInfo>()
 
+            val installedPackages = try {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    pm.getInstalledPackages(android.content.pm.PackageManager.PackageInfoFlags.of(0))
+                } else {
+                    @Suppress("DEPRECATION")
+                    pm.getInstalledPackages(0)
+                }
+            } catch (_: Exception) {
+                emptyList()
+            }
+            val packageInfoMap = installedPackages.associateBy { it.packageName }
+
             for (app in allApps) {
                 try {
-                    val pInfo = pm.getPackageInfo(app.packageName, 0)
+                    val pInfo = packageInfoMap[app.packageName] ?: continue
                     val appInfo = pInfo.applicationInfo ?: continue
                     val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0 &&
                             (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0
@@ -650,12 +662,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun isDefaultLauncher(): Boolean = _isDefaultLauncher.value
 
-    fun updateDefaultLauncherStatus() {
+    fun updateDefaultLauncherStatus(onResult: ((Boolean) -> Unit)? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             val isDefault = checkIsDefaultLauncher(getApplication())
             if (_isDefaultLauncher.value != isDefault) {
                 _isDefaultLauncher.value = isDefault
             }
+            onResult?.invoke(isDefault)
         }
     }
 
@@ -1117,19 +1130,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 val currentUpdateTimes = mutableMapOf<String, Long>()
                 val newlyInstalledOrUpdated = mutableListOf<Pair<String, Long>>()
 
-                val distinctPkgs = resolvedInfos.map { it.activityInfo.packageName }.distinct()
-                for (pkgName in distinctPkgs) {
-                    val updateTime = try {
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                            pm.getPackageInfo(pkgName, android.content.pm.PackageManager.PackageInfoFlags.of(0)).lastUpdateTime
-                        } else {
-                            @Suppress("DEPRECATION")
-                            pm.getPackageInfo(pkgName, 0).lastUpdateTime
-                        }
-                    } catch (_: Exception) {
-                        0L
+                val installedPackages = try {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        pm.getInstalledPackages(android.content.pm.PackageManager.PackageInfoFlags.of(0))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        pm.getInstalledPackages(0)
                     }
-                    currentUpdateTimes[pkgName] = updateTime
+                } catch (_: Exception) {
+                    emptyList()
+                }
+                for (pInfo in installedPackages) {
+                    currentUpdateTimes[pInfo.packageName] = pInfo.lastUpdateTime
                 }
 
                 if (!isFirstTimeTracking) {

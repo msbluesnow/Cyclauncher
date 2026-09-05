@@ -324,11 +324,6 @@ fun MainMenuScreen(
                             val event = awaitPointerEvent(pass = PointerEventPass.Initial)
                             val change = event.changes.firstOrNull { it.id == down.id } ?: break
                             if (!change.pressed) {
-                                if (isDragY && isActive && !isActionMenuOpen && !isAnyEditMode) {
-                                    if (totalDragY > 40f) {
-                                        currentOnSwipeDown()
-                                    }
-                                }
                                 break
                             }
 
@@ -419,7 +414,10 @@ fun MainMenuScreen(
                     setTagFolderReorderMode = { isTagFolderReorderMode = it },
                     onReorderTag = { from, to ->
                         if (from in popularTagsWithApps.indices && to in popularTagsWithApps.indices) {
-                            viewModel.reorderTagById(popularTagsWithApps[from].first.id, popularTagsWithApps[to].first.id)
+                            viewModel.reorderTagById(
+                                popularTagsWithApps[from].first.id,
+                                popularTagsWithApps[to].first.id
+                            )
                         }
                     },
                     onRemoveFromHistory = { viewModel.removeFromHistory(it) },
@@ -462,7 +460,10 @@ fun MainMenuScreen(
                     setTagFolderReorderMode = { isTagFolderReorderMode = it },
                     onReorderTag = { from, to ->
                         if (from in popularTagsWithApps.indices && to in popularTagsWithApps.indices) {
-                            viewModel.reorderTagById(popularTagsWithApps[from].first.id, popularTagsWithApps[to].first.id)
+                            viewModel.reorderTagById(
+                                popularTagsWithApps[from].first.id,
+                                popularTagsWithApps[to].first.id
+                            )
                         }
                     },
                     onRemoveFromHistory = { viewModel.removeFromHistory(it) },
@@ -959,7 +960,8 @@ private fun ColumnScope.TagsContentBlock(
                         label = "tag_alpha"
                     )
 
-                    val itemAnimModifier = if (animationsEnabled && !isDraggingThis) Modifier.animateItem() else Modifier
+                    val itemAnimModifier =
+                        if (animationsEnabled && !isDraggingThis) Modifier.animateItem() else Modifier
 
                     val itemRotation = if (isReorderMode && !isDraggingThis) {
                         if (index % 2 == 0) shakeRotation else -shakeRotation
@@ -997,13 +999,15 @@ private fun ColumnScope.TagsContentBlock(
                                             val curRow = curIndex / 3
                                             val targetCol = (curCol + colDelta).coerceIn(0, 2)
                                             val targetRow = (curRow + rowDelta).coerceAtLeast(0)
-                                            val targetIndex = (targetRow * 3 + targetCol).coerceIn(0, localPopularTags.size - 1)
+                                            val targetIndex =
+                                                (targetRow * 3 + targetCol).coerceIn(0, localPopularTags.size - 1)
 
                                             if (targetIndex != curIndex && targetIndex in localPopularTags.indices) {
                                                 val actualColChange = targetCol - curCol
                                                 val actualRowChange = targetRow - curRow
 
-                                                val dxToSub = if (isRtl) -actualColChange * colStep else actualColChange * colStep
+                                                val dxToSub =
+                                                    if (isRtl) -actualColChange * colStep else actualColChange * colStep
                                                 val dyToSub = -actualRowChange * rowStep
 
                                                 dragOffset = Offset(dragOffset.x - dxToSub, dragOffset.y - dyToSub)
@@ -1051,7 +1055,8 @@ private fun ColumnScope.TagsContentBlock(
                                 } else if (isReorderMode) {
                                     rotationZ = itemRotation
                                     translationX = itemTranslation
-                                    translationY = if (index % 2 == 0) itemTranslation * 0.4f else -itemTranslation * 0.4f
+                                    translationY =
+                                        if (index % 2 == 0) itemTranslation * 0.4f else -itemTranslation * 0.4f
                                 }
                             }
                             .then(gestureModifier),
@@ -1082,102 +1087,102 @@ private fun ColumnScope.TagsContentBlock(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = if (handSide == HandSide.RIGHT) Arrangement.End else Arrangement.Start,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                val showPaddingOnLeft = handSide == HandSide.RIGHT
-                val showPaddingOnRight = handSide == HandSide.LEFT
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = if (handSide == HandSide.RIGHT) Arrangement.End else Arrangement.Start,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            val showPaddingOnLeft = handSide == HandSide.RIGHT
+            val showPaddingOnRight = handSide == HandSide.LEFT
 
-                if (showPaddingOnLeft) {
-                    Box(
-                        modifier = Modifier.size(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {}
-                    Spacer(modifier = Modifier.width(4.dp))
-                }
-
-                var tagIconPosition by remember { mutableStateOf(Offset.Zero) }
-
+            if (showPaddingOnLeft) {
                 Box(
-                    modifier = Modifier
-                        .padding(horizontal = 4.dp)
-                        .size(44.dp)
-                        .onGloballyPositioned { tagIconPosition = it.positionInRoot() }
-                        .pointerInput(isReorderMode) {
-                            detectTapGestures(
-                                onLongPress = {
-                                    if (!isReorderMode) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        onTagSectionIconClick(tagIconPosition + it)
-                                    }
-                                },
-                                onTap = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    if (isReorderMode) {
-                                        setReorderMode(false)
-                                    } else {
-                                        onTagSectionIconClick(tagIconPosition + it)
-                                    }
-                                }
-                            )
-                        },
+                    modifier = Modifier.size(32.dp),
                     contentAlignment = Alignment.Center
-                ) {
-                    if (isReorderMode) {
-                        Box(contentAlignment = Alignment.Center) {
-                            if (showShadows) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = null,
-                                    tint = Color.Black.copy(alpha = 0.6f),
-                                    modifier = Modifier
-                                        .size(22.dp)
-                                        .offset(1.dp, 1.dp)
-                                )
+                ) {}
+                Spacer(modifier = Modifier.width(4.dp))
+            }
+
+            var tagIconPosition by remember { mutableStateOf(Offset.Zero) }
+
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 4.dp)
+                    .size(44.dp)
+                    .onGloballyPositioned { tagIconPosition = it.positionInRoot() }
+                    .pointerInput(isReorderMode) {
+                        detectTapGestures(
+                            onLongPress = {
+                                if (!isReorderMode) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onTagSectionIconClick(tagIconPosition + it)
+                                }
+                            },
+                            onTap = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                if (isReorderMode) {
+                                    setReorderMode(false)
+                                } else {
+                                    onTagSectionIconClick(tagIconPosition + it)
+                                }
                             }
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                if (isReorderMode) {
+                    Box(contentAlignment = Alignment.Center) {
+                        if (showShadows) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Exit Tag Reorder Mode",
-                                tint = accentColor.color,
-                                modifier = Modifier.size(22.dp)
+                                contentDescription = null,
+                                tint = Color.Black.copy(alpha = 0.6f),
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .offset(1.dp, 1.dp)
                             )
                         }
-                    } else {
-                        Box(contentAlignment = Alignment.Center) {
-                            val tagIcon = Icons.Outlined.Folder
-                            if (showShadows) {
-                                val shadowSettings = LocalShadowSettings.current
-                                Icon(
-                                    imageVector = tagIcon,
-                                    contentDescription = null,
-                                    tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
-                                    modifier = Modifier
-                                        .size(22.dp)
-                                        .offset(1.dp, 1.dp)
-                                )
-                            }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Exit Tag Reorder Mode",
+                            tint = accentColor.color,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                } else {
+                    Box(contentAlignment = Alignment.Center) {
+                        val tagIcon = Icons.Outlined.Folder
+                        if (showShadows) {
+                            val shadowSettings = LocalShadowSettings.current
                             Icon(
                                 imageVector = tagIcon,
-                                contentDescription = "Tag Folders",
-                                tint = accentColor.color,
-                                modifier = Modifier.size(22.dp)
+                                contentDescription = null,
+                                tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .offset(1.dp, 1.dp)
                             )
                         }
+                        Icon(
+                            imageVector = tagIcon,
+                            contentDescription = "Tag Folders",
+                            tint = accentColor.color,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                 }
+            }
 
-                if (showPaddingOnRight) {
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Box(
-                        modifier = Modifier.size(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {}
-                }
+            if (showPaddingOnRight) {
+                Spacer(modifier = Modifier.width(4.dp))
+                Box(
+                    modifier = Modifier.size(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {}
             }
         }
     }
+}
 
 @Composable
 private fun ColumnScope.HistoryContentBlock(
@@ -1483,6 +1488,7 @@ private fun FavoritesSection(
                     var totalDragY = 0f
                     var totalDragX = 0f
                     var isLongPressHandled = false
+                    var lastDownChange = down
 
                     val timeoutMillis = viewConfiguration.longPressTimeoutMillis
 
@@ -1490,18 +1496,25 @@ private fun FavoritesSection(
                         while (true) {
                             val event = awaitPointerEvent(pass = PointerEventPass.Initial)
                             val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            lastDownChange = change
                             if (!change.pressed) break
 
                             val positionChange = change.positionChange()
                             totalDragY += positionChange.y
                             totalDragX += positionChange.x
 
-                            if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX)) {
+                            if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragY) > kotlin.math.abs(
+                                    totalDragX
+                                )
+                            ) {
                                 isDrag = true
                                 change.consume()
                                 return@withTimeoutOrNull true
                             }
-                            if (kotlin.math.abs(totalDragX) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragX) > kotlin.math.abs(totalDragY) * 1.2f) {
+                            if (kotlin.math.abs(totalDragX) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragX) > kotlin.math.abs(
+                                    totalDragY
+                                ) * 1.2f
+                            ) {
                                 isHorizontalDrag = true
                                 return@withTimeoutOrNull false
                             }
@@ -1509,51 +1522,73 @@ private fun FavoritesSection(
                         false
                     }
 
-                    if (dragOrTimeout == null && !isDrag && !isHorizontalDrag) {
-                        val lastEvent = awaitPointerEvent(pass = PointerEventPass.Main)
-                        val change = lastEvent.changes.firstOrNull { it.id == down.id }
-                        val isConsumedByChild = change?.isConsumed == true
-
-                        if (!isConsumedByChild) {
-                            currentOnSettingsClick()
-                            isLongPressHandled = true
-                            while (true) {
-                                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                                event.changes.forEach { it.consume() }
-                                if (!event.changes.any { it.pressed }) break
+                    if (!lastDownChange.pressed) {
+                        if (!isHorizontalDrag && currentIsActive) {
+                            val isVerticalSwipe = isDrag || (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX))
+                            if (isVerticalSwipe) {
+                                if (totalDragY < -40f) {
+                                    currentOnSwipeUp()
+                                } else if (totalDragY > 40f) {
+                                    currentOnSwipeDown()
+                                }
                             }
                         }
-                    }
+                    } else {
+                        if (dragOrTimeout == null && !isDrag && !isHorizontalDrag) {
+                            val lastEvent = awaitPointerEvent(pass = PointerEventPass.Main)
+                            val change = lastEvent.changes.firstOrNull { it.id == down.id }
+                            val isConsumedByChild = change?.isConsumed == true
 
-                    if (!isLongPressHandled && !isHorizontalDrag) {
-                        while (true) {
-                            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                            if (!change.pressed) {
-                                if (isDrag && currentIsActive) {
-                                    if (totalDragY < -40f) {
-                                        currentOnSwipeUp()
-                                    } else if (totalDragY > 40f) {
-                                        currentOnSwipeDown()
+                            if (!isConsumedByChild) {
+                                currentOnSettingsClick()
+                                isLongPressHandled = true
+                                while (true) {
+                                    val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                    event.changes.forEach { it.consume() }
+                                    if (!event.changes.any { it.pressed }) break
+                                }
+                            }
+                        }
+
+                        if (!isLongPressHandled && !isHorizontalDrag) {
+                            while (true) {
+                                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                if (!change.pressed) {
+                                    if (currentIsActive) {
+                                        val isVerticalSwipe = isDrag || (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX))
+                                        if (isVerticalSwipe) {
+                                            if (totalDragY < -40f) {
+                                                currentOnSwipeUp()
+                                            } else if (totalDragY > 40f) {
+                                                currentOnSwipeDown()
+                                            }
+                                        }
+                                    }
+                                    break
+                                }
+
+                                val positionChange = change.positionChange()
+                                totalDragY += positionChange.y
+                                totalDragX += positionChange.x
+
+                                if (!isDrag && !isHorizontalDrag) {
+                                    if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop && kotlin.math.abs(
+                                            totalDragY
+                                        ) > kotlin.math.abs(totalDragX)
+                                    ) {
+                                        isDrag = true
+                                    } else if (kotlin.math.abs(totalDragX) > viewConfiguration.touchSlop && kotlin.math.abs(
+                                            totalDragX
+                                        ) > kotlin.math.abs(totalDragY) * 1.2f
+                                    ) {
+                                        isHorizontalDrag = true
                                     }
                                 }
-                                break
-                            }
 
-                            val positionChange = change.positionChange()
-                            totalDragY += positionChange.y
-                            totalDragX += positionChange.x
-
-                            if (!isDrag && !isHorizontalDrag) {
-                                if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX)) {
-                                    isDrag = true
-                                } else if (kotlin.math.abs(totalDragX) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragX) > kotlin.math.abs(totalDragY) * 1.2f) {
-                                    isHorizontalDrag = true
+                                if (isDrag) {
+                                    change.consume()
                                 }
-                            }
-
-                            if (isDrag) {
-                                change.consume()
                             }
                         }
                     }
@@ -1596,7 +1631,8 @@ private fun FavoritesSection(
                     val fallbackItemHeightPx = with(density) { 48.dp.toPx() }
                     val spacingPx = with(density) { 12.dp.toPx() }
 
-                    val itemAnimModifier = if (animationsEnabled && !isDraggingThis) Modifier.animateItem() else Modifier
+                    val itemAnimModifier =
+                        if (animationsEnabled && !isDraggingThis) Modifier.animateItem() else Modifier
 
                     val gestureModifier = if (isReorderMode) {
                         Modifier.pointerInput(itemKey, localFavorites.size) {
@@ -1618,7 +1654,8 @@ private fun FavoritesSection(
                                     change.consume()
                                     dragVerticalOffset += dragAmount.y
 
-                                    val stepHeight = (if (itemHeightPx > 0f) itemHeightPx else fallbackItemHeightPx) + spacingPx
+                                    val stepHeight =
+                                        (if (itemHeightPx > 0f) itemHeightPx else fallbackItemHeightPx) + spacingPx
                                     val effectiveDy = -dragVerticalOffset
                                     val rowDelta = (effectiveDy / stepHeight).roundToInt()
 
