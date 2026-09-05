@@ -295,7 +295,7 @@ fun TagFolderPopup(
                 .heightIn(max = 360.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(popupTheme.backgroundColor)
-                .border(1.dp, tag.color.copy(alpha = 0.7f), RoundedCornerShape(16.dp))
+                .border(1.dp, popupTheme.borderColor, RoundedCornerShape(16.dp))
                 .padding(16.dp)
         ) {
             Column {
@@ -367,7 +367,7 @@ fun TagFolderPopup(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(accentColor.color.copy(alpha = 0.2f))
-                                    .border(1.dp, accentColor.color, RoundedCornerShape(8.dp))
+                                    .border(1.dp, popupTheme.borderColor, RoundedCornerShape(8.dp))
                                     .clickable { onExitEditMode() }
                                     .padding(horizontal = 8.dp, vertical = 3.dp),
                                 contentAlignment = Alignment.Center
@@ -411,7 +411,7 @@ fun TagFolderPopup(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(tag.color.copy(alpha = 0.15f))
-                                .border(0.8.dp, tag.color.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                                .border(0.8.dp, popupTheme.borderColor, RoundedCornerShape(6.dp))
                                 .padding(horizontal = 6.dp, vertical = 2.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -811,7 +811,7 @@ fun TagFolderActionMenu(
                 .width(menuWidth)
                 .clip(RoundedCornerShape(16.dp))
                 .background(popupTheme.backgroundColor)
-                .border(1.dp, tag.color.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                .border(1.dp, popupTheme.borderColor, RoundedCornerShape(16.dp))
                 .padding(vertical = 8.dp)
         ) {
             Column {
@@ -834,7 +834,10 @@ fun TagFolderActionMenu(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                HorizontalDivider(
+                    color = popupTheme.dividerColor,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
 
                 Row(
                     modifier = Modifier
@@ -932,7 +935,7 @@ fun TagSectionActionMenu(
                 .width(menuWidth)
                 .clip(RoundedCornerShape(16.dp))
                 .background(popupTheme.backgroundColor)
-                .border(1.dp, accentColor.color.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                .border(1.dp, popupTheme.borderColor, RoundedCornerShape(16.dp))
                 .padding(vertical = 8.dp)
         ) {
             Column {
@@ -955,7 +958,10 @@ fun TagSectionActionMenu(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                HorizontalDivider(
+                    color = popupTheme.dividerColor,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
 
                 Row(
                     modifier = Modifier
@@ -1054,7 +1060,7 @@ fun TagSortPopup(
                 .width(menuWidth)
                 .clip(RoundedCornerShape(16.dp))
                 .background(popupTheme.backgroundColor)
-                .border(1.dp, accentColor.color.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                .border(1.dp, popupTheme.borderColor, RoundedCornerShape(16.dp))
                 .padding(vertical = 12.dp, horizontal = 14.dp)
         ) {
             Column {

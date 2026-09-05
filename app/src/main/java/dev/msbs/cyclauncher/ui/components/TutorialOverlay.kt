@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -63,6 +64,7 @@ enum class GestureType {
     SWIPE_UP,
     SIDE_BACK,
     SWIPE_DOWN,
+    SWIPE_HIGHLIGHTS,
     LONG_PRESS,
     FAVORITES_HISTORY,
     HISTORY_POSITION_TOGGLE
@@ -108,6 +110,12 @@ fun TutorialOverlay(
                 description = "Swipe downwards over the Favorites icons area on the Home Screen to pull down the notification shade.",
                 gestureType = GestureType.SWIPE_DOWN,
                 hintText = "Swipe down over the Favorites icons area!"
+            ),
+            TutorialStepInfo(
+                title = "Swipe Sideways — Highlights",
+                description = "Swipe horizontally from the center area (left-to-right or right-to-left based on your hand preference) to open the Highlights workspace. Access launcher overview metrics and customizable Android widgets.",
+                gestureType = GestureType.SWIPE_HIGHLIGHTS,
+                hintText = "Swipe horizontally from the center area!"
             ),
             TutorialStepInfo(
                 title = "Long Press — Menu & Settings",
@@ -187,6 +195,13 @@ fun TutorialOverlay(
                                 GestureType.SIDE_BACK -> {
                                     val isBackDirection = if (handSide == HandSide.LEFT) totalDragX < -threshold else totalDragX > threshold
                                     if (isBackDirection || kotlin.math.abs(totalDragX) > threshold) triggerSuccessAndNext()
+                                }
+                                GestureType.SWIPE_HIGHLIGHTS -> {
+                                    val isMatch = when (handSide) {
+                                        HandSide.RIGHT -> totalDragX > threshold
+                                        HandSide.LEFT -> totalDragX < -threshold
+                                    }
+                                    if (isMatch || kotlin.math.abs(totalDragX) > threshold) triggerSuccessAndNext()
                                 }
                                 GestureType.HISTORY_POSITION_TOGGLE -> {
                                     if (kotlin.math.abs(totalDragY) > threshold) triggerSuccessAndNext()
@@ -490,6 +505,33 @@ private fun GestureAnimationCanvas(
                     )
                 }
 
+                GestureType.SWIPE_HIGHLIGHTS -> {
+                    val isRightHand = handSide == HandSide.RIGHT
+                    val startX = if (isRightHand) width * 0.35f else width * 0.65f
+                    val endX = if (isRightHand) width * 0.75f else width * 0.25f
+                    val currentX = startX + (endX - startX) * progress
+
+                    val trackY = centerY - 20.dp.toPx()
+
+                    drawLine(
+                        color = accentColor.copy(alpha = alpha * 0.4f),
+                        start = Offset(startX, trackY),
+                        end = Offset(currentX, trackY),
+                        strokeWidth = 4.dp.toPx()
+                    )
+
+                    drawCircle(
+                        color = accentColor.copy(alpha = alpha * 0.25f),
+                        radius = 28.dp.toPx(),
+                        center = Offset(currentX, trackY)
+                    )
+                    drawCircle(
+                        color = accentColor.copy(alpha = alpha),
+                        radius = 12.dp.toPx(),
+                        center = Offset(currentX, trackY)
+                    )
+                }
+
                 GestureType.LONG_PRESS -> {
                     val ringRadius = (16.dp.toPx() + (40.dp.toPx() * progress))
                     val ringAlpha = (1f - progress) * alpha
@@ -669,6 +711,26 @@ private fun GestureAnimationCanvas(
                         fontWeight = FontWeight.Medium
                     )
                 }
+            }
+        }
+
+        if (gestureType == GestureType.SWIPE_HIGHLIGHTS) {
+            Box(
+                modifier = Modifier
+                    .offset(y = (-60).dp)
+                    .size(64.dp)
+                    .shadow(12.dp, RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(popupTheme.solidBackgroundColor)
+                    .border(2.dp, accentColor, RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Widgets,
+                    contentDescription = "Highlights",
+                    tint = accentColor,
+                    modifier = Modifier.size(32.dp)
+                )
             }
         }
     }

@@ -142,23 +142,28 @@ fun SettingsScreen(
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Sticky Header matching HighlightScreen layout & handSide
         Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
+            val backIcon = when (handSide) {
+                HandSide.RIGHT -> Icons.AutoMirrored.Outlined.ArrowForward
+                HandSide.LEFT -> Icons.AutoMirrored.Outlined.ArrowBack
+            }
+            val buttonAlignment = if (handSide == HandSide.RIGHT) Alignment.CenterEnd else Alignment.CenterStart
+
             IconButton(
                 onClick = onBack,
-                modifier = Modifier.align(Alignment.CenterStart)
+                modifier = Modifier.align(buttonAlignment)
             ) {
                 Box {
                     if (showShadows) {
                         val shadowOffset = 1.dp
                         Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                            imageVector = backIcon,
                             contentDescription = null,
                             tint = primaryTextColor.getShadowColor(shadowColorOverride),
                             modifier = Modifier
@@ -167,7 +172,7 @@ fun SettingsScreen(
                         )
                     }
                     Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                        imageVector = backIcon,
                         contentDescription = "Back",
                         tint = accentColor.color,
                         modifier = Modifier.size(24.dp)
@@ -181,11 +186,19 @@ fun SettingsScreen(
                     fontWeight = FontWeight.Bold,
                     shadow = shadow
                 ),
-                color = accentColor.color
+                color = accentColor.color,
+                modifier = Modifier.align(Alignment.Center)
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        // Scrollable content
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
 
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -842,22 +855,12 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .height(46.dp)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        if (showShadows) {
-                            Icon(
-                                imageVector = Icons.Outlined.School,
-                                contentDescription = null,
-                                tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
-                                modifier = Modifier.size(18.dp).offset(1.dp, 1.dp)
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Outlined.School,
-                            contentDescription = null,
-                            tint = buttonTextColor.color,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Outlined.School,
+                        contentDescription = null,
+                        tint = buttonTextColor.color,
+                        modifier = Modifier.size(18.dp)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Tutorial",
@@ -996,6 +999,7 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
     }
+}
 
     if (showKeepAndroidOpenDialog) {
         KeepAndroidOpenDialog(

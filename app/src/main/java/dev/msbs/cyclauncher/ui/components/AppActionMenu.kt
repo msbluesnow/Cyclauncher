@@ -103,14 +103,33 @@ fun AppActionMenu(
                 .padding(vertical = 8.dp)
         ) {
             Column {
-                Text(
-                    text = app.label,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = accentColor.color
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    val iconPainter = rememberAppIconPainter(app.iconKey, 20)
+                    Image(
+                        painter = iconPainter,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(CircleShape)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = app.label,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = popupTheme.contentColor,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                HorizontalDivider(
+                    color = popupTheme.dividerColor,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
 
                 MenuItem(
                     text = if (isFavorite) "Remove from Favorites" else "Add to Favorites",

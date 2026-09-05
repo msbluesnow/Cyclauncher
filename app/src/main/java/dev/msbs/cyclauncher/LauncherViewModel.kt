@@ -424,11 +424,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun setTutorialStep(step: Int) {
-        _tutorialStep.value = step.coerceIn(0, 5)
+        _tutorialStep.value = step.coerceIn(0, 6)
     }
 
     fun nextTutorialStep() {
-        if (_tutorialStep.value < 5) {
+        if (_tutorialStep.value < 6) {
             _tutorialStep.value += 1
         } else {
             completeTutorial()
