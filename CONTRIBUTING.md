@@ -52,10 +52,14 @@ app/src/main/java/dev/msbs/cyclauncher/
 │   ├── FavoriteItem.kt            # Polymorphic favorite entries (FavoriteApp vs FavoriteTag)
 │   └── Tag.kt                     # Custom tag model (id, name, color)
 │
+├── widget/                        # Android widget host & lifecycle
+│   └── LauncherAppWidgetHost.kt   # AppWidgetHost subclass with error handling and lifecycle binding
+│
 ├── ui/                            # User Interface
 │   ├── components/
 │   │   ├── AppActionMenu.kt             # Context menu (Favorites, Edit Label, Tags, Uninstall)
 │   │   ├── AppUiComponents.kt           # Shared UI elements (AppIconPainter, AppListItemWithIcon)
+│   │   ├── CustomWidgetPickerSheet.kt   # Bottom sheet widget picker with search, accordions, and live previews
 │   │   ├── KeepAndroidOpenBanner.kt     # Keep Android Open countdown banner & FreeDroidWarn integration
 │   │   ├── RectangularAlphabetWheel.kt  # Custom Canvas-rendered wheel with deceleration physics
 │   │   ├── SideAlphabetSearchLayout.kt  # Side index strip for rapid thumb-scrubbing app retrieval
@@ -63,6 +67,7 @@ app/src/main/java/dev/msbs/cyclauncher/
 │   │   └── TutorialOverlay.kt           # Interactive onboarding tutorial overlay demonstrating gestures
 │   ├── screens/
 │   │   ├── MainMenuScreen.kt            # Main screen (Favorites drag & drop, History with adaptive shadows)
+│   │   ├── HighlightScreen.kt           # Highlights panel: daily installs/updates overview and widget section
 │   │   ├── SearchScreen.kt              # Letter-filtered app list view
 │   │   ├── TextSearchInterface.kt       # Keyboard search interface
 │   │   ├── SettingsScreen.kt            # Accent colors, animation controls, hand orientation, default launcher
@@ -99,7 +104,7 @@ app/src/main/java/dev/msbs/cyclauncher/
 ## 🐛 Reporting Issues
 
 When filing a bug report in our [GitHub Issues](https://github.com/msbluesnow/Cyclauncher/issues), please ensure you provide the following to help us resolve it quickly:
-1. **App Version**: Always specify the exact version name or build code of the application you are running (e.g. `v0.10.0-alpha` or `17`). You can find this in the Settings screen or build config.
+1. **App Version**: Always specify the exact version name or build code of the application you are running (e.g. `v0.11.0-alpha` or `18`). You can find this in the Settings screen or build config.
 2. **Detailed Reproducing Steps**: Provide a step-by-step description of what triggers the issue.
 3. **Screen Recording (Highly Recommended)**: We highly prefer that you attach a screen recording/video showing the full process of reproducing the issue from start to finish. Visual context is incredibly helpful for tracing touch coordinates, gestures, and layout states.
 

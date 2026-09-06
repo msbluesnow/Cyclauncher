@@ -30,7 +30,7 @@ Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**,
 > **Alpha Version**: This project is currently in early development. Features are subject to change, and bugs may be encountered as the experience is refined.
 
 > [!TIP]
-> **Get the Latest Build**: Download the latest signed APK (**v0.10.0-alpha**, Build 17) directly from [GitHub Releases](https://github.com/msbluesnow/Cyclauncher/releases/tag/v0.10.0-alpha).
+> **Get the Latest Build**: Download the latest signed APK (**v0.11.0-alpha**, Build 18) directly from [GitHub Releases](https://github.com/msbluesnow/Cyclauncher/releases/tag/v0.11.0-alpha).
 
 ## 📽️ Demo Showcases
 
@@ -56,10 +56,11 @@ Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**,
 
 ## ✨ Key Features
 
-- **Tag Folder System & Tag Favorites**: Interactive tag folders on the main screen with color accents, 2x2 live icon previews, proximity-aware popup menus, and the ability to pin tag folders directly alongside favorite apps with smooth drag-and-drop reordering.
+- **Highlights Screen**: Dedicated home screen panel showing daily app installs and updates overview, with a full **Widgets section** — add, resize, reconfigure, and remove Android widgets via a custom picker with search, expandable accordions, and live previews.
+- **Tag Folder System & 2D Reordering**: Interactive tag folders with color accents, 2x2 live icon previews, proximity-aware popup menus, **2D drag-to-reorder** for both folder positions and apps within folders, and a sort dialog (by name / app count). Pin tag folders directly alongside favorite apps.
 - **Versatile Search Modes**: Rapid app navigation via a custom **Rectangular Alphabet Wheel** (with inertia physics), an ergonomic **Side Alphabet Index** strip for instant thumb scrubbing, or instant **Text Search**.
 - **Character & Symbol Mapping**: Comprehensive custom mapping engine to bind any symbol, emoji (🤗, 🎮...), or international alphabet letter (Cyrillic, Arabic, German/Nordic, Romance) to specific search index buckets (`A`–`Z`, `#`) with instant presets.
-- **Interactive Gesture Tutorial**: Guided onboarding overlay teaching launcher gestures (search, notifications, favorites & history management, system navigation) with animated visualizers.
+- **Interactive Gesture Tutorial**: Guided onboarding overlay teaching launcher gestures (search, notifications, favorites & history management, Highlights navigation) with animated visualizers — 7 steps.
 - **Dynamic Favorites & History Badges**: Organize top apps with intuitive drag-and-drop reordering, and track newly installed or updated apps via subtle visual update badges in history.
 - **AI-Assisted App Tagging**: Fast batch categorization of applications with an external AI tagging workflow (Export → Process via External Prompt → Import) and full JSON backup options.
 - **Deep Theme Customization & Accessibility**: Echo Icon Theme accent palettes, dynamic Material You wallpaper colors, interactive custom Color Picker, primary text color modes (Black/White) with adaptive wallpaper drop-shadows, customizable shadow colors, and an accessibility toggle to disable all animations including cursor blinking.
@@ -113,10 +114,11 @@ A continuous, unified timeline of completed milestones and planned updates.
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Application Tag System</b> — Grouping apps with an AI-assisted tagging workflow and full JSON backup options.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Adaptive Text & Theme Accents</b> — Selectable accent palettes, a custom Main Color (Black/White) switcher, dynamic shadow inversion, and animation controls.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Performance Tuning</b> — Asynchronous Coil icon prefetching with safe path filters, and cached default launcher checks to eliminate main thread IPC jank.<br>
-<kbd>&nbsp;✓&nbsp;</kbd> <b>Interactive Gesture Tutorial</b> — Guided onboarding overlay teaching launcher gestures with animated visualizers.<br>
+<kbd>&nbsp;✓&nbsp;</kbd> <b>Interactive Gesture Tutorial</b> — Guided onboarding overlay (7 steps) teaching launcher gestures with animated visualizers.<br>
+<kbd>&nbsp;✓&nbsp;</kbd> <b>Highlights Screen & Widget Integration</b> — Home panel with daily app install/update overview, full widget support (add, resize, reconfigure, remove) with a custom picker.<br>
+<kbd>&nbsp;✓&nbsp;</kbd> <b>2D Tag Folder Reordering</b> — Drag-to-reorder tag folders and apps within folders; sort dialog by name or app count with zero-latency drag architecture.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>Tag Map</i> — Interactive tag map showing connections between applications and implementing quick tag-based navigation.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>App Shortcuts</i> — Quick-launch actions like dialing specific contacts or opening deep-linked settings.<br>
-<kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>Widgets Integration</i> — Full support for configuring and pinning dynamic Android widgets on the home layout.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>Localization</i> — Native translation support for multiple popular world languages.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>3D Hex Search Grid</i> — Immersive 3D application navigation styled as a rotatable hexagonal prism.<br>
 

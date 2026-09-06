@@ -1,0 +1,8 @@
+Highlights screen with widgets, 2D tag reordering, and performance improvements.
+- Add Highlights screen: daily installs/updates and widget section
+- Add custom widget picker with search and expandable previews
+- Implement 2D drag-to-reorder for tag folders with sort dialog
+- Zero-latency drag architecture for all reorderable layouts
+- Optimize frame latency, IPC overhead, gesture responsiveness
+- Refine popup borders and sticky settings header
+- Add tutorial step for Highlights swipe gesture
