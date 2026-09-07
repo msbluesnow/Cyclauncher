@@ -150,7 +150,9 @@ class AppActionsManager(context: Context) {
 
     fun removeFromSearchHistory(componentKey: String) {
         val current = _searchHistory.value.toMutableList()
-        if (current.remove(componentKey)) {
+        val pkg = componentKey.substringBefore('/')
+        val removed = current.removeAll { it == componentKey || it == pkg || it.startsWith("$pkg/") }
+        if (removed) {
             _searchHistory.value = current
             saveList("search_history", current)
         }

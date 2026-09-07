@@ -23,9 +23,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.HistoryToggleOff
+import androidx.compose.ui.graphics.graphicsLayer
+import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
+import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -99,12 +106,41 @@ fun SideAlphabetSearchLayout(
 
     val effectiveLettersOnLeft = if (handSide == HandSide.LEFT) !isLayoutSwapped else isLayoutSwapped
 
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .navigationBarsPadding()
-    ) {
+    val isHistoryPaused by viewModel.isHistoryPaused.collectAsState()
+    val popupTheme by viewModel.popupTheme.collectAsState()
+
+    var selectedHistoryMenuOffset by remember { mutableStateOf<Offset?>(null) }
+    var isHistoryEditMode by remember { mutableStateOf(false) }
+
+    LaunchedEffect(historyApps.isEmpty()) {
+        if (historyApps.isEmpty()) {
+            isHistoryEditMode = false
+            selectedHistoryMenuOffset = null
+        }
+    }
+
+    LaunchedEffect(selectedLetter) {
+        if (selectedLetter != null) {
+            isHistoryEditMode = false
+            selectedHistoryMenuOffset = null
+        }
+    }
+
+    BackHandler(enabled = isHistoryEditMode || selectedHistoryMenuOffset != null) {
+        if (selectedHistoryMenuOffset != null) {
+            selectedHistoryMenuOffset = null
+        } else {
+            isHistoryEditMode = false
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+        ) {
         val totalWidth = maxWidth
         val totalHeight = maxHeight
 
@@ -141,6 +177,13 @@ fun SideAlphabetSearchLayout(
                                     primaryTextColor = primaryTextColor,
                                     showShadows = showShadows,
                                     viewModel = viewModel,
+                                    isEditMode = isHistoryEditMode,
+                                    onHistoryIconLongPress = { offset ->
+                                        selectedHistoryMenuOffset = offset
+                                    },
+                                    onExitEditMode = {
+                                        isHistoryEditMode = false
+                                    },
                                     onAppClick = onAppClick,
                                     onAppLongClick = onAppLongClick,
                                     modifier = Modifier
@@ -233,6 +276,13 @@ fun SideAlphabetSearchLayout(
                                     primaryTextColor = primaryTextColor,
                                     showShadows = showShadows,
                                     viewModel = viewModel,
+                                    isEditMode = isHistoryEditMode,
+                                    onHistoryIconLongPress = { offset ->
+                                        selectedHistoryMenuOffset = offset
+                                    },
+                                    onExitEditMode = {
+                                        isHistoryEditMode = false
+                                    },
                                     onAppClick = onAppClick,
                                     onAppLongClick = onAppLongClick,
                                     modifier = Modifier
@@ -300,6 +350,31 @@ fun SideAlphabetSearchLayout(
             }
         }
     }
+
+    selectedHistoryMenuOffset?.let { offset ->
+        HistoryActionMenu(
+            isHistoryPaused = isHistoryPaused,
+            hasHistoryItems = historyApps.isNotEmpty(),
+            offset = offset,
+            onDismiss = { selectedHistoryMenuOffset = null },
+            onEditHistory = {
+                selectedHistoryMenuOffset = null
+                isHistoryEditMode = true
+            },
+            onTogglePause = {
+                selectedHistoryMenuOffset = null
+                viewModel.toggleHistoryPaused()
+            },
+            onClearHistory = {
+                selectedHistoryMenuOffset = null
+                viewModel.clearSearchHistory()
+            },
+            accentColor = accentColor,
+            primaryTextColor = primaryTextColor,
+            popupTheme = popupTheme
+        )
+    }
+}
 }
 
 /**
@@ -554,8 +629,9 @@ private fun SideAppListContent(
 
 /**
  * Serpentine history block with 3 columns of icons connected by a smooth snake line,
- * with a larger static history icon situated underneath the history rows, between
- * the letters and the history list (no click actions, no popup).
+ * with a history icon situated underneath the history rows, between the letters and
+ * the history list. Supports long-press for HistoryActionMenu (pause, edit, clear)
+ * and interactive edit mode for dynamically deleting individual search history items.
  */
 @Composable
 private fun SideSearchHistoryBlock(
@@ -564,12 +640,18 @@ private fun SideSearchHistoryBlock(
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
     viewModel: LauncherViewModel,
+    isEditMode: Boolean,
+    onHistoryIconLongPress: (Offset) -> Unit,
+    onExitEditMode: () -> Unit,
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isHistoryPaused by viewModel.isHistoryPaused.collectAsState()
     val shadowSettings = LocalShadowSettings.current
+    val haptic = LocalHapticFeedback.current
+
+    var historyIconPosition by remember { mutableStateOf(Offset.Zero) }
 
     Column(
         modifier = modifier,
@@ -583,40 +665,82 @@ private fun SideSearchHistoryBlock(
         ) {
             SnakeHistoryLazyColumn(
                 history = history,
+                isEditMode = isEditMode,
                 showShadows = showShadows,
                 accentColor = accentColor,
                 primaryTextColor = primaryTextColor,
                 shadowSettings = shadowSettings,
                 onAppClick = onAppClick,
-                onAppLongClick = onAppLongClick
+                onAppLongClick = onAppLongClick,
+                onRemoveFromHistory = { componentKey ->
+                    viewModel.removeFromSearchHistory(componentKey)
+                }
             )
         }
 
-        // Static history icon under the history list, between history and letters (no click actions, no popup)
+        // History icon under the history list, between history and letters
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 2.dp, bottom = 4.dp),
             contentAlignment = Alignment.Center
         ) {
-            val historyIcon = if (isHistoryPaused) Icons.Outlined.HistoryToggleOff else Icons.Outlined.History
-            val iconSize = 28.dp
-            if (showShadows) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .onGloballyPositioned { historyIconPosition = it.positionInRoot() }
+                    .pointerInput(isEditMode) {
+                        detectTapGestures(
+                            onLongPress = { offset ->
+                                if (!isEditMode) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onHistoryIconLongPress(historyIconPosition + offset)
+                                }
+                            },
+                            onTap = {
+                                if (isEditMode) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onExitEditMode()
+                                }
+                            }
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                val iconSize = 28.dp
+                val historyIcon = when {
+                    isEditMode -> Icons.Outlined.Check
+                    isHistoryPaused -> Icons.Outlined.HistoryToggleOff
+                    else -> Icons.Outlined.History
+                }
+                val iconTint = when {
+                    isEditMode -> accentColor.color
+                    isHistoryPaused -> accentColor.color.copy(alpha = 0.5f)
+                    else -> accentColor.color
+                }
+                val contentDesc = when {
+                    isEditMode -> "Done Editing"
+                    isHistoryPaused -> "History (Paused)"
+                    else -> "History"
+                }
+
+                if (showShadows) {
+                    Icon(
+                        imageVector = historyIcon,
+                        contentDescription = null,
+                        tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
+                        modifier = Modifier
+                            .size(iconSize)
+                            .offset(1.dp, 1.dp)
+                    )
+                }
                 Icon(
                     imageVector = historyIcon,
-                    contentDescription = null,
-                    tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
-                    modifier = Modifier
-                        .size(iconSize)
-                        .offset(1.dp, 1.dp)
+                    contentDescription = contentDesc,
+                    tint = iconTint,
+                    modifier = Modifier.size(iconSize)
                 )
             }
-            Icon(
-                imageVector = historyIcon,
-                contentDescription = if (isHistoryPaused) "History (Paused)" else "History",
-                tint = if (isHistoryPaused) accentColor.color.copy(alpha = 0.5f) else accentColor.color,
-                modifier = Modifier.size(iconSize)
-            )
         }
     }
 }
@@ -624,12 +748,14 @@ private fun SideSearchHistoryBlock(
 @Composable
 private fun SnakeHistoryLazyColumn(
     history: List<AppInfo>,
+    isEditMode: Boolean,
     showShadows: Boolean,
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     shadowSettings: dev.msbs.cyclauncher.ui.theme.ShadowSettings,
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit,
+    onRemoveFromHistory: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
@@ -731,8 +857,10 @@ private fun SnakeHistoryLazyColumn(
                             SnakeAppIcon(
                                 app = app,
                                 iconSize = 44.dp,
+                                isEditMode = isEditMode,
                                 onClick = { onAppClick("${app.packageName}/${app.activityName}") },
-                                onLongClick = { offset -> onAppLongClick(app, offset) }
+                                onLongClick = { offset -> onAppLongClick(app, offset) },
+                                onRemove = { onRemoveFromHistory(app.componentKey) }
                             )
                         }
                     }
@@ -747,8 +875,10 @@ private fun SnakeHistoryLazyColumn(
                             SnakeAppIcon(
                                 app = app,
                                 iconSize = 44.dp,
+                                isEditMode = isEditMode,
                                 onClick = { onAppClick("${app.packageName}/${app.activityName}") },
-                                onLongClick = { offset -> onAppLongClick(app, offset) }
+                                onLongClick = { offset -> onAppLongClick(app, offset) },
+                                onRemove = { onRemoveFromHistory(app.componentKey) }
                             )
                         }
                     }
@@ -763,8 +893,10 @@ private fun SnakeHistoryLazyColumn(
                             SnakeAppIcon(
                                 app = app,
                                 iconSize = 44.dp,
+                                isEditMode = isEditMode,
                                 onClick = { onAppClick("${app.packageName}/${app.activityName}") },
-                                onLongClick = { offset -> onAppLongClick(app, offset) }
+                                onLongClick = { offset -> onAppLongClick(app, offset) },
+                                onRemove = { onRemoveFromHistory(app.componentKey) }
                             )
                         }
                     }
@@ -778,20 +910,54 @@ private fun SnakeHistoryLazyColumn(
 private fun SnakeAppIcon(
     app: AppInfo,
     iconSize: Dp,
+    isEditMode: Boolean,
     onClick: () -> Unit,
-    onLongClick: (Offset) -> Unit
+    onLongClick: (Offset) -> Unit,
+    onRemove: () -> Unit
 ) {
     var itemPosition by remember { mutableStateOf(Offset.Zero) }
     val painter = rememberAppIconPainter(app.iconKey, 48)
+    val haptic = LocalHapticFeedback.current
+    val animationsEnabled = LocalAnimationsEnabled.current
+
+    val shakeRotation by if (isEditMode && animationsEnabled) {
+        val infiniteTransition = rememberInfiniteTransition(label = "snake_edit_shake")
+        infiniteTransition.animateFloat(
+            initialValue = -2.5f,
+            targetValue = 2.5f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 110, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "snake_shake_rot"
+        )
+    } else {
+        remember { mutableStateOf(0f) }
+    }
 
     Box(
         modifier = Modifier
             .size(iconSize)
+            .graphicsLayer { rotationZ = shakeRotation }
             .onGloballyPositioned { itemPosition = it.positionInRoot() }
-            .pointerInput(app.componentKey) {
+            .pointerInput(app.componentKey, isEditMode) {
                 detectTapGestures(
-                    onTap = { onClick() },
-                    onLongPress = { onLongClick(itemPosition + it) }
+                    onTap = {
+                        if (isEditMode) {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onRemove()
+                        } else {
+                            onClick()
+                        }
+                    },
+                    onLongPress = {
+                        if (isEditMode) {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onRemove()
+                        } else {
+                            onLongClick(itemPosition + it)
+                        }
+                    }
                 )
             },
         contentAlignment = Alignment.Center
@@ -804,6 +970,25 @@ private fun SnakeAppIcon(
                 .fillMaxSize()
                 .clip(CircleShape)
         )
+
+        if (isEditMode) {
+            Box(
+                modifier = Modifier
+                    .size(18.dp)
+                    .align(Alignment.TopEnd)
+                    .offset(x = 2.dp, y = (-2).dp)
+                    .background(Color(0xFFE53935), CircleShape)
+                    .border(1.5.dp, Color.White, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Remove from history",
+                    tint = Color.White,
+                    modifier = Modifier.size(10.dp)
+                )
+            }
+        }
     }
 }
 
