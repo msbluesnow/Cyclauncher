@@ -39,6 +39,13 @@ data class HighlightWidgetConfig(
     val widthFraction: Float = 1.0f
 )
 
+/** Configuration for dual-widget compartment on SearchScreen */
+data class SearchWidgetsConfig(
+    val leftWidgetId: Int? = null,
+    val rightWidgetId: Int? = null,
+    val splitRatio: Float = 0.5f
+)
+
 /**
  * Represents the user's preferred hand orientation for the launcher UI layout.
  */
@@ -59,8 +66,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
     
-    private val _selectedLetter = MutableStateFlow('A')
-    val selectedLetter: StateFlow<Char> = _selectedLetter
+    private val _selectedLetter = MutableStateFlow<Char?>(null)
+    val selectedLetter: StateFlow<Char?> = _selectedLetter
 
     private val _searchListAlignment = MutableStateFlow(TextAlign.Start)
     val searchListAlignment: StateFlow<TextAlign> = _searchListAlignment
@@ -89,10 +96,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _hideStatusBar = MutableStateFlow(false)
     val hideStatusBar: StateFlow<Boolean> = _hideStatusBar
 
+    private val _showSearchWidgets = MutableStateFlow(true)
+    val showSearchWidgets: StateFlow<Boolean> = _showSearchWidgets
+
+    private val _showSearchHistory = MutableStateFlow(true)
+    val showSearchHistory: StateFlow<Boolean> = _showSearchHistory
+
     private val _animationsEnabled = MutableStateFlow(true)
     val animationsEnabled: StateFlow<Boolean> = _animationsEnabled
 
-    private val _isWallpaperDark = MutableStateFlow(AccentColor.isWallpaperDark(safeContext))
+    private val _isWallpaperDark = MutableStateFlow(
+        (safeContext.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+    )
     val isWallpaperDark: StateFlow<Boolean> = _isWallpaperDark
 
     private val _searchMethod = MutableStateFlow(SearchMethod.SIDE_ALPHABET)
@@ -164,7 +179,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyMap())
 
     val filteredApps: StateFlow<List<AppInfo>> = combine(alphabetBuckets, _selectedLetter) { buckets, letter ->
-        buckets[letter] ?: emptyList()
+        if (letter != null) {
+            buckets[letter] ?: emptyList()
+        } else {
+            emptyList()
+        }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val favorites: StateFlow<List<String>> = actionsManager.favorites
@@ -172,6 +191,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val historyApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.history) { all, ids ->
         val appMap = all.associateBy { it.componentKey }
         ids.mapNotNull { id -> appMap[id] }
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    val searchHistoryApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.searchHistory, actionsManager.recentlyUpdated) { all, ids, updated ->
+        val appMap = all.associateBy { it.componentKey }
+        ids.filter { !updated.contains(it) }.mapNotNull { id -> appMap[id] }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val recentlyUpdatedApps: StateFlow<Set<String>> = actionsManager.recentlyUpdated
@@ -287,6 +311,83 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    private val _searchWidgetsConfig = MutableStateFlow<SearchWidgetsConfig>(loadSearchWidgetsConfig())
+    val searchWidgetsConfig: StateFlow<SearchWidgetsConfig> = _searchWidgetsConfig.asStateFlow()
+
+    private fun loadSearchWidgetsConfig(): SearchWidgetsConfig {
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+        val leftId = if (prefs.contains("search_widget_left_id")) prefs.getInt("search_widget_left_id", -1).takeIf { it != -1 } else null
+        val rightId = if (prefs.contains("search_widget_right_id")) prefs.getInt("search_widget_right_id", -1).takeIf { it != -1 } else null
+        val ratio = prefs.getFloat("search_widget_split_ratio", 0.5f).coerceIn(0.15f, 0.85f)
+        return SearchWidgetsConfig(leftWidgetId = leftId, rightWidgetId = rightId, splitRatio = ratio)
+    }
+
+    private fun saveSearchWidgetsConfig(config: SearchWidgetsConfig) {
+        val editor = safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE).edit()
+        if (config.leftWidgetId != null) {
+            editor.putInt("search_widget_left_id", config.leftWidgetId)
+        } else {
+            editor.remove("search_widget_left_id")
+        }
+        if (config.rightWidgetId != null) {
+            editor.putInt("search_widget_right_id", config.rightWidgetId)
+        } else {
+            editor.remove("search_widget_right_id")
+        }
+        editor.putFloat("search_widget_split_ratio", config.splitRatio)
+        editor.apply()
+    }
+
+    fun setSearchWidget(isLeft: Boolean, widgetId: Int?) {
+        val current = _searchWidgetsConfig.value
+        val updated = if (isLeft) current.copy(leftWidgetId = widgetId) else current.copy(rightWidgetId = widgetId)
+        _searchWidgetsConfig.value = updated
+        saveSearchWidgetsConfig(updated)
+    }
+
+    fun updateSearchWidgetSplitRatio(ratio: Float) {
+        val clamped = ratio.coerceIn(0.15f, 0.85f)
+        val current = _searchWidgetsConfig.value
+        if (current.splitRatio != clamped) {
+            val updated = current.copy(splitRatio = clamped)
+            _searchWidgetsConfig.value = updated
+            saveSearchWidgetsConfig(updated)
+        }
+    }
+
+    fun removeSearchWidget(isLeft: Boolean) {
+        setSearchWidget(isLeft, null)
+    }
+
+    private val _sideSearchWidgetId = MutableStateFlow<Int?>(loadSideSearchWidgetId())
+    val sideSearchWidgetId: StateFlow<Int?> = _sideSearchWidgetId.asStateFlow()
+
+    private fun loadSideSearchWidgetId(): Int? {
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+        return if (prefs.contains("side_search_widget_id")) {
+            prefs.getInt("side_search_widget_id", -1).takeIf { it != -1 }
+        } else null
+    }
+
+    private fun saveSideSearchWidgetId(id: Int?) {
+        val editor = safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE).edit()
+        if (id != null) {
+            editor.putInt("side_search_widget_id", id)
+        } else {
+            editor.remove("side_search_widget_id")
+        }
+        editor.apply()
+    }
+
+    fun setSideSearchWidget(widgetId: Int?) {
+        _sideSearchWidgetId.value = widgetId
+        saveSideSearchWidgetId(widgetId)
+    }
+
+    fun removeSideSearchWidget() {
+        setSideSearchWidget(null)
+    }
+
     val favoriteItems: StateFlow<List<FavoriteItem>> = combine(
         apps,
         tags,
@@ -363,7 +464,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _handSide.value = try { HandSide.valueOf(savedHand) } catch (e: Exception) { HandSide.LEFT }
         
         val savedColor = prefs.getString("accent_color", AccentColor.SKY.name) ?: AccentColor.SKY.name
-        _accentColor.value = AccentColor.fromName(savedColor, safeContext)
+        _accentColor.value = AccentColor.fromName(savedColor, null)
         
         val savedTextColor = prefs.getString("primary_text_color", PrimaryTextColor.WHITE.name) ?: PrimaryTextColor.WHITE.name
         _primaryTextColor.value = PrimaryTextColor.fromName(savedTextColor)
@@ -384,6 +485,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _shadowColor.value = PrimaryTextColor.fromName(savedShadowColor)
 
         _hideStatusBar.value = prefs.getBoolean("hide_status_bar", false)
+        _showSearchWidgets.value = prefs.getBoolean("show_search_widgets", true)
+        _showSearchHistory.value = prefs.getBoolean("show_search_history", true)
         _animationsEnabled.value = prefs.getBoolean("animations_enabled", true)
 
         val savedSearchMethod = prefs.getString("search_method", SearchMethod.SIDE_ALPHABET.name) ?: SearchMethod.SIDE_ALPHABET.name
@@ -415,6 +518,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
         loadInstalledApps()
         updateDefaultLauncherStatus()
+        refreshDynamicWallpaperColor(safeContext)
         _searchListAlignment.value = if (_handSide.value == HandSide.LEFT) TextAlign.End else TextAlign.Start
     }
 
@@ -442,7 +546,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         prefs.edit().putBoolean("is_tutorial_completed", true).apply()
     }
 
-    fun setSelectedLetter(letter: Char) { _selectedLetter.value = letter }
+    fun setSelectedLetter(letter: Char?) { _selectedLetter.value = letter }
 
     fun setSideAlphabetButtonYRatio(ratio: Float) {
         val clamped = ratio.coerceIn(0.05f, 0.85f)
@@ -493,6 +597,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _hideStatusBar.value = hide
         val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putBoolean("hide_status_bar", hide).apply()
+    }
+
+    fun setShowSearchWidgets(show: Boolean) {
+        _showSearchWidgets.value = show
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("show_search_widgets", show).apply()
+    }
+
+    fun setShowSearchHistory(show: Boolean) {
+        _showSearchHistory.value = show
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("show_search_history", show).apply()
     }
 
     fun setAnimationsEnabled(enabled: Boolean) {
@@ -628,6 +744,19 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun removeFromHistory(componentKey: String) {
         actionsManager.removeFromHistory(componentKey)
+    }
+
+    fun logSearchLaunch(componentKey: String) {
+        actionsManager.logSearchLaunch(componentKey)
+        actionsManager.logAppLaunch(componentKey)
+    }
+
+    fun removeFromSearchHistory(componentKey: String) {
+        actionsManager.removeFromSearchHistory(componentKey)
+    }
+
+    fun clearSearchHistory() {
+        actionsManager.clearSearchHistory()
     }
 
     fun renameApp(componentKey: String, newLabel: String) {

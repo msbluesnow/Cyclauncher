@@ -229,19 +229,6 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    LaunchedEffect(isHighlightScreenVisible) {
-                        isHighlightScreenActive = isHighlightScreenVisible
-                        if (isHighlightScreenVisible) {
-                            showActionMenuFor = null
-                            showRenameDialogFor = null
-                            showTagDialogFor = null
-                            tagToEditForDialog = null
-                            try { appWidgetHost?.startListening() } catch (_: Exception) {}
-                        } else {
-                            try { appWidgetHost?.stopListening() } catch (_: Exception) {}
-                        }
-                    }
-
                     BackHandler(enabled = isHighlightScreenVisible) {
                         isHighlightScreenVisible = false
                     }
@@ -277,6 +264,31 @@ class MainActivity : ComponentActivity() {
                             (verticalPagerState.currentPage == 1 || verticalPagerState.targetPage == 1)
                         }
                     }
+
+                    val shouldListenWidgets by remember {
+                        derivedStateOf { isHighlightScreenVisible || isSearchActive }
+                    }
+
+                    LaunchedEffect(isSearchActive) {
+                        if (!isSearchActive) {
+                            viewModel.setSelectedLetter(null)
+                        }
+                    }
+
+                    LaunchedEffect(shouldListenWidgets) {
+                        isHighlightScreenActive = shouldListenWidgets
+                        if (shouldListenWidgets) {
+                            if (isHighlightScreenVisible) {
+                                showActionMenuFor = null
+                                showRenameDialogFor = null
+                                showTagDialogFor = null
+                                tagToEditForDialog = null
+                            }
+                            try { appWidgetHost?.startListening() } catch (_: Exception) {}
+                        } else {
+                            try { appWidgetHost?.stopListening() } catch (_: Exception) {}
+                        }
+                    }
                     
                     val handSide by viewModel.handSide.collectAsState()
                     val accentColor by viewModel.accentColor.collectAsState()
@@ -302,7 +314,7 @@ class MainActivity : ComponentActivity() {
                                     VerticalPager(
                                         state = verticalPagerState,
                                         modifier = Modifier.fillMaxSize(),
-                                        beyondViewportPageCount = 1,
+                                        beyondViewportPageCount = 0,
                                         userScrollEnabled = false 
                                     ) { vIndex ->
                                         if (vIndex == 0) {
@@ -385,7 +397,11 @@ class MainActivity : ComponentActivity() {
                                             SearchScreen(
                                                 viewModel = viewModel,
                                                 enabled = isSearchActive,
+                                                appWidgetHost = appWidgetHost,
+                                                appWidgetManager = appWidgetManager,
+                                                onConfigureWidget = ::startWidgetConfiguration,
                                                 onBackToMain = {
+                                                    viewModel.setSelectedLetter(null)
                                                     scope.launch {
                                                         if (animationsEnabled) {
                                                             verticalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
@@ -394,7 +410,10 @@ class MainActivity : ComponentActivity() {
                                                         }
                                                     }
                                                 },
-                                                onAppClick = ::openApp,
+                                                onAppClick = { appKey ->
+                                                    viewModel.setSelectedLetter(null)
+                                                    openApp(appKey)
+                                                },
                                                 onAppLongClick = { app, offset -> 
                                                     showActionMenuFor = app
                                                     menuOffset = offset
@@ -676,6 +695,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openApp(componentKey: String) {
+        viewModel.setSelectedLetter(null)
         val parts = componentKey.split("/")
         val decor = window.decorView
         val width = decor.width.coerceAtLeast(1)

@@ -86,6 +86,8 @@ fun SettingsScreen(
     val showShadows by viewModel.showShadows.collectAsState()
     val shadowColorOverride by viewModel.shadowColor.collectAsState()
     val hideStatusBar by viewModel.hideStatusBar.collectAsState()
+    val showSearchWidgets by viewModel.showSearchWidgets.collectAsState()
+    val showSearchHistory by viewModel.showSearchHistory.collectAsState()
     val animationsEnabled by viewModel.animationsEnabled.collectAsState()
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -292,6 +294,86 @@ fun SettingsScreen(
                                 handSide = handSide,
                                 onClick = { viewModel.setSearchMethod(SearchMethod.SIDE_ALPHABET) }
                             )
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "Search Widgets:",
+                            color = primaryTextColor.color,
+                            style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        val widgetIcon =
+                            if (showSearchWidgets) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff
+                        IconButton(
+                            onClick = { viewModel.setShowSearchWidgets(!showSearchWidgets) },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                if (showShadows) {
+                                    Icon(
+                                        imageVector = widgetIcon,
+                                        contentDescription = null,
+                                        tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                                        modifier = Modifier.size(22.dp).offset(1.dp, 1.dp)
+                                    )
+                                }
+                                Icon(
+                                    imageVector = widgetIcon,
+                                    contentDescription = "Toggle search widgets visibility",
+                                    tint = accentColor.color,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "Search History:",
+                            color = primaryTextColor.color,
+                            style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        val historyIcon =
+                            if (showSearchHistory) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff
+                        IconButton(
+                            onClick = { viewModel.setShowSearchHistory(!showSearchHistory) },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                if (showShadows) {
+                                    Icon(
+                                        imageVector = historyIcon,
+                                        contentDescription = null,
+                                        tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                                        modifier = Modifier.size(22.dp).offset(1.dp, 1.dp)
+                                    )
+                                }
+                                Icon(
+                                    imageVector = historyIcon,
+                                    contentDescription = "Toggle search history visibility",
+                                    tint = accentColor.color,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
                         }
                     }
                 }

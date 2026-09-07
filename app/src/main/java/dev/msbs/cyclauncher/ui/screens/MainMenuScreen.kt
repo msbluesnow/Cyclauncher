@@ -276,6 +276,9 @@ fun MainMenuScreen(
 
                     val timeoutMillis = viewConfiguration.longPressTimeoutMillis
 
+                    val downInFinal = awaitPointerEvent(pass = PointerEventPass.Final)
+                    val isChildTarget = downInFinal.changes.firstOrNull { it.id == down.id }?.isConsumed == true
+
                     val dragOrTimeout = withTimeoutOrNull(timeoutMillis) {
                         while (true) {
                             val event = awaitPointerEvent(pass = PointerEventPass.Initial)
@@ -303,19 +306,13 @@ fun MainMenuScreen(
                         false
                     }
 
-                    if (dragOrTimeout == null && !isDragY && !isHorizontalDrag) {
-                        val lastEvent = awaitPointerEvent(pass = PointerEventPass.Main)
-                        val change = lastEvent.changes.firstOrNull { it.id == down.id }
-                        val isConsumedByChild = change?.isConsumed == true
-
-                        if (!isConsumedByChild) {
-                            safeOnSettingsClick()
-                            isLongPressHandled = true
-                            while (true) {
-                                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                                event.changes.forEach { it.consume() }
-                                if (!event.changes.any { it.pressed }) break
-                            }
+                    if (!isChildTarget && dragOrTimeout == null && !isDragY && !isHorizontalDrag) {
+                        safeOnSettingsClick()
+                        isLongPressHandled = true
+                        while (true) {
+                            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                            event.changes.forEach { it.consume() }
+                            if (!event.changes.any { it.pressed }) break
                         }
                     }
 
@@ -384,7 +381,10 @@ fun MainMenuScreen(
                     primaryTextColor,
                     showShadows,
                     isReorderMode,
-                    setReorderMode = { isReorderMode = it },
+                    setReorderMode = {
+                        markItemAction()
+                        isReorderMode = it
+                    },
                     onReorder = { from, to -> viewModel.reorderFavorites(from, to) },
                     onToggleFavorite = { viewModel.toggleFavorite(it) },
                     onAppClick = handleAppClick,
@@ -409,9 +409,15 @@ fun MainMenuScreen(
                     accentColor = accentColor,
                     isHistoryPaused = isHistoryPaused,
                     isHistoryEditMode = isHistoryEditMode,
-                    setHistoryEditMode = { isHistoryEditMode = it },
+                    setHistoryEditMode = {
+                        markItemAction()
+                        isHistoryEditMode = it
+                    },
                     isTagFolderReorderMode = isTagFolderReorderMode,
-                    setTagFolderReorderMode = { isTagFolderReorderMode = it },
+                    setTagFolderReorderMode = {
+                        markItemAction()
+                        isTagFolderReorderMode = it
+                    },
                     onReorderTag = { from, to ->
                         if (from in popularTagsWithApps.indices && to in popularTagsWithApps.indices) {
                             viewModel.reorderTagById(
@@ -455,9 +461,15 @@ fun MainMenuScreen(
                     accentColor = accentColor,
                     isHistoryPaused = isHistoryPaused,
                     isHistoryEditMode = isHistoryEditMode,
-                    setHistoryEditMode = { isHistoryEditMode = it },
+                    setHistoryEditMode = {
+                        markItemAction()
+                        isHistoryEditMode = it
+                    },
                     isTagFolderReorderMode = isTagFolderReorderMode,
-                    setTagFolderReorderMode = { isTagFolderReorderMode = it },
+                    setTagFolderReorderMode = {
+                        markItemAction()
+                        isTagFolderReorderMode = it
+                    },
                     onReorderTag = { from, to ->
                         if (from in popularTagsWithApps.indices && to in popularTagsWithApps.indices) {
                             viewModel.reorderTagById(
@@ -497,7 +509,10 @@ fun MainMenuScreen(
                     primaryTextColor,
                     showShadows,
                     isReorderMode,
-                    setReorderMode = { isReorderMode = it },
+                    setReorderMode = {
+                        markItemAction()
+                        isReorderMode = it
+                    },
                     onReorder = { from, to -> viewModel.reorderFavorites(from, to) },
                     onToggleFavorite = { viewModel.toggleFavorite(it) },
                     onAppClick = handleAppClick,
@@ -881,25 +896,30 @@ private fun ColumnScope.TagsContentBlock(
     val density = LocalDensity.current
     val animationsEnabled = LocalAnimationsEnabled.current
 
-    val infiniteTransition = rememberInfiniteTransition(label = "tag_shake")
-    val shakeRotation by infiniteTransition.animateFloat(
-        initialValue = -3.5f,
-        targetValue = 3.5f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 105, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "shake_rot"
-    )
-    val shakeTranslation by infiniteTransition.animateFloat(
-        initialValue = -1.5f,
-        targetValue = 1.5f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 125, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "shake_trans"
-    )
+    val (shakeRotation, shakeTranslation) = if (isReorderMode && animationsEnabled) {
+        val infiniteTransition = rememberInfiniteTransition(label = "tag_shake")
+        val rot by infiniteTransition.animateFloat(
+            initialValue = -3.5f,
+            targetValue = 3.5f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 105, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "shake_rot"
+        )
+        val trans by infiniteTransition.animateFloat(
+            initialValue = -1.5f,
+            targetValue = 1.5f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 125, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "shake_trans"
+        )
+        rot to trans
+    } else {
+        0f to 0f
+    }
 
     var draggingTagId by remember { mutableStateOf<String?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
@@ -1487,7 +1507,6 @@ private fun FavoritesSection(
                     var isHorizontalDrag = false
                     var totalDragY = 0f
                     var totalDragX = 0f
-                    var isLongPressHandled = false
                     var lastDownChange = down
 
                     val timeoutMillis = viewConfiguration.longPressTimeoutMillis
@@ -1534,23 +1553,7 @@ private fun FavoritesSection(
                             }
                         }
                     } else {
-                        if (dragOrTimeout == null && !isDrag && !isHorizontalDrag) {
-                            val lastEvent = awaitPointerEvent(pass = PointerEventPass.Main)
-                            val change = lastEvent.changes.firstOrNull { it.id == down.id }
-                            val isConsumedByChild = change?.isConsumed == true
-
-                            if (!isConsumedByChild) {
-                                currentOnSettingsClick()
-                                isLongPressHandled = true
-                                while (true) {
-                                    val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                                    event.changes.forEach { it.consume() }
-                                    if (!event.changes.any { it.pressed }) break
-                                }
-                            }
-                        }
-
-                        if (!isLongPressHandled && !isHorizontalDrag) {
+                        if (!isHorizontalDrag) {
                             while (true) {
                                 val event = awaitPointerEvent(pass = PointerEventPass.Initial)
                                 val change = event.changes.firstOrNull { it.id == down.id } ?: break

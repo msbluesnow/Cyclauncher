@@ -6,7 +6,10 @@ import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
+import android.appwidget.AppWidgetHost
+import android.appwidget.AppWidgetManager
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,7 +20,13 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.HistoryToggleOff
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -25,16 +34,25 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
@@ -46,11 +64,17 @@ import androidx.compose.ui.unit.toSize
 fun SideAlphabetSearchLayout(
     viewModel: LauncherViewModel,
     handSide: HandSide,
+    appWidgetHost: AppWidgetHost? = null,
+    appWidgetManager: AppWidgetManager? = null,
+    onPickSideWidget: () -> Unit = {},
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit
 ) {
     val filteredApps by viewModel.filteredApps.collectAsState()
     val selectedLetter by viewModel.selectedLetter.collectAsState()
+    val historyApps by viewModel.searchHistoryApps.collectAsState()
+    val showSearchHistory by viewModel.showSearchHistory.collectAsState()
+    val showSearchWidgets by viewModel.showSearchWidgets.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
@@ -69,8 +93,8 @@ fun SideAlphabetSearchLayout(
     val currentOnLetterSelected by rememberUpdatedState { char: Char ->
         if (char != currentSelectedLetter) {
             viewModel.setSelectedLetter(char)
-            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         }
+        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
     }
 
     val effectiveLettersOnLeft = if (handSide == HandSide.LEFT) !isLayoutSwapped else isLayoutSwapped
@@ -103,12 +127,29 @@ fun SideAlphabetSearchLayout(
                     verticalAlignment = Alignment.Bottom
                 ) {
                     if (effectiveLettersOnLeft) {
-                        Box(
+                        Column(
                             modifier = Modifier
                                 .width(fixedAlphabetWidth)
                                 .fillMaxHeight(),
-                            contentAlignment = Alignment.BottomCenter
+                            verticalArrangement = Arrangement.Bottom,
+                            horizontalAlignment = Alignment.Start
                         ) {
+                            if (showSearchHistory && historyApps.isNotEmpty()) {
+                                SideSearchHistoryBlock(
+                                    history = historyApps,
+                                    accentColor = accentColor,
+                                    primaryTextColor = primaryTextColor,
+                                    showShadows = showShadows,
+                                    viewModel = viewModel,
+                                    onAppClick = onAppClick,
+                                    onAppLongClick = onAppLongClick,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth()
+                                        .padding(bottom = 6.dp)
+                                )
+                            }
+
                             SideAlphabetGrid(
                                 alphabet = alphabet,
                                 selectedLetter = selectedLetter,
@@ -125,14 +166,28 @@ fun SideAlphabetSearchLayout(
                                 .weight(1f)
                                 .fillMaxHeight()
                         ) {
-                            SideAppListContent(
-                                apps = filteredApps,
-                                handSide = handSide,
-                                primaryTextColor = primaryTextColor,
-                                showShadows = showShadows,
-                                onAppClick = onAppClick,
-                                onAppLongClick = onAppLongClick
-                            )
+                            if (selectedLetter == null) {
+                                if (showSearchWidgets) {
+                                    SideSearchWidgetSlot(
+                                        viewModel = viewModel,
+                                        appWidgetHost = appWidgetHost,
+                                        appWidgetManager = appWidgetManager,
+                                        onPickWidget = onPickSideWidget,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(horizontal = 4.dp, vertical = 6.dp)
+                                    )
+                                }
+                            } else {
+                                SideAppListContent(
+                                    apps = filteredApps,
+                                    handSide = handSide,
+                                    primaryTextColor = primaryTextColor,
+                                    showShadows = showShadows,
+                                    onAppClick = onAppClick,
+                                    onAppLongClick = onAppLongClick
+                                )
+                            }
                         }
                     } else {
                         Box(
@@ -140,22 +195,53 @@ fun SideAlphabetSearchLayout(
                                 .weight(1f)
                                 .fillMaxHeight()
                         ) {
-                            SideAppListContent(
-                                apps = filteredApps,
-                                handSide = handSide,
-                                primaryTextColor = primaryTextColor,
-                                showShadows = showShadows,
-                                onAppClick = onAppClick,
-                                onAppLongClick = onAppLongClick
-                            )
+                            if (selectedLetter == null) {
+                                if (showSearchWidgets) {
+                                    SideSearchWidgetSlot(
+                                        viewModel = viewModel,
+                                        appWidgetHost = appWidgetHost,
+                                        appWidgetManager = appWidgetManager,
+                                        onPickWidget = onPickSideWidget,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(horizontal = 4.dp, vertical = 6.dp)
+                                    )
+                                }
+                            } else {
+                                SideAppListContent(
+                                    apps = filteredApps,
+                                    handSide = handSide,
+                                    primaryTextColor = primaryTextColor,
+                                    showShadows = showShadows,
+                                    onAppClick = onAppClick,
+                                    onAppLongClick = onAppLongClick
+                                )
+                            }
                         }
 
-                        Box(
+                        Column(
                             modifier = Modifier
                                 .width(fixedAlphabetWidth)
                                 .fillMaxHeight(),
-                            contentAlignment = Alignment.BottomCenter
+                            verticalArrangement = Arrangement.Bottom,
+                            horizontalAlignment = Alignment.End
                         ) {
+                            if (showSearchHistory && historyApps.isNotEmpty()) {
+                                SideSearchHistoryBlock(
+                                    history = historyApps,
+                                    accentColor = accentColor,
+                                    primaryTextColor = primaryTextColor,
+                                    showShadows = showShadows,
+                                    viewModel = viewModel,
+                                    onAppClick = onAppClick,
+                                    onAppLongClick = onAppLongClick,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth()
+                                        .padding(bottom = 6.dp)
+                                )
+                            }
+
                             SideAlphabetGrid(
                                 alphabet = alphabet,
                                 selectedLetter = selectedLetter,
@@ -317,7 +403,7 @@ private fun SwapSemiCircleButton(
 @Composable
 private fun SideAlphabetGrid(
     alphabet: List<Char>,
-    selectedLetter: Char,
+    selectedLetter: Char?,
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
@@ -465,3 +551,259 @@ private fun SideAppListContent(
         }
     }
 }
+
+/**
+ * Serpentine history block with 3 columns of icons connected by a smooth snake line,
+ * with a larger static history icon situated underneath the history rows, between
+ * the letters and the history list (no click actions, no popup).
+ */
+@Composable
+private fun SideSearchHistoryBlock(
+    history: List<AppInfo>,
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    showShadows: Boolean,
+    viewModel: LauncherViewModel,
+    onAppClick: (String) -> Unit,
+    onAppLongClick: (AppInfo, Offset) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isHistoryPaused by viewModel.isHistoryPaused.collectAsState()
+    val shadowSettings = LocalShadowSettings.current
+
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // 3-column snake history list occupying the full width
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            SnakeHistoryLazyColumn(
+                history = history,
+                showShadows = showShadows,
+                accentColor = accentColor,
+                primaryTextColor = primaryTextColor,
+                shadowSettings = shadowSettings,
+                onAppClick = onAppClick,
+                onAppLongClick = onAppLongClick
+            )
+        }
+
+        // Static history icon under the history list, between history and letters (no click actions, no popup)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 2.dp, bottom = 4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            val historyIcon = if (isHistoryPaused) Icons.Outlined.HistoryToggleOff else Icons.Outlined.History
+            val iconSize = 28.dp
+            if (showShadows) {
+                Icon(
+                    imageVector = historyIcon,
+                    contentDescription = null,
+                    tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
+                    modifier = Modifier
+                        .size(iconSize)
+                        .offset(1.dp, 1.dp)
+                )
+            }
+            Icon(
+                imageVector = historyIcon,
+                contentDescription = if (isHistoryPaused) "History (Paused)" else "History",
+                tint = if (isHistoryPaused) accentColor.color.copy(alpha = 0.5f) else accentColor.color,
+                modifier = Modifier.size(iconSize)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SnakeHistoryLazyColumn(
+    history: List<AppInfo>,
+    showShadows: Boolean,
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    shadowSettings: dev.msbs.cyclauncher.ui.theme.ShadowSettings,
+    onAppClick: (String) -> Unit,
+    onAppLongClick: (AppInfo, Offset) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val listState = rememberLazyListState()
+    val rowCount = (history.size + 2) / 3
+    val rowHeight = 60.dp
+
+    LazyColumn(
+        state = listState,
+        modifier = modifier.fillMaxSize(),
+        reverseLayout = true,
+        verticalArrangement = Arrangement.Bottom
+    ) {
+        items(
+            count = rowCount,
+            key = { r ->
+                val base = 3 * r
+                val k0 = if (r % 2 == 0) history.getOrNull(base)?.componentKey else history.getOrNull(base + 2)?.componentKey
+                val k1 = history.getOrNull(base + 1)?.componentKey
+                val k2 = if (r % 2 == 0) history.getOrNull(base + 2)?.componentKey else history.getOrNull(base)?.componentKey
+                "$k0-$k1-$k2-$r"
+            }
+        ) { r ->
+            val base = 3 * r
+            val col0App = if (r % 2 == 0) history.getOrNull(base) else history.getOrNull(base + 2)
+            val col1App = history.getOrNull(base + 1)
+            val col2App = if (r % 2 == 0) history.getOrNull(base + 2) else history.getOrNull(base)
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(rowHeight)
+                    .drawBehind {
+                        val strokeWidth = 2.5.dp.toPx()
+                        val cornerRadius = 14.dp.toPx()
+                        val pathEffect = PathEffect.cornerPathEffect(cornerRadius)
+
+                        val x0 = size.width * (1f / 6f)
+                        val x1 = size.width * 0.5f
+                        val x2 = size.width * (5f / 6f)
+                        val cy = size.height * 0.5f
+
+                        val path = Path().apply {
+                            if (r % 2 == 0) {
+                                if (r > 0) {
+                                    moveTo(x0, size.height)
+                                    lineTo(x0, cy)
+                                } else {
+                                    moveTo(x0, cy)
+                                }
+                                if (history.size > base + 1) {
+                                    if (history.size > base + 2) {
+                                        lineTo(x2, cy)
+                                        if (history.size > base + 3) {
+                                            lineTo(x2, 0f)
+                                        }
+                                    } else {
+                                        lineTo(x1, cy)
+                                    }
+                                }
+                            } else {
+                                moveTo(x2, size.height)
+                                lineTo(x2, cy)
+                                if (history.size > base + 1) {
+                                    if (history.size > base + 2) {
+                                        lineTo(x0, cy)
+                                        if (history.size > base + 3) {
+                                            lineTo(x0, 0f)
+                                        }
+                                    } else {
+                                        lineTo(x1, cy)
+                                    }
+                                }
+                            }
+                        }
+
+                        drawPath(
+                            path = path,
+                            color = accentColor.color.copy(alpha = 0.65f),
+                            style = Stroke(
+                                width = strokeWidth,
+                                cap = StrokeCap.Butt,
+                                join = StrokeJoin.Round,
+                                pathEffect = pathEffect
+                            )
+                        )
+                    }
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        col0App?.let { app ->
+                            SnakeAppIcon(
+                                app = app,
+                                iconSize = 44.dp,
+                                onClick = { onAppClick("${app.packageName}/${app.activityName}") },
+                                onLongClick = { offset -> onAppLongClick(app, offset) }
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        col1App?.let { app ->
+                            SnakeAppIcon(
+                                app = app,
+                                iconSize = 44.dp,
+                                onClick = { onAppClick("${app.packageName}/${app.activityName}") },
+                                onLongClick = { offset -> onAppLongClick(app, offset) }
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        col2App?.let { app ->
+                            SnakeAppIcon(
+                                app = app,
+                                iconSize = 44.dp,
+                                onClick = { onAppClick("${app.packageName}/${app.activityName}") },
+                                onLongClick = { offset -> onAppLongClick(app, offset) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SnakeAppIcon(
+    app: AppInfo,
+    iconSize: Dp,
+    onClick: () -> Unit,
+    onLongClick: (Offset) -> Unit
+) {
+    var itemPosition by remember { mutableStateOf(Offset.Zero) }
+    val painter = rememberAppIconPainter(app.iconKey, 48)
+
+    Box(
+        modifier = Modifier
+            .size(iconSize)
+            .onGloballyPositioned { itemPosition = it.positionInRoot() }
+            .pointerInput(app.componentKey) {
+                detectTapGestures(
+                    onTap = { onClick() },
+                    onLongPress = { onLongClick(itemPosition + it) }
+                )
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painter,
+            contentDescription = app.label,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(CircleShape)
+        )
+    }
+}
+

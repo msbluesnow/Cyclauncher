@@ -36,6 +36,25 @@ import androidx.activity.compose.BackHandler
 import dev.msbs.cyclauncher.SearchMethod
 import dev.msbs.cyclauncher.ui.components.SideAlphabetSearchLayout
 
+import android.app.Activity
+import android.appwidget.AppWidgetHost
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProviderInfo
+import android.content.Intent
+import android.os.Build
+import android.os.Bundle
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import dev.msbs.cyclauncher.ui.components.CustomWidgetPickerSheet
+import dev.msbs.cyclauncher.ui.components.SearchWidgetCompartment
+
+enum class WidgetPickTarget {
+    WHEEL_LEFT,
+    WHEEL_RIGHT,
+    SIDE_SEARCH
+}
+
 /**
  * Search screen supporting alphabet wheel, side alphabet grid, or text search mode.
  */
@@ -43,28 +62,188 @@ import dev.msbs.cyclauncher.ui.components.SideAlphabetSearchLayout
 fun SearchScreen(
     viewModel: LauncherViewModel,
     enabled: Boolean = true,
+    appWidgetHost: AppWidgetHost? = null,
+    appWidgetManager: AppWidgetManager? = null,
+    onConfigureWidget: ((widgetId: Int, isReconfigure: Boolean, options: Bundle?, callback: (Boolean) -> Unit) -> Unit)? = null,
     onBackToMain: () -> Unit = {},
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit
 ) {
+    val context = LocalContext.current
     val isTextSearchMode by viewModel.isTextSearchMode.collectAsState()
+    val selectedLetter by viewModel.selectedLetter.collectAsState()
+    val searchMethod by viewModel.searchMethod.collectAsState()
+    val handSide by viewModel.handSide.collectAsState()
+    val searchWidgetsConfig by viewModel.searchWidgetsConfig.collectAsState()
 
     BackHandler(enabled = enabled) {
         if (isTextSearchMode) {
             viewModel.toggleTextSearchMode()
         } else {
+            viewModel.setSelectedLetter(null)
             onBackToMain()
         }
     }
 
-    val searchMethod by viewModel.searchMethod.collectAsState()
-    val handSide by viewModel.handSide.collectAsState()
+    LaunchedEffect(Unit) {
+        viewModel.setSelectedLetter(null)
+    }
+
+    val host = appWidgetHost
+    val manager = appWidgetManager ?: remember { AppWidgetManager.getInstance(context.applicationContext) }
+
+    var widgetPickTarget by remember { mutableStateOf<WidgetPickTarget?>(null) }
+    var pendingBindWidgetId by remember { mutableIntStateOf(AppWidgetManager.INVALID_APPWIDGET_ID) }
+    var pendingBindProvider by remember { mutableStateOf<AppWidgetProviderInfo?>(null) }
+    var pendingBindTarget by remember { mutableStateOf(WidgetPickTarget.WHEEL_LEFT) }
+
+    val checkConfigureAndAdd: (Int, AppWidgetProviderInfo, Bundle?, WidgetPickTarget) -> Unit = { widgetId, providerInfo, optionsBundle, target ->
+        val onConfigSuccess: () -> Unit = {
+            when (target) {
+                WidgetPickTarget.WHEEL_LEFT -> {
+                    val oldId = searchWidgetsConfig.leftWidgetId
+                    if (oldId != null && oldId != widgetId) {
+                        try { host?.deleteAppWidgetId(oldId) } catch (_: Exception) {}
+                    }
+                    viewModel.setSearchWidget(true, widgetId)
+                }
+                WidgetPickTarget.WHEEL_RIGHT -> {
+                    val oldId = searchWidgetsConfig.rightWidgetId
+                    if (oldId != null && oldId != widgetId) {
+                        try { host?.deleteAppWidgetId(oldId) } catch (_: Exception) {}
+                    }
+                    viewModel.setSearchWidget(false, widgetId)
+                }
+                WidgetPickTarget.SIDE_SEARCH -> {
+                    val oldId = viewModel.sideSearchWidgetId.value
+                    if (oldId != null && oldId != widgetId) {
+                        try { host?.deleteAppWidgetId(oldId) } catch (_: Exception) {}
+                    }
+                    viewModel.setSideSearchWidget(widgetId)
+                }
+            }
+        }
+
+        if (providerInfo.configure != null && onConfigureWidget != null) {
+            onConfigureWidget(widgetId, false, optionsBundle) { success ->
+                if (success) {
+                    onConfigSuccess()
+                } else {
+                    try { host?.deleteAppWidgetId(widgetId) } catch (_: Exception) {}
+                }
+            }
+        } else {
+            onConfigSuccess()
+        }
+    }
+
+    val bindWidgetLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && pendingBindWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+            val provider = manager.getAppWidgetInfo(pendingBindWidgetId) ?: pendingBindProvider
+            if (provider != null) {
+                val displayDensity = context.resources.displayMetrics.density
+                val screenWidthDp = (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
+                val targetWidthDp = (screenWidthDp * 0.5f).toInt()
+                val options = Bundle().apply {
+                    putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, targetWidthDp)
+                    putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, targetWidthDp)
+                    putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 140)
+                    putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 300)
+                }
+                checkConfigureAndAdd(pendingBindWidgetId, provider, options, pendingBindTarget)
+            }
+        } else {
+            if (pendingBindWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                try { host?.deleteAppWidgetId(pendingBindWidgetId) } catch (_: Exception) {}
+            }
+        }
+        pendingBindWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+        pendingBindProvider = null
+    }
+
+    val onSelectWidgetFromPicker: (AppWidgetProviderInfo, WidgetPickTarget) -> Unit = { providerInfo, target ->
+        if (host != null) {
+            val newWidgetId = host.allocateAppWidgetId()
+            val displayDensity = context.resources.displayMetrics.density
+            val screenWidthDp = (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
+            val targetWidthDp = (screenWidthDp * 0.5f).toInt()
+            val options = Bundle().apply {
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, targetWidthDp)
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, targetWidthDp)
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 140)
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 300)
+            }
+
+            val canBind = try {
+                val profile = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    providerInfo.profile ?: android.os.Process.myUserHandle()
+                } else {
+                    null
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && profile != null) {
+                    manager.bindAppWidgetIdIfAllowed(newWidgetId, profile, providerInfo.provider, options)
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                    manager.bindAppWidgetIdIfAllowed(newWidgetId, providerInfo.provider, options)
+                } else {
+                    manager.bindAppWidgetIdIfAllowed(newWidgetId, providerInfo.provider)
+                }
+            } catch (_: Exception) {
+                false
+            }
+
+            try {
+                manager.updateAppWidgetOptions(newWidgetId, options)
+            } catch (_: Exception) {}
+
+            if (canBind) {
+                val finalInfo = manager.getAppWidgetInfo(newWidgetId) ?: providerInfo
+                checkConfigureAndAdd(newWidgetId, finalInfo, options, target)
+            } else {
+                pendingBindWidgetId = newWidgetId
+                pendingBindProvider = providerInfo
+                pendingBindTarget = target
+                try {
+                    val bindIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, newWidgetId)
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, providerInfo.provider)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, providerInfo.profile ?: android.os.Process.myUserHandle())
+                        }
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_OPTIONS, options)
+                    }
+                    bindWidgetLauncher.launch(bindIntent)
+                } catch (_: Exception) {
+                    checkConfigureAndAdd(newWidgetId, providerInfo, options, target)
+                }
+            }
+        }
+    }
+
+    val widgetCompartment: @Composable (Modifier) -> Unit = { compartmentModifier ->
+        SearchWidgetCompartment(
+            viewModel = viewModel,
+            appWidgetHost = host,
+            appWidgetManager = manager,
+            onPickWidget = { isLeft ->
+                widgetPickTarget = if (isLeft) WidgetPickTarget.WHEEL_LEFT else WidgetPickTarget.WHEEL_RIGHT
+            },
+            modifier = compartmentModifier
+        )
+    }
+
+    val onSearchAppClick: (String) -> Unit = { appKey ->
+        viewModel.logSearchLaunch(appKey)
+        viewModel.setSelectedLetter(null)
+        onAppClick(appKey)
+    }
 
     when (searchMethod) {
         SearchMethod.TEXT -> {
             TextSearchInterface(
                 viewModel = viewModel,
-                onAppClick = onAppClick,
+                onAppClick = onSearchAppClick,
                 onAppLongClick = onAppLongClick
             )
         }
@@ -72,7 +251,10 @@ fun SearchScreen(
             SideAlphabetSearchLayout(
                 viewModel = viewModel,
                 handSide = handSide,
-                onAppClick = onAppClick,
+                appWidgetHost = host,
+                appWidgetManager = manager,
+                onPickSideWidget = { widgetPickTarget = WidgetPickTarget.SIDE_SEARCH },
+                onAppClick = onSearchAppClick,
                 onAppLongClick = onAppLongClick
             )
         }
@@ -80,10 +262,30 @@ fun SearchScreen(
             WheelSearchLayout(
                 viewModel = viewModel,
                 handSide = handSide,
-                onAppClick = onAppClick,
+                widgetCompartment = widgetCompartment,
+                onAppClick = onSearchAppClick,
                 onAppLongClick = onAppLongClick
             )
         }
+    }
+
+    widgetPickTarget?.let { target ->
+        val allApps by viewModel.apps.collectAsState()
+        val accentColor by viewModel.accentColor.collectAsState()
+        val primaryTextColor by viewModel.primaryTextColor.collectAsState()
+        val showShadows by viewModel.showShadows.collectAsState()
+
+        CustomWidgetPickerSheet(
+            apps = allApps,
+            accentColor = accentColor,
+            primaryTextColor = primaryTextColor,
+            showShadows = showShadows,
+            onDismiss = { widgetPickTarget = null },
+            onSelectWidget = { providerInfo ->
+                widgetPickTarget = null
+                onSelectWidgetFromPicker(providerInfo, target)
+            }
+        )
     }
 }
 
@@ -94,14 +296,17 @@ fun SearchScreen(
 fun WheelSearchLayout(
     viewModel: LauncherViewModel,
     handSide: HandSide,
+    widgetCompartment: (@Composable (Modifier) -> Unit)? = null,
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit
 ) {
     val filteredApps by viewModel.filteredApps.collectAsState()
+    val selectedLetter by viewModel.selectedLetter.collectAsState()
     val listAlignment by viewModel.searchListAlignment.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
+    val showSearchWidgets by viewModel.showSearchWidgets.collectAsState()
     val scrollOffset = remember { Animatable(0f) }
 
     Column(
@@ -117,23 +322,59 @@ fun WheelSearchLayout(
         val scaleFactor = ((configuration.screenWidthDp.dp / 360.dp).coerceIn(0.7f, 1.2f)) * 0.93f
         val stepSize = 34.dp * scaleFactor
 
-        Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            val animationsEnabled = LocalAnimationsEnabled.current
-            val scrollModifier = Modifier
-                .fillMaxHeight()
+        Box(
+            modifier = Modifier
                 .weight(1f)
-                .alphabetWheelDragGesture(scrollOffset, density, stepSize, animationsEnabled)
-
-            if (listAlignment == TextAlign.End) {
-                Box(modifier = scrollModifier)
-                Box(modifier = Modifier.weight(1f)) {
-                    AppListContent(filteredApps, listAlignment, primaryTextColor, showShadows, onAppClick, onAppLongClick)
+                .fillMaxWidth()
+        ) {
+            if (selectedLetter == null) {
+                if (showSearchWidgets) {
+                    widgetCompartment?.invoke(
+                        Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
                 }
             } else {
-                Box(modifier = Modifier.weight(1f)) {
-                    AppListContent(filteredApps, listAlignment, primaryTextColor, showShadows, onAppClick, onAppLongClick)
+                Row(modifier = Modifier.fillMaxSize()) {
+                    val animationsEnabled = LocalAnimationsEnabled.current
+                    val scrollModifier = Modifier
+                        .fillMaxHeight()
+                        .weight(1f)
+                        .alphabetWheelDragGesture(scrollOffset, density, stepSize, animationsEnabled)
+
+                    if (listAlignment == TextAlign.End) {
+                        Box(modifier = scrollModifier)
+                        Box(modifier = Modifier.weight(1f)) {
+                            AppListContent(
+                                apps = filteredApps,
+                                alignment = listAlignment,
+                                primaryTextColor = primaryTextColor,
+                                showShadows = showShadows,
+                                onAppClick = { appKey ->
+                                    viewModel.setSelectedLetter(null)
+                                    onAppClick(appKey)
+                                },
+                                onAppLongClick = onAppLongClick
+                            )
+                        }
+                    } else {
+                        Box(modifier = Modifier.weight(1f)) {
+                            AppListContent(
+                                apps = filteredApps,
+                                alignment = listAlignment,
+                                primaryTextColor = primaryTextColor,
+                                showShadows = showShadows,
+                                onAppClick = { appKey ->
+                                    viewModel.setSelectedLetter(null)
+                                    onAppClick(appKey)
+                                },
+                                onAppLongClick = onAppLongClick
+                            )
+                        }
+                        Box(modifier = scrollModifier)
+                    }
                 }
-                Box(modifier = scrollModifier)
             }
         }
 
@@ -147,12 +388,16 @@ fun WheelSearchLayout(
                 scrollOffset = scrollOffset,
                 onLetterSelected = { viewModel.setSelectedLetter(it) },
                 apps = filteredApps,
-                onAppClick = onAppClick,
+                onAppClick = { appKey ->
+                    viewModel.setSelectedLetter(null)
+                    onAppClick(appKey)
+                },
                 onAppLongClick = { componentKey, offset -> 
                     filteredApps.find { "${it.packageName}/${it.activityName}" == componentKey }?.let { app ->
                         onAppLongClick(app, offset)
                     }
                 },
+                selectedLetter = selectedLetter,
                 accentColor = accentColor,
                 primaryTextColor = primaryTextColor,
                 showShadows = showShadows

@@ -58,6 +58,7 @@ fun RectangularAlphabetWheel(
     apps: List<AppInfo>,
     onAppClick: (String) -> Unit,
     onAppLongClick: (String, Offset) -> Unit = { _, _ -> },
+    selectedLetter: Char? = null,
     accentColor: AccentColor = AccentColor.SKY,
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     showShadows: Boolean = true,
@@ -71,6 +72,13 @@ fun RectangularAlphabetWheel(
     val currentOnLetterSelected by rememberUpdatedState(onLetterSelected)
     
     var wheelPosition by remember { mutableStateOf(Offset.Zero) }
+    var userHasInteracted by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectedLetter) {
+        if (selectedLetter == null) {
+            userHasInteracted = false
+        }
+    }
 
     BoxWithConstraints(modifier = modifier) {
         val baseWidth = 360.dp
@@ -94,8 +102,10 @@ fun RectangularAlphabetWheel(
         }
 
         LaunchedEffect(activeIndex) {
-            currentOnLetterSelected(alphabet[activeIndex])
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            if (userHasInteracted || selectedLetter != null) {
+                currentOnLetterSelected(alphabet[activeIndex])
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
         }
 
         fun getRectPosition(i: Int): Offset {
@@ -187,12 +197,25 @@ fun RectangularAlphabetWheel(
         val pathMeasure = remember(indicatorPath) { PathMeasure().apply { setPath(indicatorPath, false) } }
         val totalLength = pathMeasure.length
 
+        val handleDragStart = {
+            if (!userHasInteracted) {
+                userHasInteracted = true
+                currentOnLetterSelected(alphabet[activeIndex])
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
+        }
+
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
                 .size(stepSize * 10.5f, stepSize * 5 + 40.dp)
                 .onGloballyPositioned { wheelPosition = it.positionInRoot() }
-                .alphabetWheelDragGesture(scrollOffset, density, stepSize),
+                .alphabetWheelDragGesture(
+                    scrollOffset = scrollOffset,
+                    density = density,
+                    stepSize = stepSize,
+                    onDragStart = handleDragStart
+                ),
             contentAlignment = Alignment.Center
         ) {
             Box(
@@ -209,6 +232,8 @@ fun RectangularAlphabetWheel(
                         val segmentPath = Path()
 
                         onDrawBehind {
+                            if (selectedLetter == null) return@onDrawBehind
+
                             val lower = floatIndex.toInt()
                             val progress = floatIndex - lower
                             
@@ -252,13 +277,28 @@ fun RectangularAlphabetWheel(
                     AlphabetLetterItem(
                         letter = letter,
                         index = index,
+                        selectedLetter = selectedLetter,
                         floatIndexProvider = { floatIndex },
                         stepSize = stepSize,
                         fontSize = fontSize,
                         accentColor = accentColor,
                         primaryTextColor = primaryTextColor,
                         showShadows = showShadows,
-                        pos = getRectPosition(index)
+                        pos = getRectPosition(index),
+                        onClick = {
+                            userHasInteracted = true
+                            currentOnLetterSelected(letter)
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            scope.launch {
+                                scrollOffset.animateTo(
+                                    targetValue = index.toFloat(),
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioLowBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    )
+                                )
+                            }
+                        }
                     )
                 }
 
@@ -371,6 +411,7 @@ fun AppsGrid(
 private fun AlphabetLetterItem(
     letter: Char,
     index: Int,
+    selectedLetter: Char?,
     floatIndexProvider: () -> Float,
     stepSize: Dp,
     fontSize: androidx.compose.ui.unit.TextUnit,
@@ -378,10 +419,12 @@ private fun AlphabetLetterItem(
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     showShadows: Boolean = true,
     pos: Offset,
+    onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val isExactState = remember {
         derivedStateOf {
+            if (selectedLetter == null) return@derivedStateOf false
             val floatIndex = floatIndexProvider()
             val dist = abs(floatIndex - index).let { if (it > 13.5) 27 - it else it }
             dist < 0.5f
@@ -392,18 +435,27 @@ private fun AlphabetLetterItem(
         modifier = modifier
             .size(stepSize)
             .graphicsLayer {
-                val floatIndex = floatIndexProvider()
-                val dist = abs(floatIndex - index).let { if (it > 13.5) 27 - it else it }.toFloat()
-                val scale = (1.5f - (dist * 0.4f)).coerceIn(1.0f, 1.5f)
-                val alpha = (1.0f - (dist * 0.2f)).coerceIn(0.4f, 1.0f)
-                
-                translationX = pos.x
-                translationY = pos.y
-                scaleX = scale
-                scaleY = scale
-                this.alpha = alpha
+                if (selectedLetter == null) {
+                    translationX = pos.x
+                    translationY = pos.y
+                    scaleX = 1.0f
+                    scaleY = 1.0f
+                    this.alpha = 0.85f
+                } else {
+                    val floatIndex = floatIndexProvider()
+                    val dist = abs(floatIndex - index).let { if (it > 13.5) 27 - it else it }.toFloat()
+                    val scale = (1.5f - (dist * 0.4f)).coerceIn(1.0f, 1.5f)
+                    val alpha = (1.0f - (dist * 0.2f)).coerceIn(0.4f, 1.0f)
+                    
+                    translationX = pos.x
+                    translationY = pos.y
+                    scaleX = scale
+                    scaleY = scale
+                    this.alpha = alpha
+                }
             }
             .drawBehind {
+                if (selectedLetter == null) return@drawBehind
                 val floatIndex = floatIndexProvider()
                 val dist = abs(floatIndex - index).let { if (it > 13.5) 27 - it else it }.toFloat()
                 val glowAlpha = (1f - dist * 2f).coerceIn(0f, 1f)
@@ -420,6 +472,11 @@ private fun AlphabetLetterItem(
                         style = Stroke(width = 1.dp.toPx())
                     )
                 }
+            }
+            .pointerInput(letter, index) {
+                detectTapGestures(
+                    onTap = { onClick() }
+                )
             },
         contentAlignment = Alignment.Center
     ) {
@@ -464,7 +521,8 @@ fun Modifier.alphabetWheelDragGesture(
     scrollOffset: Animatable<Float, AnimationVector1D>,
     density: Density,
     stepSize: Dp,
-    animationsEnabled: Boolean = true
+    animationsEnabled: Boolean = true,
+    onDragStart: (() -> Unit)? = null
 ): Modifier = this.pointerInput(scrollOffset, density, stepSize, animationsEnabled) {
     val s = with(density) { stepSize.toPx() }
     val slowThresholdPxPerMs = with(density) { 600.dp.toPx() } / 1000f
@@ -479,8 +537,13 @@ fun Modifier.alphabetWheelDragGesture(
                 var position = scrollOffset.value
                 var smoothedSpeedPxPerMs = 0f
                 var lastEventTimeMs = down.uptimeMillis
+                var dragTriggered = false
 
                 verticalDrag(down.id) { change ->
+                    if (!dragTriggered) {
+                        dragTriggered = true
+                        onDragStart?.invoke()
+                    }
                     val dragAmount = change.positionChange().y
                     change.consume()
 

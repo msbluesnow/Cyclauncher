@@ -76,6 +76,9 @@ class LauncherAppWidgetHostView(context: Context) : AppWidgetHostView(context) {
         return super.dispatchTouchEvent(ev)
     }
 
+    private var lastAppliedWidthDp: Int = -1
+    private var lastAppliedHeightDp: Int = -1
+
     /**
      * Updates widget size options both on the host view and with AppWidgetManager
      * so provider layouts re-measure and adapt responsively to user dimensions.
@@ -84,6 +87,12 @@ class LauncherAppWidgetHostView(context: Context) : AppWidgetHostView(context) {
     fun applyWidgetSize(widthDp: Int, heightDp: Int) {
         val safeWidth = widthDp.coerceAtLeast(40)
         val safeHeight = heightDp.coerceAtLeast(40)
+
+        if (safeWidth == lastAppliedWidthDp && safeHeight == lastAppliedHeightDp) {
+            return
+        }
+        lastAppliedWidthDp = safeWidth
+        lastAppliedHeightDp = safeHeight
 
         val options = Bundle().apply {
             putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, safeWidth)

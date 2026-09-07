@@ -122,33 +122,102 @@ class AppActionsManager(context: Context) {
         } catch (_: Exception) {}
     }
 
-    fun logAppLaunch(componentKey: String) {
-        if (_recentlyUpdated.value.contains(componentKey)) {
-            val updatedSet = _recentlyUpdated.value - componentKey
-            _recentlyUpdated.value = updatedSet
-            saveRecentlyUpdated(updatedSet)
+    private val _searchHistory = MutableStateFlow<List<String>>(loadSearchHistory())
+    val searchHistory: StateFlow<List<String>> = _searchHistory
+
+    private fun loadSearchHistory(): List<String> {
+        val list = loadList("search_history")
+        if (list.isNotEmpty()) {
+            return list.filter { !_recentlyUpdated.value.contains(it) }
         }
+        val initial = _history.value.filter { !_recentlyUpdated.value.contains(it) }
+        if (initial.isNotEmpty()) {
+            saveList("search_history", initial)
+            return initial
+        }
+        return emptyList()
+    }
+
+    fun logSearchLaunch(componentKey: String) {
         if (_isHistoryPaused.value) return
-        val current = _history.value.toMutableList()
+        val current = _searchHistory.value.toMutableList()
         current.remove(componentKey)
         current.add(0, componentKey)
-        val limited = current.take(15)
-        _history.value = limited
-        saveList("history", limited)
+        val limited = current.take(20)
+        _searchHistory.value = limited
+        saveList("search_history", limited)
+    }
+
+    fun removeFromSearchHistory(componentKey: String) {
+        val current = _searchHistory.value.toMutableList()
+        if (current.remove(componentKey)) {
+            _searchHistory.value = current
+            saveList("search_history", current)
+        }
+    }
+
+    fun clearSearchHistory() {
+        _searchHistory.value = emptyList()
+        saveList("search_history", emptyList())
+        Toast.makeText(context, "Search history cleared", Toast.LENGTH_SHORT).show()
+    }
+
+    fun logAppLaunch(componentKey: String) {
+        val hasRecentlyUpdated = _recentlyUpdated.value.contains(componentKey)
+        val updatedRecentlyUpdated = if (hasRecentlyUpdated) {
+            val set = _recentlyUpdated.value - componentKey
+            _recentlyUpdated.value = set
+            set
+        } else null
+
+        val updatedHistory = if (!_isHistoryPaused.value) {
+            val current = _history.value.toMutableList()
+            current.remove(componentKey)
+            current.add(0, componentKey)
+            val limited = current.take(15)
+            _history.value = limited
+            limited
+        } else null
+
+        if (updatedRecentlyUpdated != null || updatedHistory != null) {
+            try {
+                val editor = prefs.edit()
+                if (updatedRecentlyUpdated != null) {
+                    val json = org.json.JSONArray()
+                    updatedRecentlyUpdated.forEach { json.put(it) }
+                    editor.putString("recently_updated_apps", json.toString())
+                }
+                if (updatedHistory != null) {
+                    editor.putString("history", JSONArray(updatedHistory).toString())
+                }
+                editor.apply()
+            } catch (_: Exception) {}
+        }
     }
 
     fun onAppInstalledOrUpdated(componentKey: String) {
         val updatedSet = _recentlyUpdated.value + componentKey
         _recentlyUpdated.value = updatedSet
-        saveRecentlyUpdated(updatedSet)
 
-        if (_isHistoryPaused.value) return
-        val current = _history.value.toMutableList()
-        current.remove(componentKey)
-        current.add(0, componentKey)
-        val limited = current.take(15)
-        _history.value = limited
-        saveList("history", limited)
+        val updatedHistory = if (!_isHistoryPaused.value) {
+            val current = _history.value.toMutableList()
+            current.remove(componentKey)
+            current.add(0, componentKey)
+            val limited = current.take(15)
+            _history.value = limited
+            limited
+        } else null
+
+        try {
+            val editor = prefs.edit()
+            val json = org.json.JSONArray()
+            updatedSet.forEach { json.put(it) }
+            editor.putString("recently_updated_apps", json.toString())
+            if (updatedHistory != null) {
+                editor.putString("history", JSONArray(updatedHistory).toString())
+            }
+            editor.apply()
+        } catch (_: Exception) {}
     }
 
     fun onAppsInstalledOrUpdated(componentKeys: List<String>) {
