@@ -136,6 +136,14 @@ When filing a bug report in our [GitHub Issues](https://github.com/msbluesnow/Cy
    - Include a concise explanation of what your PR changes and why.
    - Attach screenshots or screen recordings for any visual/UI changes.
 
+5. **Non-Code Contributions (Design, Media & Translations)**
+   We deeply appreciate contributions beyond code:
+   - **🎨 Design & Artwork**: Mockups and asset proposals can be shared in design issues (e.g. [#3](https://github.com/msbluesnow/Cyclauncher/issues/3)). Approved vector graphics and icons are merged via PR into `app/src/main/res/` and `assets/`.
+   - **🎬 Media & Showcases**: Video previews, tutorials, and walkthrough clips can be shared in media issues (e.g. [#4](https://github.com/msbluesnow/Cyclauncher/issues/4)).
+   - **🌐 Translations**: Create a new resource directory `app/src/main/res/values-<lang_code>/strings.xml` copying keys from `app/src/main/res/values/strings.xml`, translate the values, and submit a PR with prefix `docs(i18n): add <language> translation`.
+
+   All contributors are credited in the project repository and in the upcoming in-app **Contributors** section!
+
 ---
 
 ## 🤝 Community & Support

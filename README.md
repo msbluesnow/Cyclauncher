@@ -65,10 +65,27 @@ Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**,
 - **AI-Assisted App Tagging**: Fast batch categorization of applications with an external AI tagging workflow (Export → Process via External Prompt → Import) and full JSON backup options.
 - **Deep Theme Customization & Accessibility**: Echo Icon Theme accent palettes, dynamic Material You wallpaper colors, interactive custom Color Picker, primary text color modes (Black/White) with adaptive wallpaper drop-shadows, customizable shadow colors, and an accessibility toggle to disable all animations including cursor blinking.
 
-## 🤝 Community & Support
+## 🤝 Contributing & Help Wanted
+
+Cyclauncher is an open-source project and warmly welcomes all forms of contributions — from code and performance optimizations to visual branding, translations, and media creation!
+
+### 📌 Active Help Wanted Tasks
+- 🎨 **[Design]: New Launcher Logo & F-Droid Store Banner** ([#3](https://github.com/msbluesnow/Cyclauncher/issues/3)) — Seeking an adaptive Android app icon (Vector/SVG) and an official 1024x500 F-Droid feature graphic.
+- 🎬 **[Media]: Comprehensive Video Showcase (Long-Term Collaboration)** ([#4](https://github.com/msbluesnow/Cyclauncher/issues/4)) — Looking for a creator to record high-quality feature walkthroughs of recent builds, with ongoing collaboration for future major releases.
+- 🌐 **Translations & Localization** — Help translate Cyclauncher into your native language by contributing a `values-<lang_code>/strings.xml` via Pull Request.
+- 🐛 **Bug Reports & Quality Assurance** — Check out open [Good First Issues](https://github.com/msbluesnow/Cyclauncher/labels/good%20first%20issue) and [Help Wanted](https://github.com/msbluesnow/Cyclauncher/labels/help%20wanted) tickets.
+
+Check out our [CONTRIBUTING.md](CONTRIBUTING.md) for architecture details, code standards, and PR workflows. All contributors are credited here and in the upcoming in-app **Contributors** screen!
+
+### 👥 Contributors
+
+<a href="https://github.com/msbluesnow/Cyclauncher/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=msbluesnow/Cyclauncher" alt="Contributors" />
+</a>
+
+## 💬 Community & Support
 
 - **Discord**: Join the community for feedback and updates: [![Discord](https://img.shields.io/badge/Discord-Join%20Community-7289DA?style=for-the-badge&logo=discord)](https://discord.gg/Zw4EBe92Qn)
-- **Contributing**: Check out [CONTRIBUTING.md](CONTRIBUTING.md) to learn how to set up the project, submit pull requests, and report issues (specifying versions and attaching reproduction videos).
 - **Tribute**: Support the development of this project: [![Support on Tribute](https://img.shields.io/badge/Support-Tribute-orange?style=for-the-badge)](https://web.tribute.tg/e/1dW)
 
 ## 🛠 Tech Stack
