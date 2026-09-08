@@ -439,7 +439,9 @@ fun HighlightScreen(
                         try {
                             host.deleteAppWidgetId(widgetId)
                         } catch (_: Exception) {}
-                    }
+                    },
+                    onMoveUp = { widgetId -> viewModel.moveHighlightWidgetUp(widgetId) },
+                    onMoveDown = { widgetId -> viewModel.moveHighlightWidgetDown(widgetId) }
                 )
 
                 Spacer(modifier = Modifier.height(28.dp))
@@ -852,7 +854,9 @@ private fun WidgetsSection(
     onAddWidget: () -> Unit,
     onConfigureWidget: ((widgetId: Int, isReconfigure: Boolean, options: Bundle?, callback: (Boolean) -> Unit) -> Unit)? = null,
     onUpdateSize: (widgetId: Int, heightDp: Int, widthFraction: Float) -> Unit,
-    onDeleteWidget: (Int) -> Unit
+    onDeleteWidget: (Int) -> Unit,
+    onMoveUp: (Int) -> Unit,
+    onMoveDown: (Int) -> Unit
 ) {
     val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
 
@@ -962,12 +966,10 @@ private fun WidgetsSection(
                 }
             }
         } else {
-            // Adaptive hand-side padding:
-            // Left Hand: widgets shifted flush right (padding start 56dp, end 0dp), leaving left corridor for thumb scrolling
-            // Right Hand: widgets shifted flush left (padding start 0dp, end 56dp), leaving right corridor for thumb scrolling
+            // Widgets docked flush to the right edge with adaptive thumb scroll space on left
             val handPadding = when (handSide) {
                 HandSide.LEFT -> PaddingValues(start = 56.dp, end = 0.dp)
-                HandSide.RIGHT -> PaddingValues(start = 0.dp, end = 56.dp)
+                HandSide.RIGHT -> PaddingValues(start = 24.dp, end = 0.dp)
             }
 
             Column(
@@ -976,10 +978,15 @@ private fun WidgetsSection(
                     .padding(handPadding),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                for (config in widgetConfigs) {
+                for ((index, config) in widgetConfigs.withIndex()) {
                     key(config.id) {
                         WidgetCard(
                             config = config,
+                            canMoveUp = index > 0,
+                            canMoveDown = index < widgetConfigs.size - 1,
+                            showMoveButtons = widgetConfigs.size > 1,
+                            onMoveUp = { onMoveUp(config.id) },
+                            onMoveDown = { onMoveDown(config.id) },
                             handSide = handSide,
                             appWidgetHost = appWidgetHost,
                             appWidgetManager = appWidgetManager,
@@ -1009,6 +1016,11 @@ private fun WidgetsSection(
 @Composable
 private fun WidgetCard(
     config: HighlightWidgetConfig,
+    canMoveUp: Boolean = false,
+    canMoveDown: Boolean = false,
+    showMoveButtons: Boolean = false,
+    onMoveUp: () -> Unit = {},
+    onMoveDown: () -> Unit = {},
     handSide: HandSide,
     appWidgetHost: AppWidgetHost,
     appWidgetManager: AppWidgetManager,
@@ -1067,7 +1079,7 @@ private fun WidgetCard(
             val result = deleteProgress.animateTo(
                 targetValue = 1f,
                 animationSpec = tween(
-                    durationMillis = if (animationsEnabled) 1300 else 100,
+                    durationMillis = if (animationsEnabled) 1200 else 100,
                     easing = LinearEasing
                 )
             )
@@ -1080,17 +1092,9 @@ private fun WidgetCard(
         }
     }
 
-    // Docking alignment and edge shape:
-    // Left hand: card aligns right, flush to screen edge (right corners 0dp, left corners 14dp)
-    // Right hand: card aligns left, flush to screen edge (left corners 0dp, right corners 14dp)
-    val cardAlignment = when (handSide) {
-        HandSide.LEFT -> Alignment.CenterEnd
-        HandSide.RIGHT -> Alignment.CenterStart
-    }
-    val cardShape = when (handSide) {
-        HandSide.LEFT -> RoundedCornerShape(topStart = 14.dp, bottomStart = 14.dp, topEnd = 0.dp, bottomEnd = 0.dp)
-        HandSide.RIGHT -> RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 14.dp, bottomEnd = 14.dp)
-    }
+    // Always align card to CenterEnd so controls and card are flush to the outer edge
+    val cardAlignment = Alignment.CenterEnd
+    val cardShape = RoundedCornerShape(topStart = 14.dp, bottomStart = 14.dp, topEnd = 0.dp, bottomEnd = 0.dp)
 
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -1105,13 +1109,13 @@ private fun WidgetCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                    .padding(vertical = 2.dp)
             ) {
                 // Header Row: Label, Animated Progress Line from Title to Recycle Bin, Configure Button, Resize Button, Trash Button
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                        .padding(start = 8.dp, end = 0.dp, top = 2.dp, bottom = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -1121,14 +1125,15 @@ private fun WidgetCard(
                         color = primaryTextColor.color.copy(alpha = 0.7f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        style = TextStyle(shadow = shadow)
+                        style = TextStyle(shadow = shadow),
+                        modifier = Modifier.weight(1f, fill = false)
                     )
 
                     // Animated Progress Line connecting Title to Trash Icon (appears/fills smoothly on hold)
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(horizontal = 8.dp)
+                            .padding(horizontal = 6.dp)
                             .height(2.5.dp),
                         contentAlignment = Alignment.CenterStart
                     ) {
@@ -1148,6 +1153,47 @@ private fun WidgetCard(
                                     .background(deleteColor)
                             )
                         }
+                    }
+
+                    // Move Up & Down Buttons
+                    if (showMoveButtons) {
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onMoveUp()
+                            },
+                            enabled = canMoveUp,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            ShadowedIcon(
+                                imageVector = Icons.Outlined.KeyboardArrowUp,
+                                contentDescription = "Move widget up",
+                                tint = if (canMoveUp) primaryTextColor.color.copy(alpha = 0.75f) else primaryTextColor.color.copy(alpha = 0.20f),
+                                modifier = Modifier.size(18.dp),
+                                showShadows = showShadows && canMoveUp,
+                                primaryTextColor = primaryTextColor,
+                                shadowSettings = shadowSettings
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onMoveDown()
+                            },
+                            enabled = canMoveDown,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            ShadowedIcon(
+                                imageVector = Icons.Outlined.KeyboardArrowDown,
+                                contentDescription = "Move widget down",
+                                tint = if (canMoveDown) primaryTextColor.color.copy(alpha = 0.75f) else primaryTextColor.color.copy(alpha = 0.20f),
+                                modifier = Modifier.size(18.dp),
+                                showShadows = showShadows && canMoveDown,
+                                primaryTextColor = primaryTextColor,
+                                shadowSettings = shadowSettings
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(2.dp))
                     }
 
                     // Native Reconfigure Button (Pencil icon) if widget supports configuration
@@ -1221,6 +1267,7 @@ private fun WidgetCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(horizontal = 4.dp)
                         .height(config.heightDp.dp)
                         .clip(RoundedCornerShape(10.dp))
                 ) {

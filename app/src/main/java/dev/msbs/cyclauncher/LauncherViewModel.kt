@@ -322,6 +322,30 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun moveHighlightWidgetUp(widgetId: Int) {
+        val current = _highlightWidgets.value.toMutableList()
+        val index = current.indexOfFirst { it.id == widgetId }
+        if (index > 0) {
+            val temp = current[index]
+            current[index] = current[index - 1]
+            current[index - 1] = temp
+            _highlightWidgets.value = current
+            saveHighlightWidgets(current)
+        }
+    }
+
+    fun moveHighlightWidgetDown(widgetId: Int) {
+        val current = _highlightWidgets.value.toMutableList()
+        val index = current.indexOfFirst { it.id == widgetId }
+        if (index != -1 && index < current.size - 1) {
+            val temp = current[index]
+            current[index] = current[index + 1]
+            current[index + 1] = temp
+            _highlightWidgets.value = current
+            saveHighlightWidgets(current)
+        }
+    }
+
     private val _searchWidgetsConfig = MutableStateFlow<SearchWidgetsConfig>(loadSearchWidgetsConfig())
     val searchWidgetsConfig: StateFlow<SearchWidgetsConfig> = _searchWidgetsConfig.asStateFlow()
 
