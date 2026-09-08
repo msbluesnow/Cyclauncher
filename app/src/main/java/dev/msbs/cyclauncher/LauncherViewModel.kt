@@ -58,6 +58,11 @@ enum class HandSide { LEFT, RIGHT }
 enum class SearchMethod { WHEEL, SIDE_ALPHABET, TEXT }
 
 /**
+ * Content to display above the alphabet grid in the side search layout.
+ */
+enum class SideAlphabetSlotMode { HISTORY, WIDGET, DISABLED }
+
+/**
  * Main ViewModel for the launcher, exposing state, settings, search, and app actions.
  */
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
@@ -102,6 +107,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private val _showSearchHistory = MutableStateFlow(true)
     val showSearchHistory: StateFlow<Boolean> = _showSearchHistory
+
+    private val _sideAlphabetSlotMode = MutableStateFlow(loadSideAlphabetSlotMode())
+    val sideAlphabetSlotMode: StateFlow<SideAlphabetSlotMode> = _sideAlphabetSlotMode.asStateFlow()
+
+    private val _sideAlphabetWidgetId = MutableStateFlow<Int?>(loadSideAlphabetWidgetId())
+    val sideAlphabetWidgetId: StateFlow<Int?> = _sideAlphabetWidgetId.asStateFlow()
 
     private val _animationsEnabled = MutableStateFlow(true)
     val animationsEnabled: StateFlow<Boolean> = _animationsEnabled
@@ -192,9 +203,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         ids.mapNotNull { id -> appMap[id] }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    val searchHistoryApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.searchHistory, actionsManager.recentlyUpdated) { all, ids, updated ->
+    val searchHistoryApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.history, actionsManager.recentlyUpdated) { all, ids, updated ->
         val appMap = all.associateBy { it.componentKey }
-        ids.filter { !updated.contains(it) }.mapNotNull { id -> appMap[id] }
+        ids.filter { id -> !updated.contains(id) && !updated.contains(id.substringBefore('/')) }
+            .mapNotNull { id -> appMap[id] }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val recentlyUpdatedApps: StateFlow<Set<String>> = actionsManager.recentlyUpdated
@@ -385,6 +397,54 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun removeSideSearchWidget() {
         setSideSearchWidget(null)
+    }
+
+    private fun loadSideAlphabetSlotMode(): SideAlphabetSlotMode {
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+        val raw = prefs.getString("side_alphabet_slot_mode", null)
+        if (raw != null) {
+            return try { SideAlphabetSlotMode.valueOf(raw) } catch (_: Exception) { SideAlphabetSlotMode.HISTORY }
+        }
+        if (prefs.contains("show_search_history")) {
+            return if (prefs.getBoolean("show_search_history", true)) SideAlphabetSlotMode.HISTORY else SideAlphabetSlotMode.DISABLED
+        }
+        return SideAlphabetSlotMode.HISTORY
+    }
+
+    fun setSideAlphabetSlotMode(mode: SideAlphabetSlotMode) {
+        _sideAlphabetSlotMode.value = mode
+        _showSearchHistory.value = (mode == SideAlphabetSlotMode.HISTORY)
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString("side_alphabet_slot_mode", mode.name)
+            .putBoolean("show_search_history", mode == SideAlphabetSlotMode.HISTORY)
+            .apply()
+    }
+
+    private fun loadSideAlphabetWidgetId(): Int? {
+        val prefs = safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+        return if (prefs.contains("side_alphabet_widget_id")) {
+            prefs.getInt("side_alphabet_widget_id", -1).takeIf { it != -1 }
+        } else null
+    }
+
+    private fun saveSideAlphabetWidgetId(id: Int?) {
+        val editor = safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE).edit()
+        if (id != null) {
+            editor.putInt("side_alphabet_widget_id", id)
+        } else {
+            editor.remove("side_alphabet_widget_id")
+        }
+        editor.apply()
+    }
+
+    fun setSideAlphabetWidget(widgetId: Int?) {
+        _sideAlphabetWidgetId.value = widgetId
+        saveSideAlphabetWidgetId(widgetId)
+    }
+
+    fun removeSideAlphabetWidget() {
+        setSideAlphabetWidget(null)
     }
 
     val favoriteItems: StateFlow<List<FavoriteItem>> = combine(
@@ -751,10 +811,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun removeFromSearchHistory(componentKey: String) {
+        actionsManager.removeFromHistory(componentKey)
         actionsManager.removeFromSearchHistory(componentKey)
     }
 
     fun clearSearchHistory() {
+        actionsManager.clearHistory()
         actionsManager.clearSearchHistory()
     }
 

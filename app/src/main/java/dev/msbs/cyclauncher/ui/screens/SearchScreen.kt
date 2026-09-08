@@ -52,7 +52,8 @@ import dev.msbs.cyclauncher.ui.components.SearchWidgetCompartment
 enum class WidgetPickTarget {
     WHEEL_LEFT,
     WHEEL_RIGHT,
-    SIDE_SEARCH
+    SIDE_SEARCH,
+    SIDE_ALPHABET_WIDGET
 }
 
 /**
@@ -120,6 +121,13 @@ fun SearchScreen(
                         try { host?.deleteAppWidgetId(oldId) } catch (_: Exception) {}
                     }
                     viewModel.setSideSearchWidget(widgetId)
+                }
+                WidgetPickTarget.SIDE_ALPHABET_WIDGET -> {
+                    val oldId = viewModel.sideAlphabetWidgetId.value
+                    if (oldId != null && oldId != widgetId) {
+                        try { host?.deleteAppWidgetId(oldId) } catch (_: Exception) {}
+                    }
+                    viewModel.setSideAlphabetWidget(widgetId)
                 }
             }
         }
@@ -254,6 +262,7 @@ fun SearchScreen(
                 appWidgetHost = host,
                 appWidgetManager = manager,
                 onPickSideWidget = { widgetPickTarget = WidgetPickTarget.SIDE_SEARCH },
+                onPickSideAlphabetWidget = { widgetPickTarget = WidgetPickTarget.SIDE_ALPHABET_WIDGET },
                 onAppClick = onSearchAppClick,
                 onAppLongClick = onAppLongClick
             )

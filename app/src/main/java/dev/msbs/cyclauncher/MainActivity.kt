@@ -275,6 +275,19 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    LaunchedEffect(verticalPagerState.currentPage, horizontalPagerState.currentPage, isHighlightScreenVisible) {
+                        val isMenuDismissNeeded = when (menuSource) {
+                            "search" -> verticalPagerState.currentPage != 1 || horizontalPagerState.currentPage != 0 || isHighlightScreenVisible
+                            else -> verticalPagerState.currentPage != 0 || horizontalPagerState.currentPage != 0 || isHighlightScreenVisible
+                        }
+                        if (isMenuDismissNeeded) {
+                            showActionMenuFor = null
+                            showRenameDialogFor = null
+                            showTagDialogFor = null
+                            tagToEditForDialog = null
+                        }
+                    }
+
                     LaunchedEffect(shouldListenWidgets) {
                         isHighlightScreenActive = shouldListenWidgets
                         if (shouldListenWidgets) {

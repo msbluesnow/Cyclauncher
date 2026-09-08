@@ -2,6 +2,7 @@ package dev.msbs.cyclauncher.ui.components
 
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.HandSide
+import dev.msbs.cyclauncher.SideAlphabetSlotMode
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
@@ -74,6 +75,7 @@ fun SideAlphabetSearchLayout(
     appWidgetHost: AppWidgetHost? = null,
     appWidgetManager: AppWidgetManager? = null,
     onPickSideWidget: () -> Unit = {},
+    onPickSideAlphabetWidget: () -> Unit = {},
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit
 ) {
@@ -81,6 +83,7 @@ fun SideAlphabetSearchLayout(
     val selectedLetter by viewModel.selectedLetter.collectAsState()
     val historyApps by viewModel.searchHistoryApps.collectAsState()
     val showSearchHistory by viewModel.showSearchHistory.collectAsState()
+    val sideAlphabetSlotMode by viewModel.sideAlphabetSlotMode.collectAsState()
     val showSearchWidgets by viewModel.showSearchWidgets.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
@@ -170,27 +173,48 @@ fun SideAlphabetSearchLayout(
                             verticalArrangement = Arrangement.Bottom,
                             horizontalAlignment = Alignment.Start
                         ) {
-                            if (showSearchHistory && historyApps.isNotEmpty()) {
-                                SideSearchHistoryBlock(
-                                    history = historyApps,
-                                    accentColor = accentColor,
-                                    primaryTextColor = primaryTextColor,
-                                    showShadows = showShadows,
-                                    viewModel = viewModel,
-                                    isEditMode = isHistoryEditMode,
-                                    onHistoryIconLongPress = { offset ->
-                                        selectedHistoryMenuOffset = offset
-                                    },
-                                    onExitEditMode = {
-                                        isHistoryEditMode = false
-                                    },
-                                    onAppClick = onAppClick,
-                                    onAppLongClick = onAppLongClick,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxWidth()
-                                        .padding(bottom = 6.dp)
-                                )
+                            when (sideAlphabetSlotMode) {
+                                SideAlphabetSlotMode.HISTORY -> {
+                                    if (historyApps.isNotEmpty()) {
+                                        SideSearchHistoryBlock(
+                                            history = historyApps,
+                                            accentColor = accentColor,
+                                            primaryTextColor = primaryTextColor,
+                                            showShadows = showShadows,
+                                            viewModel = viewModel,
+                                            isEditMode = isHistoryEditMode,
+                                            onHistoryIconLongPress = { offset ->
+                                                selectedHistoryMenuOffset = offset
+                                            },
+                                            onExitEditMode = {
+                                                isHistoryEditMode = false
+                                            },
+                                            onAppClick = onAppClick,
+                                            onAppLongClick = onAppLongClick,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxWidth()
+                                                .padding(bottom = 6.dp)
+                                        )
+                                    } else {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
+                                SideAlphabetSlotMode.WIDGET -> {
+                                    SideAlphabetWidgetSlot(
+                                        viewModel = viewModel,
+                                        appWidgetHost = appWidgetHost,
+                                        appWidgetManager = appWidgetManager,
+                                        onPickWidget = onPickSideAlphabetWidget,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxWidth()
+                                            .padding(bottom = 6.dp)
+                                    )
+                                }
+                                SideAlphabetSlotMode.DISABLED -> {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
                             }
 
                             SideAlphabetGrid(
@@ -269,27 +293,48 @@ fun SideAlphabetSearchLayout(
                             verticalArrangement = Arrangement.Bottom,
                             horizontalAlignment = Alignment.End
                         ) {
-                            if (showSearchHistory && historyApps.isNotEmpty()) {
-                                SideSearchHistoryBlock(
-                                    history = historyApps,
-                                    accentColor = accentColor,
-                                    primaryTextColor = primaryTextColor,
-                                    showShadows = showShadows,
-                                    viewModel = viewModel,
-                                    isEditMode = isHistoryEditMode,
-                                    onHistoryIconLongPress = { offset ->
-                                        selectedHistoryMenuOffset = offset
-                                    },
-                                    onExitEditMode = {
-                                        isHistoryEditMode = false
-                                    },
-                                    onAppClick = onAppClick,
-                                    onAppLongClick = onAppLongClick,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxWidth()
-                                        .padding(bottom = 6.dp)
-                                )
+                            when (sideAlphabetSlotMode) {
+                                SideAlphabetSlotMode.HISTORY -> {
+                                    if (historyApps.isNotEmpty()) {
+                                        SideSearchHistoryBlock(
+                                            history = historyApps,
+                                            accentColor = accentColor,
+                                            primaryTextColor = primaryTextColor,
+                                            showShadows = showShadows,
+                                            viewModel = viewModel,
+                                            isEditMode = isHistoryEditMode,
+                                            onHistoryIconLongPress = { offset ->
+                                                selectedHistoryMenuOffset = offset
+                                            },
+                                            onExitEditMode = {
+                                                isHistoryEditMode = false
+                                            },
+                                            onAppClick = onAppClick,
+                                            onAppLongClick = onAppLongClick,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxWidth()
+                                                .padding(bottom = 6.dp)
+                                        )
+                                    } else {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
+                                SideAlphabetSlotMode.WIDGET -> {
+                                    SideAlphabetWidgetSlot(
+                                        viewModel = viewModel,
+                                        appWidgetHost = appWidgetHost,
+                                        appWidgetManager = appWidgetManager,
+                                        onPickWidget = onPickSideAlphabetWidget,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxWidth()
+                                            .padding(bottom = 6.dp)
+                                    )
+                                }
+                                SideAlphabetSlotMode.DISABLED -> {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
                             }
 
                             SideAlphabetGrid(

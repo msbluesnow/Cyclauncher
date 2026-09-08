@@ -199,8 +199,10 @@ fun MainMenuScreen(
     val markItemAction = { lastItemActionTime = System.currentTimeMillis() }
 
     val handleAppClick: (String) -> Unit = { key ->
-        markItemAction()
-        onAppClick(key)
+        if (!isActionMenuOpen) {
+            markItemAction()
+            onAppClick(key)
+        }
     }
 
     val handleAppLongClick: (AppInfo, Offset) -> Unit = { app, offset ->
@@ -218,26 +220,30 @@ fun MainMenuScreen(
     }
 
     val handleTagFolderClick: (Tag, List<AppInfo>, Offset) -> Unit = { tag, taggedApps, offset ->
-        markItemAction()
-        selectedTagForMenu = null
-        selectedTagSectionMenuOffset = null
-        selectedTagSortPopupOffset = null
-        selectedHistoryMenuOffset = null
-        isTagPopupEditMode = false
-        selectedTagForPopup = Triple(tag, taggedApps, offset)
+        if (!isActionMenuOpen) {
+            markItemAction()
+            selectedTagForMenu = null
+            selectedTagSectionMenuOffset = null
+            selectedTagSortPopupOffset = null
+            selectedHistoryMenuOffset = null
+            isTagPopupEditMode = false
+            selectedTagForPopup = Triple(tag, taggedApps, offset)
+        }
     }
 
     val handleTagFolderLongClick: (Tag, List<AppInfo>, Offset) -> Unit = { tag, taggedApps, offset ->
-        markItemAction()
-        selectedTagForPopup = null
-        selectedTagSectionMenuOffset = null
-        selectedTagSortPopupOffset = null
-        selectedHistoryMenuOffset = null
-        isTagPopupEditMode = false
-        isReorderMode = false
-        isHistoryEditMode = false
-        isTagFolderReorderMode = false
-        selectedTagForMenu = Triple(tag, taggedApps, offset)
+        if (!isActionMenuOpen) {
+            markItemAction()
+            selectedTagForPopup = null
+            selectedTagSectionMenuOffset = null
+            selectedTagSortPopupOffset = null
+            selectedHistoryMenuOffset = null
+            isTagPopupEditMode = false
+            isReorderMode = false
+            isHistoryEditMode = false
+            isTagFolderReorderMode = false
+            selectedTagForMenu = Triple(tag, taggedApps, offset)
+        }
     }
 
     val isAnyEditMode =
@@ -394,7 +400,8 @@ fun MainMenuScreen(
                     onSwipeUp = onSwipeUp,
                     onSwipeDown = onSwipeDown,
                     onSettingsClick = safeOnSettingsClick,
-                    isActive = isActive
+                    isActive = isActive,
+                    isActionMenuOpen = isActionMenuOpen || isAnyEditMode
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 HistorySection(
@@ -522,7 +529,8 @@ fun MainMenuScreen(
                     onSwipeUp = onSwipeUp,
                     onSwipeDown = onSwipeDown,
                     onSettingsClick = safeOnSettingsClick,
-                    isActive = isActive
+                    isActive = isActive,
+                    isActionMenuOpen = isActionMenuOpen || isAnyEditMode
                 )
             }
         }
@@ -1464,7 +1472,8 @@ private fun FavoritesSection(
     onSwipeUp: () -> Unit,
     onSwipeDown: () -> Unit,
     onSettingsClick: () -> Unit,
-    isActive: Boolean
+    isActive: Boolean,
+    isActionMenuOpen: Boolean = false
 ) {
     val shadow = primaryTextColor.getShadow(showShadows, LocalShadowSettings.current.shadowColorOverride)
 
@@ -1499,8 +1508,8 @@ private fun FavoritesSection(
     Box(
         modifier = modifier
             .fillMaxHeight()
-            .pointerInput(isReorderMode, isActive) {
-                if (isReorderMode || !isActive) return@pointerInput
+            .pointerInput(isReorderMode, isActive, isActionMenuOpen) {
+                if (isReorderMode || !isActive || isActionMenuOpen) return@pointerInput
                 awaitEachGesture {
                     val down = awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
                     var isDrag = false

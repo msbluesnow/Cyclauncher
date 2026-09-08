@@ -618,3 +618,212 @@ fun SideSearchWidgetSlot(
         )
     }
 }
+
+/**
+ * Embedded widget slot displayed above the alphabet grid in the side search layout.
+ */
+@Composable
+fun SideAlphabetWidgetSlot(
+    viewModel: LauncherViewModel,
+    appWidgetHost: AppWidgetHost?,
+    appWidgetManager: AppWidgetManager?,
+    onPickWidget: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val haptic = LocalHapticFeedback.current
+
+    val widgetId by viewModel.sideAlphabetWidgetId.collectAsState()
+    val accentColor by viewModel.accentColor.collectAsState()
+    val primaryTextColor by viewModel.primaryTextColor.collectAsState()
+    val popupTheme by viewModel.popupTheme.collectAsState()
+
+    var showOptions by remember { mutableStateOf(false) }
+
+    val manager = appWidgetManager ?: remember { AppWidgetManager.getInstance(context.applicationContext) }
+
+    val widgetInfo = remember(widgetId) {
+        widgetId?.let {
+            try {
+                manager.getAppWidgetInfo(it)
+            } catch (_: Exception) {
+                null
+            }
+        }
+    }
+
+    var cachedHostView by remember(widgetId) { mutableStateOf<LauncherAppWidgetHostView?>(null) }
+
+    val currentWidgetId = widgetId
+
+    BoxWithConstraints(modifier = modifier) {
+        val totalWidth = maxWidth
+        val totalHeight = maxHeight
+        val slotWidthPx = with(density) { totalWidth.toPx() }
+        val slotHeightPx = with(density) { totalHeight.toPx() }
+
+        if (currentWidgetId == null || widgetInfo == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(primaryTextColor.color.copy(alpha = 0.05f))
+                    .border(1.dp, primaryTextColor.color.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                    .clickable(onClick = onPickWidget),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Add,
+                        contentDescription = "Add Widget",
+                        tint = accentColor.color.copy(alpha = 0.8f),
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Add Widget",
+                        color = primaryTextColor.color.copy(alpha = 0.6f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(12.dp))
+            ) {
+                AndroidView(
+                    factory = { ctx ->
+                        cachedHostView ?: run {
+                            val host = appWidgetHost
+                            val view = (host?.createView(ctx, currentWidgetId, widgetInfo) as? LauncherAppWidgetHostView)
+                                ?: LauncherAppWidgetHostView(ctx).apply {
+                                    setAppWidget(currentWidgetId, widgetInfo)
+                                }
+                            (view.parent as? ViewGroup)?.removeView(view)
+                            cachedHostView = view
+                            view
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                    update = { view ->
+                        val displayDensity = context.resources.displayMetrics.density
+                        val targetWidthDp = (slotWidthPx / displayDensity).toInt().coerceAtLeast(30)
+                        val targetHeightDp = (slotHeightPx / displayDensity).toInt().coerceAtLeast(30)
+                        view.applyWidgetSize(targetWidthDp, targetHeightDp)
+                    }
+                )
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.38f))
+                        .clickable { showOptions = true },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.MoreVert,
+                        contentDescription = "Widget Options",
+                        tint = Color.White.copy(alpha = 0.85f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+        }
+    }
+
+    if (showOptions) {
+        val widgetLabel = remember(widgetId) {
+            widgetId?.let { id ->
+                try {
+                    manager.getAppWidgetInfo(id)?.loadLabel(context.packageManager)
+                } catch (_: Exception) {
+                    null
+                }
+            } ?: "Widget"
+        }
+
+        AlertDialog(
+            onDismissRequest = { showOptions = false },
+            containerColor = popupTheme.backgroundColor,
+            title = {
+                Text(
+                    text = widgetLabel,
+                    color = accentColor.color,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TextButton(
+                        onClick = {
+                            showOptions = false
+                            onPickWidget()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.textButtonColors(contentColor = popupTheme.contentColor)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Start
+                        ) {
+                            Icon(Icons.Outlined.Edit, contentDescription = null, tint = accentColor.color)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Change Widget", fontSize = 15.sp)
+                        }
+                    }
+
+                    TextButton(
+                        onClick = {
+                            showOptions = false
+                            widgetId?.let { id ->
+                                try {
+                                    appWidgetHost?.deleteAppWidgetId(id)
+                                } catch (_: Exception) {}
+                            }
+                            cachedHostView = null
+                            viewModel.removeSideAlphabetWidget()
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFFF5252))
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Start
+                        ) {
+                            Icon(Icons.Outlined.Delete, contentDescription = null, tint = Color(0xFFFF5252))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Remove Widget", fontSize = 15.sp)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { showOptions = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = popupTheme.contentColor)
+                ) {
+                    Text("Close")
+                }
+            }
+        )
+    }
+}
