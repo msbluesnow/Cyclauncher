@@ -566,7 +566,11 @@ fun MainMenuScreen(
                 isFavorite = viewModel.isFavorite("tag:${currentTag.id}"),
                 offset = offset,
                 onDismiss = { selectedTagForMenu = null },
-                onEditGroup = {
+                onEditTag = {
+                    selectedTagForMenu = null
+                    onEditTag(currentTag)
+                },
+                onReorder = {
                     selectedTagForMenu = null
                     isTagPopupEditMode = true
                     selectedTagForPopup = Triple(currentTag, taggedApps, offset)
@@ -574,6 +578,14 @@ fun MainMenuScreen(
                 onToggleFavorite = {
                     selectedTagForMenu = null
                     viewModel.toggleFavorite("tag:${currentTag.id}")
+                },
+                onDeleteTag = {
+                    selectedTagForMenu = null
+                    if (selectedTagForPopup?.first?.id == currentTag.id) {
+                        selectedTagForPopup = null
+                        isTagPopupEditMode = false
+                    }
+                    viewModel.deleteTag(currentTag.id)
                 },
                 accentColor = accentColor,
                 primaryTextColor = primaryTextColor,

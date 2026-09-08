@@ -1,5 +1,7 @@
 package dev.msbs.cyclauncher.ui.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationEndReason
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -14,8 +16,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -26,6 +31,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
@@ -377,32 +383,6 @@ fun TagFolderPopup(
                                     color = accentColor.color,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
-                                )
-                            }
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .clickable { onEditTag(tag) }
-                                    .padding(4.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (showShadows) {
-                                    val shadowSettings = LocalShadowSettings.current
-                                    Icon(
-                                        imageVector = Icons.Outlined.Edit,
-                                        contentDescription = null,
-                                        tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.25f),
-                                        modifier = Modifier
-                                            .size(17.dp)
-                                            .offset(1.dp, 1.dp)
-                                    )
-                                }
-                                Icon(
-                                    imageVector = Icons.Outlined.Edit,
-                                    contentDescription = "Edit Tag",
-                                    tint = popupTheme.secondaryContentColor,
-                                    modifier = Modifier.size(17.dp)
                                 )
                             }
                         }
@@ -766,7 +746,7 @@ fun TagFolderIcon(
 }
 
 /**
- * Context action menu for tag folders (edit group, toggle favorite).
+ * Context action menu for tag folders (edit tag, reorder apps, toggle favorite, delete tag).
  */
 @Composable
 fun TagFolderActionMenu(
@@ -774,8 +754,10 @@ fun TagFolderActionMenu(
     isFavorite: Boolean,
     offset: Offset,
     onDismiss: () -> Unit,
-    onEditGroup: () -> Unit,
+    onEditTag: () -> Unit,
+    onReorder: () -> Unit,
     onToggleFavorite: () -> Unit,
+    onDeleteTag: () -> Unit,
     accentColor: AccentColor = AccentColor.SKY,
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     popupTheme: PopupTheme = PopupTheme.DARK
@@ -789,7 +771,7 @@ fun TagFolderActionMenu(
     val menuWidth = 240.dp
     val menuWidthPx = with(density) { menuWidth.toPx() }
 
-    val itemsCount = 2
+    val itemsCount = 4
     val menuHeightPx = with(density) { (60 + itemsCount * 48).dp.toPx() }
     val borderPadding = with(density) { 16.dp.toPx() }
 
@@ -819,18 +801,37 @@ fun TagFolderActionMenu(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(tag.color)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    val vectorIcon = TagIconRegistry.getVectorIcon(tag.emoji)
+                    if (vectorIcon != null) {
+                        Icon(
+                            imageVector = vectorIcon,
+                            contentDescription = null,
+                            tint = tag.color,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    } else if (!tag.emoji.isNullOrBlank()) {
+                        Text(
+                            text = tag.emoji,
+                            fontSize = 14.sp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(tag.color)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
                     Text(
                         text = tag.name,
                         style = MaterialTheme.typography.titleSmall,
                         color = popupTheme.contentColor,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
@@ -839,12 +840,13 @@ fun TagFolderActionMenu(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                 )
 
+                // 1. Edit Tag with pencil icon
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
                             onDismiss()
-                            onEditGroup()
+                            onEditTag()
                         }
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -857,12 +859,38 @@ fun TagFolderActionMenu(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Edit Group",
+                        text = "Edit Tag",
                         color = popupTheme.contentColor,
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
 
+                // 2. Reorder (replaces Edit Group, opens folder popup reorder mode)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onDismiss()
+                            onReorder()
+                        }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.OpenWith,
+                        contentDescription = null,
+                        tint = accentColor.color,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Reorder",
+                        color = popupTheme.contentColor,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+
+                // 3. Add to Favorites / Remove from Favorites
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -885,6 +913,87 @@ fun TagFolderActionMenu(
                         color = popupTheme.contentColor,
                         style = MaterialTheme.typography.bodyLarge
                     )
+                }
+
+                // 4. Delete Tag with trash can icon and hold-to-delete line (1.2s)
+                val haptic = LocalHapticFeedback.current
+                var isDeletePressed by remember { mutableStateOf(false) }
+                val deleteProgress = remember { Animatable(0f) }
+                val deleteColor = Color(0xFFEF4444)
+                val holdDurationMs = 1200L
+
+                LaunchedEffect(isDeletePressed) {
+                    if (isDeletePressed) {
+                        val result = deleteProgress.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(
+                                durationMillis = holdDurationMs.toInt(),
+                                easing = LinearEasing
+                            )
+                        )
+                        if (result.endReason == AnimationEndReason.Finished && deleteProgress.value >= 0.99f) {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onDismiss()
+                            onDeleteTag()
+                        }
+                    } else {
+                        deleteProgress.snapTo(0f)
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(if (deleteProgress.value > 0f) deleteColor.copy(alpha = 0.12f) else Color.Transparent)
+                        .pointerInput(Unit) {
+                            awaitEachGesture {
+                                awaitFirstDown(requireUnconsumed = false)
+                                isDeletePressed = true
+                                waitForUpOrCancellation()
+                                isDeletePressed = false
+                            }
+                        }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = "Hold to delete tag",
+                        tint = if (deleteProgress.value > 0f) deleteColor else deleteColor.copy(alpha = 0.85f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Delete Tag",
+                        color = if (deleteProgress.value > 0f) deleteColor else deleteColor.copy(alpha = 0.85f),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+
+                    // Animated progress line connecting the text to the end of the popup
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 10.dp)
+                            .height(2.5.dp),
+                        contentAlignment = Alignment.CenterEnd
+                    ) {
+                        if (deleteProgress.value > 0f) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight()
+                                    .clip(CircleShape)
+                                    .background(deleteColor.copy(alpha = 0.18f))
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(deleteProgress.value)
+                                    .fillMaxHeight()
+                                    .clip(CircleShape)
+                                    .background(deleteColor)
+                            )
+                        }
+                    }
                 }
             }
         }
