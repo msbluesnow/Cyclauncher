@@ -294,13 +294,34 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            "Search Widgets:",
-                            color = primaryTextColor.color,
-                            style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                if (showShadows) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Search,
+                                        contentDescription = null,
+                                        tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
+                                        modifier = Modifier.size(16.dp).offset(1.dp, 1.dp)
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.Outlined.Search,
+                                    contentDescription = null,
+                                    tint = primaryTextColor.color,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Text(
+                                "Widgets",
+                                color = primaryTextColor.color,
+                                style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                         val widgetIcon =
                             if (showSearchWidgets) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff
                         IconButton(
@@ -332,7 +353,7 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            "Side Slot:",
+                            "Side Slot",
                             color = primaryTextColor.color,
                             style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                             maxLines = 1,
@@ -450,7 +471,7 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            "Hide Status Bar:",
+                            "Status Bar",
                             color = primaryTextColor.color,
                             style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                             maxLines = 1,
@@ -487,7 +508,7 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            "Animations:",
+                            "Animations",
                             color = primaryTextColor.color,
                             style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                             maxLines = 1,
@@ -498,7 +519,11 @@ fun SettingsScreen(
                             onCheckedChange = { viewModel.setAnimationsEnabled(it) },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = accentColor.color,
-                                checkedTrackColor = accentColor.color.copy(alpha = 0.5f)
+                                checkedTrackColor = accentColor.color.copy(alpha = 0.45f),
+                                checkedBorderColor = accentColor.color.copy(alpha = 0.80f),
+                                uncheckedThumbColor = accentColor.color.copy(alpha = 0.65f),
+                                uncheckedTrackColor = accentColor.color.copy(alpha = 0.12f),
+                                uncheckedBorderColor = accentColor.color.copy(alpha = 0.35f)
                             )
                         )
                     }
@@ -546,7 +571,7 @@ fun SettingsScreen(
                                 )
                             }
                             Text(
-                                "Mapping:",
+                                "Mapping",
                                 color = primaryTextColor.color,
                                 style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                                 maxLines = 1,
@@ -610,7 +635,7 @@ fun SettingsScreen(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            "Icon Pack:",
+                            "Icon Pack",
                             color = primaryTextColor.color,
                             style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                             maxLines = 1,
@@ -689,7 +714,7 @@ fun SettingsScreen(
                                 )
                             }
                             Text(
-                                "Accent:",
+                                "Accent",
                                 color = primaryTextColor.color,
                                 style = TextStyle(shadow = shadow, fontSize = 15.sp)
                             )
@@ -724,11 +749,6 @@ fun SettingsScreen(
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
-                            Text(
-                                ":",
-                                color = primaryTextColor.color,
-                                style = TextStyle(shadow = shadow, fontSize = 15.sp)
-                            )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(
@@ -743,7 +763,11 @@ fun SettingsScreen(
                                 onCheckedChange = { viewModel.setShowShadows(it) },
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = accentColor.color,
-                                    checkedTrackColor = accentColor.color.copy(alpha = 0.5f)
+                                    checkedTrackColor = accentColor.color.copy(alpha = 0.45f),
+                                    checkedBorderColor = accentColor.color.copy(alpha = 0.80f),
+                                    uncheckedThumbColor = accentColor.color.copy(alpha = 0.65f),
+                                    uncheckedTrackColor = accentColor.color.copy(alpha = 0.12f),
+                                    uncheckedBorderColor = accentColor.color.copy(alpha = 0.35f)
                                 )
                             )
                             Box(modifier = Modifier.weight(1f)) {
@@ -765,7 +789,7 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "Main Color:",
+                            "Main Color",
                             color = primaryTextColor.color,
                             style = TextStyle(shadow = shadow, fontSize = 13.sp),
                             maxLines = 1,
@@ -777,7 +801,7 @@ fun SettingsScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "Button Text:",
+                            "Button Text",
                             color = primaryTextColor.color,
                             style = TextStyle(shadow = shadow, fontSize = 13.sp),
                             maxLines = 1,
@@ -789,7 +813,7 @@ fun SettingsScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "Popup Theme:",
+                            "Popup Theme",
                             color = primaryTextColor.color,
                             style = TextStyle(shadow = shadow, fontSize = 13.sp),
                             maxLines = 1,
