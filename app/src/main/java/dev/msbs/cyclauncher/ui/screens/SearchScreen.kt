@@ -73,6 +73,7 @@ fun SearchScreen(
     val context = LocalContext.current
     val isTextSearchMode by viewModel.isTextSearchMode.collectAsState()
     val selectedLetter by viewModel.selectedLetter.collectAsState()
+    val selectedColor by viewModel.selectedColor.collectAsState()
     val searchMethod by viewModel.searchMethod.collectAsState()
     val handSide by viewModel.handSide.collectAsState()
     val searchWidgetsConfig by viewModel.searchWidgetsConfig.collectAsState()
@@ -81,13 +82,13 @@ fun SearchScreen(
         if (isTextSearchMode) {
             viewModel.toggleTextSearchMode()
         } else {
-            viewModel.setSelectedLetter(null)
+            viewModel.resetSearchFilters()
             onBackToMain()
         }
     }
 
     LaunchedEffect(Unit) {
-        viewModel.setSelectedLetter(null)
+        viewModel.resetSearchFilters()
     }
 
     val host = appWidgetHost
@@ -243,7 +244,7 @@ fun SearchScreen(
 
     val onSearchAppClick: (String) -> Unit = { appKey ->
         viewModel.logSearchLaunch(appKey)
-        viewModel.setSelectedLetter(null)
+        viewModel.resetSearchFilters()
         onAppClick(appKey)
     }
 

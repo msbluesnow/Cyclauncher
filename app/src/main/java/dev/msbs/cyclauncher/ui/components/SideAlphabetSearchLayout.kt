@@ -81,6 +81,7 @@ fun SideAlphabetSearchLayout(
 ) {
     val filteredApps by viewModel.filteredApps.collectAsState()
     val selectedLetter by viewModel.selectedLetter.collectAsState()
+    val selectedColor by viewModel.selectedColor.collectAsState()
     val historyApps by viewModel.searchHistoryApps.collectAsState()
     val showSearchHistory by viewModel.showSearchHistory.collectAsState()
     val sideAlphabetSlotMode by viewModel.sideAlphabetSlotMode.collectAsState()
@@ -122,8 +123,8 @@ fun SideAlphabetSearchLayout(
         }
     }
 
-    LaunchedEffect(selectedLetter) {
-        if (selectedLetter != null) {
+    LaunchedEffect(selectedLetter, selectedColor) {
+        if (selectedLetter != null || selectedColor != null) {
             isHistoryEditMode = false
             selectedHistoryMenuOffset = null
         }
@@ -183,18 +184,12 @@ fun SideAlphabetSearchLayout(
                                             showShadows = showShadows,
                                             viewModel = viewModel,
                                             isEditMode = isHistoryEditMode,
-                                            onHistoryIconLongPress = { offset ->
-                                                selectedHistoryMenuOffset = offset
-                                            },
-                                            onExitEditMode = {
-                                                isHistoryEditMode = false
-                                            },
                                             onAppClick = onAppClick,
                                             onAppLongClick = onAppLongClick,
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .fillMaxWidth()
-                                                .padding(bottom = 6.dp)
+                                                .padding(bottom = 2.dp)
                                         )
                                     } else {
                                         Spacer(modifier = Modifier.weight(1f))
@@ -217,6 +212,29 @@ fun SideAlphabetSearchLayout(
                                 }
                             }
 
+                            SideAlphabetColorHeader(
+                                selectedColor = selectedColor,
+                                onColorSelected = { color ->
+                                    viewModel.setSelectedColor(color)
+                                },
+                                showHistoryIcon = sideAlphabetSlotMode == SideAlphabetSlotMode.HISTORY && (historyApps.isNotEmpty() || isHistoryEditMode),
+                                isHistoryEditMode = isHistoryEditMode,
+                                isHistoryPaused = isHistoryPaused,
+                                accentColor = accentColor,
+                                primaryTextColor = primaryTextColor,
+                                showShadows = showShadows,
+                                shadowSettings = shadowSettings,
+                                onHistoryIconLongPress = { offset ->
+                                    selectedHistoryMenuOffset = offset
+                                },
+                                onExitEditMode = {
+                                    isHistoryEditMode = false
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 4.dp, end = 4.dp, bottom = 6.dp)
+                            )
+
                             SideAlphabetGrid(
                                 alphabet = alphabet,
                                 selectedLetter = selectedLetter,
@@ -233,7 +251,7 @@ fun SideAlphabetSearchLayout(
                                 .weight(1f)
                                 .fillMaxHeight()
                         ) {
-                            if (selectedLetter == null) {
+                            if (selectedLetter == null && selectedColor == null) {
                                 if (showSearchWidgets) {
                                     SideSearchWidgetSlot(
                                         viewModel = viewModel,
@@ -262,7 +280,7 @@ fun SideAlphabetSearchLayout(
                                 .weight(1f)
                                 .fillMaxHeight()
                         ) {
-                            if (selectedLetter == null) {
+                            if (selectedLetter == null && selectedColor == null) {
                                 if (showSearchWidgets) {
                                     SideSearchWidgetSlot(
                                         viewModel = viewModel,
@@ -303,18 +321,12 @@ fun SideAlphabetSearchLayout(
                                             showShadows = showShadows,
                                             viewModel = viewModel,
                                             isEditMode = isHistoryEditMode,
-                                            onHistoryIconLongPress = { offset ->
-                                                selectedHistoryMenuOffset = offset
-                                            },
-                                            onExitEditMode = {
-                                                isHistoryEditMode = false
-                                            },
                                             onAppClick = onAppClick,
                                             onAppLongClick = onAppLongClick,
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .fillMaxWidth()
-                                                .padding(bottom = 6.dp)
+                                                .padding(bottom = 2.dp)
                                         )
                                     } else {
                                         Spacer(modifier = Modifier.weight(1f))
@@ -336,6 +348,29 @@ fun SideAlphabetSearchLayout(
                                     Spacer(modifier = Modifier.weight(1f))
                                 }
                             }
+
+                            SideAlphabetColorHeader(
+                                selectedColor = selectedColor,
+                                onColorSelected = { color ->
+                                    viewModel.setSelectedColor(color)
+                                },
+                                showHistoryIcon = sideAlphabetSlotMode == SideAlphabetSlotMode.HISTORY && (historyApps.isNotEmpty() || isHistoryEditMode),
+                                isHistoryEditMode = isHistoryEditMode,
+                                isHistoryPaused = isHistoryPaused,
+                                accentColor = accentColor,
+                                primaryTextColor = primaryTextColor,
+                                showShadows = showShadows,
+                                shadowSettings = shadowSettings,
+                                onHistoryIconLongPress = { offset ->
+                                    selectedHistoryMenuOffset = offset
+                                },
+                                onExitEditMode = {
+                                    isHistoryEditMode = false
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 4.dp, end = 4.dp, bottom = 6.dp)
+                            )
 
                             SideAlphabetGrid(
                                 alphabet = alphabet,
@@ -367,10 +402,14 @@ fun SideAlphabetSearchLayout(
                 }
             }
 
+            val totalHeightPx = with(density) { totalHeight.toPx() }
+            val minYRatio = 0.05f
+            val effectiveYRatio = localYRatio.coerceIn(minYRatio, 0.85f)
+
             Box(
                 modifier = Modifier
                     .align(if (handSide == HandSide.LEFT) Alignment.BottomStart else Alignment.BottomEnd)
-                    .padding(bottom = totalHeight * localYRatio)
+                    .padding(bottom = totalHeight * effectiveYRatio)
             ) {
                 SwapSemiCircleButton(
                     handSide = handSide,
@@ -382,14 +421,13 @@ fun SideAlphabetSearchLayout(
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     },
                     onVerticalDrag = { deltaPx ->
-                        val totalHeightPx = with(density) { totalHeight.toPx() }
                         if (totalHeightPx > 0f) {
                             val deltaRatio = -deltaPx / totalHeightPx
-                            localYRatio = (localYRatio + deltaRatio).coerceIn(0.05f, 0.85f)
+                            localYRatio = (localYRatio + deltaRatio).coerceIn(minYRatio, 0.85f)
                         }
                     },
                     onDragEnd = {
-                        viewModel.setSideAlphabetButtonYRatio(localYRatio)
+                        viewModel.setSideAlphabetButtonYRatio(localYRatio.coerceIn(minYRatio, 0.85f))
                     }
                 )
             }
@@ -686,107 +724,28 @@ private fun SideSearchHistoryBlock(
     showShadows: Boolean,
     viewModel: LauncherViewModel,
     isEditMode: Boolean,
-    onHistoryIconLongPress: (Offset) -> Unit,
-    onExitEditMode: () -> Unit,
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isHistoryPaused by viewModel.isHistoryPaused.collectAsState()
     val shadowSettings = LocalShadowSettings.current
-    val haptic = LocalHapticFeedback.current
 
-    var historyIconPosition by remember { mutableStateOf(Offset.Zero) }
-
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
+    Box(
+        modifier = modifier.fillMaxWidth()
     ) {
-        // 3-column snake history list occupying the full width
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-        ) {
-            SnakeHistoryLazyColumn(
-                history = history,
-                isEditMode = isEditMode,
-                showShadows = showShadows,
-                accentColor = accentColor,
-                primaryTextColor = primaryTextColor,
-                shadowSettings = shadowSettings,
-                onAppClick = onAppClick,
-                onAppLongClick = onAppLongClick,
-                onRemoveFromHistory = { componentKey ->
-                    viewModel.removeFromSearchHistory(componentKey)
-                }
-            )
-        }
-
-        // History icon under the history list, between history and letters
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 2.dp, bottom = 4.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .onGloballyPositioned { historyIconPosition = it.positionInRoot() }
-                    .pointerInput(isEditMode) {
-                        detectTapGestures(
-                            onLongPress = { offset ->
-                                if (!isEditMode) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    onHistoryIconLongPress(historyIconPosition + offset)
-                                }
-                            },
-                            onTap = {
-                                if (isEditMode) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    onExitEditMode()
-                                }
-                            }
-                        )
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                val iconSize = 28.dp
-                val historyIcon = when {
-                    isEditMode -> Icons.Outlined.Check
-                    isHistoryPaused -> Icons.Outlined.HistoryToggleOff
-                    else -> Icons.Outlined.History
-                }
-                val iconTint = when {
-                    isEditMode -> accentColor.color
-                    isHistoryPaused -> accentColor.color.copy(alpha = 0.5f)
-                    else -> accentColor.color
-                }
-                val contentDesc = when {
-                    isEditMode -> "Done Editing"
-                    isHistoryPaused -> "History (Paused)"
-                    else -> "History"
-                }
-
-                if (showShadows) {
-                    Icon(
-                        imageVector = historyIcon,
-                        contentDescription = null,
-                        tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
-                        modifier = Modifier
-                            .size(iconSize)
-                            .offset(1.dp, 1.dp)
-                    )
-                }
-                Icon(
-                    imageVector = historyIcon,
-                    contentDescription = contentDesc,
-                    tint = iconTint,
-                    modifier = Modifier.size(iconSize)
-                )
+        SnakeHistoryLazyColumn(
+            history = history,
+            isEditMode = isEditMode,
+            showShadows = showShadows,
+            accentColor = accentColor,
+            primaryTextColor = primaryTextColor,
+            shadowSettings = shadowSettings,
+            onAppClick = onAppClick,
+            onAppLongClick = onAppLongClick,
+            onRemoveFromHistory = { componentKey ->
+                viewModel.removeFromSearchHistory(componentKey)
             }
-        }
+        )
     }
 }
 

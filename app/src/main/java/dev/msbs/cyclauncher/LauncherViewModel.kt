@@ -1,6 +1,8 @@
 package dev.msbs.cyclauncher
 
 import dev.msbs.cyclauncher.data.AppActionsManager
+import dev.msbs.cyclauncher.data.AppColorManager
+import dev.msbs.cyclauncher.model.AppColorBucket
 import dev.msbs.cyclauncher.utils.getSafeStorageContext
 import dev.msbs.cyclauncher.data.AutoTagsPreview
 import dev.msbs.cyclauncher.data.TagsBackupPreview
@@ -69,11 +71,17 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private val safeContext = application.getSafeStorageContext()
     private val actionsManager = AppActionsManager(safeContext)
+    private val appColorManager = AppColorManager(safeContext)
+
+    val appColors: StateFlow<Map<String, AppColorBucket>> = appColorManager.appColors
 
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
     
     private val _selectedLetter = MutableStateFlow<Char?>(null)
     val selectedLetter: StateFlow<Char?> = _selectedLetter
+
+    private val _selectedColor = MutableStateFlow<AppColorBucket?>(null)
+    val selectedColor: StateFlow<AppColorBucket?> = _selectedColor
 
     private val _searchListAlignment = MutableStateFlow(TextAlign.Start)
     val searchListAlignment: StateFlow<TextAlign> = _searchListAlignment
@@ -188,11 +196,20 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         all.groupBy { it.searchChar }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyMap())
 
-    val filteredApps: StateFlow<List<AppInfo>> = combine(alphabetBuckets, _selectedLetter) { buckets, letter ->
-        if (letter != null) {
-            buckets[letter] ?: emptyList()
-        } else {
-            emptyList()
+    private val colorBuckets: StateFlow<Map<AppColorBucket, List<AppInfo>>> = combine(apps, appColors) { allApps, colorsMap ->
+        allApps.groupBy { colorsMap[it.componentKey] ?: AppColorBucket.MONOCHROME }
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyMap())
+
+    val filteredApps: StateFlow<List<AppInfo>> = combine(
+        alphabetBuckets,
+        colorBuckets,
+        _selectedLetter,
+        _selectedColor
+    ) { alphaBuckets, cBuckets, letter, color ->
+        when {
+            letter != null -> alphaBuckets[letter] ?: emptyList()
+            color != null -> cBuckets[color] ?: emptyList()
+            else -> emptyList()
         }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
@@ -629,7 +646,24 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         prefs.edit().putBoolean("is_tutorial_completed", true).apply()
     }
 
-    fun setSelectedLetter(letter: Char?) { _selectedLetter.value = letter }
+    fun setSelectedLetter(letter: Char?) {
+        _selectedLetter.value = letter
+        if (letter != null) {
+            _selectedColor.value = null
+        }
+    }
+
+    fun setSelectedColor(color: AppColorBucket?) {
+        _selectedColor.value = color
+        if (color != null) {
+            _selectedLetter.value = null
+        }
+    }
+
+    fun resetSearchFilters() {
+        _selectedLetter.value = null
+        _selectedColor.value = null
+    }
 
     fun setSideAlphabetButtonYRatio(ratio: Float) {
         val clamped = ratio.coerceIn(0.05f, 0.85f)
@@ -769,6 +803,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 imageLoader.memoryCache?.clear()
             } catch (_: Exception) {}
             _iconPackVersion.value = System.currentTimeMillis()
+            appColorManager.indexApps(viewModelScope, _apps.value, _iconPackVersion.value)
         }
     }
 
@@ -1336,6 +1371,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
             val keysToPrewarm = (actionsManager.favorites.value + actionsManager.history.value).distinct()
             prewarmIcons(keysToPrewarm)
+            appColorManager.indexApps(viewModelScope, appList, _iconPackVersion.value)
 
             // In the background without blocking app list presentation, track update timestamps
             launch(Dispatchers.IO) {

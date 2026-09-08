@@ -271,7 +271,7 @@ class MainActivity : ComponentActivity() {
 
                     LaunchedEffect(isSearchActive) {
                         if (!isSearchActive) {
-                            viewModel.setSelectedLetter(null)
+                            viewModel.resetSearchFilters()
                         }
                     }
 
@@ -708,7 +708,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openApp(componentKey: String) {
-        viewModel.setSelectedLetter(null)
+        viewModel.resetSearchFilters()
         val parts = componentKey.split("/")
         val decor = window.decorView
         val width = decor.width.coerceAtLeast(1)

@@ -70,6 +70,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.palette)
 
     implementation(libs.coil.compose)
     implementation(libs.freedroidwarn)
