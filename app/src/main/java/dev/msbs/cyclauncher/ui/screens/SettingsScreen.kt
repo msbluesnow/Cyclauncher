@@ -10,6 +10,7 @@ import dev.msbs.cyclauncher.icons.IconPackInfo
 import dev.msbs.cyclauncher.icons.IconPackManager
 import dev.msbs.cyclauncher.ui.components.KeepAndroidOpenBanner
 import dev.msbs.cyclauncher.ui.components.KeepAndroidOpenDialog
+import dev.msbs.cyclauncher.ui.components.ScreenTopBar
 
 import android.content.Intent
 import android.net.Uri
@@ -89,6 +90,7 @@ fun SettingsScreen(
     val showSearchWidgets by viewModel.showSearchWidgets.collectAsState()
     val showSearchHistory by viewModel.showSearchHistory.collectAsState()
     val animationsEnabled by viewModel.animationsEnabled.collectAsState()
+    val isWpDark by viewModel.isWallpaperDark.collectAsState()
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
 
@@ -145,53 +147,15 @@ fun SettingsScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        // Sticky Header matching HighlightScreen layout & handSide
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp)
-        ) {
-            val backIcon = when (handSide) {
-                HandSide.RIGHT -> Icons.AutoMirrored.Outlined.ArrowForward
-                HandSide.LEFT -> Icons.AutoMirrored.Outlined.ArrowBack
-            }
-            val buttonAlignment = if (handSide == HandSide.RIGHT) Alignment.CenterEnd else Alignment.CenterStart
-
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.align(buttonAlignment)
-            ) {
-                Box {
-                    if (showShadows) {
-                        val shadowOffset = 1.dp
-                        Icon(
-                            imageVector = backIcon,
-                            contentDescription = null,
-                            tint = primaryTextColor.getShadowColor(shadowColorOverride),
-                            modifier = Modifier
-                                .size(24.dp)
-                                .offset(x = shadowOffset, y = shadowOffset)
-                        )
-                    }
-                    Icon(
-                        imageVector = backIcon,
-                        contentDescription = "Back",
-                        tint = accentColor.color,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-
-            Text(
-                text = "SETTINGS",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    shadow = shadow
-                ),
-                color = accentColor.color,
-                modifier = Modifier.align(Alignment.Center)
-            )
-        }
+        ScreenTopBar(
+            title = "SETTINGS",
+            handSide = handSide,
+            accentColor = accentColor,
+            primaryTextColor = primaryTextColor,
+            showShadows = showShadows,
+            shadowColorOverride = shadowColorOverride,
+            onBack = onBack
+        )
 
         // Scrollable content
         Column(
@@ -606,7 +570,7 @@ fun SettingsScreen(
                             style = TextStyle(shadow = shadow, fontSize = 15.sp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        AccentColorDropdown(accentColor, primaryTextColor, popupTheme) { viewModel.setAccentColor(it) }
+                        AccentColorDropdown(accentColor, primaryTextColor, popupTheme, isWpDark) { viewModel.setAccentColor(it) }
                     }
 
                     Column(modifier = Modifier.weight(1f)) {
@@ -693,7 +657,6 @@ fun SettingsScreen(
                     ) {
                         Spacer(modifier = Modifier.height(24.dp))
                         val isLightAccent = accentColor.color.luminance() > 0.5f
-                        val isWpDark by viewModel.isWallpaperDark.collectAsState()
                         val recommendedMainColor =
                             if (isWpDark) PrimaryTextColor.WHITE else PrimaryTextColor.BLACK
                         val recommendedShadowColor =
@@ -1258,6 +1221,7 @@ private fun AccentColorDropdown(
     selectedColor: AccentColor,
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     popupTheme: PopupTheme = PopupTheme.DARK,
+    isWallpaperDark: Boolean = AccentColor.isWallpaperDark(LocalContext.current),
     onSelect: (AccentColor) -> Unit
 ) {
     var showDialog by remember { mutableStateOf(false) }
@@ -1313,6 +1277,7 @@ private fun AccentColorDropdown(
             AccentColorDialog(
                 selectedColor = selectedColor,
                 popupTheme = popupTheme,
+                isWallpaperDark = isWallpaperDark,
                 onDismiss = { showDialog = false },
                 onSelect = {
                     onSelect(it)
@@ -1331,12 +1296,13 @@ private fun AccentColorDropdown(
 private fun AccentColorDialog(
     selectedColor: AccentColor,
     popupTheme: PopupTheme,
+    isWallpaperDark: Boolean = AccentColor.isWallpaperDark(LocalContext.current),
     onDismiss: () -> Unit,
     onSelect: (AccentColor) -> Unit
 ) {
     val context = LocalContext.current
     var selectedTab by remember { mutableStateOf(if (selectedColor.isCustom) 1 else 0) }
-    val isWpDark = AccentColor.isWallpaperDark(context)
+    val isWpDark = isWallpaperDark
     val wallpaperColor = remember(context, isWpDark, selectedColor) { AccentColor.getWallpaperAccentColor(context) }
 
     val initialHsv = remember(selectedColor) {

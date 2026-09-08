@@ -102,8 +102,12 @@ data class AccentColor(
 
         /**
          * Applies the Color Hue Angle Shift algorithm:
-         * - On dark wallpapers: shifts toward warm luminous highlights (~55° Gold/Amber) with high brightness for contrast.
-         * - On light wallpapers: shifts toward cool deep shadows (~260° Indigo/Violet) with deep rich shade for contrast.
+         * - On dark wallpapers ("Luminous highlight for dark wallpaper"):
+         *   Shifts hue slightly toward warm luminous tones (~55° Gold/Amber) with high brightness (V >= 0.90)
+         *   and vibrant saturation (S ~ 0.45..0.85) to create a glowing highlight effect.
+         * - On light wallpapers ("Deep dark shade for light wallpaper"):
+         *   Shifts hue slightly toward cool deep shadows (~255° Indigo/Violet) with darkened value (V ~ 0.38..0.52)
+         *   and rich saturation (S ~ 0.65..0.95) to create a bold, high-contrast darkened accent.
          */
         fun applyAdaptiveHueShift(baseColor: Color, isDarkWallpaper: Boolean): Color {
             val hsv = FloatArray(3)
@@ -120,22 +124,22 @@ data class AccentColor(
                 // Highlight shift toward warm luminous tones (~55° Gold/Amber)
                 val warmAnchor = 55f
                 val diff = (warmAnchor - effectiveHue + 540f) % 360f - 180f
-                val shiftAmount = (diff * 0.28f).coerceIn(-35f, 35f)
+                val shiftAmount = (diff * 0.22f).coerceIn(-25f, 25f)
                 val shiftedHue = (effectiveHue + shiftAmount + 360f) % 360f
 
-                val brightSat = if (sat < 0.08f) 0.35f else sat.coerceIn(0.40f, 0.85f)
-                val brightVal = (value * 1.30f).coerceIn(0.85f, 1.0f)
+                val brightSat = if (sat < 0.08f) 0.35f else sat.coerceIn(0.45f, 0.85f)
+                val brightVal = (value * 1.25f).coerceIn(0.90f, 1.0f)
 
                 return Color(android.graphics.Color.HSVToColor(floatArrayOf(shiftedHue, brightSat, brightVal)))
             } else {
-                // Shadow shift toward cool deep tones (~260° Indigo/Violet)
-                val coolAnchor = 260f
+                // Shadow shift toward cool deep tones (~255° Indigo/Violet)
+                val coolAnchor = 255f
                 val diff = (coolAnchor - effectiveHue + 540f) % 360f - 180f
-                val shiftAmount = (diff * 0.28f).coerceIn(-35f, 35f)
+                val shiftAmount = (diff * 0.22f).coerceIn(-25f, 25f)
                 val shiftedHue = (effectiveHue + shiftAmount + 360f) % 360f
 
-                val richSat = if (sat < 0.08f) 0.40f else (sat * 1.25f).coerceIn(0.50f, 0.95f)
-                val deepVal = (value * 0.65f).coerceIn(0.35f, 0.68f)
+                val richSat = if (sat < 0.08f) 0.40f else (sat * 1.15f).coerceIn(0.65f, 0.95f)
+                val deepVal = (value * 0.70f).coerceIn(0.38f, 0.52f)
 
                 return Color(android.graphics.Color.HSVToColor(floatArrayOf(shiftedHue, richSat, deepVal)))
             }
@@ -145,15 +149,18 @@ data class AccentColor(
          * Extracts the dynamic accent color from current wallpaper / Material You theme
          * using adaptive Hue Angle Shift (bright tone on dark wallpapers, dark tone on light wallpapers).
          */
-        fun getWallpaperAccentColor(context: Context): Color {
-            val isWpDark = isWallpaperDark(context)
+        fun getWallpaperAccentColor(context: Context, cachedColors: WallpaperColors? = null): Color {
+            val isWpDark = isWallpaperDark(context, cachedColors)
             val rawColor = try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     val scheme = if (isWpDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
                     scheme.primary
                 } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                    val wpManager = context.getSystemService(Context.WALLPAPER_SERVICE) as? WallpaperManager
-                    val colors = wpManager?.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
+                    val colors = cachedColors ?: run {
+                        val wpManager = context.getSystemService(Context.WALLPAPER_SERVICE) as? WallpaperManager
+                        wpManager?.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
+                            ?: wpManager?.getWallpaperColors(WallpaperManager.FLAG_LOCK)
+                    }
                     val primary = colors?.primaryColor
                     if (primary != null) {
                         Color(primary.toArgb())
@@ -171,33 +178,66 @@ data class AccentColor(
 
         /**
          * Determines if the current wallpaper is dark.
+         * Correctly analyzes WallpaperColors hints and weighted luminance so light wallpapers are never falsely marked as dark.
          */
-        fun isWallpaperDark(context: Context): Boolean {
+        fun isWallpaperDark(context: Context, cachedColors: WallpaperColors? = null): Boolean {
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                    val wpManager = context.getSystemService(Context.WALLPAPER_SERVICE) as? WallpaperManager
-                    val colors = wpManager?.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
+                    val colors = cachedColors ?: run {
+                        val wpManager = context.getSystemService(Context.WALLPAPER_SERVICE) as? WallpaperManager
+                        wpManager?.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
+                            ?: wpManager?.getWallpaperColors(WallpaperManager.FLAG_LOCK)
+                    }
                     if (colors != null) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            val supportsDarkText = (colors.colorHints and WallpaperColors.HINT_SUPPORTS_DARK_TEXT) != 0
-                            return !supportsDarkText
+                        val hints = colors.colorHints
+                        // 1. Explicit OS flag for light wallpaper (requires dark text)
+                        val supportsDarkText = (hints and WallpaperColors.HINT_SUPPORTS_DARK_TEXT) != 0
+                        if (supportsDarkText) {
+                            return false
                         }
-                        val primary = colors.primaryColor
-                        return Color(primary.toArgb()).luminance() < 0.5f
+
+                        // 2. Explicit OS flag for dark wallpaper (supports dark theme)
+                        // HINT_SUPPORTS_DARK_THEME is 1 shl 1 = 2
+                        val supportsDarkTheme = (hints and 2) != 0
+                        if (supportsDarkTheme) {
+                            return true
+                        }
+
+                        // 3. Measure true luminance from primary, secondary, and tertiary colors
+                        val primaryColor = Color(colors.primaryColor.toArgb())
+                        val primaryLum = primaryColor.luminance()
+                        val secondaryLum = colors.secondaryColor?.let { Color(it.toArgb()).luminance() }
+                        val tertiaryLum = colors.tertiaryColor?.let { Color(it.toArgb()).luminance() }
+
+                        val weightedLum = when {
+                            secondaryLum != null && tertiaryLum != null -> {
+                                primaryLum * 0.50f + secondaryLum * 0.30f + tertiaryLum * 0.20f
+                            }
+                            secondaryLum != null -> {
+                                primaryLum * 0.65f + secondaryLum * 0.35f
+                            }
+                            else -> {
+                                primaryLum
+                            }
+                        }
+
+                        // If weighted luminance >= 0.44, the wallpaper is light; otherwise dark
+                        return weightedLum < 0.44f
                     }
                 }
                 val isNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
                 return isNight
             } catch (_: Exception) {
-                return true
+                val isNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+                return isNight
             }
         }
 
         /**
          * Creates a dynamic Wallpaper AccentColor instance for the given context.
          */
-        fun wallpaper(context: Context): AccentColor {
-            val dynamicColor = getWallpaperAccentColor(context)
+        fun wallpaper(context: Context, cachedColors: WallpaperColors? = null): AccentColor {
+            val dynamicColor = getWallpaperAccentColor(context, cachedColors)
             return AccentColor(
                 name = "WALLPAPER",
                 displayName = "Hue Angle Shift",

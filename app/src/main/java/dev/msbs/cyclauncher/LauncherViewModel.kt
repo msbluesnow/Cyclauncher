@@ -14,6 +14,7 @@ import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
 import android.app.Application
+import android.app.WallpaperColors
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -105,9 +106,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _animationsEnabled = MutableStateFlow(true)
     val animationsEnabled: StateFlow<Boolean> = _animationsEnabled
 
-    private val _isWallpaperDark = MutableStateFlow(
-        (safeContext.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
-    )
+    private val _isWallpaperDark = MutableStateFlow(AccentColor.isWallpaperDark(safeContext))
     val isWallpaperDark: StateFlow<Boolean> = _isWallpaperDark
 
     private val _searchMethod = MutableStateFlow(SearchMethod.SIDE_ALPHABET)
@@ -623,15 +622,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         prefs.edit().putString("accent_color", color.name).apply()
     }
 
-    fun refreshDynamicWallpaperColor(context: Context) {
+    fun refreshDynamicWallpaperColor(context: Context, cachedColors: WallpaperColors? = null) {
         val appContext = context.applicationContext
         viewModelScope.launch(Dispatchers.IO) {
-            val currentDark = AccentColor.isWallpaperDark(appContext)
+            val currentDark = AccentColor.isWallpaperDark(appContext, cachedColors)
             if (_isWallpaperDark.value != currentDark) {
                 _isWallpaperDark.value = currentDark
             }
             if (_accentColor.value.isDynamicWallpaper) {
-                val updated = AccentColor.wallpaper(appContext)
+                val updated = AccentColor.wallpaper(appContext, cachedColors)
                 if (_accentColor.value.color != updated.color) {
                     _accentColor.value = updated
                 }

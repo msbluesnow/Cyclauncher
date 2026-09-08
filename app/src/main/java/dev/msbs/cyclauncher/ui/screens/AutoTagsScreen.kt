@@ -1,10 +1,12 @@
 package dev.msbs.cyclauncher.ui.screens
 
+import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
+import dev.msbs.cyclauncher.ui.components.ScreenTopBar
 
 import android.content.ClipData
 import android.content.Context
@@ -23,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Upload
@@ -54,6 +57,7 @@ fun AutoTagsScreen(
     val popupTheme by viewModel.popupTheme.collectAsState()
     val buttonTextColor by viewModel.buttonTextColor.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
+    val handSide by viewModel.handSide.collectAsState()
     val shadowSettings = LocalShadowSettings.current
     val context = LocalContext.current
 
@@ -83,44 +87,15 @@ fun AutoTagsScreen(
             .navigationBarsPadding(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 12.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.align(Alignment.CenterStart)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    if (showShadows) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = null,
-                            tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.25f),
-                            modifier = Modifier
-                                .size(24.dp)
-                                .offset(1.dp, 1.dp)
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                        contentDescription = "Back to Settings",
-                        tint = accentColor.color,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-            Text(
-                text = "TAGS",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    shadow = shadow
-                ),
-                color = accentColor.color
-            )
-        }
+        ScreenTopBar(
+            title = "TAGS",
+            handSide = handSide,
+            accentColor = accentColor,
+            primaryTextColor = primaryTextColor,
+            showShadows = showShadows,
+            shadowColorOverride = shadowSettings.shadowColorOverride,
+            onBack = onBack
+        )
 
         Column(
             modifier = Modifier

@@ -159,8 +159,8 @@ class MainActivity : ComponentActivity() {
         
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
             val wpManager = getSystemService(android.app.WallpaperManager::class.java)
-            val listener = android.app.WallpaperManager.OnColorsChangedListener { _, _ ->
-                viewModel.refreshDynamicWallpaperColor(this@MainActivity)
+            val listener = android.app.WallpaperManager.OnColorsChangedListener { colors, _ ->
+                viewModel.refreshDynamicWallpaperColor(this@MainActivity, colors)
             }
             try {
                 wpManager?.addOnColorsChangedListener(listener, android.os.Handler(android.os.Looper.getMainLooper()))

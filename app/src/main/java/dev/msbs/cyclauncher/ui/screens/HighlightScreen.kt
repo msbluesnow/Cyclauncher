@@ -6,6 +6,7 @@ import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.ui.components.CustomWidgetPickerSheet
 import dev.msbs.cyclauncher.ui.components.rememberAppIconPainter
+import dev.msbs.cyclauncher.ui.components.ScreenTopBar
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
@@ -472,44 +473,15 @@ private fun HighlightTopBar(
     shadowSettings: ShadowSettings,
     onClose: () -> Unit
 ) {
-    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
-    ) {
-        val backIcon = when (handSide) {
-            HandSide.RIGHT -> Icons.AutoMirrored.Outlined.ArrowForward
-            HandSide.LEFT -> Icons.AutoMirrored.Outlined.ArrowBack
-        }
-        val buttonAlignment = if (handSide == HandSide.RIGHT) Alignment.CenterEnd else Alignment.CenterStart
-
-        IconButton(
-            onClick = onClose,
-            modifier = Modifier.align(buttonAlignment)
-        ) {
-            ShadowedIcon(
-                imageVector = backIcon,
-                contentDescription = "Close Highlights",
-                tint = accentColor.color,
-                modifier = Modifier.size(24.dp),
-                showShadows = showShadows,
-                primaryTextColor = primaryTextColor,
-                shadowSettings = shadowSettings
-            )
-        }
-
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.Bold,
-                shadow = shadow
-            ),
-            color = accentColor.color,
-            modifier = Modifier.align(Alignment.Center)
-        )
-    }
+    ScreenTopBar(
+        title = title,
+        handSide = handSide,
+        accentColor = accentColor,
+        primaryTextColor = primaryTextColor,
+        showShadows = showShadows,
+        shadowColorOverride = shadowSettings.shadowColorOverride,
+        onBack = onClose
+    )
 }
 
 /**
