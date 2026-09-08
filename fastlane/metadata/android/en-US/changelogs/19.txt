@@ -1,0 +1,7 @@
+Search slot modes, widgets in search, Highlights reordering, and UI polish.
+- Side Alphabet slot modes: History, Widget, Disabled
+- Add widget support and serpentine history in search
+- Highlights: widget reordering arrows and edge-docked controls
+- History context menu with edit mode and pinning
+- Adaptive ScreenTopBar with dynamic title scaling
+- Modernized Settings UI with themed switches and clean labels
