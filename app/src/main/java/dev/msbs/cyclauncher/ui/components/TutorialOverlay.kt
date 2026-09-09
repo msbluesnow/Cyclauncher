@@ -4,6 +4,7 @@ import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
+import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import androidx.activity.compose.BackHandler
@@ -13,6 +14,7 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -29,13 +31,16 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -44,11 +49,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Data class representing a single step in the interactive tutorial.
@@ -84,12 +93,28 @@ fun TutorialOverlay(
     val stepIndex by viewModel.tutorialStep.collectAsState()
     val handSide by viewModel.handSide.collectAsState()
     val accentColorEnum by viewModel.accentColor.collectAsState()
+    val primaryTextColor by viewModel.primaryTextColor.collectAsState()
     val buttonTextColor by viewModel.buttonTextColor.collectAsState()
     val popupTheme by viewModel.popupTheme.collectAsState()
 
     val accentColor = accentColorEnum.color
     val haptic = LocalHapticFeedback.current
+    val coroutineScope = rememberCoroutineScope()
     var isSuccessFlash by remember { mutableStateOf(false) }
+
+    var tutorialOverlayState by remember { mutableStateOf<SwipeDownOverlayState?>(null) }
+    var tutorialSelectedFeedback by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(stepIndex) {
+        tutorialOverlayState = null
+        tutorialSelectedFeedback = null
+    }
+
+    val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+    val cardWidthPx = with(density) { 160.dp.toPx() }
+    val screenMarginPx = with(density) { 16.dp.toPx() }
 
     val steps = remember(handSide) {
         listOf(
@@ -106,10 +131,10 @@ fun TutorialOverlay(
                 hintText = "Use the native Back gesture or Back button!"
             ),
             TutorialStepInfo(
-                title = "Swipe Down — Notifications",
-                description = "Swipe downwards over the Favorites icons area on the Home Screen to pull down the notification shade.",
+                title = "Swipe Down — Quick Actions",
+                description = "Swipe downwards over the Favorites area to activate quick action cards. Release directly under your finger to open Notifications, or slide to the adjacent card to open Quick Settings.",
                 gestureType = GestureType.SWIPE_DOWN,
-                hintText = "Swipe down over the Favorites icons area!"
+                hintText = "Try it below: swipe down, slide between cards, and release!"
             ),
             TutorialStepInfo(
                 title = "Swipe Sideways — Highlights",
@@ -176,22 +201,72 @@ fun TutorialOverlay(
                 .pointerInput(stepIndex, handSide) {
                     var totalDragX = 0f
                     var totalDragY = 0f
+                    var startOffset = Offset.Zero
+                    var isTutorialSwipeDownActive = false
+                    var lastTarget = SwipeDownTarget.NOTIFICATIONS
 
                     detectDragGestures(
-                        onDragStart = {
+                        onDragStart = { offset ->
                             totalDragX = 0f
                             totalDragY = 0f
+                            startOffset = offset
+                            isTutorialSwipeDownActive = false
+                            lastTarget = SwipeDownTarget.NOTIFICATIONS
                         },
                         onDrag = { change, dragAmount ->
                             change.consume()
                             totalDragX += dragAmount.x
                             totalDragY += dragAmount.y
+
+                            if (currentStep.gestureType == GestureType.SWIPE_DOWN) {
+                                val dragThreshold = 20f
+                                if (totalDragY > dragThreshold || isTutorialSwipeDownActive) {
+                                    isTutorialSwipeDownActive = true
+                                    val currentPos = change.position
+                                    val target = resolveSwipeDownTarget(
+                                        anchorX = startOffset.x,
+                                        currentX = currentPos.x,
+                                        handSide = handSide,
+                                        screenWidthPx = screenWidthPx,
+                                        cardWidthPx = cardWidthPx,
+                                        screenMarginPx = screenMarginPx
+                                    )
+                                    lastTarget = target
+                                    if (tutorialOverlayState == null) {
+                                        tutorialOverlayState = SwipeDownOverlayState(
+                                            anchorPosition = startOffset,
+                                            currentPosition = currentPos,
+                                            handSide = handSide,
+                                            selectedTarget = target
+                                        )
+                                    } else if (tutorialOverlayState?.selectedTarget != target) {
+                                        tutorialOverlayState = tutorialOverlayState?.copy(
+                                            selectedTarget = target
+                                        )
+                                    }
+                                }
+                            }
                         },
                         onDragEnd = {
                             val threshold = 60f
                             when (currentStep.gestureType) {
                                 GestureType.SWIPE_UP -> if (totalDragY < -threshold) triggerSuccessAndNext()
-                                GestureType.SWIPE_DOWN -> if (totalDragY > threshold) triggerSuccessAndNext()
+                                GestureType.SWIPE_DOWN -> {
+                                    if (isTutorialSwipeDownActive || totalDragY > threshold) {
+                                        tutorialOverlayState = null
+                                        val chosen = lastTarget
+                                        tutorialSelectedFeedback = if (chosen == SwipeDownTarget.NOTIFICATIONS) {
+                                            "Notifications"
+                                        } else {
+                                            "Quick Settings"
+                                        }
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        coroutineScope.launch {
+                                            delay(850)
+                                            triggerSuccessAndNext()
+                                        }
+                                    }
+                                }
                                 GestureType.SIDE_BACK -> {
                                     val isBackDirection = if (handSide == HandSide.LEFT) totalDragX < -threshold else totalDragX > threshold
                                     if (isBackDirection || kotlin.math.abs(totalDragX) > threshold) triggerSuccessAndNext()
@@ -208,6 +283,10 @@ fun TutorialOverlay(
                                 }
                                 else -> {}
                             }
+                        },
+                        onDragCancel = {
+                            tutorialOverlayState = null
+                            isTutorialSwipeDownActive = false
                         }
                     )
                 }
@@ -228,6 +307,52 @@ fun TutorialOverlay(
                 popupTheme = popupTheme,
                 modifier = Modifier.fillMaxSize()
             )
+
+            // Live interactive trial overlay when swiping down in the tutorial
+            tutorialOverlayState?.let { overlayState ->
+                SwipeDownQuickActionsOverlay(
+                    state = overlayState,
+                    accentColor = accentColorEnum,
+                    primaryTextColor = primaryTextColor,
+                    popupTheme = popupTheme,
+                    onDismiss = null
+                )
+            }
+
+            // Success feedback pill showing which action was triggered in the trial
+            AnimatedVisibility(
+                visible = tutorialSelectedFeedback != null,
+                enter = if (animationsEnabled) fadeIn() + scaleIn() else EnterTransition.None,
+                exit = if (animationsEnabled) fadeOut() else ExitTransition.None,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .offset(y = 80.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = accentColor,
+                    shadowElevation = 10.dp
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = buttonTextColor.color,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Tested: $tutorialSelectedFeedback!",
+                            color = buttonTextColor.color,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
 
             Row(
                 modifier = Modifier
@@ -482,26 +607,79 @@ private fun GestureAnimationCanvas(
                 }
 
                 GestureType.SWIPE_DOWN -> {
-                    val startY = height * 0.25f
-                    val endY = height * 0.65f
-                    val currentY = startY + (endY - startY) * progress
+                    val cardCenterY = centerY - 50.dp.toPx()
+                    val leftIsNotifications = handSide == HandSide.LEFT
+                    val notifX = if (leftIsNotifications) centerX - 67.5.dp.toPx() else centerX + 67.5.dp.toPx()
+                    val qsX = if (leftIsNotifications) centerX + 67.5.dp.toPx() else centerX - 67.5.dp.toPx()
+                    val startY = cardCenterY - 130.dp.toPx()
 
-                    drawLine(
-                        color = accentColor.copy(alpha = alpha * 0.4f),
-                        start = Offset(centerX, startY),
-                        end = Offset(centerX, currentY),
-                        strokeWidth = 4.dp.toPx()
-                    )
+                    val currentX: Float
+                    val currentY: Float
+
+                    if (progress < 0.40f) {
+                        val p1 = progress / 0.40f
+                        currentX = notifX
+                        currentY = startY + (cardCenterY - startY) * p1
+
+                        drawLine(
+                            color = accentColor.copy(alpha = alpha * 0.45f),
+                            start = Offset(notifX, startY),
+                            end = Offset(notifX, currentY),
+                            strokeWidth = 4.dp.toPx()
+                        )
+                    } else if (progress < 0.75f) {
+                        val p2 = (progress - 0.40f) / 0.35f
+                        currentX = notifX + (qsX - notifX) * p2
+                        currentY = cardCenterY
+
+                        drawLine(
+                            color = accentColor.copy(alpha = alpha * 0.45f),
+                            start = Offset(notifX, startY),
+                            end = Offset(notifX, cardCenterY),
+                            strokeWidth = 4.dp.toPx()
+                        )
+                        drawLine(
+                            color = accentColor.copy(alpha = alpha * 0.45f),
+                            start = Offset(notifX, cardCenterY),
+                            end = Offset(currentX, cardCenterY),
+                            strokeWidth = 4.dp.toPx()
+                        )
+                    } else {
+                        val p3 = (progress - 0.75f) / 0.25f
+                        currentX = qsX
+                        currentY = cardCenterY
+
+                        drawLine(
+                            color = accentColor.copy(alpha = alpha * 0.35f),
+                            start = Offset(notifX, startY),
+                            end = Offset(notifX, cardCenterY),
+                            strokeWidth = 4.dp.toPx()
+                        )
+                        drawLine(
+                            color = accentColor.copy(alpha = alpha * 0.35f),
+                            start = Offset(notifX, cardCenterY),
+                            end = Offset(qsX, cardCenterY),
+                            strokeWidth = 4.dp.toPx()
+                        )
+
+                        // Pulse ring on selection release
+                        drawCircle(
+                            color = accentColor.copy(alpha = (1f - p3) * 0.7f),
+                            radius = 16.dp.toPx() + (30.dp.toPx() * p3),
+                            center = Offset(qsX, cardCenterY),
+                            style = Stroke(width = 3.dp.toPx())
+                        )
+                    }
 
                     drawCircle(
-                        color = accentColor.copy(alpha = alpha * 0.25f),
-                        radius = 28.dp.toPx(),
-                        center = Offset(centerX, currentY)
+                        color = accentColor.copy(alpha = alpha * 0.3f),
+                        radius = 26.dp.toPx(),
+                        center = Offset(currentX, currentY)
                     )
                     drawCircle(
                         color = accentColor.copy(alpha = alpha),
                         radius = 12.dp.toPx(),
-                        center = Offset(centerX, currentY)
+                        center = Offset(currentX, currentY)
                     )
                 }
 
@@ -732,6 +910,129 @@ private fun GestureAnimationCanvas(
                     modifier = Modifier.size(32.dp)
                 )
             }
+        }
+
+        if (gestureType == GestureType.SWIPE_DOWN) {
+            val leftIsNotifications = handSide == HandSide.LEFT
+            val isNotifActive = progress in 0.30f..0.52f
+            val isQsActive = progress > 0.52f
+            val previewTextColor = if (popupTheme == PopupTheme.LIGHT) Color.Black else Color.White
+
+            val notifShape = remember(leftIsNotifications) {
+                if (leftIsNotifications)
+                    RoundedCornerShape(topStart = 18.dp, bottomStart = 18.dp, topEnd = 3.dp, bottomEnd = 3.dp)
+                else
+                    RoundedCornerShape(topStart = 3.dp, bottomStart = 3.dp, topEnd = 18.dp, bottomEnd = 18.dp)
+            }
+            val qsShape = remember(leftIsNotifications) {
+                if (leftIsNotifications)
+                    RoundedCornerShape(topStart = 3.dp, bottomStart = 3.dp, topEnd = 18.dp, bottomEnd = 18.dp)
+                else
+                    RoundedCornerShape(topStart = 18.dp, bottomStart = 18.dp, topEnd = 3.dp, bottomEnd = 3.dp)
+            }
+
+            Row(
+                modifier = Modifier.offset(y = (-50).dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (leftIsNotifications) {
+                    TutorialPreviewCard(
+                        title = "Notifications",
+                        subtitle = "Notification Shade",
+                        icon = Icons.Outlined.Notifications,
+                        isActive = isNotifActive,
+                        shape = notifShape,
+                        accentColor = accentColor,
+                        popupTheme = popupTheme,
+                        textColor = previewTextColor
+                    )
+                    TutorialPreviewCard(
+                        title = "Quick Settings",
+                        subtitle = "Wi-Fi, Bluetooth",
+                        icon = Icons.Outlined.Tune,
+                        isActive = isQsActive,
+                        shape = qsShape,
+                        accentColor = accentColor,
+                        popupTheme = popupTheme,
+                        textColor = previewTextColor
+                    )
+                } else {
+                    TutorialPreviewCard(
+                        title = "Quick Settings",
+                        subtitle = "Wi-Fi, Bluetooth",
+                        icon = Icons.Outlined.Tune,
+                        isActive = isQsActive,
+                        shape = qsShape,
+                        accentColor = accentColor,
+                        popupTheme = popupTheme,
+                        textColor = previewTextColor
+                    )
+                    TutorialPreviewCard(
+                        title = "Notifications",
+                        subtitle = "Notification Shade",
+                        icon = Icons.Outlined.Notifications,
+                        isActive = isNotifActive,
+                        shape = notifShape,
+                        accentColor = accentColor,
+                        popupTheme = popupTheme,
+                        textColor = previewTextColor
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TutorialPreviewCard(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isActive: Boolean,
+    shape: RoundedCornerShape,
+    accentColor: Color,
+    popupTheme: PopupTheme,
+    textColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .width(135.dp)
+            .height(84.dp)
+            .scale(if (isActive) 1.05f else 0.98f)
+            .clip(shape)
+            .background(
+                if (isActive) accentColor.copy(alpha = 0.28f)
+                else popupTheme.solidBackgroundColor.copy(alpha = 0.92f)
+            )
+            .border(
+                width = if (isActive) 2.5.dp else 1.dp,
+                color = if (isActive) accentColor else popupTheme.borderColor,
+                shape = shape
+            )
+            .padding(8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (isActive) accentColor else textColor.copy(alpha = 0.85f),
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = title,
+                color = textColor,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = subtitle,
+                color = textColor.copy(alpha = 0.8f),
+                fontSize = 9.5.sp
+            )
         }
     }
 }

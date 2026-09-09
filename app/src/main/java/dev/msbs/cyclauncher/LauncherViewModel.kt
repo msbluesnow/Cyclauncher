@@ -762,14 +762,19 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun refreshDynamicWallpaperColor(context: Context, cachedColors: WallpaperColors? = null) {
         val appContext = context.applicationContext
         viewModelScope.launch(Dispatchers.IO) {
-            val currentDark = AccentColor.isWallpaperDark(appContext, cachedColors)
-            if (_isWallpaperDark.value != currentDark) {
-                _isWallpaperDark.value = currentDark
+            val theme = AccentColor.resolveWallpaperTheme(appContext, cachedColors)
+            if (_isWallpaperDark.value != theme.isDark) {
+                _isWallpaperDark.value = theme.isDark
             }
             if (_accentColor.value.isDynamicWallpaper) {
-                val updated = AccentColor.wallpaper(appContext, cachedColors)
-                if (_accentColor.value.color != updated.color) {
-                    _accentColor.value = updated
+                if (_accentColor.value.color != theme.accentColor) {
+                    _accentColor.value = AccentColor(
+                        name = "WALLPAPER",
+                        displayName = "Hue Angle Shift",
+                        color = theme.accentColor,
+                        glowColor = theme.accentColor.copy(alpha = 0.2f),
+                        isDynamicWallpaper = true
+                    )
                 }
             }
         }

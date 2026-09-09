@@ -390,6 +390,7 @@ class MainActivity : ComponentActivity() {
                                                             }
                                                         },
                                                         onSwipeDown = ::openNotifications,
+                                                        onOpenQuickSettings = ::openQuickSettings,
                                                         onSettingsClick = {
                                                             scope.launch {
                                                                 if (animationsEnabled) {
@@ -784,15 +785,84 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private var cachedStatusBarService: Any? = null
+    private var cachedExpandNotificationsMethod: java.lang.reflect.Method? = null
+    private var cachedExpandSettingsMethod: java.lang.reflect.Method? = null
+    private var isStatusBarReflectionInitialized = false
+
+    @SuppressLint("WrongConstant")
+    private fun ensureStatusBarReflection() {
+        if (isStatusBarReflectionInitialized) return
+        try {
+            val service = getSystemService("statusbar")
+            val managerClass = Class.forName("android.app.StatusBarManager")
+            val notifMethod = managerClass.methods.firstOrNull { it.name == "expandNotificationsPanel" }
+                ?: managerClass.getMethod("expandNotificationsPanel")
+            val settingsMethod = managerClass.methods.firstOrNull { it.name == "expandSettingsPanel" }
+                ?: managerClass.getMethod("expandSettingsPanel")
+            cachedStatusBarService = service
+            cachedExpandNotificationsMethod = notifMethod
+            cachedExpandSettingsMethod = settingsMethod
+        } catch (e: Exception) {
+            android.util.Log.e("Cyclauncher", "Failed to cache StatusBarManager reflection", e)
+        } finally {
+            isStatusBarReflectionInitialized = true
+        }
+    }
+
     @SuppressLint("WrongConstant")
     private fun openNotifications() {
+        android.util.Log.d("Cyclauncher", "openNotifications invoked")
         try {
-            val statusBarService = getSystemService("statusbar")
-            val statusBarManager = Class.forName("android.app.StatusBarManager")
-            val expandMethod = statusBarManager.getMethod("expandNotificationsPanel")
-            expandMethod.invoke(statusBarService)
+            ensureStatusBarReflection()
+            val service = cachedStatusBarService
+            val method = cachedExpandNotificationsMethod
+            if (service != null && method != null) {
+                method.invoke(service)
+            } else {
+                val statusBarService = getSystemService("statusbar")
+                val statusBarManager = Class.forName("android.app.StatusBarManager")
+                val expandMethod = statusBarManager.getMethod("expandNotificationsPanel")
+                expandMethod.invoke(statusBarService)
+            }
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("Cyclauncher", "openNotifications failed", e)
+        }
+    }
+
+    @SuppressLint("WrongConstant")
+    private fun openQuickSettings() {
+        android.util.Log.d("Cyclauncher", "openQuickSettings invoked")
+        try {
+            ensureStatusBarReflection()
+            val service = cachedStatusBarService
+            val method = cachedExpandSettingsMethod
+            if (service != null && method != null) {
+                if (method.parameterCount == 0) {
+                    method.invoke(service)
+                } else {
+                    method.invoke(service, null as String?)
+                }
+                return
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("Cyclauncher", "openQuickSettings failed via reflection", e)
+        }
+
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                val panelIntent = Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(panelIntent)
+            } else {
+                val settingsIntent = Intent(Settings.ACTION_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(settingsIntent)
+            }
+        } catch (fallbackEx: Exception) {
+            android.util.Log.e("Cyclauncher", "openQuickSettings fallback failed", fallbackEx)
         }
     }
 

@@ -145,35 +145,69 @@ data class AccentColor(
             }
         }
 
+        data class WallpaperTheme(
+            val isDark: Boolean,
+            val accentColor: Color
+        )
+
+        @Volatile
+        private var lastResolvedTheme: WallpaperTheme? = null
+        @Volatile
+        private var lastWallpaperColorsPrimary: Int? = null
+        @Volatile
+        private var lastWallpaperColorsHints: Int? = null
+
         /**
-         * Extracts the dynamic accent color from current wallpaper / Material You theme
+         * Resolves both wallpaper darkness and adaptive accent color in a SINGLE pass,
+         * with in-memory caching to eliminate redundant Binder IPC calls to WallpaperManager.
+         */
+        fun resolveWallpaperTheme(context: Context, cachedColors: WallpaperColors? = null): WallpaperTheme {
+            return try {
+                var colors = cachedColors
+                if (colors == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                    val wpManager = context.getSystemService(Context.WALLPAPER_SERVICE) as? WallpaperManager
+                    colors = try {
+                        wpManager?.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
+                            ?: wpManager?.getWallpaperColors(WallpaperManager.FLAG_LOCK)
+                    } catch (_: Exception) { null }
+                }
+
+                val primaryArgb = colors?.primaryColor?.toArgb()
+                val hints = colors?.colorHints ?: 0
+                val cached = lastResolvedTheme
+                if (cached != null && primaryArgb != null && primaryArgb == lastWallpaperColorsPrimary && hints == lastWallpaperColorsHints) {
+                    return cached
+                }
+
+                val isWpDark = isWallpaperDark(context, colors)
+                var rawColor: Color? = null
+                if (primaryArgb != null) {
+                    rawColor = Color(primaryArgb)
+                }
+
+                if (rawColor == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val scheme = if (isWpDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+                    rawColor = scheme.primary
+                }
+
+                val finalColor = applyAdaptiveHueShift(rawColor ?: Color(0xFF19AEFF), isWpDark)
+                val theme = WallpaperTheme(isDark = isWpDark, accentColor = finalColor)
+                lastWallpaperColorsPrimary = primaryArgb
+                lastWallpaperColorsHints = hints
+                lastResolvedTheme = theme
+                theme
+            } catch (_: Exception) {
+                val isNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+                WallpaperTheme(isDark = isNight, accentColor = applyAdaptiveHueShift(Color(0xFF19AEFF), isNight))
+            }
+        }
+
+        /**
+         * Extracts the dynamic accent color from current wallpaper / theme
          * using adaptive Hue Angle Shift (bright tone on dark wallpapers, dark tone on light wallpapers).
          */
         fun getWallpaperAccentColor(context: Context, cachedColors: WallpaperColors? = null): Color {
-            val isWpDark = isWallpaperDark(context, cachedColors)
-            val rawColor = try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    val scheme = if (isWpDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-                    scheme.primary
-                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                    val colors = cachedColors ?: run {
-                        val wpManager = context.getSystemService(Context.WALLPAPER_SERVICE) as? WallpaperManager
-                        wpManager?.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
-                            ?: wpManager?.getWallpaperColors(WallpaperManager.FLAG_LOCK)
-                    }
-                    val primary = colors?.primaryColor
-                    if (primary != null) {
-                        Color(primary.toArgb())
-                    } else {
-                        Color(0xFF19AEFF)
-                    }
-                } else {
-                    Color(0xFF19AEFF)
-                }
-            } catch (_: Exception) {
-                Color(0xFF19AEFF)
-            }
-            return applyAdaptiveHueShift(rawColor, isWpDark)
+            return resolveWallpaperTheme(context, cachedColors).accentColor
         }
 
         /**

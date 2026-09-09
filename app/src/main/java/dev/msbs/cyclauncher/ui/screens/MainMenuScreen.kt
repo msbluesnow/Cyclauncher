@@ -18,6 +18,11 @@ import dev.msbs.cyclauncher.ui.components.TagFolderItem
 import dev.msbs.cyclauncher.ui.components.TagFolderPopup
 import dev.msbs.cyclauncher.ui.components.HistoryActionMenu
 import dev.msbs.cyclauncher.ui.components.rememberAppIconPainter
+import dev.msbs.cyclauncher.ui.components.SwipeDownQuickActionsOverlay
+import dev.msbs.cyclauncher.ui.components.SwipeDownOverlayState
+import dev.msbs.cyclauncher.ui.components.SwipeDownTarget
+import dev.msbs.cyclauncher.ui.components.resolveSwipeDownTarget
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
@@ -96,6 +101,7 @@ fun MainMenuScreen(
     onAppLongClick: (AppInfo, Offset) -> Unit,
     onSwipeUp: () -> Unit,
     onSwipeDown: () -> Unit,
+    onOpenQuickSettings: () -> Unit = {},
     onSettingsClick: () -> Unit,
     onOpenHighlightScreen: () -> Unit = {},
     onEditTag: (Tag) -> Unit = {}
@@ -122,6 +128,7 @@ fun MainMenuScreen(
     var selectedTagSortPopupOffset by remember { mutableStateOf<Offset?>(null) }
     var selectedHistoryMenuOffset by remember { mutableStateOf<Offset?>(null) }
     var isTagPopupEditMode by remember { mutableStateOf(false) }
+    var swipeDownOverlayState by remember { mutableStateOf<SwipeDownOverlayState?>(null) }
 
     val popularTagsWithApps by viewModel.popularTagsWithApps.collectAsState()
 
@@ -140,6 +147,7 @@ fun MainMenuScreen(
             selectedTagSortPopupOffset = null
             selectedHistoryMenuOffset = null
             isTagPopupEditMode = false
+            swipeDownOverlayState = null
         }
     }
 
@@ -154,6 +162,7 @@ fun MainMenuScreen(
             selectedTagSortPopupOffset = null
             selectedHistoryMenuOffset = null
             isTagPopupEditMode = false
+            swipeDownOverlayState = null
         }
     }
 
@@ -173,6 +182,7 @@ fun MainMenuScreen(
                 selectedTagSortPopupOffset = null
                 selectedHistoryMenuOffset = null
                 isTagPopupEditMode = false
+                swipeDownOverlayState = null
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -192,6 +202,7 @@ fun MainMenuScreen(
             selectedTagSortPopupOffset = null
             selectedHistoryMenuOffset = null
             isTagPopupEditMode = false
+            swipeDownOverlayState = null
         }
     }
 
@@ -251,6 +262,7 @@ fun MainMenuScreen(
     val currentOnSettingsClick by rememberUpdatedState(onSettingsClick)
     val currentOnSwipeUp by rememberUpdatedState(onSwipeUp)
     val currentOnSwipeDown by rememberUpdatedState(onSwipeDown)
+    val currentOnOpenQuickSettings by rememberUpdatedState(onOpenQuickSettings)
     val currentOnOpenHighlightScreen by rememberUpdatedState(onOpenHighlightScreen)
 
     val density = LocalDensity.current
@@ -399,6 +411,33 @@ fun MainMenuScreen(
                     onTagFolderLongClick = handleTagFolderLongClick,
                     onSwipeUp = onSwipeUp,
                     onSwipeDown = onSwipeDown,
+                    onOpenQuickSettings = onOpenQuickSettings,
+                    onStartSwipeDownOverlay = { anchor ->
+                        swipeDownOverlayState = SwipeDownOverlayState(
+                            anchorPosition = anchor,
+                            currentPosition = anchor,
+                            handSide = handSide,
+                            selectedTarget = SwipeDownTarget.NOTIFICATIONS
+                        )
+                    },
+                    onUpdateSwipeDownOverlay = { current, target ->
+                        if (swipeDownOverlayState?.selectedTarget != target) {
+                            swipeDownOverlayState = swipeDownOverlayState?.copy(
+                                selectedTarget = target
+                            )
+                        }
+                    },
+                    onEndSwipeDownOverlay = { target ->
+                        android.util.Log.d("Cyclauncher", "onEndSwipeDownOverlay target=$target")
+                        swipeDownOverlayState = null
+                        when (target) {
+                            SwipeDownTarget.NOTIFICATIONS -> currentOnSwipeDown()
+                            SwipeDownTarget.QUICK_SETTINGS -> currentOnOpenQuickSettings()
+                        }
+                    },
+                    onCancelSwipeDownOverlay = {
+                        swipeDownOverlayState = null
+                    },
                     onSettingsClick = safeOnSettingsClick,
                     isActive = isActive,
                     isActionMenuOpen = isActionMenuOpen || isAnyEditMode
@@ -528,6 +567,33 @@ fun MainMenuScreen(
                     onTagFolderLongClick = handleTagFolderLongClick,
                     onSwipeUp = onSwipeUp,
                     onSwipeDown = onSwipeDown,
+                    onOpenQuickSettings = onOpenQuickSettings,
+                    onStartSwipeDownOverlay = { anchor ->
+                        swipeDownOverlayState = SwipeDownOverlayState(
+                            anchorPosition = anchor,
+                            currentPosition = anchor,
+                            handSide = handSide,
+                            selectedTarget = SwipeDownTarget.NOTIFICATIONS
+                        )
+                    },
+                    onUpdateSwipeDownOverlay = { current, target ->
+                        if (swipeDownOverlayState?.selectedTarget != target) {
+                            swipeDownOverlayState = swipeDownOverlayState?.copy(
+                                selectedTarget = target
+                            )
+                        }
+                    },
+                    onEndSwipeDownOverlay = { target ->
+                        android.util.Log.d("Cyclauncher", "onEndSwipeDownOverlay target=$target")
+                        swipeDownOverlayState = null
+                        when (target) {
+                            SwipeDownTarget.NOTIFICATIONS -> currentOnSwipeDown()
+                            SwipeDownTarget.QUICK_SETTINGS -> currentOnOpenQuickSettings()
+                        }
+                    },
+                    onCancelSwipeDownOverlay = {
+                        swipeDownOverlayState = null
+                    },
                     onSettingsClick = safeOnSettingsClick,
                     isActive = isActive,
                     isActionMenuOpen = isActionMenuOpen || isAnyEditMode
@@ -678,6 +744,16 @@ fun MainMenuScreen(
                 showShadows = showShadows,
                 accentColor = accentColor,
                 popupTheme = popupTheme
+            )
+        }
+
+        swipeDownOverlayState?.let { overlayState ->
+            SwipeDownQuickActionsOverlay(
+                state = overlayState,
+                accentColor = accentColor,
+                primaryTextColor = primaryTextColor,
+                popupTheme = popupTheme,
+                onDismiss = { swipeDownOverlayState = null }
             )
         }
     }
@@ -1487,6 +1563,11 @@ private fun FavoritesSection(
     onTagFolderLongClick: (Tag, List<AppInfo>, Offset) -> Unit,
     onSwipeUp: () -> Unit,
     onSwipeDown: () -> Unit,
+    onOpenQuickSettings: () -> Unit,
+    onStartSwipeDownOverlay: (Offset) -> Unit,
+    onUpdateSwipeDownOverlay: (Offset, SwipeDownTarget) -> Unit,
+    onEndSwipeDownOverlay: (SwipeDownTarget) -> Unit,
+    onCancelSwipeDownOverlay: () -> Unit,
     onSettingsClick: () -> Unit,
     isActive: Boolean,
     isActionMenuOpen: Boolean = false
@@ -1517,107 +1598,194 @@ private fun FavoritesSection(
 
     val currentOnSwipeUp by rememberUpdatedState(onSwipeUp)
     val currentOnSwipeDown by rememberUpdatedState(onSwipeDown)
+    val currentOnOpenQuickSettings by rememberUpdatedState(onOpenQuickSettings)
+    val currentOnStartSwipeDownOverlay by rememberUpdatedState(onStartSwipeDownOverlay)
+    val currentOnUpdateSwipeDownOverlay by rememberUpdatedState(onUpdateSwipeDownOverlay)
+    val currentOnEndSwipeDownOverlay by rememberUpdatedState(onEndSwipeDownOverlay)
+    val currentOnCancelSwipeDownOverlay by rememberUpdatedState(onCancelSwipeDownOverlay)
     val currentOnSettingsClick by rememberUpdatedState(onSettingsClick)
     val currentIsActive by rememberUpdatedState(isActive)
     val viewConfiguration = LocalViewConfiguration.current
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+    val cardWidthPx = with(density) { 160.dp.toPx() }
+    val screenMarginPx = with(density) { 16.dp.toPx() }
+    val cancelDistancePx = with(density) { 80.dp.toPx() }
+
+    var sectionPositionInRoot by remember { mutableStateOf(Offset.Zero) }
 
     Box(
         modifier = modifier
             .fillMaxHeight()
-            .pointerInput(isReorderMode, isActive, isActionMenuOpen) {
-                if (isReorderMode || !isActive || isActionMenuOpen) return@pointerInput
+            .onGloballyPositioned { coordinates ->
+                sectionPositionInRoot = coordinates.positionInRoot()
+            }
+            .pointerInput(isReorderMode, isActive) {
+                if (isReorderMode || !isActive) return@pointerInput
                 awaitEachGesture {
                     val down = awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
+                    if (isActionMenuOpen) return@awaitEachGesture
                     var isDrag = false
                     var isHorizontalDrag = false
+                    var isSwipeDownActive = false
+                    var anchorRootPos = Offset.Zero
+                    var lastCurrentTarget = SwipeDownTarget.NOTIFICATIONS
                     var totalDragY = 0f
                     var totalDragX = 0f
                     var lastDownChange = down
 
                     val timeoutMillis = viewConfiguration.longPressTimeoutMillis
 
-                    val dragOrTimeout = withTimeoutOrNull(timeoutMillis) {
-                        while (true) {
-                            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                            lastDownChange = change
-                            if (!change.pressed) break
-
-                            val positionChange = change.positionChange()
-                            totalDragY += positionChange.y
-                            totalDragX += positionChange.x
-
-                            if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragY) > kotlin.math.abs(
-                                    totalDragX
-                                )
-                            ) {
-                                isDrag = true
-                                change.consume()
-                                return@withTimeoutOrNull true
-                            }
-                            if (kotlin.math.abs(totalDragX) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragX) > kotlin.math.abs(
-                                    totalDragY
-                                ) * 1.2f
-                            ) {
-                                isHorizontalDrag = true
-                                return@withTimeoutOrNull false
-                            }
-                        }
-                        false
-                    }
-
-                    if (!lastDownChange.pressed) {
-                        if (!isHorizontalDrag && currentIsActive) {
-                            val isVerticalSwipe = isDrag || (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX))
-                            if (isVerticalSwipe) {
-                                if (totalDragY < -40f) {
-                                    currentOnSwipeUp()
-                                } else if (totalDragY > 40f) {
-                                    currentOnSwipeDown()
-                                }
-                            }
-                        }
-                    } else {
-                        if (!isHorizontalDrag) {
+                    try {
+                        val dragOrTimeout = withTimeoutOrNull(timeoutMillis) {
                             while (true) {
                                 val event = awaitPointerEvent(pass = PointerEventPass.Initial)
                                 val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                                if (!change.pressed) {
-                                    if (currentIsActive) {
-                                        val isVerticalSwipe = isDrag || (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX))
-                                        if (isVerticalSwipe) {
-                                            if (totalDragY < -40f) {
-                                                currentOnSwipeUp()
-                                            } else if (totalDragY > 40f) {
-                                                currentOnSwipeDown()
-                                            }
-                                        }
-                                    }
-                                    break
-                                }
+                                lastDownChange = change
+                                if (!change.pressed) break
 
                                 val positionChange = change.positionChange()
                                 totalDragY += positionChange.y
                                 totalDragX += positionChange.x
 
-                                if (!isDrag && !isHorizontalDrag) {
-                                    if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop && kotlin.math.abs(
-                                            totalDragY
-                                        ) > kotlin.math.abs(totalDragX)
-                                    ) {
-                                        isDrag = true
-                                    } else if (kotlin.math.abs(totalDragX) > viewConfiguration.touchSlop && kotlin.math.abs(
-                                            totalDragX
-                                        ) > kotlin.math.abs(totalDragY) * 1.2f
-                                    ) {
-                                        isHorizontalDrag = true
-                                    }
+                                if (totalDragY > 40f && totalDragY > kotlin.math.abs(totalDragX) * 1.2f) {
+                                    isDrag = true
+                                    isSwipeDownActive = true
+                                    anchorRootPos = sectionPositionInRoot + change.position
+                                    lastCurrentTarget = resolveSwipeDownTarget(
+                                        anchorX = anchorRootPos.x,
+                                        currentX = anchorRootPos.x,
+                                        handSide = handSide,
+                                        screenWidthPx = screenWidthPx,
+                                        cardWidthPx = cardWidthPx,
+                                        screenMarginPx = screenMarginPx
+                                    )
+                                    currentOnStartSwipeDownOverlay(anchorRootPos)
+                                    change.consume()
+                                    return@withTimeoutOrNull true
                                 }
 
-                                if (isDrag) {
+                                if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragY) > kotlin.math.abs(
+                                        totalDragX
+                                    )
+                                ) {
+                                    isDrag = true
                                     change.consume()
+                                    return@withTimeoutOrNull true
+                                }
+                                if (kotlin.math.abs(totalDragX) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragX) > kotlin.math.abs(
+                                        totalDragY
+                                    ) * 1.2f
+                                ) {
+                                    isHorizontalDrag = true
+                                    return@withTimeoutOrNull false
                                 }
                             }
+                            false
+                        }
+
+                        if (!lastDownChange.pressed) {
+                            if (isSwipeDownActive) {
+                                val currentRootPos = sectionPositionInRoot + lastDownChange.position
+                                if (currentRootPos.y < anchorRootPos.y - cancelDistancePx) {
+                                    currentOnCancelSwipeDownOverlay()
+                                } else {
+                                    currentOnEndSwipeDownOverlay(lastCurrentTarget)
+                                }
+                                isSwipeDownActive = false
+                            } else if (!isHorizontalDrag && currentIsActive) {
+                                val isVerticalSwipe = isDrag || (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX))
+                                if (isVerticalSwipe) {
+                                    if (totalDragY < -40f) {
+                                        currentOnSwipeUp()
+                                    } else if (totalDragY > 40f) {
+                                        currentOnSwipeDown()
+                                    }
+                                }
+                            }
+                        } else {
+                            if (!isHorizontalDrag) {
+                                while (true) {
+                                    val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                    val currentRootPos = sectionPositionInRoot + change.position
+
+                                    if (!change.pressed) {
+                                        if (isSwipeDownActive) {
+                                            if (currentRootPos.y < anchorRootPos.y - cancelDistancePx) {
+                                                currentOnCancelSwipeDownOverlay()
+                                            } else {
+                                                currentOnEndSwipeDownOverlay(lastCurrentTarget)
+                                            }
+                                            isSwipeDownActive = false
+                                        } else if (currentIsActive) {
+                                            val isVerticalSwipe = isDrag || (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX))
+                                            if (isVerticalSwipe) {
+                                                if (totalDragY < -40f) {
+                                                    currentOnSwipeUp()
+                                                } else if (totalDragY > 40f) {
+                                                    currentOnSwipeDown()
+                                                }
+                                            }
+                                        }
+                                        break
+                                    }
+
+                                    val positionChange = change.positionChange()
+                                    totalDragY += positionChange.y
+                                    totalDragX += positionChange.x
+
+                                    if (!isSwipeDownActive) {
+                                        if (totalDragY > 40f && totalDragY > kotlin.math.abs(totalDragX) * 1.2f) {
+                                            isDrag = true
+                                            isSwipeDownActive = true
+                                            anchorRootPos = currentRootPos
+                                            lastCurrentTarget = resolveSwipeDownTarget(
+                                                anchorX = anchorRootPos.x,
+                                                currentX = currentRootPos.x,
+                                                handSide = handSide,
+                                                screenWidthPx = screenWidthPx,
+                                                cardWidthPx = cardWidthPx,
+                                                screenMarginPx = screenMarginPx
+                                            )
+                                            currentOnStartSwipeDownOverlay(anchorRootPos)
+                                        } else if (!isDrag) {
+                                            if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop && kotlin.math.abs(
+                                                    totalDragY
+                                                ) > kotlin.math.abs(totalDragX)
+                                            ) {
+                                                isDrag = true
+                                            } else if (kotlin.math.abs(totalDragX) > viewConfiguration.touchSlop && kotlin.math.abs(
+                                                    totalDragX
+                                                ) > kotlin.math.abs(totalDragY) * 1.2f
+                                            ) {
+                                                isHorizontalDrag = true
+                                            }
+                                        }
+                                    } else {
+                                        lastCurrentTarget = resolveSwipeDownTarget(
+                                            anchorX = anchorRootPos.x,
+                                            currentX = currentRootPos.x,
+                                            handSide = handSide,
+                                            screenWidthPx = screenWidthPx,
+                                            cardWidthPx = cardWidthPx,
+                                            screenMarginPx = screenMarginPx
+                                        )
+                                        currentOnUpdateSwipeDownOverlay(currentRootPos, lastCurrentTarget)
+                                    }
+
+                                    if (isDrag || isSwipeDownActive) {
+                                        change.consume()
+                                    }
+                                }
+                            }
+                        }
+                    } finally {
+                        if (isSwipeDownActive) {
+                            isSwipeDownActive = false
+                            currentOnCancelSwipeDownOverlay()
                         }
                     }
                 }

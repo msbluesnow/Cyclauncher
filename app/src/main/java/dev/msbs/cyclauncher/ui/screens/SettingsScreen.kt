@@ -1569,7 +1569,7 @@ private fun AccentColorDialog(
 
                 if (selectedTab == 0) {
                     Text(
-                        "Wallpaper Accent (Material You)",
+                        "Adaptive Wallpaper Accent",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = popupTheme.secondaryContentColor

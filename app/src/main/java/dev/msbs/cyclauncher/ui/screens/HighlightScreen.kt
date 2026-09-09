@@ -86,6 +86,7 @@ import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -335,7 +336,7 @@ fun HighlightScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .navigationBarsPadding()
+                .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
         ) {
             // Top Bar matching Settings layout
             HighlightTopBar(
@@ -1111,155 +1112,169 @@ private fun WidgetCard(
                     .fillMaxWidth()
                     .padding(vertical = 2.dp)
             ) {
-                // Header Row: Label, Animated Progress Line from Title to Recycle Bin, Configure Button, Resize Button, Trash Button
+                // Header Row: Left container (Title + Progress Line) and Right container (Action buttons docked flush to edge)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 8.dp, end = 0.dp, top = 2.dp, bottom = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = label,
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = primaryTextColor.color.copy(alpha = 0.7f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        style = TextStyle(shadow = shadow),
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-
-                    // Animated Progress Line connecting Title to Trash Icon (appears/fills smoothly on hold)
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = 6.dp)
-                            .height(2.5.dp),
-                        contentAlignment = Alignment.CenterStart
+                    // Left area: Title + Animated Progress Line filling all remaining width up to the buttons
+                    Row(
+                        modifier = Modifier.weight(1f, fill = true),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (deleteProgress.value > 0f) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .fillMaxHeight()
-                                    .clip(CircleShape)
-                                    .background(deleteColor.copy(alpha = 0.18f))
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth(deleteProgress.value)
-                                    .fillMaxHeight()
-                                    .clip(CircleShape)
-                                    .background(deleteColor)
-                            )
-                        }
-                    }
-
-                    // Move Up & Down Buttons
-                    if (showMoveButtons) {
-                        IconButton(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onMoveUp()
-                            },
-                            enabled = canMoveUp,
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            ShadowedIcon(
-                                imageVector = Icons.Outlined.KeyboardArrowUp,
-                                contentDescription = "Move widget up",
-                                tint = if (canMoveUp) primaryTextColor.color.copy(alpha = 0.75f) else primaryTextColor.color.copy(alpha = 0.20f),
-                                modifier = Modifier.size(18.dp),
-                                showShadows = showShadows && canMoveUp,
-                                primaryTextColor = primaryTextColor,
-                                shadowSettings = shadowSettings
-                            )
-                        }
-                        IconButton(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onMoveDown()
-                            },
-                            enabled = canMoveDown,
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            ShadowedIcon(
-                                imageVector = Icons.Outlined.KeyboardArrowDown,
-                                contentDescription = "Move widget down",
-                                tint = if (canMoveDown) primaryTextColor.color.copy(alpha = 0.75f) else primaryTextColor.color.copy(alpha = 0.20f),
-                                modifier = Modifier.size(18.dp),
-                                showShadows = showShadows && canMoveDown,
-                                primaryTextColor = primaryTextColor,
-                                shadowSettings = shadowSettings
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(2.dp))
-                    }
-
-                    // Native Reconfigure Button (Pencil icon) if widget supports configuration
-                    if (widgetInfo.configure != null && onConfigureWidget != null) {
-                        IconButton(
-                            onClick = {
-                                onConfigureWidget(config.id, true, null) { /* Provider re-renders on result */ }
-                            },
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            ShadowedIcon(
-                                imageVector = Icons.Outlined.Edit,
-                                contentDescription = "Configure widget",
-                                tint = primaryTextColor.color.copy(alpha = 0.7f),
-                                modifier = Modifier.size(16.dp),
-                                showShadows = showShadows,
-                                primaryTextColor = primaryTextColor,
-                                shadowSettings = shadowSettings
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(2.dp))
-                    }
-
-                    // Resize Button
-                    IconButton(
-                        onClick = { showResizeDialog = true },
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        ShadowedIcon(
-                            imageVector = Icons.Outlined.AspectRatio,
-                            contentDescription = "Resize widget",
-                            tint = primaryTextColor.color.copy(alpha = 0.7f),
-                            modifier = Modifier.size(17.dp),
-                            showShadows = showShadows,
-                            primaryTextColor = primaryTextColor,
-                            shadowSettings = shadowSettings
+                        Text(
+                            text = label,
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = primaryTextColor.color.copy(alpha = 0.7f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = TextStyle(shadow = shadow),
+                            modifier = Modifier.widthIn(max = 160.dp)
                         )
+
+                        // Animated Progress Line connecting Title to Action Buttons (absorbs all space between title and buttons)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f, fill = true)
+                                .padding(horizontal = 6.dp)
+                                .height(2.5.dp),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            if (deleteProgress.value > 0f) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .fillMaxHeight()
+                                        .clip(CircleShape)
+                                        .background(deleteColor.copy(alpha = 0.18f))
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(deleteProgress.value)
+                                        .fillMaxHeight()
+                                        .clip(CircleShape)
+                                        .background(deleteColor)
+                                )
+                            }
+                        }
                     }
 
-                    Spacer(modifier = Modifier.width(2.dp))
-
-                    // Safety Hold-To-Delete Recycle Bin Button
-                    Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(if (deleteProgress.value > 0f) deleteColor.copy(alpha = 0.2f) else Color.Transparent)
-                            .pointerInput(Unit) {
-                                awaitEachGesture {
-                                    awaitFirstDown(requireUnconsumed = false)
-                                    isDeletePressed = true
-                                    waitForUpOrCancellation()
-                                    isDeletePressed = false
+                    // Action buttons tightly docked flush to the card and screen edge
+                    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            // Move Up & Down Buttons
+                            if (showMoveButtons) {
+                                IconButton(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        onMoveUp()
+                                    },
+                                    enabled = canMoveUp,
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    ShadowedIcon(
+                                        imageVector = Icons.Outlined.KeyboardArrowUp,
+                                        contentDescription = "Move widget up",
+                                        tint = if (canMoveUp) primaryTextColor.color.copy(alpha = 0.75f) else primaryTextColor.color.copy(alpha = 0.20f),
+                                        modifier = Modifier.size(18.dp),
+                                        showShadows = showShadows && canMoveUp,
+                                        primaryTextColor = primaryTextColor,
+                                        shadowSettings = shadowSettings
+                                    )
                                 }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        ShadowedIcon(
-                            imageVector = Icons.Outlined.Delete,
-                            contentDescription = "Hold to delete widget",
-                            tint = if (deleteProgress.value > 0f) deleteColor else deleteColor.copy(alpha = 0.85f),
-                            modifier = Modifier.size(17.dp),
-                            showShadows = showShadows,
-                            primaryTextColor = primaryTextColor,
-                            shadowSettings = shadowSettings
-                        )
+                                IconButton(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        onMoveDown()
+                                    },
+                                    enabled = canMoveDown,
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    ShadowedIcon(
+                                        imageVector = Icons.Outlined.KeyboardArrowDown,
+                                        contentDescription = "Move widget down",
+                                        tint = if (canMoveDown) primaryTextColor.color.copy(alpha = 0.75f) else primaryTextColor.color.copy(alpha = 0.20f),
+                                        modifier = Modifier.size(18.dp),
+                                        showShadows = showShadows && canMoveDown,
+                                        primaryTextColor = primaryTextColor,
+                                        shadowSettings = shadowSettings
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(2.dp))
+                            }
+
+                            // Native Reconfigure Button (Pencil icon) if widget supports configuration
+                            if (widgetInfo.configure != null && onConfigureWidget != null) {
+                                IconButton(
+                                    onClick = {
+                                        onConfigureWidget(config.id, true, null) { /* Provider re-renders on result */ }
+                                    },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    ShadowedIcon(
+                                        imageVector = Icons.Outlined.Edit,
+                                        contentDescription = "Configure widget",
+                                        tint = primaryTextColor.color.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(16.dp),
+                                        showShadows = showShadows,
+                                        primaryTextColor = primaryTextColor,
+                                        shadowSettings = shadowSettings
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(2.dp))
+                            }
+
+                            // Resize Button
+                            IconButton(
+                                onClick = { showResizeDialog = true },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                ShadowedIcon(
+                                    imageVector = Icons.Outlined.AspectRatio,
+                                    contentDescription = "Resize widget",
+                                    tint = primaryTextColor.color.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(17.dp),
+                                    showShadows = showShadows,
+                                    primaryTextColor = primaryTextColor,
+                                    shadowSettings = shadowSettings
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(2.dp))
+
+                            // Safety Hold-To-Delete Recycle Bin Button
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(if (deleteProgress.value > 0f) deleteColor.copy(alpha = 0.2f) else Color.Transparent)
+                                    .pointerInput(Unit) {
+                                        awaitEachGesture {
+                                            awaitFirstDown(requireUnconsumed = false)
+                                            isDeletePressed = true
+                                            waitForUpOrCancellation()
+                                            isDeletePressed = false
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                ShadowedIcon(
+                                    imageVector = Icons.Outlined.Delete,
+                                    contentDescription = "Hold to delete widget",
+                                    tint = if (deleteProgress.value > 0f) deleteColor else deleteColor.copy(alpha = 0.85f),
+                                    modifier = Modifier.size(17.dp),
+                                    showShadows = showShadows,
+                                    primaryTextColor = primaryTextColor,
+                                    shadowSettings = shadowSettings
+                                )
+                            }
+                        }
                     }
                 }
 
