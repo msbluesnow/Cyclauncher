@@ -410,6 +410,13 @@ class AppActionsManager(context: Context) {
             saveTagAppOrders(currentMap)
         }
     }
+
+    fun updateTagAppOrder(tagId: String, orderedKeys: List<String>) {
+        val currentMap = _tagAppOrders.value.toMutableMap()
+        currentMap[tagId] = orderedKeys
+        _tagAppOrders.value = currentMap
+        saveTagAppOrders(currentMap)
+    }
     
     fun onPackageRemoved(packageName: String) {
         val newRecent = _recentlyUpdated.value.filterNot { it.startsWith("$packageName/") || it == packageName }.toSet()

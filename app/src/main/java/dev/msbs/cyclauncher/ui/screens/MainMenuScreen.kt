@@ -653,6 +653,7 @@ fun MainMenuScreen(
                 apps = currentTaggedApps,
                 offset = offset,
                 isEditMode = isTagPopupEditMode,
+                handSide = handSide,
                 onAppClick = onAppClick,
                 onAppLongClick = onAppLongClick,
                 onRemoveAppFromTag = { tagId, componentKey ->
@@ -660,6 +661,9 @@ fun MainMenuScreen(
                 },
                 onReorderApp = { fromIndex, toIndex ->
                     viewModel.reorderAppInTag(currentTag.id, fromIndex, toIndex, currentTaggedApps)
+                },
+                onSaveOrder = { orderedKeys ->
+                    viewModel.updateTagAppOrder(currentTag.id, orderedKeys)
                 },
                 onEditTag = { tagToEdit ->
                     selectedTagForPopup = null

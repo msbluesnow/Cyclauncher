@@ -315,7 +315,7 @@ fun SettingsScreen(
                                 )
                             }
                             Text(
-                                "Widgets",
+                                "Widget",
                                 color = primaryTextColor.color,
                                 style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                                 maxLines = 1,

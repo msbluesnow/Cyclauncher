@@ -4,6 +4,8 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationEndReason
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -11,6 +13,10 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import dev.msbs.cyclauncher.HandSide
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -20,6 +26,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -62,6 +69,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
@@ -238,10 +246,12 @@ fun TagFolderPopup(
     apps: List<AppInfo>,
     offset: Offset,
     isEditMode: Boolean = false,
+    handSide: HandSide = HandSide.RIGHT,
     onAppClick: (String) -> Unit = {},
     onAppLongClick: (AppInfo, Offset) -> Unit = { _, _ -> },
     onRemoveAppFromTag: (String, String) -> Unit = { _, _ -> },
     onReorderApp: ((Int, Int) -> Unit)? = null,
+    onSaveOrder: ((List<String>) -> Unit)? = null,
     onEditTag: (Tag) -> Unit = {},
     onExitEditMode: () -> Unit = {},
     onDismiss: () -> Unit,
@@ -276,17 +286,23 @@ fun TagFolderPopup(
 
     // Reorder drag tracking states
     var draggingKey by remember { mutableStateOf<String?>(null) }
-    var dragOffset by remember { mutableStateOf(Offset.Zero) }
-    var cellWidthPx by remember { mutableFloatStateOf(0f) }
-    var cellHeightPx by remember { mutableFloatStateOf(0f) }
+    var draggingInitialOffset by remember { mutableStateOf(Offset.Zero) }
+    var draggingDelta by remember { mutableStateOf(Offset.Zero) }
+    var draggedItemSize by remember { mutableStateOf(IntSize.Zero) }
 
     val currentOnReorderApp by rememberUpdatedState(onReorderApp)
+    val currentOnSaveOrder by rememberUpdatedState(onSaveOrder)
     val currentApps by rememberUpdatedState(apps)
+
+    var autoScrollSpeed by remember { mutableFloatStateOf(0f) }
+    var lastSwapTime by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(isEditMode) {
         if (!isEditMode) {
+            autoScrollSpeed = 0f
             draggingKey = null
-            dragOffset = Offset.Zero
+            draggingDelta = Offset.Zero
+            draggingInitialOffset = Offset.Zero
         }
     }
 
@@ -448,157 +464,392 @@ fun TagFolderPopup(
 
                     val gridState = rememberLazyGridState()
 
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(3),
-                        state = gridState,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        itemsIndexed(localApps, key = { _, item -> "${item.packageName}/${item.activityName}" }) { index, app ->
-                            val appKey = "${app.packageName}/${app.activityName}"
-                            val isDraggingThis = draggingKey == appKey
+                    fun updateAutoScroll(draggedCenterY: Float) {
+                        val viewportHeight = gridState.layoutInfo.viewportSize.height.toFloat()
+                        if (viewportHeight <= 0f) {
+                            autoScrollSpeed = 0f
+                            return
+                        }
+                        val scrollEdgeMargin = with(density) { 44.dp.toPx() }
 
-                            val scale by animateFloatAsState(
-                                targetValue = if (isDraggingThis) 1.15f else 1.0f,
-                                animationSpec = if (animationsEnabled) spring() else snap(),
-                                label = "scale"
-                            )
-                            val alpha by animateFloatAsState(
-                                targetValue = if (isDraggingThis) 0.88f else 1.0f,
-                                animationSpec = if (animationsEnabled) spring() else snap(),
-                                label = "alpha"
-                            )
+                        autoScrollSpeed = when {
+                            draggedCenterY < scrollEdgeMargin && gridState.canScrollBackward -> {
+                                val intensity = ((scrollEdgeMargin - draggedCenterY) / scrollEdgeMargin).coerceIn(0.1f, 1f)
+                                -with(density) { (5.dp + 14.dp * intensity).toPx() }
+                            }
+                            draggedCenterY > (viewportHeight - scrollEdgeMargin) && gridState.canScrollForward -> {
+                                val intensity = ((draggedCenterY - (viewportHeight - scrollEdgeMargin)) / scrollEdgeMargin).coerceIn(0.1f, 1f)
+                                with(density) { (5.dp + 14.dp * intensity).toPx() }
+                            }
+                            else -> 0f
+                        }
+                    }
 
-                            val itemAnimModifier = if (animationsEnabled && !isDraggingThis) Modifier.animateItem() else Modifier
+                    fun checkForMove() {
+                        val curKey = draggingKey ?: return
+                        val curIndex = localApps.indexOfFirst { "${it.packageName}/${it.activityName}" == curKey }
+                        if (curIndex == -1) return
 
-                            val itemRotation = if (isEditMode && !isDraggingThis) {
-                                if (index % 2 == 0) shakeRotation else -shakeRotation
-                            } else 0f
+                        val visibleItems = gridState.layoutInfo.visibleItemsInfo
+                        val curItemInfo = visibleItems.firstOrNull { it.index == curIndex }
 
-                            val itemTranslation = if (isEditMode && !isDraggingThis) {
-                                if ((index / 2) % 2 == 0) shakeTranslation else -shakeTranslation
-                            } else 0f
+                        val itemWidth = curItemInfo?.size?.width ?: draggedItemSize.width
+                        val itemHeight = curItemInfo?.size?.height ?: draggedItemSize.height
+                        if (itemWidth <= 0 || itemHeight <= 0) return
 
-                            val gestureModifier = if (isEditMode) {
-                                Modifier.pointerInput(appKey, localApps.size) {
-                                    detectDragGestures(
-                                        onDragStart = {
-                                            draggingKey = appKey
-                                            dragOffset = Offset.Zero
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        },
-                                        onDrag = { change, dragAmount ->
-                                            change.consume()
-                                            dragOffset += dragAmount
+                        val draggedVisualX = draggingInitialOffset.x + draggingDelta.x
+                        val draggedVisualY = draggingInitialOffset.y + draggingDelta.y
+                        val draggedCenterX = (draggedVisualX + itemWidth / 2f).toInt()
+                        val draggedCenterY = (draggedVisualY + itemHeight / 2f).toInt()
 
-                                            if (currentOnReorderApp != null) {
-                                                val visibleItems = gridState.layoutInfo.visibleItemsInfo
-                                                val curIndex = localApps.indexOfFirst { "${it.packageName}/${it.activityName}" == appKey }
-                                                val draggedItem = visibleItems.firstOrNull { it.index == curIndex }
+                        val targetItem = visibleItems.firstOrNull { item ->
+                            item.index != curIndex && item.index in localApps.indices &&
+                                draggedCenterX in item.offset.x..(item.offset.x + item.size.width) &&
+                                draggedCenterY in item.offset.y..(item.offset.y + item.size.height)
+                        }
 
-                                                if (draggedItem != null && curIndex != -1) {
-                                                    val draggedCenterX = draggedItem.offset.x + draggedItem.size.width / 2f + dragOffset.x
-                                                    val draggedCenterY = draggedItem.offset.y + draggedItem.size.height / 2f + dragOffset.y
-
-                                                    val targetItem = visibleItems
-                                                        .filter { it.index != curIndex && it.index in localApps.indices }
-                                                        .minByOrNull { item ->
-                                                            val itemCenterX = item.offset.x + item.size.width / 2f
-                                                            val itemCenterY = item.offset.y + item.size.height / 2f
-                                                            val dx = draggedCenterX - itemCenterX
-                                                            val dy = draggedCenterY - itemCenterY
-                                                            dx * dx + dy * dy
-                                                        }
-
-                                                    if (targetItem != null) {
-                                                        val targetCenterX = targetItem.offset.x + targetItem.size.width / 2f
-                                                        val targetCenterY = targetItem.offset.y + targetItem.size.height / 2f
-                                                        val distSq = (draggedCenterX - targetCenterX) * (draggedCenterX - targetCenterX) +
-                                                                     (draggedCenterY - targetCenterY) * (draggedCenterY - targetCenterY)
-
-                                                        val threshold = (targetItem.size.width.coerceAtLeast(targetItem.size.height) * 0.65f)
-                                                        if (distSq < threshold * threshold) {
-                                                            val deltaX = (targetItem.offset.x - draggedItem.offset.x).toFloat()
-                                                            val deltaY = (targetItem.offset.y - draggedItem.offset.y).toFloat()
-                                                            dragOffset = Offset(dragOffset.x - deltaX, dragOffset.y - deltaY)
-                                                            val item = localApps.removeAt(curIndex)
-                                                            localApps.add(targetItem.index, item)
-                                                            currentOnReorderApp?.invoke(curIndex, targetItem.index)
-                                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        onDragEnd = {
-                                            draggingKey = null
-                                            dragOffset = Offset.Zero
-                                        },
-                                        onDragCancel = {
-                                            draggingKey = null
-                                            dragOffset = Offset.Zero
-                                        }
+                        if (targetItem != null) {
+                            val now = System.currentTimeMillis()
+                            if (now - lastSwapTime > 140L) {
+                                lastSwapTime = now
+                                if (curIndex == gridState.firstVisibleItemIndex || targetItem.index == gridState.firstVisibleItemIndex) {
+                                    gridState.requestScrollToItem(
+                                        gridState.firstVisibleItemIndex,
+                                        gridState.firstVisibleItemScrollOffset
                                     )
                                 }
-                            } else {
-                                Modifier
+                                val movedItem = localApps.removeAt(curIndex)
+                                localApps.add(targetItem.index, movedItem)
+                                currentOnReorderApp?.invoke(curIndex, targetItem.index)
+                                currentOnSaveOrder?.invoke(localApps.map { it.componentKey })
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             }
+                        }
+                    }
 
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .then(itemAnimModifier)
-                                    .zIndex(if (isDraggingThis) 10f else 1f)
-                                    .onGloballyPositioned { coordinates ->
-                                        if (cellWidthPx == 0f && coordinates.size.width > 0) {
-                                            cellWidthPx = coordinates.size.width.toFloat()
-                                            cellHeightPx = coordinates.size.height.toFloat()
-                                        }
-                                    }
-                                    .graphicsLayer {
-                                        scaleX = scale
-                                        scaleY = scale
-                                        this.alpha = alpha
-                                        if (isDraggingThis) {
-                                            translationX = dragOffset.x
-                                            translationY = dragOffset.y
-                                            rotationZ = 0f
-                                        } else if (isEditMode) {
-                                            rotationZ = itemRotation
-                                            translationX = itemTranslation
-                                            translationY = if (index % 2 == 0) itemTranslation * 0.4f else -itemTranslation * 0.4f
-                                        }
-                                    }
-                                    .then(gestureModifier)
-                            ) {
-                                TagFolderAppItem(
-                                    app = app,
-                                    isEditMode = isEditMode,
-                                    isDragging = isDraggingThis,
-                                    onClick = {
-                                        if (!isEditMode) {
-                                            onAppClick("${app.packageName}/${app.activityName}")
-                                            onDismiss()
-                                        }
-                                    },
-                                    onLongClick = { appOffset ->
-                                        if (!isEditMode) {
-                                            onDismiss()
-                                            onAppLongClick(app, Offset(x, y) + appOffset)
-                                        }
-                                    },
-                                    onRemoveAppFromTag = onRemoveAppFromTag,
-                                    tagId = tag.id,
-                                    primaryTextColor = primaryTextColor,
-                                    showShadows = showShadows,
-                                    popupTheme = popupTheme
-                                )
+                    LaunchedEffect(draggingKey) {
+                        if (draggingKey == null) return@LaunchedEffect
+                        while (isActive && draggingKey != null) {
+                            if (autoScrollSpeed != 0f) {
+                                val consumed = gridState.scrollBy(autoScrollSpeed)
+                                if (consumed != 0f) {
+                                    val itemHeight = if (draggedItemSize.height > 0) draggedItemSize.height else 80
+                                    val draggedVisualY = draggingInitialOffset.y + draggingDelta.y
+                                    val draggedCenterY = draggedVisualY + itemHeight / 2f
+                                    updateAutoScroll(draggedCenterY)
+                                    checkForMove()
+                                } else {
+                                    autoScrollSpeed = 0f
+                                }
                             }
+                            delay(16L)
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(3),
+                            state = gridState,
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    start = if (isEditMode && handSide == HandSide.LEFT) 14.dp else 0.dp,
+                                    end = if (isEditMode && handSide == HandSide.RIGHT) 14.dp else 0.dp
+                                )
+                        ) {
+                            itemsIndexed(localApps, key = { _, item -> "${item.packageName}/${item.activityName}" }) { index, app ->
+                                val appKey = "${app.packageName}/${app.activityName}"
+                                val isDraggingThis = draggingKey == appKey
+
+                                val scale by animateFloatAsState(
+                                    targetValue = if (isDraggingThis) 1.15f else 1.0f,
+                                    animationSpec = if (animationsEnabled) spring() else snap(),
+                                    label = "scale"
+                                )
+                                val alpha by animateFloatAsState(
+                                    targetValue = if (isDraggingThis) 0.92f else 1.0f,
+                                    animationSpec = if (animationsEnabled) spring() else snap(),
+                                    label = "alpha"
+                                )
+
+                                val itemAnimModifier = if (animationsEnabled && !isDraggingThis) Modifier.animateItem() else Modifier
+
+                                val itemRotation = if (isEditMode && !isDraggingThis) {
+                                    if (index % 2 == 0) shakeRotation else -shakeRotation
+                                } else 0f
+
+                                val itemTranslation = if (isEditMode && !isDraggingThis) {
+                                    if ((index / 2) % 2 == 0) shakeTranslation else -shakeTranslation
+                                } else 0f
+
+                                val gestureModifier = if (isEditMode) {
+                                    Modifier.pointerInput(appKey, localApps.size) {
+                                        detectDragGestures(
+                                            onDragStart = {
+                                                val itemInfo = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+                                                if (itemInfo != null) {
+                                                    draggingKey = appKey
+                                                    draggingInitialOffset = Offset(itemInfo.offset.x.toFloat(), itemInfo.offset.y.toFloat())
+                                                    draggingDelta = Offset.Zero
+                                                    draggedItemSize = itemInfo.size
+                                                    autoScrollSpeed = 0f
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                }
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                change.consume()
+                                                draggingDelta += dragAmount
+
+                                                val itemHeight = if (draggedItemSize.height > 0) draggedItemSize.height else 80
+                                                val draggedCenterY = draggingInitialOffset.y + draggingDelta.y + itemHeight / 2f
+                                                updateAutoScroll(draggedCenterY)
+                                                checkForMove()
+                                            },
+                                            onDragEnd = {
+                                                autoScrollSpeed = 0f
+                                                draggingKey = null
+                                                draggingDelta = Offset.Zero
+                                                currentOnSaveOrder?.invoke(localApps.map { it.componentKey })
+                                            },
+                                            onDragCancel = {
+                                                autoScrollSpeed = 0f
+                                                draggingKey = null
+                                                draggingDelta = Offset.Zero
+                                                currentOnSaveOrder?.invoke(localApps.map { it.componentKey })
+                                            }
+                                        )
+                                    }
+                                } else {
+                                    Modifier
+                                }
+
+                                val curItemInfo = if (isDraggingThis) {
+                                    gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+                                } else null
+
+                                val itemTranslationX = if (isDraggingThis) {
+                                    if (curItemInfo != null) {
+                                        val draggedVisualX = draggingInitialOffset.x + draggingDelta.x
+                                        draggedVisualX - curItemInfo.offset.x
+                                    } else {
+                                        draggingDelta.x
+                                    }
+                                } else if (isEditMode) {
+                                    itemTranslation
+                                } else {
+                                    0f
+                                }
+
+                                val itemTranslationY = if (isDraggingThis) {
+                                    if (curItemInfo != null) {
+                                        val draggedVisualY = draggingInitialOffset.y + draggingDelta.y
+                                        draggedVisualY - curItemInfo.offset.y
+                                    } else {
+                                        draggingDelta.y
+                                    }
+                                } else if (isEditMode) {
+                                    if (index % 2 == 0) itemTranslation * 0.4f else -itemTranslation * 0.4f
+                                } else {
+                                    0f
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .then(itemAnimModifier)
+                                        .zIndex(if (isDraggingThis) 10f else 1f)
+                                        .graphicsLayer {
+                                            scaleX = scale
+                                            scaleY = scale
+                                            this.alpha = alpha
+                                            shadowElevation = if (isDraggingThis) 16.dp.toPx() else 0f
+                                            translationX = itemTranslationX
+                                            translationY = itemTranslationY
+                                            rotationZ = if (isDraggingThis) 0f else itemRotation
+                                        }
+                                        .then(gestureModifier)
+                                ) {
+                                    TagFolderAppItem(
+                                        app = app,
+                                        isEditMode = isEditMode,
+                                        isDragging = isDraggingThis,
+                                        onClick = {
+                                            if (!isEditMode) {
+                                                onAppClick("${app.packageName}/${app.activityName}")
+                                                onDismiss()
+                                            }
+                                        },
+                                        onLongClick = { appOffset ->
+                                            if (!isEditMode) {
+                                                onDismiss()
+                                                onAppLongClick(app, Offset(x, y) + appOffset)
+                                            }
+                                        },
+                                        onRemoveAppFromTag = onRemoveAppFromTag,
+                                        tagId = tag.id,
+                                        primaryTextColor = primaryTextColor,
+                                        showShadows = showShadows,
+                                        popupTheme = popupTheme
+                                    )
+                                }
+                            }
+                        }
+
+                        if (isEditMode) {
+                            TagFolderScrollbar(
+                                gridState = gridState,
+                                totalItems = localApps.size,
+                                handSide = handSide,
+                                accentColor = accentColor.color,
+                                trackColor = popupTheme.borderColor.copy(alpha = 0.35f),
+                                modifier = Modifier
+                                    .align(if (handSide == HandSide.LEFT) Alignment.TopStart else Alignment.TopEnd)
+                                    .matchParentSize()
+                            )
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun TagFolderScrollbar(
+    gridState: androidx.compose.foundation.lazy.grid.LazyGridState,
+    totalItems: Int,
+    handSide: HandSide,
+    accentColor: Color,
+    trackColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val haptic = LocalHapticFeedback.current
+
+    val totalRows = (totalItems + 2) / 3
+    val layoutInfo = gridState.layoutInfo
+    val visibleItems = layoutInfo.visibleItemsInfo
+
+    var isInteracting by remember { mutableStateOf(false) }
+
+    BoxWithConstraints(
+        modifier = modifier
+    ) {
+        val trackHeightPx = constraints.maxHeight.toFloat()
+        if (trackHeightPx <= 0f) return@BoxWithConstraints
+
+        val rowHeightPx = remember(visibleItems) {
+            if (visibleItems.isNotEmpty()) {
+                visibleItems.first().size.height.toFloat() + with(density) { 12.dp.toPx() }
+            } else {
+                with(density) { 80.dp.toPx() }
+            }
+        }
+
+        val verticalSpacing = with(density) { 12.dp.toPx() }
+        val totalContentHeightPx = (totalRows * rowHeightPx - verticalSpacing).coerceAtLeast(trackHeightPx)
+        val viewportHeightPx = if (layoutInfo.viewportSize.height > 0) {
+            layoutInfo.viewportSize.height.toFloat()
+        } else {
+            trackHeightPx
+        }
+
+        val isScrollable = totalContentHeightPx > viewportHeightPx
+
+        val thumbHeightRatio = if (isScrollable) {
+            (viewportHeightPx / totalContentHeightPx).coerceIn(0.18f, 0.85f)
+        } else {
+            1.0f
+        }
+        val minThumbHeightPx = with(density) { 28.dp.toPx() }
+        val thumbHeightPx = (trackHeightPx * thumbHeightRatio).coerceIn(minThumbHeightPx, trackHeightPx)
+
+        val firstVisibleRow = gridState.firstVisibleItemIndex / 3
+        val firstRowOffset = gridState.firstVisibleItemScrollOffset.toFloat()
+        val currentScrollPx = firstVisibleRow * rowHeightPx + firstRowOffset
+        val maxScrollPx = (totalContentHeightPx - viewportHeightPx).coerceAtLeast(1f)
+
+        val scrollProgress = when {
+            !isScrollable -> 0f
+            !gridState.canScrollBackward -> 0f
+            !gridState.canScrollForward -> 1f
+            else -> (currentScrollPx / maxScrollPx).coerceIn(0f, 1f)
+        }
+
+        val thumbOffsetPx = if (isScrollable) {
+            scrollProgress * (trackHeightPx - thumbHeightPx)
+        } else {
+            0f
+        }
+
+        Box(
+            modifier = Modifier
+                .align(if (handSide == HandSide.LEFT) Alignment.TopStart else Alignment.TopEnd)
+                .width(18.dp)
+                .fillMaxHeight()
+                .pointerInput(isScrollable, trackHeightPx, maxScrollPx, thumbHeightPx) {
+                    if (!isScrollable) return@pointerInput
+                    detectDragGestures(
+                        onDragStart = { offset ->
+                            isInteracting = true
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            val scrollableTrack = trackHeightPx - thumbHeightPx
+                            if (scrollableTrack > 0f) {
+                                val targetProgress = ((offset.y - thumbHeightPx / 2f) / scrollableTrack).coerceIn(0f, 1f)
+                                val targetScrollPx = targetProgress * maxScrollPx
+                                val delta = targetScrollPx - currentScrollPx
+                                coroutineScope.launch {
+                                    gridState.scrollBy(delta)
+                                }
+                            }
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            val scrollableTrack = trackHeightPx - thumbHeightPx
+                            if (scrollableTrack > 0f) {
+                                val delta = (dragAmount.y / scrollableTrack) * maxScrollPx
+                                coroutineScope.launch {
+                                    gridState.scrollBy(delta)
+                                }
+                            }
+                        },
+                        onDragEnd = { isInteracting = false },
+                        onDragCancel = { isInteracting = false }
+                    )
+                },
+            contentAlignment = Alignment.TopCenter
+        ) {
+            // Track line
+            Box(
+                modifier = Modifier
+                    .width(3.5.dp)
+                    .fillMaxHeight()
+                    .clip(CircleShape)
+                    .background(trackColor)
+            )
+
+            // Thumb pill
+            val thumbWidth by animateDpAsState(
+                targetValue = if (isInteracting) 5.5.dp else 3.5.dp,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                label = "tag_scrollbar_thumb_w"
+            )
+
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(0, thumbOffsetPx.roundToInt()) }
+                    .width(thumbWidth)
+                    .height(with(density) { thumbHeightPx.toDp() })
+                    .clip(CircleShape)
+                    .background(
+                        if (isScrollable) accentColor else accentColor.copy(alpha = 0.4f)
+                    )
+            )
         }
     }
 }

@@ -228,9 +228,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     val recentlyUpdatedApps: StateFlow<Set<String>> = actionsManager.recentlyUpdated
 
-    val todayActivity: StateFlow<Pair<List<AppInfo>, List<AppInfo>>> = apps.map { allApps ->
+    val todayActivity: StateFlow<Pair<List<AppInfo>, List<AppInfo>>> = combine(apps, actionsManager.recentlyUpdated) { allApps, recentlyUpdatedKeys ->
         withContext(Dispatchers.IO) {
-            val oneDayAgo = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
+            val recentThreshold = System.currentTimeMillis() - 48 * 60 * 60 * 1000L
             val pm = safeContext.packageManager
             val installs = mutableListOf<AppInfo>()
             val updates = mutableListOf<AppInfo>()
@@ -246,26 +246,45 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 emptyList()
             }
             val packageInfoMap = installedPackages.associateBy { it.packageName }
+            val updateTimeMap = mutableMapOf<String, Long>()
 
             for (app in allApps) {
                 try {
-                    val pInfo = packageInfoMap[app.packageName] ?: continue
-                    val appInfo = pInfo.applicationInfo ?: continue
-                    val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0 &&
-                            (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0
-                    if (isSystem) continue
+                    val pInfo = packageInfoMap[app.packageName] ?: try {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                            pm.getPackageInfo(app.packageName, android.content.pm.PackageManager.PackageInfoFlags.of(0))
+                        } else {
+                            @Suppress("DEPRECATION")
+                            pm.getPackageInfo(app.packageName, 0)
+                        }
+                    } catch (_: Exception) { null } ?: continue
 
                     val firstInstall = pInfo.firstInstallTime
                     val lastUpdate = pInfo.lastUpdateTime
+                    updateTimeMap[app.componentKey] = lastUpdate
 
-                    if (firstInstall >= oneDayAgo && (lastUpdate - firstInstall < 60000L || lastUpdate >= oneDayAgo)) {
+                    val isMarkedRecentlyUpdated = recentlyUpdatedKeys.contains(app.componentKey) ||
+                            recentlyUpdatedKeys.contains(app.packageName)
+
+                    // Fresh install: installed within last 48h and no subsequent update
+                    val isNewInstall = firstInstall >= recentThreshold && (lastUpdate - firstInstall < 60000L)
+
+                    // Updated: lastUpdate is within 48h (or marked in recentlyUpdated), and distinctly after firstInstall
+                    val isRecentUpdate = (lastUpdate > firstInstall + 60000L) &&
+                            (lastUpdate >= recentThreshold || isMarkedRecentlyUpdated)
+
+                    if (isNewInstall) {
                         installs.add(app)
-                    } else if (lastUpdate >= oneDayAgo && lastUpdate > firstInstall + 60000L) {
+                    } else if (isRecentUpdate) {
                         updates.add(app)
                     }
                 } catch (_: Exception) {}
             }
-            Pair(installs, updates)
+
+            val sortedInstalls = installs.sortedByDescending { updateTimeMap[it.componentKey] ?: 0L }
+            val sortedUpdates = updates.sortedByDescending { updateTimeMap[it.componentKey] ?: 0L }
+
+            Pair(sortedInstalls, sortedUpdates)
         }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Pair(emptyList(), emptyList()))
 
@@ -834,6 +853,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         actionsManager.reorderAppInTag(tagId, fromIndex, toIndex, currentApps)
     }
 
+    fun updateTagAppOrder(tagId: String, orderedKeys: List<String>) {
+        actionsManager.updateTagAppOrder(tagId, orderedKeys)
+    }
+
     fun reorderTags(fromIndex: Int, toIndex: Int) {
         actionsManager.reorderTags(fromIndex, toIndex)
     }
@@ -1398,8 +1421,17 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     for (info in resolvedInfos) {
                         val pkgName = info.activityInfo.packageName
                         val compKey = "$pkgName/${info.activityInfo.name}"
-                        val updateTime = currentUpdateTimes[pkgName] ?: 0L
+                        val updateTime = currentUpdateTimes[pkgName] ?: try {
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                pm.getPackageInfo(pkgName, android.content.pm.PackageManager.PackageInfoFlags.of(0)).lastUpdateTime
+                            } else {
+                                @Suppress("DEPRECATION")
+                                pm.getPackageInfo(pkgName, 0).lastUpdateTime
+                            }
+                        } catch (_: Exception) { 0L }
+
                         if (updateTime > 0L) {
+                            currentUpdateTimes[pkgName] = updateTime
                             val prevTime = prevUpdateTimes[pkgName]
                             if (prevTime == null || updateTime > prevTime) {
                                 newlyInstalledOrUpdated.add(compKey to updateTime)
