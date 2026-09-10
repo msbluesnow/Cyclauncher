@@ -7,6 +7,7 @@ import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.ui.components.CustomWidgetPickerSheet
 import dev.msbs.cyclauncher.ui.components.rememberAppIconPainter
 import dev.msbs.cyclauncher.ui.components.ScreenTopBar
+import dev.msbs.cyclauncher.ui.components.ShadowedIcon
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
@@ -1511,36 +1512,5 @@ private fun WidgetResizeDialog(
                 }
             }
         }
-    }
-}
-
-/**
- * Reusable icon component with an adaptive drop shadow layer underneath.
- */
-@Composable
-private fun ShadowedIcon(
-    imageVector: ImageVector,
-    contentDescription: String?,
-    tint: Color,
-    modifier: Modifier = Modifier,
-    showShadows: Boolean,
-    primaryTextColor: PrimaryTextColor,
-    shadowSettings: ShadowSettings
-) {
-    Box(contentAlignment = Alignment.Center) {
-        if (showShadows) {
-            Icon(
-                imageVector = imageVector,
-                contentDescription = null,
-                tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.25f),
-                modifier = modifier.offset(1.dp, 1.dp)
-            )
-        }
-        Icon(
-            imageVector = imageVector,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = modifier
-        )
     }
 }

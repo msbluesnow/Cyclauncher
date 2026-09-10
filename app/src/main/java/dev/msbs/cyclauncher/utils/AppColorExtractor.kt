@@ -51,7 +51,7 @@ object AppColorExtractor {
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
 
         val hsv = FloatArray(3)
-        val bucketCounts = mutableMapOf<AppColorBucket, Int>()
+        val bucketCounts = IntArray(AppColorBucket.entries.size)
         var chromaticCount = 0
 
         for (color in pixels) {
@@ -72,7 +72,7 @@ object AppColorExtractor {
             }
 
             val bucket = mapHueToBucket(hsv[0])
-            bucketCounts[bucket] = (bucketCounts[bucket] ?: 0) + 1
+            bucketCounts[bucket.ordinal]++
             chromaticCount++
         }
 
@@ -81,16 +81,27 @@ object AppColorExtractor {
             return AppColorBucket.MONOCHROME
         }
 
-        if (bucketCounts.size == 1) {
-            return bucketCounts.keys.first()
+        var topIdx = -1
+        var topCount = 0
+        var secondCount = 0
+
+        for (i in bucketCounts.indices) {
+            val count = bucketCounts[i]
+            if (count > topCount) {
+                secondCount = topCount
+                topCount = count
+                topIdx = i
+            } else if (count > secondCount) {
+                secondCount = count
+            }
         }
 
-        val sorted = bucketCounts.entries.sortedByDescending { it.value }
-        val top = sorted[0]
-        val second = sorted[1]
+        if (topIdx == -1) {
+            return AppColorBucket.MONOCHROME
+        }
 
-        val topRatio = top.value.toFloat() / chromaticCount
-        val secondRatio = second.value.toFloat() / chromaticCount
+        val topRatio = topCount.toFloat() / chromaticCount
+        val secondRatio = secondCount.toFloat() / chromaticCount
 
         // Если доминирующий цвет занимает более 69%, иконка не может быть в радуге.
         // Если доминирующий цвет занимает <= 69% и среди других цветов есть хотя бы один с долей >= 19%:
@@ -100,7 +111,7 @@ object AppColorExtractor {
             return AppColorBucket.MULTICOLOR
         }
 
-        return top.key
+        return AppColorBucket.entries[topIdx]
     }
 
     private fun mapHueToBucket(hue: Float): AppColorBucket {

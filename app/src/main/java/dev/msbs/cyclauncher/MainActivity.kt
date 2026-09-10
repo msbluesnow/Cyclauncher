@@ -201,7 +201,7 @@ class MainActivity : ComponentActivity() {
                     val horizontalPagerState = rememberPagerState { 2 }
                     val verticalPagerState = rememberPagerState { 2 }
                     val scope = rememberCoroutineScope()
-                    val fastAnimSpec = remember { tween<Float>(durationMillis = 150, easing = FastOutSlowInEasing) }
+                    val fastAnimSpec = remember { tween<Float>(durationMillis = 200, easing = FastOutSlowInEasing) }
                     val slideAnimSpec = remember { tween<androidx.compose.ui.unit.IntOffset>(durationMillis = 180, easing = FastOutSlowInEasing) }
                     
                     var showActionMenuFor by remember { mutableStateOf<AppInfo?>(null) }
@@ -213,12 +213,16 @@ class MainActivity : ComponentActivity() {
                     var menuSource by remember { mutableStateOf("none") }
                     var menuOffset by remember { mutableStateOf(Offset.Zero) }
 
+                    val dismissTransientDialogs = {
+                        showActionMenuFor = null
+                        showRenameDialogFor = null
+                        showTagDialogFor = null
+                        tagToEditForDialog = null
+                    }
+
                     LaunchedEffect(Unit) {
                         viewModel.resetRequest.collect {
-                            showActionMenuFor = null
-                            showRenameDialogFor = null
-                            showTagDialogFor = null
-                            tagToEditForDialog = null
+                            dismissTransientDialogs()
                             isHighlightScreenVisible = false
                             if (horizontalPagerState.currentPage != 0) {
                                 horizontalPagerState.scrollToPage(0)
@@ -281,10 +285,7 @@ class MainActivity : ComponentActivity() {
                             else -> verticalPagerState.currentPage != 0 || horizontalPagerState.currentPage != 0 || isHighlightScreenVisible
                         }
                         if (isMenuDismissNeeded) {
-                            showActionMenuFor = null
-                            showRenameDialogFor = null
-                            showTagDialogFor = null
-                            tagToEditForDialog = null
+                            dismissTransientDialogs()
                         }
                     }
 
@@ -292,10 +293,7 @@ class MainActivity : ComponentActivity() {
                         isHighlightScreenActive = shouldListenWidgets
                         if (shouldListenWidgets) {
                             if (isHighlightScreenVisible) {
-                                showActionMenuFor = null
-                                showRenameDialogFor = null
-                                showTagDialogFor = null
-                                tagToEditForDialog = null
+                                dismissTransientDialogs()
                             }
                             try { appWidgetHost?.startListening() } catch (_: Exception) {}
                         } else {
@@ -327,7 +325,7 @@ class MainActivity : ComponentActivity() {
                                     VerticalPager(
                                         state = verticalPagerState,
                                         modifier = Modifier.fillMaxSize(),
-                                        beyondViewportPageCount = 0,
+                                        beyondViewportPageCount = 1,
                                         userScrollEnabled = false 
                                     ) { vIndex ->
                                         if (vIndex == 0) {
@@ -335,29 +333,19 @@ class MainActivity : ComponentActivity() {
                                             androidx.compose.animation.AnimatedContent(
                                                 targetState = isHighlightScreenVisible,
                                                 transitionSpec = {
-                                                    if (targetState) {
-                                                        (androidx.compose.animation.slideInHorizontally(
-                                                            initialOffsetX = { fullWidth -> if (handSide == HandSide.RIGHT) fullWidth else -fullWidth },
-                                                            animationSpec = if (animationsEnabled) slideAnimSpec else androidx.compose.animation.core.snap()
-                                                        ) + androidx.compose.animation.fadeIn(animationSpec = if (animationsEnabled) androidx.compose.animation.core.tween(150) else androidx.compose.animation.core.snap()))
-                                                        .togetherWith(
-                                                            androidx.compose.animation.slideOutHorizontally(
-                                                                targetOffsetX = { fullWidth -> if (handSide == HandSide.RIGHT) -fullWidth else fullWidth },
-                                                                animationSpec = if (animationsEnabled) slideAnimSpec else androidx.compose.animation.core.snap()
-                                                            ) + androidx.compose.animation.fadeOut(animationSpec = if (animationsEnabled) androidx.compose.animation.core.tween(150) else androidx.compose.animation.core.snap())
-                                                        )
-                                                    } else {
-                                                        (androidx.compose.animation.slideInHorizontally(
-                                                            initialOffsetX = { fullWidth -> if (handSide == HandSide.RIGHT) -fullWidth else fullWidth },
-                                                            animationSpec = if (animationsEnabled) slideAnimSpec else androidx.compose.animation.core.snap()
-                                                        ) + androidx.compose.animation.fadeIn(animationSpec = if (animationsEnabled) androidx.compose.animation.core.tween(150) else androidx.compose.animation.core.snap()))
-                                                        .togetherWith(
-                                                            androidx.compose.animation.slideOutHorizontally(
-                                                                targetOffsetX = { fullWidth -> if (handSide == HandSide.RIGHT) fullWidth else -fullWidth },
-                                                                animationSpec = if (animationsEnabled) slideAnimSpec else androidx.compose.animation.core.snap()
-                                                            ) + androidx.compose.animation.fadeOut(animationSpec = if (animationsEnabled) androidx.compose.animation.core.tween(150) else androidx.compose.animation.core.snap())
-                                                        )
-                                                    }
+                                                    val direction = if (targetState == (handSide == HandSide.RIGHT)) 1 else -1
+                                                    val slideSpec = if (animationsEnabled) slideAnimSpec else androidx.compose.animation.core.snap<androidx.compose.ui.unit.IntOffset>()
+                                                    val fadeSpec = if (animationsEnabled) androidx.compose.animation.core.tween<Float>(150) else androidx.compose.animation.core.snap<Float>()
+                                                    (androidx.compose.animation.slideInHorizontally(
+                                                        initialOffsetX = { fullWidth -> direction * fullWidth },
+                                                        animationSpec = slideSpec
+                                                    ) + androidx.compose.animation.fadeIn(animationSpec = fadeSpec))
+                                                    .togetherWith(
+                                                        androidx.compose.animation.slideOutHorizontally(
+                                                            targetOffsetX = { fullWidth -> -direction * fullWidth },
+                                                            animationSpec = slideSpec
+                                                        ) + androidx.compose.animation.fadeOut(animationSpec = fadeSpec)
+                                                    )
                                                 },
                                                 label = "MainHighlightScreenTransition"
                                             ) { showHighlight ->
@@ -381,24 +369,12 @@ class MainActivity : ComponentActivity() {
                                                             menuSource = "history_or_favorites" 
                                                         },
                                                         onSwipeUp = {
-                                                            scope.launch {
-                                                                if (animationsEnabled) {
-                                                                    verticalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec)
-                                                                } else {
-                                                                    verticalPagerState.scrollToPage(1)
-                                                                }
-                                                            }
+                                                            scope.launch { verticalPagerState.scrollToPageCompat(1, animationsEnabled, fastAnimSpec) }
                                                         },
                                                         onSwipeDown = ::openNotifications,
                                                         onOpenQuickSettings = ::openQuickSettings,
                                                         onSettingsClick = {
-                                                            scope.launch {
-                                                                if (animationsEnabled) {
-                                                                    horizontalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec)
-                                                                } else {
-                                                                    horizontalPagerState.scrollToPage(1)
-                                                                }
-                                                            }
+                                                            scope.launch { horizontalPagerState.scrollToPageCompat(1, animationsEnabled, fastAnimSpec) }
                                                         },
                                                         onOpenHighlightScreen = {
                                                             isHighlightScreenVisible = true
@@ -415,14 +391,7 @@ class MainActivity : ComponentActivity() {
                                                 appWidgetManager = appWidgetManager,
                                                 onConfigureWidget = ::startWidgetConfiguration,
                                                 onBackToMain = {
-                                                    viewModel.setSelectedLetter(null)
-                                                    scope.launch {
-                                                        if (animationsEnabled) {
-                                                            verticalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
-                                                        } else {
-                                                            verticalPagerState.scrollToPage(0)
-                                                        }
-                                                    }
+                                                    scope.launch { verticalPagerState.scrollToPageCompat(0, animationsEnabled, fastAnimSpec) }
                                                 },
                                                 onAppClick = { appKey ->
                                                     viewModel.setSelectedLetter(null)
@@ -441,13 +410,7 @@ class MainActivity : ComponentActivity() {
                                         viewModel = viewModel,
                                         enabled = isSettingsActive,
                                         onBack = {
-                                            scope.launch {
-                                                if (animationsEnabled) {
-                                                    horizontalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
-                                                } else {
-                                                    horizontalPagerState.scrollToPage(0)
-                                                }
-                                            }
+                                            scope.launch { horizontalPagerState.scrollToPageCompat(0, animationsEnabled, fastAnimSpec) }
                                         }
                                     )
                                 }
@@ -544,22 +507,10 @@ class MainActivity : ComponentActivity() {
                             TutorialOverlay(
                                 viewModel = viewModel,
                                 onNavigateToSearch = {
-                                    scope.launch {
-                                        if (animationsEnabled) {
-                                            verticalPagerState.animateScrollToPage(1, animationSpec = fastAnimSpec)
-                                        } else {
-                                            verticalPagerState.scrollToPage(1)
-                                        }
-                                    }
+                                    scope.launch { verticalPagerState.scrollToPageCompat(1, animationsEnabled, fastAnimSpec) }
                                 },
                                 onNavigateToMain = {
-                                    scope.launch {
-                                        if (animationsEnabled) {
-                                            verticalPagerState.animateScrollToPage(0, animationSpec = fastAnimSpec)
-                                        } else {
-                                            verticalPagerState.scrollToPage(0)
-                                        }
-                                    }
+                                    scope.launch { verticalPagerState.scrollToPageCompat(0, animationsEnabled, fastAnimSpec) }
                                 }
                             )
                         }
@@ -614,12 +565,11 @@ class MainActivity : ComponentActivity() {
     private var pendingWidgetConfigureCallback: ((Boolean) -> Unit)? = null
 
     fun startWidgetConfiguration(widgetId: Int, isReconfigure: Boolean, options: Bundle? = null, callback: (Boolean) -> Unit) {
-        pendingWidgetConfigureCallback = callback
-        val host = appWidgetHost
-        if (host == null) {
+        val host = appWidgetHost ?: run {
             callback(false)
             return
         }
+        pendingWidgetConfigureCallback = callback
         val requestCode = if (isReconfigure) REQUEST_RECONFIGURE_WIDGET else REQUEST_CONFIGURE_WIDGET
         try {
             host.startAppWidgetConfigureActivityForResult(
@@ -630,8 +580,8 @@ class MainActivity : ComponentActivity() {
                 options
             )
         } catch (_: Exception) {
-            callback(false)
             pendingWidgetConfigureCallback = null
+            callback(false)
         }
     }
 
@@ -710,7 +660,9 @@ class MainActivity : ComponentActivity() {
 
     private fun openApp(componentKey: String) {
         viewModel.resetSearchFilters()
-        val parts = componentKey.split("/")
+        viewModel.logAppLaunch(componentKey)
+        viewModel.requestHistoryScrollToBottom()
+
         val decor = window.decorView
         val width = decor.width.coerceAtLeast(1)
         val height = decor.height.coerceAtLeast(1)
@@ -720,21 +672,18 @@ class MainActivity : ComponentActivity() {
             null
         }
 
+        val parts = componentKey.split("/")
         if (parts.size == 2) {
             val packageName = parts[0]
             val activityName = parts[1]
             val componentName = android.content.ComponentName(packageName, activityName)
 
-            viewModel.logAppLaunch(componentKey)
-            viewModel.requestHistoryScrollToBottom()
-
             val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
-            var launched = false
-            if (launcherApps != null) {
-                try {
-                    launcherApps.startMainActivity(componentName, android.os.Process.myUserHandle(), null, optionsBundle)
-                    launched = true
-                } catch (_: Exception) {}
+            val launched = try {
+                launcherApps?.startMainActivity(componentName, android.os.Process.myUserHandle(), null, optionsBundle)
+                launcherApps != null
+            } catch (_: Exception) {
+                false
             }
 
             if (!launched) {
@@ -752,8 +701,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
         } else {
-            viewModel.logAppLaunch(componentKey)
-            viewModel.requestHistoryScrollToBottom()
             packageManager.getLaunchIntentForPackage(componentKey)?.let { intent ->
                 startActivity(intent, optionsBundle)
             }
@@ -796,13 +743,11 @@ class MainActivity : ComponentActivity() {
         try {
             val service = getSystemService("statusbar")
             val managerClass = Class.forName("android.app.StatusBarManager")
-            val notifMethod = managerClass.methods.firstOrNull { it.name == "expandNotificationsPanel" }
-                ?: managerClass.getMethod("expandNotificationsPanel")
-            val settingsMethod = managerClass.methods.firstOrNull { it.name == "expandSettingsPanel" }
-                ?: managerClass.getMethod("expandSettingsPanel")
             cachedStatusBarService = service
-            cachedExpandNotificationsMethod = notifMethod
-            cachedExpandSettingsMethod = settingsMethod
+            cachedExpandNotificationsMethod = managerClass.methods.firstOrNull { it.name == "expandNotificationsPanel" }
+                ?: managerClass.getMethod("expandNotificationsPanel")
+            cachedExpandSettingsMethod = managerClass.methods.firstOrNull { it.name == "expandSettingsPanel" }
+                ?: managerClass.getMethod("expandSettingsPanel")
         } catch (e: Exception) {
             android.util.Log.e("Cyclauncher", "Failed to cache StatusBarManager reflection", e)
         } finally {
@@ -815,16 +760,10 @@ class MainActivity : ComponentActivity() {
         android.util.Log.d("Cyclauncher", "openNotifications invoked")
         try {
             ensureStatusBarReflection()
-            val service = cachedStatusBarService
+            val service = cachedStatusBarService ?: getSystemService("statusbar")
             val method = cachedExpandNotificationsMethod
-            if (service != null && method != null) {
-                method.invoke(service)
-            } else {
-                val statusBarService = getSystemService("statusbar")
-                val statusBarManager = Class.forName("android.app.StatusBarManager")
-                val expandMethod = statusBarManager.getMethod("expandNotificationsPanel")
-                expandMethod.invoke(statusBarService)
-            }
+                ?: Class.forName("android.app.StatusBarManager").getMethod("expandNotificationsPanel")
+            method.invoke(service)
         } catch (e: Exception) {
             android.util.Log.e("Cyclauncher", "openNotifications failed", e)
         }
@@ -835,32 +774,26 @@ class MainActivity : ComponentActivity() {
         android.util.Log.d("Cyclauncher", "openQuickSettings invoked")
         try {
             ensureStatusBarReflection()
-            val service = cachedStatusBarService
+            val service = cachedStatusBarService ?: getSystemService("statusbar")
             val method = cachedExpandSettingsMethod
-            if (service != null && method != null) {
-                if (method.parameterCount == 0) {
-                    method.invoke(service)
-                } else {
-                    method.invoke(service, null as String?)
-                }
-                return
+                ?: Class.forName("android.app.StatusBarManager").getMethod("expandSettingsPanel")
+            if (method.parameterCount == 0) {
+                method.invoke(service)
+            } else {
+                method.invoke(service, null as String?)
             }
+            return
         } catch (e: Exception) {
             android.util.Log.e("Cyclauncher", "openQuickSettings failed via reflection", e)
         }
 
         try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                val panelIntent = Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                startActivity(panelIntent)
+            val intent = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY)
             } else {
-                val settingsIntent = Intent(Settings.ACTION_SETTINGS).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                startActivity(settingsIntent)
+                Intent(Settings.ACTION_SETTINGS)
             }
+            startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         } catch (fallbackEx: Exception) {
             android.util.Log.e("Cyclauncher", "openQuickSettings fallback failed", fallbackEx)
         }
@@ -883,59 +816,52 @@ private fun CyclauncherTheme(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun AutoTagsConfirmDialog(
-    preview: AutoTagsPreview,
+private fun TagPreviewItemRow(
+    color: Color,
+    name: String,
+    contentColor: Color
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 2.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            name,
+            color = contentColor,
+            fontSize = 13.sp
+        )
+    }
+}
+
+@Composable
+private fun BaseLauncherConfirmDialog(
+    title: String,
+    confirmButtonText: String,
     accentColor: AccentColor,
     buttonTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     popupTheme: PopupTheme = PopupTheme.DARK,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                "Apply Auto Tags?",
+                title,
                 color = accentColor.color,
                 fontWeight = FontWeight.Bold
             )
         },
         text = {
-            Column {
-                Text(
-                    "${preview.matchedAppsCount} apps will be tagged into ${preview.tags.size} categories:",
-                    color = popupTheme.contentColor.copy(alpha = 0.85f),
-                    fontSize = 14.sp
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                preview.tags.forEach { tagInfo ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 2.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(12.dp)
-                                .clip(CircleShape)
-                                .background(tagInfo.color)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            tagInfo.name,
-                            color = popupTheme.contentColor,
-                            fontSize = 13.sp
-                        )
-                    }
-                }
-                if (preview.unmatchedAppPackages.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "${preview.unmatchedAppPackages.size} apps not found on device",
-                        color = popupTheme.secondaryContentColor,
-                        fontSize = 11.sp
-                    )
-                }
-            }
+            Column(content = content)
         },
         confirmButton = {
             Button(
@@ -946,7 +872,7 @@ private fun AutoTagsConfirmDialog(
                 ),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Apply", color = buttonTextColor.color, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(confirmButtonText, color = buttonTextColor.color, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
         },
         dismissButton = {
@@ -964,6 +890,44 @@ private fun AutoTagsConfirmDialog(
 }
 
 @Composable
+private fun AutoTagsConfirmDialog(
+    preview: AutoTagsPreview,
+    accentColor: AccentColor,
+    buttonTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    popupTheme: PopupTheme = PopupTheme.DARK,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    BaseLauncherConfirmDialog(
+        title = "Apply Auto Tags?",
+        confirmButtonText = "Apply",
+        accentColor = accentColor,
+        buttonTextColor = buttonTextColor,
+        popupTheme = popupTheme,
+        onConfirm = onConfirm,
+        onDismiss = onDismiss
+    ) {
+        Text(
+            "${preview.matchedAppsCount} apps will be tagged into ${preview.tags.size} categories:",
+            color = popupTheme.contentColor.copy(alpha = 0.85f),
+            fontSize = 14.sp
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        preview.tags.forEach { tagInfo ->
+            TagPreviewItemRow(color = tagInfo.color, name = tagInfo.name, contentColor = popupTheme.contentColor)
+        }
+        if (preview.unmatchedAppPackages.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "${preview.unmatchedAppPackages.size} apps not found on device",
+                color = popupTheme.secondaryContentColor,
+                fontSize = 11.sp
+            )
+        }
+    }
+}
+
+@Composable
 private fun TagsBackupConfirmDialog(
     preview: TagsBackupPreview,
     accentColor: AccentColor,
@@ -972,90 +936,55 @@ private fun TagsBackupConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                "Import Backup / Tags?",
-                color = accentColor.color,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column {
-                Text(
-                    buildString {
-                        if (preview.newTags.isNotEmpty() || preview.existingTagCount > 0 || preview.assignmentCount > 0) {
-                            append("New tags to create: ${preview.newTags.size}")
-                            append("\nExisting tags kept: ${preview.existingTagCount}")
-                            append("\nTag assignments: ${preview.assignmentCount}")
-                        }
-                        if (preview.customLabels.isNotEmpty()) {
-                            if (isNotEmpty()) append("\n")
-                            append("Custom labels to restore: ${preview.customLabels.size}")
-                        }
-                        if (preview.favorites.isNotEmpty()) {
-                            if (isNotEmpty()) append("\n")
-                            append("Favorites to restore: ${preview.favorites.size}")
-                        }
-                    },
-                    color = popupTheme.contentColor.copy(alpha = 0.85f),
-                    fontSize = 14.sp
-                )
-                if (preview.newTags.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    preview.newTags.take(12).forEach { tagInfo ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(vertical = 2.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                .size(12.dp)
-                                .clip(CircleShape)
-                                .background(tagInfo.color)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                tagInfo.name,
-                                color = popupTheme.contentColor,
-                                fontSize = 13.sp
-                            )
-                        }
-                    }
-                    if (preview.newTags.size > 12) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            "… and ${preview.newTags.size - 12} more",
-                            color = popupTheme.secondaryContentColor,
-                            fontSize = 11.sp
-                        )
-                    }
+    BaseLauncherConfirmDialog(
+        title = "Import Backup / Tags?",
+        confirmButtonText = "Import",
+        accentColor = accentColor,
+        buttonTextColor = buttonTextColor,
+        popupTheme = popupTheme,
+        onConfirm = onConfirm,
+        onDismiss = onDismiss
+    ) {
+        Text(
+            buildString {
+                if (preview.newTags.isNotEmpty() || preview.existingTagCount > 0 || preview.assignmentCount > 0) {
+                    append("New tags to create: ${preview.newTags.size}")
+                    append("\nExisting tags kept: ${preview.existingTagCount}")
+                    append("\nTag assignments: ${preview.assignmentCount}")
                 }
+                if (preview.customLabels.isNotEmpty()) {
+                    if (isNotEmpty()) append("\n")
+                    append("Custom labels to restore: ${preview.customLabels.size}")
+                }
+                if (preview.favorites.isNotEmpty()) {
+                    if (isNotEmpty()) append("\n")
+                    append("Favorites to restore: ${preview.favorites.size}")
+                }
+            },
+            color = popupTheme.contentColor.copy(alpha = 0.85f),
+            fontSize = 14.sp
+        )
+        if (preview.newTags.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            preview.newTags.take(12).forEach { tagInfo ->
+                TagPreviewItemRow(color = tagInfo.color, name = tagInfo.name, contentColor = popupTheme.contentColor)
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = accentColor.color,
-                    contentColor = buttonTextColor.color
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("Import", color = buttonTextColor.color, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            if (preview.newTags.size > 12) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "… and ${preview.newTags.size - 12} more",
+                    color = popupTheme.secondaryContentColor,
+                    fontSize = 11.sp
+                )
             }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("Cancel", color = popupTheme.secondaryContentColor)
-            }
-        },
-        containerColor = popupTheme.solidBackgroundColor,
-        textContentColor = popupTheme.contentColor,
-        shape = RoundedCornerShape(20.dp)
-    )
+        }
+    }
+}
+
+private suspend fun androidx.compose.foundation.pager.PagerState.scrollToPageCompat(
+    page: Int,
+    animated: Boolean,
+    animationSpec: androidx.compose.animation.core.AnimationSpec<Float>
+) {
+    if (animated) animateScrollToPage(page, animationSpec = animationSpec) else scrollToPage(page)
 }

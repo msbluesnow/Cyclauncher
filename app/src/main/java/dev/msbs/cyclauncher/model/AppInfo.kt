@@ -13,5 +13,5 @@ data class AppInfo(
     val searchChar: Char = ' ',
     val normalizedLabel: String = label.lowercase().trim()
 ) {
-    val componentKey: String get() = "$packageName/$activityName"
+    val componentKey: String = "$packageName/$activityName"
 }

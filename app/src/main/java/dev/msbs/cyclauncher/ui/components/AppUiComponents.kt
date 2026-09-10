@@ -5,7 +5,11 @@ import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
+import dev.msbs.cyclauncher.ui.theme.ShadowSettings
 import dev.msbs.cyclauncher.ui.theme.LocalIconPackVersion
+
+import androidx.compose.ui.composed
+import androidx.compose.ui.graphics.vector.ImageVector
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -249,6 +253,68 @@ fun rememberAppIconPainter(iconKey: String, sizeDp: Int = 48): Painter {
 }
 
 /**
+ * Universal icon with optional drop shadow offset, taking settings from [LocalShadowSettings] by default.
+ */
+@Composable
+fun ShadowedIcon(
+    imageVector: ImageVector,
+    tint: Color,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+    size: androidx.compose.ui.unit.Dp? = null,
+    showShadows: Boolean = LocalShadowSettings.current.showShadows,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    shadowSettings: ShadowSettings = LocalShadowSettings.current,
+    shadowColorOverride: PrimaryTextColor? = shadowSettings.shadowColorOverride,
+    shadowAlpha: Float = 0.25f,
+    offset: androidx.compose.ui.unit.Dp = 1.dp
+) {
+    val iconModifier = if (size != null) modifier.size(size) else modifier
+    Box(contentAlignment = Alignment.Center) {
+        if (showShadows) {
+            Icon(
+                imageVector = imageVector,
+                contentDescription = null,
+                tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = shadowAlpha),
+                modifier = iconModifier.offset(offset, offset)
+            )
+        }
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = iconModifier
+        )
+    }
+}
+
+private class ItemPositionRef {
+    var position: Offset = Offset.Zero
+}
+
+/**
+ * Attaches root position tracking and tap/long-press gestures to an app item composable.
+ */
+fun Modifier.appItemGestures(
+    key: Any?,
+    onClick: () -> Unit,
+    onLongClick: (Offset) -> Unit = {}
+): Modifier = composed {
+    val positionRef = remember { ItemPositionRef() }
+    val currentOnClick by rememberUpdatedState(onClick)
+    val currentOnLongClick by rememberUpdatedState(onLongClick)
+
+    this
+        .onGloballyPositioned { positionRef.position = it.positionInRoot() }
+        .pointerInput(key) {
+            detectTapGestures(
+                onTap = { currentOnClick() },
+                onLongPress = { currentOnLongClick(positionRef.position + it) }
+            )
+        }
+}
+
+/**
  * Circular app icon with click and long-press gestures.
  */
 @Composable
@@ -258,11 +324,6 @@ fun AppIconItem(
     onClick: () -> Unit,
     onLongClick: (Offset) -> Unit = {}
 ) {
-    var itemPosition by remember { mutableStateOf(Offset.Zero) }
-    val currentItemPosition by rememberUpdatedState(itemPosition)
-    val currentOnClick by rememberUpdatedState(onClick)
-    val currentOnLongClick by rememberUpdatedState(onLongClick)
-
     val painter: Painter = rememberAppIconPainter(app.iconKey, size)
 
     Image(
@@ -272,13 +333,7 @@ fun AppIconItem(
         modifier = Modifier
             .size(size.dp)
             .clip(CircleShape)
-            .onGloballyPositioned { itemPosition = it.positionInRoot() }
-            .pointerInput(app.componentKey) {
-                detectTapGestures(
-                    onTap = { currentOnClick() },
-                    onLongPress = { currentOnLongClick(currentItemPosition + it) }
-                )
-            }
+            .appItemGestures(app.componentKey, onClick, onLongClick)
     )
 }
 
@@ -294,21 +349,10 @@ fun AppListItem(
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     showShadows: Boolean = false
 ) {
-    var itemPosition by remember { mutableStateOf(Offset.Zero) }
-    val currentItemPosition by rememberUpdatedState(itemPosition)
-    val currentOnClick by rememberUpdatedState(onClick)
-    val currentOnLongClick by rememberUpdatedState(onLongClick)
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .onGloballyPositioned { itemPosition = it.positionInRoot() }
-            .pointerInput("${app.packageName}/${app.activityName}") {
-                detectTapGestures(
-                    onTap = { currentOnClick() },
-                    onLongPress = { currentOnLongClick(currentItemPosition + it) }
-                )
-            }
+            .appItemGestures(app.componentKey, onClick, onLongClick)
             .padding(vertical = 12.dp, horizontal = 16.dp),
         contentAlignment = when(textAlign) {
             TextAlign.Start -> Alignment.CenterStart
@@ -343,22 +387,12 @@ fun AppListItemWithIcon(
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     showShadows: Boolean = false
 ) {
-    var itemPosition by remember { mutableStateOf(Offset.Zero) }
-    val currentItemPosition by rememberUpdatedState(itemPosition)
-    val currentOnClick by rememberUpdatedState(onClick)
-    val currentOnLongClick by rememberUpdatedState(onLongClick)
     val painter: Painter = rememberAppIconPainter(app.iconKey, iconSize)
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .onGloballyPositioned { itemPosition = it.positionInRoot() }
-            .pointerInput("${app.packageName}/${app.activityName}") {
-                detectTapGestures(
-                    onTap = { currentOnClick() },
-                    onLongPress = { currentOnLongClick(currentItemPosition + it) }
-                )
-            }
+            .appItemGestures(app.componentKey, onClick, onLongClick)
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = if (handSide == HandSide.LEFT) Arrangement.Start else Arrangement.End
@@ -373,79 +407,32 @@ fun AppListItemWithIcon(
                     .clip(CircleShape)
             )
             Spacer(modifier = Modifier.width(10.dp))
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start
-            ) {
-                AutoResizingText(
-                    text = app.label,
-                    targetFontSize = fontSize,
-                    textAlign = TextAlign.Start,
-                    modifier = Modifier.weight(1f, fill = false),
-                    primaryTextColor = primaryTextColor,
-                    showShadows = showShadows
-                )
-                if (isRecentlyUpdated) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Box(contentAlignment = Alignment.Center) {
-                        val shadowSettings = LocalShadowSettings.current
-                        if (showShadows || shadowSettings.showShadows) {
-                            Icon(
-                                imageVector = Icons.Outlined.Update,
-                                contentDescription = "Recently Updated",
-                                tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
-                                modifier = Modifier
-                                    .size(16.dp)
-                                    .offset(1.dp, 1.dp)
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Outlined.Update,
-                            contentDescription = "Recently Updated",
-                            tint = accentColor.color,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
+        }
+
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = if (handSide == HandSide.LEFT) Arrangement.Start else Arrangement.End
+        ) {
+            if (handSide == HandSide.RIGHT && isRecentlyUpdated) {
+                RecentlyUpdatedBadge(accentColor, primaryTextColor, showShadows)
+                Spacer(modifier = Modifier.width(6.dp))
             }
-        } else {
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End
-            ) {
-                if (isRecentlyUpdated) {
-                    Box(contentAlignment = Alignment.Center) {
-                        val shadowSettings = LocalShadowSettings.current
-                        if (showShadows || shadowSettings.showShadows) {
-                            Icon(
-                                imageVector = Icons.Outlined.Update,
-                                contentDescription = "Recently Updated",
-                                tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
-                                modifier = Modifier
-                                    .size(16.dp)
-                                    .offset(1.dp, 1.dp)
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Outlined.Update,
-                            contentDescription = "Recently Updated",
-                            tint = accentColor.color,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(6.dp))
-                }
-                AutoResizingText(
-                    text = app.label,
-                    targetFontSize = fontSize,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.weight(1f, fill = false),
-                    primaryTextColor = primaryTextColor,
-                    showShadows = showShadows
-                )
+            AutoResizingText(
+                text = app.label,
+                targetFontSize = fontSize,
+                textAlign = if (handSide == HandSide.LEFT) TextAlign.Start else TextAlign.End,
+                modifier = Modifier.weight(1f, fill = false),
+                primaryTextColor = primaryTextColor,
+                showShadows = showShadows
+            )
+            if (handSide == HandSide.LEFT && isRecentlyUpdated) {
+                Spacer(modifier = Modifier.width(6.dp))
+                RecentlyUpdatedBadge(accentColor, primaryTextColor, showShadows)
             }
+        }
+
+        if (handSide == HandSide.RIGHT) {
             Spacer(modifier = Modifier.width(10.dp))
             Image(
                 painter = painter,
@@ -457,4 +444,22 @@ fun AppListItemWithIcon(
             )
         }
     }
+}
+
+@Composable
+private fun RecentlyUpdatedBadge(
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    showShadows: Boolean
+) {
+    val shadowSettings = LocalShadowSettings.current
+    ShadowedIcon(
+        imageVector = Icons.Outlined.Update,
+        contentDescription = "Recently Updated",
+        tint = accentColor.color,
+        modifier = Modifier.size(16.dp),
+        showShadows = showShadows || shadowSettings.showShadows,
+        primaryTextColor = primaryTextColor,
+        shadowSettings = shadowSettings
+    )
 }

@@ -19,7 +19,10 @@ import android.app.Application
 import android.app.WallpaperColors
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.ui.text.style.TextAlign
@@ -70,6 +73,15 @@ enum class SideAlphabetSlotMode { HISTORY, WIDGET, DISABLED }
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
 
     private val safeContext = application.getSafeStorageContext()
+    private val prefs: SharedPreferences by lazy {
+        safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+    }
+    private inline fun editPrefs(action: SharedPreferences.Editor.() -> Unit) {
+        val editor = prefs.edit()
+        editor.action()
+        editor.apply()
+    }
+
     private val actionsManager = AppActionsManager(safeContext)
     private val appColorManager = AppColorManager(safeContext)
 
@@ -235,30 +247,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val installs = mutableListOf<AppInfo>()
             val updates = mutableListOf<AppInfo>()
 
-            val installedPackages = try {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    pm.getInstalledPackages(android.content.pm.PackageManager.PackageInfoFlags.of(0))
-                } else {
-                    @Suppress("DEPRECATION")
-                    pm.getInstalledPackages(0)
-                }
-            } catch (_: Exception) {
-                emptyList()
-            }
+            val installedPackages = pm.getInstalledPackagesCompat()
             val packageInfoMap = installedPackages.associateBy { it.packageName }
             val updateTimeMap = mutableMapOf<String, Long>()
 
             for (app in allApps) {
                 try {
-                    val pInfo = packageInfoMap[app.packageName] ?: try {
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                            pm.getPackageInfo(app.packageName, android.content.pm.PackageManager.PackageInfoFlags.of(0))
-                        } else {
-                            @Suppress("DEPRECATION")
-                            pm.getPackageInfo(app.packageName, 0)
-                        }
-                    } catch (_: Exception) { null } ?: continue
-
+                    val pInfo = packageInfoMap[app.packageName] ?: pm.getPackageInfoCompat(app.packageName) ?: continue
                     val firstInstall = pInfo.firstInstallTime
                     val lastUpdate = pInfo.lastUpdateTime
                     updateTimeMap[app.componentKey] = lastUpdate
@@ -292,7 +287,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val highlightWidgets: StateFlow<List<HighlightWidgetConfig>> = _highlightWidgets
 
     private fun loadHighlightWidgets(): List<HighlightWidgetConfig> {
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
         val jsonStr = prefs.getString("highlight_widgets_v2", null)
             ?: prefs.getString("highlight_widgets", "[]") ?: "[]"
         return try {
@@ -325,10 +319,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             }
             jsonArray.put(obj)
         }
-        safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
-            .edit()
-            .putString("highlight_widgets_v2", jsonArray.toString())
-            .apply()
+        editPrefs {
+            putString("highlight_widgets_v2", jsonArray.toString())
+        }
     }
 
     fun addHighlightWidget(widgetId: Int, initialHeightDp: Int = 160, initialWidthFraction: Float = 1.0f) {
@@ -358,25 +351,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun moveHighlightWidgetUp(widgetId: Int) {
-        val current = _highlightWidgets.value.toMutableList()
-        val index = current.indexOfFirst { it.id == widgetId }
-        if (index > 0) {
-            val temp = current[index]
-            current[index] = current[index - 1]
-            current[index - 1] = temp
-            _highlightWidgets.value = current
-            saveHighlightWidgets(current)
-        }
-    }
+    fun moveHighlightWidgetUp(widgetId: Int) = moveHighlightWidget(widgetId, -1)
 
-    fun moveHighlightWidgetDown(widgetId: Int) {
+    fun moveHighlightWidgetDown(widgetId: Int) = moveHighlightWidget(widgetId, 1)
+
+    private fun moveHighlightWidget(widgetId: Int, offset: Int) {
         val current = _highlightWidgets.value.toMutableList()
         val index = current.indexOfFirst { it.id == widgetId }
-        if (index != -1 && index < current.size - 1) {
-            val temp = current[index]
-            current[index] = current[index + 1]
-            current[index + 1] = temp
+        val targetIndex = index + offset
+        if (index != -1 && targetIndex in current.indices) {
+            java.util.Collections.swap(current, index, targetIndex)
             _highlightWidgets.value = current
             saveHighlightWidgets(current)
         }
@@ -385,28 +369,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _searchWidgetsConfig = MutableStateFlow<SearchWidgetsConfig>(loadSearchWidgetsConfig())
     val searchWidgetsConfig: StateFlow<SearchWidgetsConfig> = _searchWidgetsConfig.asStateFlow()
 
-    private fun loadSearchWidgetsConfig(): SearchWidgetsConfig {
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
-        val leftId = if (prefs.contains("search_widget_left_id")) prefs.getInt("search_widget_left_id", -1).takeIf { it != -1 } else null
-        val rightId = if (prefs.contains("search_widget_right_id")) prefs.getInt("search_widget_right_id", -1).takeIf { it != -1 } else null
-        val ratio = prefs.getFloat("search_widget_split_ratio", 0.5f).coerceIn(0.15f, 0.85f)
-        return SearchWidgetsConfig(leftWidgetId = leftId, rightWidgetId = rightId, splitRatio = ratio)
-    }
+    private fun loadSearchWidgetsConfig(): SearchWidgetsConfig = SearchWidgetsConfig(
+        leftWidgetId = prefs.getNullableInt("search_widget_left_id"),
+        rightWidgetId = prefs.getNullableInt("search_widget_right_id"),
+        splitRatio = prefs.getFloat("search_widget_split_ratio", 0.5f).coerceIn(0.15f, 0.85f)
+    )
 
     private fun saveSearchWidgetsConfig(config: SearchWidgetsConfig) {
-        val editor = safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE).edit()
-        if (config.leftWidgetId != null) {
-            editor.putInt("search_widget_left_id", config.leftWidgetId)
-        } else {
-            editor.remove("search_widget_left_id")
+        editPrefs {
+            putNullableInt("search_widget_left_id", config.leftWidgetId)
+            putNullableInt("search_widget_right_id", config.rightWidgetId)
+            putFloat("search_widget_split_ratio", config.splitRatio)
         }
-        if (config.rightWidgetId != null) {
-            editor.putInt("search_widget_right_id", config.rightWidgetId)
-        } else {
-            editor.remove("search_widget_right_id")
-        }
-        editor.putFloat("search_widget_split_ratio", config.splitRatio)
-        editor.apply()
     }
 
     fun setSearchWidget(isLeft: Boolean, widgetId: Int?) {
@@ -433,21 +407,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _sideSearchWidgetId = MutableStateFlow<Int?>(loadSideSearchWidgetId())
     val sideSearchWidgetId: StateFlow<Int?> = _sideSearchWidgetId.asStateFlow()
 
-    private fun loadSideSearchWidgetId(): Int? {
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
-        return if (prefs.contains("side_search_widget_id")) {
-            prefs.getInt("side_search_widget_id", -1).takeIf { it != -1 }
-        } else null
-    }
+    private fun loadSideSearchWidgetId(): Int? = prefs.getNullableInt("side_search_widget_id")
 
     private fun saveSideSearchWidgetId(id: Int?) {
-        val editor = safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE).edit()
-        if (id != null) {
-            editor.putInt("side_search_widget_id", id)
-        } else {
-            editor.remove("side_search_widget_id")
-        }
-        editor.apply()
+        editPrefs { putNullableInt("side_search_widget_id", id) }
     }
 
     fun setSideSearchWidget(widgetId: Int?) {
@@ -460,7 +423,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun loadSideAlphabetSlotMode(): SideAlphabetSlotMode {
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
         val raw = prefs.getString("side_alphabet_slot_mode", null)
         if (raw != null) {
             return try { SideAlphabetSlotMode.valueOf(raw) } catch (_: Exception) { SideAlphabetSlotMode.HISTORY }
@@ -474,28 +436,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun setSideAlphabetSlotMode(mode: SideAlphabetSlotMode) {
         _sideAlphabetSlotMode.value = mode
         _showSearchHistory.value = (mode == SideAlphabetSlotMode.HISTORY)
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
-        prefs.edit()
-            .putString("side_alphabet_slot_mode", mode.name)
-            .putBoolean("show_search_history", mode == SideAlphabetSlotMode.HISTORY)
-            .apply()
+        editPrefs {
+            putString("side_alphabet_slot_mode", mode.name)
+            putBoolean("show_search_history", mode == SideAlphabetSlotMode.HISTORY)
+        }
     }
 
-    private fun loadSideAlphabetWidgetId(): Int? {
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
-        return if (prefs.contains("side_alphabet_widget_id")) {
-            prefs.getInt("side_alphabet_widget_id", -1).takeIf { it != -1 }
-        } else null
-    }
+    private fun loadSideAlphabetWidgetId(): Int? = prefs.getNullableInt("side_alphabet_widget_id")
 
     private fun saveSideAlphabetWidgetId(id: Int?) {
-        val editor = safeContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE).edit()
-        if (id != null) {
-            editor.putInt("side_alphabet_widget_id", id)
-        } else {
-            editor.remove("side_alphabet_widget_id")
-        }
-        editor.apply()
+        editPrefs { putNullableInt("side_alphabet_widget_id", id) }
     }
 
     fun setSideAlphabetWidget(widgetId: Int?) {
@@ -578,7 +528,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val tutorialStep: StateFlow<Int> = _tutorialStep
 
     init {
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
         val savedHand = prefs.getString("hand_side", HandSide.LEFT.name) ?: HandSide.LEFT.name
         _handSide.value = try { HandSide.valueOf(savedHand) } catch (e: Exception) { HandSide.LEFT }
         
@@ -661,8 +610,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun completeTutorial() {
         _showTutorial.value = false
         _tutorialStep.value = 0
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
-        prefs.edit().putBoolean("is_tutorial_completed", true).apply()
+        editPrefs { putBoolean("is_tutorial_completed", true) }
     }
 
     fun setSelectedLetter(letter: Char?) {
@@ -687,8 +635,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun setSideAlphabetButtonYRatio(ratio: Float) {
         val clamped = ratio.coerceIn(0.05f, 0.85f)
         _sideAlphabetButtonYRatio.value = clamped
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
-        prefs.edit().putFloat("side_alphabet_button_y_ratio", clamped).apply()
+        editPrefs { putFloat("side_alphabet_button_y_ratio", clamped) }
     }
 
     fun setSearchMethod(method: SearchMethod) {
@@ -700,11 +647,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         if (method != SearchMethod.TEXT) {
             _searchText.value = ""
         }
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
-        prefs.edit()
-            .putString("search_method", method.name)
-            .putString("last_alphabet_search_method", lastAlphabetSearchMethod.name)
-            .apply()
+        editPrefs {
+            putString("search_method", method.name)
+            putString("last_alphabet_search_method", lastAlphabetSearchMethod.name)
+        }
     }
 
     fun toggleTextSearchMode() {
@@ -720,43 +666,33 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun setHandSide(side: HandSide) {
         _handSide.value = side
-        _searchListAlignment.value = if (side == HandSide.LEFT) {
-            TextAlign.End
-        } else {
-            TextAlign.Start
-        }
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
-        prefs.edit().putString("hand_side", side.name).apply()
+        _searchListAlignment.value = if (side == HandSide.LEFT) TextAlign.End else TextAlign.Start
+        editPrefs { putString("hand_side", side.name) }
     }
 
     fun setHideStatusBar(hide: Boolean) {
         _hideStatusBar.value = hide
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
-        prefs.edit().putBoolean("hide_status_bar", hide).apply()
+        editPrefs { putBoolean("hide_status_bar", hide) }
     }
 
     fun setShowSearchWidgets(show: Boolean) {
         _showSearchWidgets.value = show
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
-        prefs.edit().putBoolean("show_search_widgets", show).apply()
+        editPrefs { putBoolean("show_search_widgets", show) }
     }
 
     fun setShowSearchHistory(show: Boolean) {
         _showSearchHistory.value = show
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
-        prefs.edit().putBoolean("show_search_history", show).apply()
+        editPrefs { putBoolean("show_search_history", show) }
     }
 
     fun setAnimationsEnabled(enabled: Boolean) {
         _animationsEnabled.value = enabled
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
-        prefs.edit().putBoolean("animations_enabled", enabled).apply()
+        editPrefs { putBoolean("animations_enabled", enabled) }
     }
 
     fun setAccentColor(color: AccentColor) {
         _accentColor.value = color
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
-        prefs.edit().putString("accent_color", color.name).apply()
+        editPrefs { putString("accent_color", color.name) }
     }
 
     fun refreshDynamicWallpaperColor(context: Context, cachedColors: WallpaperColors? = null) {
@@ -782,43 +718,36 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun setPrimaryTextColor(color: PrimaryTextColor) {
         _primaryTextColor.value = color
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
-        prefs.edit().putString("primary_text_color", color.name).apply()
+        editPrefs { putString("primary_text_color", color.name) }
     }
 
     fun setButtonTextColor(color: PrimaryTextColor) {
         _buttonTextColor.value = color
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
-        prefs.edit().putString("button_text_color", color.name).apply()
+        editPrefs { putString("button_text_color", color.name) }
     }
 
     fun setPopupTheme(theme: PopupTheme) {
         _popupTheme.value = theme
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
-        prefs.edit().putString("popup_theme", theme.name).apply()
+        editPrefs { putString("popup_theme", theme.name) }
     }
 
     fun setShowShadows(enabled: Boolean) {
         _showShadows.value = enabled
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
-        prefs.edit().putBoolean("show_shadows", enabled).apply()
+        editPrefs { putBoolean("show_shadows", enabled) }
     }
 
     fun setShadowColor(color: PrimaryTextColor) {
         _shadowColor.value = color
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
-        prefs.edit().putString("shadow_color", color.name).apply()
+        editPrefs { putString("shadow_color", color.name) }
     }
 
     fun setIconPack(packageName: String?) {
         val newPackage = packageName?.takeIf { it.isNotBlank() }
         if (_selectedIconPack.value == newPackage) return
         _selectedIconPack.value = newPackage
-        val prefs = safeContext.getSharedPreferences("launcher_prefs", android.content.Context.MODE_PRIVATE)
-        if (newPackage != null) {
-            prefs.edit().putString("icon_pack_package", newPackage).apply()
-        } else {
-            prefs.edit().remove("icon_pack_package").apply()
+        editPrefs {
+            if (newPackage != null) putString("icon_pack_package", newPackage)
+            else remove("icon_pack_package")
         }
         viewModelScope.launch {
             IconPackManager.loadIconPack(safeContext, newPackage)
@@ -1056,32 +985,24 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun openSupportPage() {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://web.tribute.tg/e/1dW")).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        getApplication<Application>().startActivity(intent)
+    fun openSupportPage() = openUrl("https://web.tribute.tg/e/1dW")
+    fun openGitHubPage() = openUrl("https://github.com/msbluesnow/Cyclauncher")
+    fun openDiscordPage() = openUrl("https://discord.gg/Zw4EBe92Qn")
+    fun openKeepAndroidOpenPage() = openUrl("https://keepandroidopen.org/")
+
+    private fun openUrl(url: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            getApplication<Application>().startActivity(intent)
+        } catch (_: Exception) {}
     }
 
-    fun openGitHubPage() {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/msbluesnow/Cyclauncher")).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    private fun showToast(message: String) {
+        viewModelScope.launch(Dispatchers.Main) {
+            Toast.makeText(getApplication(), message, Toast.LENGTH_SHORT).show()
         }
-        getApplication<Application>().startActivity(intent)
-    }
-
-    fun openDiscordPage() {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://discord.gg/Zw4EBe92Qn")).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        getApplication<Application>().startActivity(intent)
-    }
-
-    fun openKeepAndroidOpenPage() {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://keepandroidopen.org/")).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        getApplication<Application>().startActivity(intent)
     }
 
     fun exportAppNamesJson(uri: Uri) {
@@ -1089,13 +1010,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             try {
                 val list = apps.value
                 actionsManager.exportAppNamesToUri(uri, list)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), "Exported ${list.size} apps", Toast.LENGTH_SHORT).show()
-                }
+                showToast("Exported ${list.size} apps")
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+                showToast("Export failed: ${e.message}")
             }
         }
     }
@@ -1105,13 +1022,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             try {
                 val list = apps.value
                 actionsManager.exportAppNamesToUriAsText(uri, list)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), "Exported ${list.size} apps", Toast.LENGTH_SHORT).show()
-                }
+                showToast("Exported ${list.size} apps")
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+                showToast("Export failed: ${e.message}")
             }
         }
     }
@@ -1130,9 +1043,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     onResult(result.labels.size, result.favorites.size)
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), "Import failed: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+                showToast("Import failed: ${e.message}")
             }
         }
     }
@@ -1145,9 +1056,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     _autoTagsPreview.value = preview
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), "Failed to parse tags: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+                showToast("Failed to parse tags: ${e.message}")
             }
         }
     }
@@ -1171,13 +1080,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             try {
                 val list = apps.value
                 actionsManager.exportTagsBackupToUri(uri, list)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), "Backup exported (${tags.value.size} tags, ${list.size} apps)", Toast.LENGTH_SHORT).show()
-                }
+                showToast("Backup exported (${tags.value.size} tags, ${list.size} apps)")
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+                showToast("Export failed: ${e.message}")
             }
         }
     }
@@ -1190,9 +1095,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     _tagsBackupPreview.value = preview
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), "Failed to parse tags file: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+                showToast("Failed to parse tags file: ${e.message}")
             }
         }
     }
@@ -1235,13 +1138,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             try {
                 val count = customCharMappings.value.size
                 actionsManager.exportCharMappingsToUri(uri)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), "Exported $count mappings", Toast.LENGTH_SHORT).show()
-                }
+                showToast("Exported $count mappings")
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(getApplication(), "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+                showToast("Export failed: ${e.message}")
             }
         }
     }
@@ -1408,16 +1307,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 val currentUpdateTimes = mutableMapOf<String, Long>()
                 val newlyInstalledOrUpdated = mutableListOf<Pair<String, Long>>()
 
-                val installedPackages = try {
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                        pm.getInstalledPackages(android.content.pm.PackageManager.PackageInfoFlags.of(0))
-                    } else {
-                        @Suppress("DEPRECATION")
-                        pm.getInstalledPackages(0)
-                    }
-                } catch (_: Exception) {
-                    emptyList()
-                }
+                val installedPackages = pm.getInstalledPackagesCompat()
                 for (pInfo in installedPackages) {
                     currentUpdateTimes[pInfo.packageName] = pInfo.lastUpdateTime
                 }
@@ -1426,14 +1316,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     for (info in resolvedInfos) {
                         val pkgName = info.activityInfo.packageName
                         val compKey = "$pkgName/${info.activityInfo.name}"
-                        val updateTime = currentUpdateTimes[pkgName] ?: try {
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                                pm.getPackageInfo(pkgName, android.content.pm.PackageManager.PackageInfoFlags.of(0)).lastUpdateTime
-                            } else {
-                                @Suppress("DEPRECATION")
-                                pm.getPackageInfo(pkgName, 0).lastUpdateTime
-                            }
-                        } catch (_: Exception) { 0L }
+                        val updateTime = currentUpdateTimes[pkgName] ?: pm.getPackageInfoCompat(pkgName)?.lastUpdateTime ?: 0L
 
                         if (updateTime > 0L) {
                             currentUpdateTimes[pkgName] = updateTime
@@ -1517,4 +1400,33 @@ fun orderTagApps(apps: List<AppInfo>, customOrder: List<String>?): List<AppInfo>
     val orderedKeys = ordered.map { it.componentKey }.toSet()
     apps.filter { it.componentKey !in orderedKeys }.forEach { ordered.add(it) }
     return ordered
+}
+
+private fun SharedPreferences.getNullableInt(key: String): Int? =
+    if (contains(key)) getInt(key, -1).takeIf { it != -1 } else null
+
+private fun SharedPreferences.Editor.putNullableInt(key: String, value: Int?) {
+    if (value != null) putInt(key, value) else remove(key)
+}
+
+private fun PackageManager.getInstalledPackagesCompat(): List<PackageInfo> = try {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        getInstalledPackages(PackageManager.PackageInfoFlags.of(0))
+    } else {
+        @Suppress("DEPRECATION")
+        getInstalledPackages(0)
+    }
+} catch (_: Exception) {
+    emptyList()
+}
+
+private fun PackageManager.getPackageInfoCompat(packageName: String): PackageInfo? = try {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
+    } else {
+        @Suppress("DEPRECATION")
+        getPackageInfo(packageName, 0)
+    }
+} catch (_: Exception) {
+    null
 }

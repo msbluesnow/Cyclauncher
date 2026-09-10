@@ -348,7 +348,7 @@ fun CustomWidgetPickerSheet(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            PickerShadowedIcon(
+                            ShadowedIcon(
                                 imageVector = Icons.Outlined.Widgets,
                                 contentDescription = null,
                                 tint = accentColor.color,
@@ -371,7 +371,7 @@ fun CustomWidgetPickerSheet(
                             onClick = onDismiss,
                             modifier = Modifier.size(32.dp)
                         ) {
-                            PickerShadowedIcon(
+                            ShadowedIcon(
                                 imageVector = Icons.Outlined.Close,
                                 contentDescription = "Close picker",
                                 tint = primaryTextColor.color.copy(alpha = 0.7f),
@@ -396,7 +396,7 @@ fun CustomWidgetPickerSheet(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        PickerShadowedIcon(
+                        ShadowedIcon(
                             imageVector = Icons.Outlined.Search,
                             contentDescription = null,
                             tint = primaryTextColor.color.copy(alpha = 0.6f),
@@ -594,7 +594,7 @@ private fun AppWidgetAccordionCard(
                     }
                 }
 
-                PickerShadowedIcon(
+                ShadowedIcon(
                     imageVector = if (isExpanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
                     contentDescription = if (isExpanded) "Collapse" else "Expand",
                     tint = primaryTextColor.color.copy(alpha = 0.7f),
@@ -758,33 +758,5 @@ private fun SingleWidgetPreviewCard(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun PickerShadowedIcon(
-    imageVector: ImageVector,
-    contentDescription: String?,
-    tint: Color,
-    modifier: Modifier = Modifier,
-    showShadows: Boolean,
-    primaryTextColor: PrimaryTextColor,
-    shadowSettings: ShadowSettings
-) {
-    Box(contentAlignment = Alignment.Center) {
-        if (showShadows) {
-            Icon(
-                imageVector = imageVector,
-                contentDescription = null,
-                tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.25f),
-                modifier = modifier.offset(1.dp, 1.dp)
-            )
-        }
-        Icon(
-            imageVector = imageVector,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = modifier
-        )
     }
 }

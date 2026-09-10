@@ -54,7 +54,7 @@ class AppActionsManager(context: Context) {
             val tagId = componentKey.removePrefix("tag:")
             _tags.value.find { it.id == tagId }?.name ?: "Tag"
         } else {
-            componentKey.split("/").first().split(".").last().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+            componentKey.substringBefore('/').substringAfterLast('.').replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
         }
         
         if (current.contains(componentKey)) {
@@ -258,7 +258,7 @@ class AppActionsManager(context: Context) {
             _recentlyUpdated.value = updatedSet
             saveRecentlyUpdated(updatedSet)
         }
-        val label = componentKey.split("/").first().split(".").last().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        val label = componentKey.substringBefore('/').substringAfterLast('.').replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
         Toast.makeText(context, "Removed \"$label\" from History", Toast.LENGTH_SHORT).show()
     }
 
@@ -357,13 +357,17 @@ class AppActionsManager(context: Context) {
         }
 
         val currentAppTags = _appTags.value.toMutableMap()
+        var appTagsChanged = false
         currentAppTags.forEach { (key, list) ->
             if (list.contains(tagId)) {
                 currentAppTags[key] = list.filter { it != tagId }
+                appTagsChanged = true
             }
         }
-        _appTags.value = currentAppTags
-        saveAppTags(currentAppTags)
+        if (appTagsChanged) {
+            _appTags.value = currentAppTags
+            saveAppTags(currentAppTags)
+        }
 
         val currentOrders = _tagAppOrders.value.toMutableMap()
         if (currentOrders.remove(tagId) != null) {
@@ -1279,8 +1283,12 @@ class AppActionsManager(context: Context) {
 
     private fun loadList(key: String): List<String> {
         val json = prefs.getString(key, null) ?: return emptyList()
-        val array = JSONArray(json)
-        return List(array.length()) { array.getString(it) }
+        return try {
+            val array = JSONArray(json)
+            List(array.length()) { array.getString(it) }
+        } catch (_: Exception) {
+            emptyList()
+        }
     }
 
     private fun saveMap(key: String, map: Map<String, String>) {
@@ -1290,12 +1298,16 @@ class AppActionsManager(context: Context) {
 
     private fun loadMap(key: String): Map<String, String> {
         val jsonString = prefs.getString(key, null) ?: return emptyMap()
-        val json = JSONObject(jsonString)
-        val map = mutableMapOf<String, String>()
-        json.keys().forEach { k ->
-            map[k] = json.getString(k)
+        return try {
+            val json = JSONObject(jsonString)
+            val map = mutableMapOf<String, String>()
+            json.keys().forEach { k ->
+                map[k] = json.getString(k)
+            }
+            map
+        } catch (_: Exception) {
+            emptyMap()
         }
-        return map
     }
 
     private fun saveTags(list: List<Tag>) {
@@ -1306,8 +1318,12 @@ class AppActionsManager(context: Context) {
 
     private fun loadTags(): List<Tag> {
         val json = prefs.getString("tags", null) ?: return emptyList()
-        val array = JSONArray(json)
-        return List(array.length()) { Tag.fromJsonObject(array.getJSONObject(it)) }
+        return try {
+            val array = JSONArray(json)
+            List(array.length()) { Tag.fromJsonObject(array.getJSONObject(it)) }
+        } catch (_: Exception) {
+            emptyList()
+        }
     }
 
     private fun saveAppTags(map: Map<String, List<String>>) {
@@ -1318,13 +1334,17 @@ class AppActionsManager(context: Context) {
 
     private fun loadAppTags(): Map<String, List<String>> {
         val jsonString = prefs.getString("app_tags", null) ?: return emptyMap()
-        val json = JSONObject(jsonString)
-        val map = mutableMapOf<String, List<String>>()
-        json.keys().forEach { k ->
-            val array = json.getJSONArray(k)
-            map[k] = List(array.length()) { array.getString(it) }
+        return try {
+            val json = JSONObject(jsonString)
+            val map = mutableMapOf<String, List<String>>()
+            json.keys().forEach { k ->
+                val array = json.getJSONArray(k)
+                map[k] = List(array.length()) { array.getString(it) }
+            }
+            map
+        } catch (_: Exception) {
+            emptyMap()
         }
-        return map
     }
 
     private fun saveTagAppOrders(map: Map<String, List<String>>) {

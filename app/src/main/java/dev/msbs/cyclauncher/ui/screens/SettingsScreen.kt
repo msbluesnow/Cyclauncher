@@ -12,6 +12,7 @@ import dev.msbs.cyclauncher.icons.IconPackManager
 import dev.msbs.cyclauncher.ui.components.KeepAndroidOpenBanner
 import dev.msbs.cyclauncher.ui.components.KeepAndroidOpenDialog
 import dev.msbs.cyclauncher.ui.components.ScreenTopBar
+import dev.msbs.cyclauncher.ui.components.ShadowedIcon
 
 import android.content.Intent
 import android.net.Uri
@@ -433,40 +434,6 @@ private fun SettingsDivider(
         color = primaryTextColor.color.copy(alpha = 0.08f),
         modifier = Modifier.padding(top = top, bottom = bottom)
     )
-}
-
-/**
- * Standard icon with optional adaptive shadow layer.
- */
-@Composable
-private fun ShadowedIcon(
-    imageVector: ImageVector,
-    tint: Color,
-    modifier: Modifier = Modifier,
-    size: Dp = 20.dp,
-    contentDescription: String? = null,
-    showShadows: Boolean = false,
-    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
-    shadowColorOverride: PrimaryTextColor? = null,
-    shadowAlpha: Float = 0.25f,
-    offset: Dp = 1.dp
-) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        if (showShadows) {
-            Icon(
-                imageVector = imageVector,
-                contentDescription = null,
-                tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = shadowAlpha),
-                modifier = Modifier.size(size).offset(offset, offset)
-            )
-        }
-        Icon(
-            imageVector = imageVector,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = Modifier.size(size)
-        )
-    }
 }
 
 /**

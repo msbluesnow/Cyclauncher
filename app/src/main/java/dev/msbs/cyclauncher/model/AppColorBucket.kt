@@ -43,13 +43,11 @@ enum class AppColorBucket(
     );
 
     companion object {
+        private val byNameMap: Map<String, AppColorBucket> = entries.associateBy { it.name }
+
         fun fromNameOrNull(name: String?): AppColorBucket? {
             if (name == null) return null
-            return try {
-                valueOf(name)
-            } catch (_: Exception) {
-                null
-            }
+            return byNameMap[name]
         }
     }
 }

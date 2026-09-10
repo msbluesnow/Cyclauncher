@@ -57,7 +57,7 @@ class AppColorManager(context: Context) {
             val keys = json.keys()
             while (keys.hasNext()) {
                 val key = keys.next()
-                val bucketName = if (json.has(key)) json.getString(key) else null
+                val bucketName = json.optString(key).takeIf { it.isNotEmpty() }
                 val bucket = AppColorBucket.fromNameOrNull(bucketName)
                 if (bucket != null) {
                     result[key] = bucket
@@ -99,21 +99,24 @@ class AppColorManager(context: Context) {
 
             val missingApps = apps.filter { !currentMap.containsKey(it.componentKey) }
             if (missingApps.isNotEmpty()) {
-                val results: List<Pair<String, AppColorBucket>> = coroutineScope {
-                    missingApps.map { app ->
-                        async(Dispatchers.Default) {
-                            val drawable = resolveAppIcon(pm, app.componentKey, app.packageName, app.activityName)
-                            if (drawable != null) {
-                                val bucket = AppColorExtractor.extractColorBucket(drawable)
-                                Pair(app.componentKey, bucket)
-                            } else null
-                        }
-                    }.awaitAll().filterNotNull()
-                }
+                val chunks = missingApps.chunked(16)
+                for (chunk in chunks) {
+                    val chunkResults = coroutineScope {
+                        chunk.map { app ->
+                            async(Dispatchers.Default) {
+                                val drawable = resolveAppIcon(pm, app.componentKey, app.packageName, app.activityName)
+                                if (drawable != null) {
+                                    val bucket = AppColorExtractor.extractColorBucket(drawable)
+                                    Pair(app.componentKey, bucket)
+                                } else null
+                            }
+                        }.awaitAll().filterNotNull()
+                    }
 
-                for ((compKey, bucket) in results) {
-                    currentMap[compKey] = bucket
-                    hasNewItems = true
+                    for ((compKey, bucket) in chunkResults) {
+                        currentMap[compKey] = bucket
+                        hasNewItems = true
+                    }
                 }
             }
 

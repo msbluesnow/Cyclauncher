@@ -35,10 +35,11 @@ internal class AppIconFetcher private constructor(
     }
 
     override suspend fun fetch(): FetchResult? = withContext(iconDispatcher) {
+        val slashIndex = key.componentKey.indexOf('/')
+        if (slashIndex <= 0 || slashIndex >= key.componentKey.length - 1) return@withContext null
+        val pkg = key.componentKey.substring(0, slashIndex)
+        val activity = key.componentKey.substring(slashIndex + 1)
         val pm = context.packageManager
-        val parts = key.componentKey.split("/", limit = 2)
-        if (parts.size != 2) return@withContext null
-        val (pkg, activity) = parts
 
         val iconPackDrawable: Drawable? = try {
             IconPackManager.getIcon(key.componentKey)
@@ -109,7 +110,8 @@ internal class AppIconFetcher private constructor(
             val key = when (data) {
                 is AppIconKey -> data
                 is String -> {
-                    if (data.startsWith("/") || data.contains("://") || !data.contains('/')) return null
+                    val slash = data.indexOf('/')
+                    if (slash <= 0 || slash >= data.length - 1 || data.contains("://")) return null
                     AppIconKey(data)
                 }
                 else -> return null

@@ -40,6 +40,7 @@ import android.app.Activity
 import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -82,7 +83,6 @@ fun SearchScreen(
         if (isTextSearchMode) {
             viewModel.toggleTextSearchMode()
         } else {
-            viewModel.resetSearchFilters()
             onBackToMain()
         }
     }
@@ -101,35 +101,17 @@ fun SearchScreen(
 
     val checkConfigureAndAdd: (Int, AppWidgetProviderInfo, Bundle?, WidgetPickTarget) -> Unit = { widgetId, providerInfo, optionsBundle, target ->
         val onConfigSuccess: () -> Unit = {
+            val replaceWidget: (Int?, (Int) -> Unit) -> Unit = { oldId, updateAction ->
+                if (oldId != null && oldId != widgetId) {
+                    try { host?.deleteAppWidgetId(oldId) } catch (_: Exception) {}
+                }
+                updateAction(widgetId)
+            }
             when (target) {
-                WidgetPickTarget.WHEEL_LEFT -> {
-                    val oldId = searchWidgetsConfig.leftWidgetId
-                    if (oldId != null && oldId != widgetId) {
-                        try { host?.deleteAppWidgetId(oldId) } catch (_: Exception) {}
-                    }
-                    viewModel.setSearchWidget(true, widgetId)
-                }
-                WidgetPickTarget.WHEEL_RIGHT -> {
-                    val oldId = searchWidgetsConfig.rightWidgetId
-                    if (oldId != null && oldId != widgetId) {
-                        try { host?.deleteAppWidgetId(oldId) } catch (_: Exception) {}
-                    }
-                    viewModel.setSearchWidget(false, widgetId)
-                }
-                WidgetPickTarget.SIDE_SEARCH -> {
-                    val oldId = viewModel.sideSearchWidgetId.value
-                    if (oldId != null && oldId != widgetId) {
-                        try { host?.deleteAppWidgetId(oldId) } catch (_: Exception) {}
-                    }
-                    viewModel.setSideSearchWidget(widgetId)
-                }
-                WidgetPickTarget.SIDE_ALPHABET_WIDGET -> {
-                    val oldId = viewModel.sideAlphabetWidgetId.value
-                    if (oldId != null && oldId != widgetId) {
-                        try { host?.deleteAppWidgetId(oldId) } catch (_: Exception) {}
-                    }
-                    viewModel.setSideAlphabetWidget(widgetId)
-                }
+                WidgetPickTarget.WHEEL_LEFT -> replaceWidget(searchWidgetsConfig.leftWidgetId) { viewModel.setSearchWidget(true, it) }
+                WidgetPickTarget.WHEEL_RIGHT -> replaceWidget(searchWidgetsConfig.rightWidgetId) { viewModel.setSearchWidget(false, it) }
+                WidgetPickTarget.SIDE_SEARCH -> replaceWidget(viewModel.sideSearchWidgetId.value) { viewModel.setSideSearchWidget(it) }
+                WidgetPickTarget.SIDE_ALPHABET_WIDGET -> replaceWidget(viewModel.sideAlphabetWidgetId.value) { viewModel.setSideAlphabetWidget(it) }
             }
         }
 
@@ -152,15 +134,7 @@ fun SearchScreen(
         if (result.resultCode == Activity.RESULT_OK && pendingBindWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
             val provider = manager.getAppWidgetInfo(pendingBindWidgetId) ?: pendingBindProvider
             if (provider != null) {
-                val displayDensity = context.resources.displayMetrics.density
-                val screenWidthDp = (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
-                val targetWidthDp = (screenWidthDp * 0.5f).toInt()
-                val options = Bundle().apply {
-                    putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, targetWidthDp)
-                    putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, targetWidthDp)
-                    putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 140)
-                    putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 300)
-                }
+                val options = createWidgetOptions(context)
                 checkConfigureAndAdd(pendingBindWidgetId, provider, options, pendingBindTarget)
             }
         } else {
@@ -175,15 +149,7 @@ fun SearchScreen(
     val onSelectWidgetFromPicker: (AppWidgetProviderInfo, WidgetPickTarget) -> Unit = { providerInfo, target ->
         if (host != null) {
             val newWidgetId = host.allocateAppWidgetId()
-            val displayDensity = context.resources.displayMetrics.density
-            val screenWidthDp = (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
-            val targetWidthDp = (screenWidthDp * 0.5f).toInt()
-            val options = Bundle().apply {
-                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, targetWidthDp)
-                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, targetWidthDp)
-                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 140)
-                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 300)
-            }
+            val options = createWidgetOptions(context)
 
             val canBind = try {
                 val profile = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -474,5 +440,17 @@ private fun SearchToggleBar(
                 style = MaterialTheme.typography.bodyLarge.copy(shadow = shadow)
             )
         }
+    }
+}
+
+private fun createWidgetOptions(context: Context): Bundle {
+    val displayDensity = context.resources.displayMetrics.density
+    val screenWidthDp = (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
+    val targetWidthDp = (screenWidthDp * 0.5f).toInt()
+    return Bundle().apply {
+        putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, targetWidthDp)
+        putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, targetWidthDp)
+        putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 140)
+        putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 300)
     }
 }

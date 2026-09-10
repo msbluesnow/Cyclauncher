@@ -29,7 +29,7 @@ data class Tag(
                 id = json.getString("id"),
                 name = json.getString("name"),
                 color = Color(json.getInt("color")),
-                emoji = if (json.has("emoji")) json.optString("emoji", "").takeIf { it.isNotBlank() } else null
+                emoji = json.optString("emoji", "").takeIf { it.isNotBlank() }
             )
         }
     }

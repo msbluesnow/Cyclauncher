@@ -10,11 +10,11 @@ sealed class FavoriteItem {
 
     /** An individual application shortcut in favorites. */
     data class App(val appInfo: AppInfo) : FavoriteItem() {
-        override val key: String get() = appInfo.componentKey
+        override val key: String = appInfo.componentKey
     }
 
     /** A categorized tag folder in favorites containing assigned apps. */
     data class TagFolder(val tag: Tag, val apps: List<AppInfo>) : FavoriteItem() {
-        override val key: String get() = "tag:${tag.id}"
+        override val key: String = "tag:${tag.id}"
     }
 }
