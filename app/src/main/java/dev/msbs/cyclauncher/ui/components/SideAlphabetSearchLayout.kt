@@ -202,6 +202,7 @@ fun SideAlphabetSearchLayout(
                                         appWidgetHost = appWidgetHost,
                                         appWidgetManager = appWidgetManager,
                                         onPickWidget = onPickSideAlphabetWidget,
+                                        handSide = handSide,
                                         modifier = Modifier
                                             .weight(1f)
                                             .fillMaxWidth()
@@ -259,6 +260,7 @@ fun SideAlphabetSearchLayout(
                                         appWidgetHost = appWidgetHost,
                                         appWidgetManager = appWidgetManager,
                                         onPickWidget = onPickSideWidget,
+                                        handSide = handSide,
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .padding(horizontal = 4.dp, vertical = 6.dp)
@@ -288,6 +290,7 @@ fun SideAlphabetSearchLayout(
                                         appWidgetHost = appWidgetHost,
                                         appWidgetManager = appWidgetManager,
                                         onPickWidget = onPickSideWidget,
+                                        handSide = handSide,
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .padding(horizontal = 4.dp, vertical = 6.dp)
@@ -339,6 +342,7 @@ fun SideAlphabetSearchLayout(
                                         appWidgetHost = appWidgetHost,
                                         appWidgetManager = appWidgetManager,
                                         onPickWidget = onPickSideAlphabetWidget,
+                                        handSide = handSide,
                                         modifier = Modifier
                                             .weight(1f)
                                             .fillMaxWidth()

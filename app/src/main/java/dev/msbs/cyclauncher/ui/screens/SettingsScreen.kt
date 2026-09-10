@@ -65,6 +65,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -92,16 +93,18 @@ fun SettingsScreen(
     val sideAlphabetSlotMode by viewModel.sideAlphabetSlotMode.collectAsState()
     val animationsEnabled by viewModel.animationsEnabled.collectAsState()
     val isWpDark by viewModel.isWallpaperDark.collectAsState()
+    val customCharMappings by viewModel.customCharMappings.collectAsState()
+    val currentIsDefault by viewModel.isDefaultLauncherState.collectAsState()
+    val selectedIconPack by viewModel.selectedIconPack.collectAsState()
+    val installedIconPacks by viewModel.installedIconPacks.collectAsState()
+
     val context = LocalContext.current
-    val haptic = LocalHapticFeedback.current
 
     var showDefaultLauncherDialog by remember { mutableStateOf(false) }
     var showAutoTagsScreen by remember { mutableStateOf(false) }
     var showCharacterMappingScreen by remember { mutableStateOf(false) }
     var showIconPackDialog by remember { mutableStateOf(false) }
     var showKeepAndroidOpenDialog by remember { mutableStateOf(false) }
-    val customCharMappings by viewModel.customCharMappings.collectAsState()
-    val currentIsDefault by viewModel.isDefaultLauncherState.collectAsState()
 
     val exportBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -166,1053 +169,204 @@ fun SettingsScreen(
                 .padding(horizontal = 24.dp, vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.05f)),
-            border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = 0.12f))
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1.1f)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            if (showShadows) {
-                                Icon(
-                                    imageVector = Icons.Outlined.PanTool,
-                                    contentDescription = null,
-                                    tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
-                                    modifier = Modifier.size(20.dp).offset(1.dp, 1.dp)
-                                )
-                            }
-                            Icon(
-                                imageVector = Icons.Outlined.PanTool,
-                                contentDescription = null,
-                                tint = primaryTextColor.color.copy(alpha = 0.7f),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            HandArrowButton(
-                                icon = Icons.AutoMirrored.Outlined.ArrowBack,
-                                isSelected = handSide == HandSide.LEFT,
-                                contentDescription = "Left hand",
-                                accentColor = accentColor,
-                                primaryTextColor = primaryTextColor,
-                                buttonTextColor = buttonTextColor,
-                                showShadows = showShadows,
-                                isWpDark = isWpDark,
-                                animationsEnabled = animationsEnabled,
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    viewModel.setHandSide(HandSide.LEFT)
-                                }
-                            )
-                            HandArrowButton(
-                                icon = Icons.AutoMirrored.Outlined.ArrowForward,
-                                isSelected = handSide == HandSide.RIGHT,
-                                contentDescription = "Right hand",
-                                accentColor = accentColor,
-                                primaryTextColor = primaryTextColor,
-                                buttonTextColor = buttonTextColor,
-                                showShadows = showShadows,
-                                isWpDark = isWpDark,
-                                animationsEnabled = animationsEnabled,
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    viewModel.setHandSide(HandSide.RIGHT)
-                                }
-                            )
-                        }
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.End,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            if (showShadows) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Search,
-                                    contentDescription = null,
-                                    tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
-                                    modifier = Modifier.size(20.dp).offset(1.dp, 1.dp)
-                                )
-                            }
-                            Icon(
-                                imageVector = Icons.Outlined.Search,
-                                contentDescription = null,
-                                tint = primaryTextColor.color.copy(alpha = 0.7f),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            SearchMethodIconOption(
-                                isHorizontal = true,
-                                isSelected = searchMethod == SearchMethod.WHEEL,
-                                accentColor = accentColor,
-                                primaryTextColor = primaryTextColor,
-                                handSide = handSide,
-                                onClick = { viewModel.setSearchMethod(SearchMethod.WHEEL) }
-                            )
-
-                            SearchMethodIconOption(
-                                isHorizontal = false,
-                                isSelected = searchMethod == SearchMethod.SIDE_ALPHABET,
-                                accentColor = accentColor,
-                                primaryTextColor = primaryTextColor,
-                                handSide = handSide,
-                                onClick = { viewModel.setSearchMethod(SearchMethod.SIDE_ALPHABET) }
-                            )
-                        }
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        modifier = Modifier.weight(0.95f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                if (showShadows) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Search,
-                                        contentDescription = null,
-                                        tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
-                                        modifier = Modifier.size(16.dp).offset(1.dp, 1.dp)
-                                    )
-                                }
-                                Icon(
-                                    imageVector = Icons.Outlined.Search,
-                                    contentDescription = null,
-                                    tint = primaryTextColor.color,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                            Text(
-                                "Widget",
-                                color = primaryTextColor.color,
-                                style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        val widgetIcon =
-                            if (showSearchWidgets) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff
-                        IconButton(
-                            onClick = { viewModel.setShowSearchWidgets(!showSearchWidgets) },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                if (showShadows) {
-                                    Icon(
-                                        imageVector = widgetIcon,
-                                        contentDescription = null,
-                                        tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
-                                        modifier = Modifier.size(22.dp).offset(1.dp, 1.dp)
-                                    )
-                                }
-                                Icon(
-                                    imageVector = widgetIcon,
-                                    contentDescription = "Toggle search widgets visibility",
-                                    tint = accentColor.color,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier.weight(1.05f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            "Side Slot",
-                            color = primaryTextColor.color,
-                            style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.05f)),
+                border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = 0.12f))
+            ) {
+                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        InteractionSection(
+                            handSide = handSide,
+                            searchMethod = searchMethod,
+                            showSearchWidgets = showSearchWidgets,
+                            sideAlphabetSlotMode = sideAlphabetSlotMode,
+                            accentColor = accentColor,
+                            primaryTextColor = primaryTextColor,
+                            buttonTextColor = buttonTextColor,
+                            popupTheme = popupTheme,
+                            showShadows = showShadows,
+                            shadowColorOverride = shadowColorOverride,
+                            shadow = shadow,
+                            isWpDark = isWpDark,
+                            animationsEnabled = animationsEnabled,
+                            onHandSideChange = { viewModel.setHandSide(it) },
+                            onSearchMethodChange = { viewModel.setSearchMethod(it) },
+                            onToggleSearchWidgets = { viewModel.setShowSearchWidgets(!showSearchWidgets) },
+                            onSideAlphabetSlotModeChange = { viewModel.setSideAlphabetSlotMode(it) }
                         )
-                        var expanded by remember { mutableStateOf(false) }
-                        val (currentIcon, currentLabel) = when (sideAlphabetSlotMode) {
-                            SideAlphabetSlotMode.HISTORY -> Pair(Icons.Outlined.History, "History")
-                            SideAlphabetSlotMode.WIDGET -> Pair(Icons.Outlined.Widgets, "Widget")
-                            SideAlphabetSlotMode.DISABLED -> Pair(Icons.Outlined.VisibilityOff, "Disabled")
-                        }
-                        Box {
-                            Row(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(primaryTextColor.color.copy(alpha = 0.08f))
-                                    .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
-                                    .clickable { expanded = true }
-                                    .padding(horizontal = 7.dp, vertical = 5.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = currentIcon,
-                                    contentDescription = null,
-                                    tint = accentColor.color,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = currentLabel,
-                                    color = accentColor.color,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1,
-                                    style = TextStyle(shadow = shadow)
-                                )
-                                Icon(
-                                    imageVector = Icons.Outlined.ArrowDropDown,
-                                    contentDescription = "Select side slot mode",
-                                    tint = primaryTextColor.color.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
 
-                            DropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false },
-                                shape = RoundedCornerShape(14.dp),
-                                containerColor = popupTheme.solidBackgroundColor,
-                                border = BorderStroke(1.dp, popupTheme.borderColor),
-                                shadowElevation = 8.dp
-                            ) {
-                                listOf(
-                                    SideAlphabetSlotMode.HISTORY,
-                                    SideAlphabetSlotMode.WIDGET,
-                                    SideAlphabetSlotMode.DISABLED
-                                ).forEach { mode ->
-                                    val isSelected = sideAlphabetSlotMode == mode
-                                    val (modeIcon, modeLabel) = when (mode) {
-                                        SideAlphabetSlotMode.HISTORY -> Pair(Icons.Outlined.History, "History")
-                                        SideAlphabetSlotMode.WIDGET -> Pair(Icons.Outlined.Widgets, "Widget")
-                                        SideAlphabetSlotMode.DISABLED -> Pair(Icons.Outlined.VisibilityOff, "Disabled")
-                                    }
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = modeLabel,
-                                                color = if (isSelected) accentColor.color else popupTheme.contentColor,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                                fontSize = 14.sp
-                                            )
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                imageVector = modeIcon,
-                                                contentDescription = null,
-                                                tint = if (isSelected) accentColor.color else popupTheme.contentColor.copy(alpha = 0.7f),
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        },
-                                        trailingIcon = if (isSelected) {
-                                            {
-                                                Icon(
-                                                    imageVector = Icons.Outlined.Check,
-                                                    contentDescription = null,
-                                                    tint = accentColor.color,
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
-                                        } else null,
-                                        onClick = {
-                                            viewModel.setSideAlphabetSlotMode(mode)
-                                            expanded = false
-                                        }
-                                    )
+                        SettingsDivider(primaryTextColor, top = 8.dp, bottom = 5.dp)
+
+                        StatusBarAndAnimationsSection(
+                            hideStatusBar = hideStatusBar,
+                            animationsEnabled = animationsEnabled,
+                            accentColor = accentColor,
+                            primaryTextColor = primaryTextColor,
+                            showShadows = showShadows,
+                            shadowColorOverride = shadowColorOverride,
+                            shadow = shadow,
+                            onToggleStatusBar = { viewModel.setHideStatusBar(!hideStatusBar) },
+                            onAnimationsChange = { viewModel.setAnimationsEnabled(it) }
+                        )
+
+                        SettingsDivider(primaryTextColor, top = 5.dp, bottom = 8.dp)
+
+                        MappingAndIconPackSection(
+                            customCharMappings = customCharMappings,
+                            selectedIconPack = selectedIconPack,
+                            installedIconPacks = installedIconPacks,
+                            accentColor = accentColor,
+                            primaryTextColor = primaryTextColor,
+                            showShadows = showShadows,
+                            shadowColorOverride = shadowColorOverride,
+                            shadow = shadow,
+                            onOpenCharacterMapping = { showCharacterMappingScreen = true },
+                            onOpenIconPackDialog = {
+                                viewModel.reloadInstalledIconPacks()
+                                showIconPackDialog = true
+                            }
+                        )
+
+                        SettingsDivider(primaryTextColor)
+
+                        ThemeAndColorsSection(
+                            accentColor = accentColor,
+                            primaryTextColor = primaryTextColor,
+                            buttonTextColor = buttonTextColor,
+                            shadowColorOverride = shadowColorOverride,
+                            popupTheme = popupTheme,
+                            showShadows = showShadows,
+                            isWpDark = isWpDark,
+                            animationsEnabled = animationsEnabled,
+                            shadow = shadow,
+                            onAccentColorChange = { viewModel.setAccentColor(it) },
+                            onShadowsChange = { viewModel.setShowShadows(it) },
+                            onShadowColorChange = { viewModel.setShadowColor(it) },
+                            onPrimaryTextColorChange = { viewModel.setPrimaryTextColor(it) },
+                            onButtonTextColorChange = { viewModel.setButtonTextColor(it) },
+                            onPopupThemeChange = { viewModel.setPopupTheme(it) },
+                            onAutoMatchColors = {
+                                val currentWpDark = isWpDark
+                                val isLightAccent = accentColor.color.luminance() > 0.5f
+                                val targetMainColor =
+                                    if (currentWpDark) PrimaryTextColor.WHITE else PrimaryTextColor.BLACK
+                                val targetShadowColor =
+                                    if (targetMainColor == PrimaryTextColor.BLACK) PrimaryTextColor.WHITE else PrimaryTextColor.BLACK
+                                val targetBtnText =
+                                    if (isLightAccent) PrimaryTextColor.BLACK else PrimaryTextColor.WHITE
+                                val targetPopupTheme =
+                                    if (targetBtnText == PrimaryTextColor.BLACK) PopupTheme.DARK else PopupTheme.LIGHT
+
+                                viewModel.setPrimaryTextColor(targetMainColor)
+                                viewModel.setShadowColor(targetShadowColor)
+                                viewModel.setButtonTextColor(targetBtnText)
+                                viewModel.setPopupTheme(targetPopupTheme)
+                            }
+                        )
+
+                        SettingsDivider(primaryTextColor)
+
+                        BackupAndTagsSection(
+                            accentColor = accentColor,
+                            primaryTextColor = primaryTextColor,
+                            showShadows = showShadows,
+                            shadowColorOverride = shadowColorOverride,
+                            shadow = shadow,
+                            onExportBackup = { exportBackupLauncher.launch("cyclauncher_backup.json") },
+                            onImportBackup = { importBackupLauncher.launch("*/*") },
+                            onOpenAutoTags = { showAutoTagsScreen = true }
+                        )
+
+                        SettingsDivider(primaryTextColor)
+
+                        DefaultLauncherAndRelaunchRow(
+                            isDefault = currentIsDefault,
+                            accentColor = accentColor,
+                            primaryTextColor = primaryTextColor,
+                            showShadows = showShadows,
+                            shadowColorOverride = shadowColorOverride,
+                            onDefaultClick = {
+                                viewModel.openDefaultLauncherSettings(context)
+                                showDefaultLauncherDialog = true
+                            },
+                            onRelaunchClick = {
+                                val pm = context.packageManager
+                                val intent = pm.getLaunchIntentForPackage(context.packageName)
+                                if (intent != null) {
+                                    val mainIntent = Intent.makeRestartActivityTask(intent.component)
+                                    context.startActivity(mainIntent)
+                                    Runtime.getRuntime().exit(0)
                                 }
                             }
-                        }
-                    }
-                }
-
-                HorizontalDivider(
-                    color = primaryTextColor.color.copy(alpha = 0.08f),
-                    modifier = Modifier.padding(vertical = 12.dp)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            "Status Bar",
-                            color = primaryTextColor.color,
-                            style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
                         )
-                        val visibilityIcon =
-                            if (hideStatusBar) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility
-                        IconButton(
-                            onClick = { viewModel.setHideStatusBar(!hideStatusBar) },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                if (showShadows) {
-                                    Icon(
-                                        imageVector = visibilityIcon,
-                                        contentDescription = null,
-                                        tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
-                                        modifier = Modifier.size(22.dp).offset(1.dp, 1.dp)
-                                    )
-                                }
-                                Icon(
-                                    imageVector = visibilityIcon,
-                                    contentDescription = "Toggle status bar visibility",
-                                    tint = accentColor.color,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-                        }
-                    }
 
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            "Animations",
-                            color = primaryTextColor.color,
-                            style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Switch(
-                            checked = animationsEnabled,
-                            onCheckedChange = { viewModel.setAnimationsEnabled(it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = accentColor.color,
-                                checkedTrackColor = accentColor.color.copy(alpha = 0.45f),
-                                checkedBorderColor = accentColor.color.copy(alpha = 0.80f),
-                                uncheckedThumbColor = accentColor.color.copy(alpha = 0.65f),
-                                uncheckedTrackColor = accentColor.color.copy(alpha = 0.12f),
-                                uncheckedBorderColor = accentColor.color.copy(alpha = 0.35f)
-                            )
-                        )
-                    }
-                }
+                        SettingsDivider(primaryTextColor)
 
-                HorizontalDivider(
-                    color = primaryTextColor.color.copy(alpha = 0.08f),
-                    modifier = Modifier.padding(vertical = 12.dp)
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Left column: Character Mapping
-                    val charMappingSummary = remember(customCharMappings) {
-                        getCharMappingSummary(customCharMappings)
-                    }
-
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                if (showShadows) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.TextFields,
-                                        contentDescription = null,
-                                        tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
-                                        modifier = Modifier.size(16.dp).offset(1.dp, 1.dp)
-                                    )
-                                }
-                                Icon(
-                                    imageVector = Icons.Outlined.TextFields,
-                                    contentDescription = null,
-                                    tint = primaryTextColor.color,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                            Text(
-                                "Mapping",
-                                color = primaryTextColor.color,
-                                style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        Row(
+                        Button(
+                            onClick = {
+                                viewModel.startTutorial()
+                                onBack()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
+                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(primaryTextColor.color.copy(alpha = 0.08f))
-                                .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
-                                .clickable { showCharacterMappingScreen = true }
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .height(46.dp)
                         ) {
-                            Text(
-                                text = charMappingSummary,
-                                color = accentColor.color,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = TextStyle(shadow = shadow),
-                                modifier = Modifier.weight(1f, fill = false)
-                            )
-                            Box(contentAlignment = Alignment.Center) {
-                                if (showShadows) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Tune,
-                                        contentDescription = null,
-                                        tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
-                                        modifier = Modifier.size(16.dp).offset(1.dp, 1.dp)
-                                    )
-                                }
-                                Icon(
-                                    imageVector = Icons.Outlined.Tune,
-                                    contentDescription = "Configure character mappings",
-                                    tint = accentColor.color,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    // Right column: Icon Pack
-                    val selectedIconPack by viewModel.selectedIconPack.collectAsState()
-                    val installedIconPacks by viewModel.installedIconPacks.collectAsState()
-                    val activePack = remember(selectedIconPack, installedIconPacks) {
-                        if (selectedIconPack != null) {
-                            installedIconPacks.find { it.packageName == selectedIconPack }
-                        } else {
-                            val sysPkg = IconPackManager.getSystemIconPackPackage(context)
-                            if (sysPkg != null) installedIconPacks.find { it.packageName == sysPkg } else null
-                        }
-                    }
-
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            "Icon Pack",
-                            color = primaryTextColor.color,
-                            style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(primaryTextColor.color.copy(alpha = 0.08f))
-                                .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
-                                .clickable {
-                                    viewModel.reloadInstalledIconPacks()
-                                    showIconPackDialog = true
-                                }
-                                .padding(horizontal = 10.dp, vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            if (activePack?.icon != null) {
-                                DrawableIcon(
-                                    drawable = activePack.icon,
-                                    modifier = Modifier.size(20.dp).clip(CircleShape)
-                                )
-                            } else {
-                                Box(contentAlignment = Alignment.Center) {
-                                    if (showShadows) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Apps,
-                                            contentDescription = null,
-                                            tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
-                                            modifier = Modifier.size(20.dp).offset(1.dp, 1.dp)
-                                        )
-                                    }
-                                    Icon(
-                                        imageVector = Icons.Outlined.Apps,
-                                        contentDescription = "Select Icon Pack",
-                                        tint = accentColor.color,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                HorizontalDivider(
-                    color = primaryTextColor.color.copy(alpha = 0.08f),
-                    modifier = Modifier.padding(vertical = 12.dp)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                if (showShadows) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Palette,
-                                        contentDescription = null,
-                                        tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
-                                        modifier = Modifier.size(16.dp).offset(1.dp, 1.dp)
-                                    )
-                                }
-                                Icon(
-                                    imageVector = Icons.Outlined.Palette,
-                                    contentDescription = null,
-                                    tint = primaryTextColor.color,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                            Text(
-                                "Accent",
-                                color = primaryTextColor.color,
-                                style = TextStyle(shadow = shadow, fontSize = 15.sp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        AccentColorDropdown(accentColor, primaryTextColor, popupTheme, isWpDark) { viewModel.setAccentColor(it) }
-                    }
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                "Adaptive",
-                                color = primaryTextColor.color,
-                                style = TextStyle(shadow = shadow, fontSize = 15.sp)
-                            )
-                            Box(contentAlignment = Alignment.Center) {
-                                if (showShadows) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Tonality,
-                                        contentDescription = null,
-                                        tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
-                                        modifier = Modifier.size(16.dp).offset(1.dp, 1.dp)
-                                    )
-                                }
-                                Icon(
-                                    imageVector = Icons.Outlined.Tonality,
-                                    contentDescription = null,
-                                    tint = primaryTextColor.color,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(36.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Switch(
-                                checked = showShadows,
-                                onCheckedChange = { viewModel.setShowShadows(it) },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = accentColor.color,
-                                    checkedTrackColor = accentColor.color.copy(alpha = 0.45f),
-                                    checkedBorderColor = accentColor.color.copy(alpha = 0.80f),
-                                    uncheckedThumbColor = accentColor.color.copy(alpha = 0.65f),
-                                    uncheckedTrackColor = accentColor.color.copy(alpha = 0.12f),
-                                    uncheckedBorderColor = accentColor.color.copy(alpha = 0.35f)
-                                )
-                            )
-                            Box(modifier = Modifier.weight(1f)) {
-                                MainColorSelector(
-                                    shadowColorOverride,
-                                    primaryTextColor
-                                ) { viewModel.setShadowColor(it) }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Main Color",
-                            color = primaryTextColor.color,
-                            style = TextStyle(shadow = shadow, fontSize = 13.sp),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        MainColorSelector(primaryTextColor, primaryTextColor) { viewModel.setPrimaryTextColor(it) }
-                    }
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Button Text",
-                            color = primaryTextColor.color,
-                            style = TextStyle(shadow = shadow, fontSize = 13.sp),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        MainColorSelector(buttonTextColor, primaryTextColor) { viewModel.setButtonTextColor(it) }
-                    }
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Popup Theme",
-                            color = primaryTextColor.color,
-                            style = TextStyle(shadow = shadow, fontSize = 13.sp),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        PopupThemeSelector(popupTheme, primaryTextColor) { viewModel.setPopupTheme(it) }
-                    }
-
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Spacer(modifier = Modifier.height(24.dp))
-                        val isLightAccent = accentColor.color.luminance() > 0.5f
-                        val recommendedMainColor =
-                            if (isWpDark) PrimaryTextColor.WHITE else PrimaryTextColor.BLACK
-                        val recommendedShadowColor =
-                            if (recommendedMainColor == PrimaryTextColor.BLACK) PrimaryTextColor.WHITE else PrimaryTextColor.BLACK
-                        val recommendedBtnText =
-                            if (isLightAccent) PrimaryTextColor.BLACK else PrimaryTextColor.WHITE
-                        val recommendedPopupTheme =
-                            if (recommendedBtnText == PrimaryTextColor.BLACK) PopupTheme.DARK else PopupTheme.LIGHT
-
-                        val isAutoMatched = (primaryTextColor == recommendedMainColor) &&
-                                (shadowColorOverride == recommendedShadowColor) &&
-                                (buttonTextColor == recommendedBtnText) &&
-                                (popupTheme == recommendedPopupTheme)
-
-                        val inactiveBaseColor = if (isWpDark) Color.White else Color.Black
-                        val autoButtonBg by animateColorAsState(
-                            targetValue = if (isAutoMatched) accentColor.color else inactiveBaseColor.copy(alpha = 0.08f),
-                            animationSpec = if (animationsEnabled) spring() else snap(),
-                            label = "autoButtonBg"
-                        )
-                        val autoButtonBorderColor by animateColorAsState(
-                            targetValue = if (isAutoMatched) accentColor.color else inactiveBaseColor.copy(alpha = 0.25f),
-                            animationSpec = if (animationsEnabled) spring() else snap(),
-                            label = "autoButtonBorderColor"
-                        )
-                        val autoIconTint by animateColorAsState(
-                            targetValue = if (isAutoMatched) (if (isLightAccent) Color.Black else Color.White) else inactiveBaseColor,
-                            animationSpec = if (animationsEnabled) spring() else snap(),
-                            label = "autoIconTint"
-                        )
-
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(autoButtonBg)
-                                .border(BorderStroke(1.dp, autoButtonBorderColor), CircleShape)
-                                .clickable {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    val currentWpDark = isWpDark
-                                    val targetMainColor =
-                                        if (currentWpDark) PrimaryTextColor.WHITE else PrimaryTextColor.BLACK
-                                    val targetShadowColor =
-                                        if (targetMainColor == PrimaryTextColor.BLACK) PrimaryTextColor.WHITE else PrimaryTextColor.BLACK
-                                    val targetBtnText =
-                                        if (isLightAccent) PrimaryTextColor.BLACK else PrimaryTextColor.WHITE
-                                    val targetPopupTheme =
-                                        if (targetBtnText == PrimaryTextColor.BLACK) PopupTheme.DARK else PopupTheme.LIGHT
-
-                                    viewModel.setPrimaryTextColor(targetMainColor)
-                                    viewModel.setShadowColor(targetShadowColor)
-                                    viewModel.setButtonTextColor(targetBtnText)
-                                    viewModel.setPopupTheme(targetPopupTheme)
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (!isAutoMatched && showShadows) {
-                                val shadowTint = if (isWpDark) Color.Black.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.35f)
-                                Icon(
-                                    imageVector = Icons.Outlined.AutoFixHigh,
-                                    contentDescription = null,
-                                    tint = shadowTint,
-                                    modifier = Modifier.size(16.dp).offset(1.dp, 1.dp)
-                                )
-                            }
                             Icon(
-                                imageVector = if (isAutoMatched) Icons.Filled.AutoFixHigh else Icons.Outlined.AutoFixHigh,
-                                contentDescription = "Auto Action",
-                                tint = autoIconTint,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                }
-
-                HorizontalDivider(
-                    color = primaryTextColor.color.copy(alpha = 0.08f),
-                    modifier = Modifier.padding(vertical = 12.dp)
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(46.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        color = primaryTextColor.color.copy(alpha = 0.07f),
-                        border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.35f))
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = "Backup",
-                                color = primaryTextColor.color,
-                                style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            IconButton(
-                                onClick = { exportBackupLauncher.launch("cyclauncher_backup.json") },
-                                modifier = Modifier.size(36.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    if (showShadows) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Upload,
-                                            contentDescription = null,
-                                            tint = primaryTextColor.getShadowColor(shadowColorOverride)
-                                                .copy(alpha = 0.25f),
-                                            modifier = Modifier.size(22.dp).offset(1.dp, 1.dp)
-                                        )
-                                    }
-                                    Icon(
-                                        imageVector = Icons.Outlined.Upload,
-                                        contentDescription = "Export Backup",
-                                        tint = accentColor.color,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                }
-                            }
-                            IconButton(
-                                onClick = { importBackupLauncher.launch("*/*") },
-                                modifier = Modifier.size(36.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    if (showShadows) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Download,
-                                            contentDescription = null,
-                                            tint = primaryTextColor.getShadowColor(shadowColorOverride)
-                                                .copy(alpha = 0.25f),
-                                            modifier = Modifier.size(22.dp).offset(1.dp, 1.dp)
-                                        )
-                                    }
-                                    Icon(
-                                        imageVector = Icons.Outlined.Download,
-                                        contentDescription = "Import Backup",
-                                        tint = accentColor.color,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Surface(
-                        onClick = { showAutoTagsScreen = true },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(46.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        color = primaryTextColor.color.copy(alpha = 0.07f),
-                        border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.35f))
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                if (showShadows) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.AutoAwesome,
-                                        contentDescription = null,
-                                        tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
-                                        modifier = Modifier.size(20.dp).offset(1.dp, 1.dp)
-                                    )
-                                }
-                                Icon(
-                                    imageVector = Icons.Outlined.AutoAwesome,
-                                    contentDescription = null,
-                                    tint = accentColor.color,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "AI Tags",
-                                color = primaryTextColor.color,
-                                style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                            )
-                        }
-                    }
-                }
-
-                HorizontalDivider(
-                    color = primaryTextColor.color.copy(alpha = 0.08f),
-                    modifier = Modifier.padding(vertical = 12.dp)
-                )
-
-                DefaultLauncherAndRelaunchRow(
-                    isDefault = currentIsDefault,
-                    accentColor = accentColor,
-                    primaryTextColor = primaryTextColor,
-                    showShadows = showShadows,
-                    shadowColorOverride = shadowColorOverride,
-                    onDefaultClick = {
-                        viewModel.openDefaultLauncherSettings(context)
-                        showDefaultLauncherDialog = true
-                    },
-                    onRelaunchClick = {
-                        val pm = context.packageManager
-                        val intent = pm.getLaunchIntentForPackage(context.packageName)
-                        if (intent != null) {
-                            val mainIntent = Intent.makeRestartActivityTask(intent.component)
-                            context.startActivity(mainIntent)
-                            Runtime.getRuntime().exit(0)
-                        }
-                    }
-                )
-
-                HorizontalDivider(
-                    color = primaryTextColor.color.copy(alpha = 0.08f),
-                    modifier = Modifier.padding(vertical = 12.dp)
-                )
-
-                Button(
-                    onClick = {
-                        viewModel.startTutorial()
-                        onBack()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(46.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.School,
-                        contentDescription = null,
-                        tint = buttonTextColor.color,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Tutorial",
-                        color = buttonTextColor.color,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                }
-
-                HorizontalDivider(
-                    color = primaryTextColor.color.copy(alpha = 0.08f),
-                    modifier = Modifier.padding(vertical = 12.dp)
-                )
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            if (showShadows) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Favorite,
-                                    contentDescription = null,
-                                    tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
-                                    modifier = Modifier.size(18.dp).offset(1.dp, 1.dp)
-                                )
-                            }
-                            Icon(
-                                imageVector = Icons.Outlined.Favorite,
+                                imageVector = Icons.Outlined.School,
                                 contentDescription = null,
-                                tint = accentColor.color,
+                                tint = buttonTextColor.color,
                                 modifier = Modifier.size(18.dp)
                             )
-                        }
-                        Text(
-                            text = "Support & Community",
-                            color = primaryTextColor.color,
-                            style = TextStyle(
-                                shadow = shadow,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Tutorial",
+                                color = buttonTextColor.color,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
                             )
-                        )
-                    }
+                        }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                        SettingsDivider(primaryTextColor)
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        CommunityButton(
-                            title = "GitHub",
-                            subtitle = "⭐ Project",
-                            icon = Icons.Outlined.Code,
+                        SupportAndCommunitySection(
                             accentColor = accentColor,
                             primaryTextColor = primaryTextColor,
-                            shadow = shadow,
                             showShadows = showShadows,
                             shadowColorOverride = shadowColorOverride,
-                            isHighlight = false,
-                            onClick = { viewModel.openGitHubPage() },
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        CommunityButton(
-                            title = "Discord",
-                            subtitle = "Join chat",
-                            icon = Icons.AutoMirrored.Outlined.Chat,
-                            accentColor = accentColor,
-                            primaryTextColor = primaryTextColor,
                             shadow = shadow,
-                            showShadows = showShadows,
-                            shadowColorOverride = shadowColorOverride,
-                            isHighlight = false,
-                            onClick = { viewModel.openDiscordPage() },
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        CommunityButton(
-                            title = "Tribute",
-                            subtitle = "Sponsor",
-                            icon = Icons.Outlined.VolunteerActivism,
-                            accentColor = accentColor,
-                            primaryTextColor = primaryTextColor,
-                            shadow = shadow,
-                            showShadows = showShadows,
-                            shadowColorOverride = shadowColorOverride,
-                            isHighlight = true,
-                            onClick = { viewModel.openSupportPage() },
-                            modifier = Modifier.weight(1f)
+                            onGitHubClick = { viewModel.openGitHubPage() },
+                            onDiscordClick = { viewModel.openDiscordPage() },
+                            onSupportClick = { viewModel.openSupportPage() }
                         )
                     }
                 }
-
             }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            KeepAndroidOpenBanner(
+                accentColor = accentColor,
+                primaryTextColor = primaryTextColor,
+                popupTheme = popupTheme,
+                showShadows = showShadows,
+                onLearnMoreClick = { showKeepAndroidOpenDialog = true },
+                onWebsiteClick = { viewModel.openKeepAndroidOpenPage() }
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            SettingsVersionText(
+                primaryTextColor = primaryTextColor,
+                shadow = shadow
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        KeepAndroidOpenBanner(
-            accentColor = accentColor,
-            primaryTextColor = primaryTextColor,
-            popupTheme = popupTheme,
-            showShadows = showShadows,
-            onLearnMoreClick = { showKeepAndroidOpenDialog = true },
-            onWebsiteClick = { viewModel.openKeepAndroidOpenPage() }
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        val versionName = remember {
-            try {
-                val pm = context.packageManager
-                val pi = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    pm.getPackageInfo(context.packageName, android.content.pm.PackageManager.PackageInfoFlags.of(0L))
-                } else {
-                    @Suppress("DEPRECATION")
-                    pm.getPackageInfo(context.packageName, 0)
-                }
-                pi.versionName ?: "1.0"
-            } catch (e: Exception) {
-                "1.0"
-            }
-        }
-        Text(
-            text = "Version $versionName",
-            color = primaryTextColor.color.copy(alpha = 0.4f),
-            style = TextStyle(shadow = shadow, fontSize = 14.sp)
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
     }
-}
 
     if (showKeepAndroidOpenDialog) {
         KeepAndroidOpenDialog(
@@ -1224,13 +378,10 @@ fun SettingsScreen(
     }
 
     if (showIconPackDialog) {
-        val selectedIconPack by viewModel.selectedIconPack.collectAsState()
-        val installedIconPacks by viewModel.installedIconPacks.collectAsState()
         IconPackSelectionDialog(
             installedIconPacks = installedIconPacks,
             selectedPackageName = selectedIconPack,
             accentColor = accentColor,
-            buttonTextColor = buttonTextColor,
             popupTheme = popupTheme,
             onSelect = { viewModel.setIconPack(it) },
             onDismiss = { showIconPackDialog = false }
@@ -1269,21 +420,1019 @@ fun SettingsScreen(
     }
 }
 
+/**
+ * Common horizontal divider with unified padding inside settings cards.
+ */
 @Composable
-private fun SettingsRow(
-    label: String,
-    textColor: Color = Color.White,
+private fun SettingsDivider(
+    primaryTextColor: PrimaryTextColor,
+    top: Dp = 8.dp,
+    bottom: Dp = 8.dp
+) {
+    HorizontalDivider(
+        color = primaryTextColor.color.copy(alpha = 0.08f),
+        modifier = Modifier.padding(top = top, bottom = bottom)
+    )
+}
+
+/**
+ * Standard icon with optional adaptive shadow layer.
+ */
+@Composable
+private fun ShadowedIcon(
+    imageVector: ImageVector,
+    tint: Color,
+    modifier: Modifier = Modifier,
+    size: Dp = 20.dp,
+    contentDescription: String? = null,
+    showShadows: Boolean = false,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    shadowColorOverride: PrimaryTextColor? = null,
+    shadowAlpha: Float = 0.25f,
+    offset: Dp = 1.dp
+) {
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        if (showShadows) {
+            Icon(
+                imageVector = imageVector,
+                contentDescription = null,
+                tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = shadowAlpha),
+                modifier = Modifier.size(size).offset(offset, offset)
+            )
+        }
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(size)
+        )
+    }
+}
+
+/**
+ * Animated circular action or toggle button with shadow support.
+ */
+@Composable
+private fun CircleActionButton(
+    icon: ImageVector,
+    isSelected: Boolean,
+    contentDescription: String?,
+    accentColor: AccentColor,
+    selectedIconTint: Color,
+    showShadows: Boolean,
+    isWpDark: Boolean,
+    animationsEnabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val inactiveBaseColor = if (isWpDark) Color.White else Color.Black
+
+    val buttonBg by animateColorAsState(
+        targetValue = if (isSelected) accentColor.color else inactiveBaseColor.copy(alpha = 0.08f),
+        animationSpec = if (animationsEnabled) spring() else snap(),
+        label = "circleBtnBg"
+    )
+    val buttonBorderColor by animateColorAsState(
+        targetValue = if (isSelected) accentColor.color else inactiveBaseColor.copy(alpha = 0.25f),
+        animationSpec = if (animationsEnabled) spring() else snap(),
+        label = "circleBtnBorderColor"
+    )
+    val iconTint by animateColorAsState(
+        targetValue = if (isSelected) selectedIconTint else inactiveBaseColor,
+        animationSpec = if (animationsEnabled) spring() else snap(),
+        label = "circleBtnIconTint"
+    )
+
+    Box(
+        modifier = modifier
+            .size(28.dp)
+            .clip(CircleShape)
+            .background(buttonBg)
+            .border(BorderStroke(1.dp, buttonBorderColor), CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        if (!isSelected && showShadows) {
+            val shadowTint = if (isWpDark) Color.Black.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.35f)
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = shadowTint,
+                modifier = Modifier.size(16.dp).offset(1.dp, 1.dp)
+            )
+        }
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = iconTint,
+            modifier = Modifier.size(16.dp)
+        )
+    }
+}
+
+/**
+ * Section for Hand Side, Search Method, Search Widget visibility, and Side Slot mode.
+ */
+@Composable
+private fun InteractionSection(
+    handSide: HandSide,
+    searchMethod: SearchMethod,
+    showSearchWidgets: Boolean,
+    sideAlphabetSlotMode: SideAlphabetSlotMode,
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    buttonTextColor: PrimaryTextColor,
+    popupTheme: PopupTheme,
+    showShadows: Boolean,
+    shadowColorOverride: PrimaryTextColor?,
     shadow: Shadow?,
-    content: @Composable () -> Unit
+    isWpDark: Boolean,
+    animationsEnabled: Boolean,
+    onHandSideChange: (HandSide) -> Unit,
+    onSearchMethodChange: (SearchMethod) -> Unit,
+    onToggleSearchWidgets: () -> Unit,
+    onSideAlphabetSlotModeChange: (SideAlphabetSlotMode) -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1.1f)
+        ) {
+            ShadowedIcon(
+                imageVector = Icons.Outlined.PanTool,
+                tint = primaryTextColor.color.copy(alpha = 0.7f),
+                size = 20.dp,
+                showShadows = showShadows,
+                primaryTextColor = primaryTextColor,
+                shadowColorOverride = shadowColorOverride
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                HandArrowButton(
+                    icon = Icons.AutoMirrored.Outlined.ArrowBack,
+                    isSelected = handSide == HandSide.LEFT,
+                    contentDescription = "Left hand",
+                    accentColor = accentColor,
+                    primaryTextColor = primaryTextColor,
+                    buttonTextColor = buttonTextColor,
+                    showShadows = showShadows,
+                    isWpDark = isWpDark,
+                    animationsEnabled = animationsEnabled,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onHandSideChange(HandSide.LEFT)
+                    }
+                )
+                HandArrowButton(
+                    icon = Icons.AutoMirrored.Outlined.ArrowForward,
+                    isSelected = handSide == HandSide.RIGHT,
+                    contentDescription = "Right hand",
+                    accentColor = accentColor,
+                    primaryTextColor = primaryTextColor,
+                    buttonTextColor = buttonTextColor,
+                    showShadows = showShadows,
+                    isWpDark = isWpDark,
+                    animationsEnabled = animationsEnabled,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onHandSideChange(HandSide.RIGHT)
+                    }
+                )
+            }
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End,
+            modifier = Modifier.weight(1f)
+        ) {
+            ShadowedIcon(
+                imageVector = Icons.Outlined.Search,
+                tint = primaryTextColor.color.copy(alpha = 0.7f),
+                size = 20.dp,
+                showShadows = showShadows,
+                primaryTextColor = primaryTextColor,
+                shadowColorOverride = shadowColorOverride
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                SearchMethodIconOption(
+                    isHorizontal = true,
+                    isSelected = searchMethod == SearchMethod.WHEEL,
+                    accentColor = accentColor,
+                    primaryTextColor = primaryTextColor,
+                    handSide = handSide,
+                    onClick = { onSearchMethodChange(SearchMethod.WHEEL) }
+                )
+
+                SearchMethodIconOption(
+                    isHorizontal = false,
+                    isSelected = searchMethod == SearchMethod.SIDE_ALPHABET,
+                    accentColor = accentColor,
+                    primaryTextColor = primaryTextColor,
+                    handSide = handSide,
+                    onClick = { onSearchMethodChange(SearchMethod.SIDE_ALPHABET) }
+                )
+            }
+        }
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier.weight(0.95f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                ShadowedIcon(
+                    imageVector = Icons.Outlined.Search,
+                    tint = primaryTextColor.color,
+                    size = 16.dp,
+                    showShadows = showShadows,
+                    primaryTextColor = primaryTextColor,
+                    shadowColorOverride = shadowColorOverride
+                )
+                Text(
+                    "Widget",
+                    color = primaryTextColor.color,
+                    style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            val widgetIcon = if (showSearchWidgets) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff
+            IconButton(
+                onClick = onToggleSearchWidgets,
+                modifier = Modifier.size(36.dp)
+            ) {
+                ShadowedIcon(
+                    imageVector = widgetIcon,
+                    contentDescription = "Toggle search widgets visibility",
+                    tint = accentColor.color,
+                    size = 22.dp,
+                    showShadows = showShadows,
+                    primaryTextColor = primaryTextColor,
+                    shadowColorOverride = shadowColorOverride
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier.weight(1.05f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "Side Slot",
+                color = primaryTextColor.color,
+                style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            var expanded by remember { mutableStateOf(false) }
+            val (currentIcon, currentLabel) = when (sideAlphabetSlotMode) {
+                SideAlphabetSlotMode.HISTORY -> Pair(Icons.Outlined.History, "History")
+                SideAlphabetSlotMode.WIDGET -> Pair(Icons.Outlined.Widgets, "Widget")
+                SideAlphabetSlotMode.DISABLED -> Pair(Icons.Outlined.VisibilityOff, "Disabled")
+            }
+            Box {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(primaryTextColor.color.copy(alpha = 0.08f))
+                        .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
+                        .clickable { expanded = true }
+                        .padding(horizontal = 7.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = currentIcon,
+                        contentDescription = null,
+                        tint = accentColor.color,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = currentLabel,
+                        color = accentColor.color,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        style = TextStyle(shadow = shadow)
+                    )
+                    Icon(
+                        imageVector = Icons.Outlined.ArrowDropDown,
+                        contentDescription = "Select side slot mode",
+                        tint = primaryTextColor.color.copy(alpha = 0.7f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    shape = RoundedCornerShape(14.dp),
+                    containerColor = popupTheme.solidBackgroundColor,
+                    border = BorderStroke(1.dp, popupTheme.borderColor),
+                    shadowElevation = 8.dp
+                ) {
+                    listOf(
+                        SideAlphabetSlotMode.HISTORY,
+                        SideAlphabetSlotMode.WIDGET,
+                        SideAlphabetSlotMode.DISABLED
+                    ).forEach { mode ->
+                        val isSelected = sideAlphabetSlotMode == mode
+                        val (modeIcon, modeLabel) = when (mode) {
+                            SideAlphabetSlotMode.HISTORY -> Pair(Icons.Outlined.History, "History")
+                            SideAlphabetSlotMode.WIDGET -> Pair(Icons.Outlined.Widgets, "Widget")
+                            SideAlphabetSlotMode.DISABLED -> Pair(Icons.Outlined.VisibilityOff, "Disabled")
+                        }
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = modeLabel,
+                                    color = if (isSelected) accentColor.color else popupTheme.contentColor,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 14.sp
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = modeIcon,
+                                    contentDescription = null,
+                                    tint = if (isSelected) accentColor.color else popupTheme.contentColor.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            trailingIcon = if (isSelected) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Check,
+                                        contentDescription = null,
+                                        tint = accentColor.color,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            } else null,
+                            onClick = {
+                                onSideAlphabetSlotModeChange(mode)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Section for Status Bar visibility and animations toggles.
+ */
+@Composable
+private fun StatusBarAndAnimationsSection(
+    hideStatusBar: Boolean,
+    animationsEnabled: Boolean,
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    showShadows: Boolean,
+    shadowColorOverride: PrimaryTextColor?,
+    shadow: Shadow?,
+    onToggleStatusBar: () -> Unit,
+    onAnimationsChange: (Boolean) -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, color = textColor, style = TextStyle(shadow = shadow, fontSize = 16.sp))
-        content()
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "Status Bar",
+                color = primaryTextColor.color,
+                style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            val visibilityIcon =
+                if (hideStatusBar) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility
+            IconButton(
+                onClick = onToggleStatusBar,
+                modifier = Modifier.size(32.dp)
+            ) {
+                ShadowedIcon(
+                    imageVector = visibilityIcon,
+                    contentDescription = "Toggle status bar visibility",
+                    tint = accentColor.color,
+                    size = 20.dp,
+                    showShadows = showShadows,
+                    primaryTextColor = primaryTextColor,
+                    shadowColorOverride = shadowColorOverride
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "Animations",
+                color = primaryTextColor.color,
+                style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Switch(
+                checked = animationsEnabled,
+                onCheckedChange = onAnimationsChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = accentColor.color,
+                    checkedTrackColor = accentColor.color.copy(alpha = 0.45f),
+                    checkedBorderColor = accentColor.color.copy(alpha = 0.80f),
+                    uncheckedThumbColor = accentColor.color.copy(alpha = 0.65f),
+                    uncheckedTrackColor = accentColor.color.copy(alpha = 0.12f),
+                    uncheckedBorderColor = accentColor.color.copy(alpha = 0.35f)
+                )
+            )
+        }
     }
+}
+
+/**
+ * Section for Character Mapping configuration and Icon Pack selection.
+ */
+@Composable
+private fun MappingAndIconPackSection(
+    customCharMappings: Map<String, Char>,
+    selectedIconPack: String?,
+    installedIconPacks: List<IconPackInfo>,
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    showShadows: Boolean,
+    shadowColorOverride: PrimaryTextColor?,
+    shadow: Shadow?,
+    onOpenCharacterMapping: () -> Unit,
+    onOpenIconPackDialog: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val charMappingSummary = remember(customCharMappings) {
+            getCharMappingSummary(customCharMappings)
+        }
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                ShadowedIcon(
+                    imageVector = Icons.Outlined.TextFields,
+                    tint = primaryTextColor.color,
+                    size = 16.dp,
+                    showShadows = showShadows,
+                    primaryTextColor = primaryTextColor,
+                    shadowColorOverride = shadowColorOverride
+                )
+                Text(
+                    "Mapping",
+                    color = primaryTextColor.color,
+                    style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(primaryTextColor.color.copy(alpha = 0.08f))
+                    .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
+                    .clickable(onClick = onOpenCharacterMapping)
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = charMappingSummary,
+                    color = accentColor.color,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = TextStyle(shadow = shadow),
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                ShadowedIcon(
+                    imageVector = Icons.Outlined.Tune,
+                    contentDescription = "Configure character mappings",
+                    tint = accentColor.color,
+                    size = 16.dp,
+                    showShadows = showShadows,
+                    primaryTextColor = primaryTextColor,
+                    shadowColorOverride = shadowColorOverride
+                )
+            }
+        }
+
+        val context = LocalContext.current
+        val activePack = remember(selectedIconPack, installedIconPacks) {
+            if (selectedIconPack != null) {
+                installedIconPacks.find { it.packageName == selectedIconPack }
+            } else {
+                val sysPkg = IconPackManager.getSystemIconPackPackage(context)
+                if (sysPkg != null) installedIconPacks.find { it.packageName == sysPkg } else null
+            }
+        }
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                "Icon Pack",
+                color = primaryTextColor.color,
+                style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(primaryTextColor.color.copy(alpha = 0.08f))
+                    .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
+                    .clickable(onClick = onOpenIconPackDialog)
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                if (activePack?.icon != null) {
+                    DrawableIcon(
+                        drawable = activePack.icon,
+                        modifier = Modifier.size(20.dp).clip(CircleShape)
+                    )
+                } else {
+                    ShadowedIcon(
+                        imageVector = Icons.Outlined.Apps,
+                        contentDescription = "Select Icon Pack",
+                        tint = accentColor.color,
+                        size = 20.dp,
+                        showShadows = showShadows,
+                        primaryTextColor = primaryTextColor,
+                        shadowColorOverride = shadowColorOverride
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Section for theme colors (Accent, Adaptive shadows, Main color, Button text, Popup theme, and auto-match).
+ */
+@Composable
+private fun ThemeAndColorsSection(
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    buttonTextColor: PrimaryTextColor,
+    shadowColorOverride: PrimaryTextColor?,
+    popupTheme: PopupTheme,
+    showShadows: Boolean,
+    isWpDark: Boolean,
+    animationsEnabled: Boolean,
+    shadow: Shadow?,
+    onAccentColorChange: (AccentColor) -> Unit,
+    onShadowsChange: (Boolean) -> Unit,
+    onShadowColorChange: (PrimaryTextColor) -> Unit,
+    onPrimaryTextColorChange: (PrimaryTextColor) -> Unit,
+    onButtonTextColorChange: (PrimaryTextColor) -> Unit,
+    onPopupThemeChange: (PopupTheme) -> Unit,
+    onAutoMatchColors: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                ShadowedIcon(
+                    imageVector = Icons.Outlined.Palette,
+                    tint = primaryTextColor.color,
+                    size = 16.dp,
+                    showShadows = showShadows,
+                    primaryTextColor = primaryTextColor,
+                    shadowColorOverride = shadowColorOverride
+                )
+                Text(
+                    "Accent",
+                    color = primaryTextColor.color,
+                    style = TextStyle(shadow = shadow, fontSize = 15.sp)
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            AccentColorDropdown(accentColor, primaryTextColor, popupTheme, isWpDark, onAccentColorChange)
+        }
+
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    "Adaptive",
+                    color = primaryTextColor.color,
+                    style = TextStyle(shadow = shadow, fontSize = 15.sp)
+                )
+                ShadowedIcon(
+                    imageVector = Icons.Outlined.Tonality,
+                    tint = primaryTextColor.color,
+                    size = 16.dp,
+                    showShadows = showShadows,
+                    primaryTextColor = primaryTextColor,
+                    shadowColorOverride = shadowColorOverride
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(36.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Switch(
+                    checked = showShadows,
+                    onCheckedChange = onShadowsChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = accentColor.color,
+                        checkedTrackColor = accentColor.color.copy(alpha = 0.45f),
+                        checkedBorderColor = accentColor.color.copy(alpha = 0.80f),
+                        uncheckedThumbColor = accentColor.color.copy(alpha = 0.65f),
+                        uncheckedTrackColor = accentColor.color.copy(alpha = 0.12f),
+                        uncheckedBorderColor = accentColor.color.copy(alpha = 0.35f)
+                    )
+                )
+                Box(modifier = Modifier.weight(1f)) {
+                    MainColorSelector(
+                        selectedColor = shadowColorOverride,
+                        primaryTextColor = primaryTextColor,
+                        onSelect = onShadowColorChange
+                    )
+                }
+            }
+        }
+    }
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                "Main Color",
+                color = primaryTextColor.color,
+                style = TextStyle(shadow = shadow, fontSize = 13.sp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            MainColorSelector(primaryTextColor, primaryTextColor, onPrimaryTextColorChange)
+        }
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                "Button Text",
+                color = primaryTextColor.color,
+                style = TextStyle(shadow = shadow, fontSize = 13.sp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            MainColorSelector(buttonTextColor, primaryTextColor, onButtonTextColorChange)
+        }
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                "Popup Theme",
+                color = primaryTextColor.color,
+                style = TextStyle(shadow = shadow, fontSize = 13.sp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            PopupThemeSelector(popupTheme, primaryTextColor, onPopupThemeChange)
+        }
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Spacer(modifier = Modifier.height(24.dp))
+            val isLightAccent = accentColor.color.luminance() > 0.5f
+            val recommendedMainColor =
+                if (isWpDark) PrimaryTextColor.WHITE else PrimaryTextColor.BLACK
+            val recommendedShadowColor =
+                if (recommendedMainColor == PrimaryTextColor.BLACK) PrimaryTextColor.WHITE else PrimaryTextColor.BLACK
+            val recommendedBtnText =
+                if (isLightAccent) PrimaryTextColor.BLACK else PrimaryTextColor.WHITE
+            val recommendedPopupTheme =
+                if (recommendedBtnText == PrimaryTextColor.BLACK) PopupTheme.DARK else PopupTheme.LIGHT
+
+            val isAutoMatched = (primaryTextColor == recommendedMainColor) &&
+                    (shadowColorOverride == recommendedShadowColor) &&
+                    (buttonTextColor == recommendedBtnText) &&
+                    (popupTheme == recommendedPopupTheme)
+
+            val haptic = LocalHapticFeedback.current
+            CircleActionButton(
+                icon = if (isAutoMatched) Icons.Filled.AutoFixHigh else Icons.Outlined.AutoFixHigh,
+                isSelected = isAutoMatched,
+                contentDescription = "Auto Action",
+                accentColor = accentColor,
+                selectedIconTint = if (isLightAccent) Color.Black else Color.White,
+                showShadows = showShadows,
+                isWpDark = isWpDark,
+                animationsEnabled = animationsEnabled,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onAutoMatchColors()
+                }
+            )
+        }
+    }
+}
+
+/**
+ * Section for tags backup (export/import) and AI Tags screen launch.
+ */
+@Composable
+private fun BackupAndTagsSection(
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    showShadows: Boolean,
+    shadowColorOverride: PrimaryTextColor?,
+    shadow: Shadow?,
+    onExportBackup: () -> Unit,
+    onImportBackup: () -> Unit,
+    onOpenAutoTags: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            modifier = Modifier
+                .weight(1f)
+                .height(46.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = primaryTextColor.color.copy(alpha = 0.07f),
+            border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.35f))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Backup",
+                    color = primaryTextColor.color,
+                    style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                IconButton(
+                    onClick = onExportBackup,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    ShadowedIcon(
+                        imageVector = Icons.Outlined.Upload,
+                        contentDescription = "Export Backup",
+                        tint = accentColor.color,
+                        size = 22.dp,
+                        showShadows = showShadows,
+                        primaryTextColor = primaryTextColor,
+                        shadowColorOverride = shadowColorOverride
+                    )
+                }
+                IconButton(
+                    onClick = onImportBackup,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    ShadowedIcon(
+                        imageVector = Icons.Outlined.Download,
+                        contentDescription = "Import Backup",
+                        tint = accentColor.color,
+                        size = 22.dp,
+                        showShadows = showShadows,
+                        primaryTextColor = primaryTextColor,
+                        shadowColorOverride = shadowColorOverride
+                    )
+                }
+            }
+        }
+
+        Surface(
+            onClick = onOpenAutoTags,
+            modifier = Modifier
+                .weight(1f)
+                .height(46.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = primaryTextColor.color.copy(alpha = 0.07f),
+            border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.35f))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                ShadowedIcon(
+                    imageVector = Icons.Outlined.AutoAwesome,
+                    tint = accentColor.color,
+                    size = 20.dp,
+                    showShadows = showShadows,
+                    primaryTextColor = primaryTextColor,
+                    shadowColorOverride = shadowColorOverride
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "AI Tags",
+                    color = primaryTextColor.color,
+                    style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Section for Support & Community buttons (GitHub, Discord, Tribute).
+ */
+@Composable
+private fun SupportAndCommunitySection(
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    showShadows: Boolean,
+    shadowColorOverride: PrimaryTextColor?,
+    shadow: Shadow?,
+    onGitHubClick: () -> Unit,
+    onDiscordClick: () -> Unit,
+    onSupportClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 2.dp, bottom = 4.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            ShadowedIcon(
+                imageVector = Icons.Outlined.Favorite,
+                tint = accentColor.color,
+                size = 18.dp,
+                showShadows = showShadows,
+                primaryTextColor = primaryTextColor,
+                shadowColorOverride = shadowColorOverride
+            )
+            Text(
+                text = "Support & Community",
+                color = primaryTextColor.color,
+                style = TextStyle(
+                    shadow = shadow,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            CommunityButton(
+                title = "GitHub",
+                subtitle = "⭐ Project",
+                icon = Icons.Outlined.Code,
+                accentColor = accentColor,
+                primaryTextColor = primaryTextColor,
+                shadow = shadow,
+                showShadows = showShadows,
+                shadowColorOverride = shadowColorOverride,
+                isHighlight = false,
+                onClick = onGitHubClick,
+                modifier = Modifier.weight(1f)
+            )
+
+            CommunityButton(
+                title = "Discord",
+                subtitle = "Join chat",
+                icon = Icons.AutoMirrored.Outlined.Chat,
+                accentColor = accentColor,
+                primaryTextColor = primaryTextColor,
+                shadow = shadow,
+                showShadows = showShadows,
+                shadowColorOverride = shadowColorOverride,
+                isHighlight = false,
+                onClick = onDiscordClick,
+                modifier = Modifier.weight(1f)
+            )
+
+            CommunityButton(
+                title = "Tribute",
+                subtitle = "Sponsor",
+                icon = Icons.Outlined.VolunteerActivism,
+                accentColor = accentColor,
+                primaryTextColor = primaryTextColor,
+                shadow = shadow,
+                showShadows = showShadows,
+                shadowColorOverride = shadowColorOverride,
+                isHighlight = true,
+                onClick = onSupportClick,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+/**
+ * Display app version text with fallback.
+ */
+@Composable
+private fun SettingsVersionText(
+    primaryTextColor: PrimaryTextColor,
+    shadow: Shadow?,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val versionName = remember {
+        try {
+            val pm = context.packageManager
+            val pi = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                pm.getPackageInfo(context.packageName, android.content.pm.PackageManager.PackageInfoFlags.of(0L))
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getPackageInfo(context.packageName, 0)
+            }
+            pi.versionName ?: "1.0"
+        } catch (e: Exception) {
+            "1.0"
+        }
+    }
+    Text(
+        text = "Version $versionName",
+        color = primaryTextColor.color.copy(alpha = 0.4f),
+        style = TextStyle(shadow = shadow, fontSize = 14.sp),
+        modifier = modifier
+    )
 }
 
 /**
@@ -1342,19 +1491,14 @@ private fun CommunityButton(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                if (showShadows) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = 0.25f),
-                        modifier = Modifier.size(18.dp).offset(1.dp, 1.dp)
-                    )
-                }
-                Icon(
+                ShadowedIcon(
                     imageVector = icon,
                     contentDescription = title,
                     tint = iconTint,
-                    modifier = Modifier.size(18.dp)
+                    size = 18.dp,
+                    showShadows = showShadows,
+                    primaryTextColor = primaryTextColor,
+                    shadowColorOverride = shadowColorOverride
                 )
             }
 
@@ -1424,22 +1568,14 @@ private fun AccentColorDropdown(
                 }
             }
             val shadowSettings = dev.msbs.cyclauncher.ui.theme.LocalShadowSettings.current
-            Box(contentAlignment = Alignment.Center) {
-                if (shadowSettings.showShadows) {
-                    Icon(
-                        imageVector = Icons.Outlined.KeyboardArrowDown,
-                        contentDescription = null,
-                        tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.25f),
-                        modifier = Modifier.size(20.dp).offset(1.dp, 1.dp)
-                    )
-                }
-                Icon(
-                    imageVector = Icons.Outlined.KeyboardArrowDown,
-                    contentDescription = null,
-                    tint = selectedColor.color,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            ShadowedIcon(
+                imageVector = Icons.Outlined.KeyboardArrowDown,
+                tint = selectedColor.color,
+                size = 20.dp,
+                showShadows = shadowSettings.showShadows,
+                primaryTextColor = primaryTextColor,
+                shadowColorOverride = shadowSettings.shadowColorOverride
+            )
         }
 
         if (showDialog) {
@@ -1961,7 +2097,7 @@ private fun DefaultLauncherAndRelaunchRow(
                 fontSize = 12.sp,
                 style = TextStyle(shadow = shadow)
             )
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = onDefaultClick,
                 colors = ButtonDefaults.buttonColors(
@@ -1994,7 +2130,7 @@ private fun DefaultLauncherAndRelaunchRow(
                 fontSize = 12.sp,
                 style = TextStyle(shadow = shadow)
             )
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = onRelaunchClick,
                 colors = ButtonDefaults.buttonColors(containerColor = primaryTextColor.color.copy(alpha = 0.07f)),
@@ -2026,49 +2162,17 @@ private fun HandArrowButton(
     animationsEnabled: Boolean,
     onClick: () -> Unit
 ) {
-    val inactiveBaseColor = if (isWpDark) Color.White else Color.Black
-
-    val buttonBg by animateColorAsState(
-        targetValue = if (isSelected) accentColor.color else inactiveBaseColor.copy(alpha = 0.08f),
-        animationSpec = if (animationsEnabled) spring() else snap(),
-        label = "handButtonBg"
+    CircleActionButton(
+        icon = icon,
+        isSelected = isSelected,
+        contentDescription = contentDescription,
+        accentColor = accentColor,
+        selectedIconTint = buttonTextColor.color,
+        showShadows = showShadows,
+        isWpDark = isWpDark,
+        animationsEnabled = animationsEnabled,
+        onClick = onClick
     )
-    val buttonBorderColor by animateColorAsState(
-        targetValue = if (isSelected) accentColor.color else inactiveBaseColor.copy(alpha = 0.25f),
-        animationSpec = if (animationsEnabled) spring() else snap(),
-        label = "handButtonBorderColor"
-    )
-    val iconTint by animateColorAsState(
-        targetValue = if (isSelected) buttonTextColor.color else inactiveBaseColor,
-        animationSpec = if (animationsEnabled) spring() else snap(),
-        label = "handIconTint"
-    )
-
-    Box(
-        modifier = Modifier
-            .size(28.dp)
-            .clip(CircleShape)
-            .background(buttonBg)
-            .border(BorderStroke(1.dp, buttonBorderColor), CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        if (!isSelected && showShadows) {
-            val shadowTint = if (isWpDark) Color.Black.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.35f)
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = shadowTint,
-                modifier = Modifier.size(16.dp).offset(1.dp, 1.dp)
-            )
-        }
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = iconTint,
-            modifier = Modifier.size(16.dp)
-        )
-    }
 }
 
 @Composable
@@ -2122,23 +2226,22 @@ private fun SearchMethodIconOption(
 
 
 /**
- * Selector for Primary Text Color (Main Color) using a split black/white capsule design.
+ * Generic split black/white capsule toggle with animated thumb.
  */
 @Composable
-private fun MainColorSelector(
-    selectedColor: PrimaryTextColor,
+private fun BlackWhiteCapsuleToggle(
+    isFirstSelected: Boolean,
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
-    onSelect: (PrimaryTextColor) -> Unit
+    onToggle: () -> Unit
 ) {
     val animationsEnabled = LocalAnimationsEnabled.current
-    val isBlackSelected = selectedColor == PrimaryTextColor.BLACK
     val thumbOffset by animateFloatAsState(
-        targetValue = if (isBlackSelected) 0f else 1f,
+        targetValue = if (isFirstSelected) 0f else 1f,
         animationSpec = if (animationsEnabled) spring(stiffness = Spring.StiffnessMediumLow) else snap(),
         label = "thumbOffset"
     )
     val thumbColor by animateColorAsState(
-        targetValue = if (isBlackSelected) Color.White else Color.Black,
+        targetValue = if (isFirstSelected) Color.White else Color.Black,
         animationSpec = if (animationsEnabled) spring() else snap(),
         label = "thumbColor"
     )
@@ -2148,7 +2251,7 @@ private fun MainColorSelector(
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(primaryTextColor.color.copy(alpha = 0.1f))
-            .clickable { onSelect(if (isBlackSelected) PrimaryTextColor.WHITE else PrimaryTextColor.BLACK) }
+            .clickable(onClick = onToggle)
             .padding(horizontal = 4.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
@@ -2206,6 +2309,22 @@ private fun MainColorSelector(
             )
         }
     }
+}
+
+/**
+ * Selector for Primary Text Color (Main Color) using a split black/white capsule design.
+ */
+@Composable
+private fun MainColorSelector(
+    selectedColor: PrimaryTextColor?,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    onSelect: (PrimaryTextColor) -> Unit
+) {
+    BlackWhiteCapsuleToggle(
+        isFirstSelected = selectedColor == PrimaryTextColor.BLACK,
+        primaryTextColor = primaryTextColor,
+        onToggle = { onSelect(if (selectedColor == PrimaryTextColor.BLACK) PrimaryTextColor.WHITE else PrimaryTextColor.BLACK) }
+    )
 }
 
 /**
@@ -2217,82 +2336,11 @@ private fun PopupThemeSelector(
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     onSelect: (PopupTheme) -> Unit
 ) {
-    val animationsEnabled = LocalAnimationsEnabled.current
-    val isDarkSelected = selectedTheme == PopupTheme.DARK
-    val thumbOffset by animateFloatAsState(
-        targetValue = if (isDarkSelected) 0f else 1f,
-        animationSpec = if (animationsEnabled) spring(stiffness = Spring.StiffnessMediumLow) else snap(),
-        label = "thumbOffset"
+    BlackWhiteCapsuleToggle(
+        isFirstSelected = selectedTheme == PopupTheme.DARK,
+        primaryTextColor = primaryTextColor,
+        onToggle = { onSelect(if (selectedTheme == PopupTheme.DARK) PopupTheme.LIGHT else PopupTheme.DARK) }
     )
-    val thumbColor by animateColorAsState(
-        targetValue = if (isDarkSelected) Color.White else Color.Black,
-        animationSpec = if (animationsEnabled) spring() else snap(),
-        label = "thumbColor"
-    )
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(primaryTextColor.color.copy(alpha = 0.1f))
-            .clickable { onSelect(if (isDarkSelected) PopupTheme.LIGHT else PopupTheme.DARK) }
-            .padding(horizontal = 4.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .height(16.dp)
-        ) {
-            Row(modifier = Modifier.fillMaxSize()) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clipToBounds()
-                        .drawBehind {
-                            val cornerRadius = 3.dp.toPx()
-                            drawRoundRect(
-                                color = Color.Black,
-                                topLeft = Offset.Zero,
-                                size = Size(size.width + cornerRadius, size.height),
-                                cornerRadius = CornerRadius(cornerRadius, cornerRadius)
-                            )
-                        }
-                )
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clipToBounds()
-                        .drawBehind {
-                            val cornerRadius = 3.dp.toPx()
-                            drawRoundRect(
-                                color = Color.White,
-                                topLeft = Offset(-cornerRadius, 0f),
-                                size = Size(size.width + cornerRadius, size.height),
-                                cornerRadius = CornerRadius(cornerRadius, cornerRadius)
-                            )
-                        }
-                )
-            }
-
-            val thumbSize = 6.5.dp
-            val startOffset = (maxWidth * 0.25f) - (thumbSize / 2)
-            val endOffset = (maxWidth * 0.75f) - (thumbSize / 2)
-            val currentOffset = startOffset + (endOffset - startOffset) * thumbOffset
-
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .offset(x = currentOffset)
-                    .size(thumbSize)
-                    .clip(CircleShape)
-                    .background(thumbColor)
-            )
-        }
-    }
 }
 
 /**
@@ -2303,7 +2351,6 @@ private fun IconPackSelectionDialog(
     installedIconPacks: List<IconPackInfo>,
     selectedPackageName: String?,
     accentColor: AccentColor,
-    buttonTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     popupTheme: PopupTheme = PopupTheme.DARK,
     onSelect: (String?) -> Unit,
     onDismiss: () -> Unit

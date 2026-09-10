@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.widget.LauncherAppWidgetHostView
 
@@ -415,6 +416,7 @@ fun SideSearchWidgetSlot(
     appWidgetHost: AppWidgetHost?,
     appWidgetManager: AppWidgetManager?,
     onPickWidget: () -> Unit,
+    handSide: HandSide = HandSide.RIGHT,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -512,10 +514,10 @@ fun SideSearchWidgetSlot(
                     }
                 )
 
-                // Corner options button
+                // Corner options button — positioned at the bottom on the hand-side edge
                 Box(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
+                        .align(if (handSide == HandSide.LEFT) Alignment.BottomStart else Alignment.BottomEnd)
                         .padding(6.dp)
                         .size(24.dp)
                         .clip(CircleShape)
@@ -628,6 +630,7 @@ fun SideAlphabetWidgetSlot(
     appWidgetHost: AppWidgetHost?,
     appWidgetManager: AppWidgetManager?,
     onPickWidget: () -> Unit,
+    handSide: HandSide = HandSide.RIGHT,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -722,9 +725,10 @@ fun SideAlphabetWidgetSlot(
                     }
                 )
 
+                // Options button — bottom, hand-side edge
                 Box(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
+                        .align(if (handSide == HandSide.LEFT) Alignment.BottomStart else Alignment.BottomEnd)
                         .padding(6.dp)
                         .size(24.dp)
                         .clip(CircleShape)
