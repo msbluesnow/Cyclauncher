@@ -22,25 +22,27 @@ object AppColorExtractor {
      * Extracts the primary color category from a given application icon [Drawable].
      */
     fun extractColorBucket(drawable: Drawable): AppColorBucket {
-        // For AdaptiveIconDrawable, prioritize the foreground layer to isolate
-        // the app's brand graphic from any white/neutral background container.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && drawable is AdaptiveIconDrawable) {
-            val foreground = drawable.foreground
-            if (foreground != null) {
-                val fgBitmap = drawableToBitmap(foreground, TARGET_BITMAP_SIZE)
-                val fgBucket = analyzeBitmapPixels(fgBitmap)
-                // If the foreground has distinct chromatic color(s), use it!
-                // If the foreground is monochrome (e.g. white icon on colored background like Telegram/WhatsApp),
-                // fall back to the full composite drawable.
-                if (fgBucket != AppColorBucket.MONOCHROME) {
-                    return fgBucket
+        return try {
+            // For AdaptiveIconDrawable, prioritize the foreground layer to isolate
+            // the app's brand graphic from any white/neutral background container.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && drawable is AdaptiveIconDrawable) {
+                val foreground = drawable.foreground
+                if (foreground != null) {
+                    val fgBitmap = drawableToBitmap(foreground, TARGET_BITMAP_SIZE)
+                    val fgBucket = analyzeBitmapPixels(fgBitmap)
+                    // If the foreground has distinct chromatic color(s), use it!
+                    if (fgBucket != AppColorBucket.MONOCHROME) {
+                        return fgBucket
+                    }
                 }
             }
-        }
 
-        // Full composite icon analysis
-        val bitmap = drawableToBitmap(drawable, TARGET_BITMAP_SIZE)
-        return analyzeBitmapPixels(bitmap)
+            // Full composite icon analysis
+            val bitmap = drawableToBitmap(drawable, TARGET_BITMAP_SIZE)
+            analyzeBitmapPixels(bitmap)
+        } catch (_: Exception) {
+            AppColorBucket.MONOCHROME
+        }
     }
 
     private fun analyzeBitmapPixels(bitmap: Bitmap): AppColorBucket {

@@ -216,63 +216,69 @@ fun HighlightScreen(
     // Callback when user taps a widget from the CustomWidgetPickerSheet
     val onSelectWidgetFromPicker: (AppWidgetProviderInfo) -> Unit = { providerInfo ->
         showCustomWidgetPicker = false
-        val newWidgetId = host.allocateAppWidgetId()
-
-        val displayDensity = context.resources.displayMetrics.density
-        val optimalHeight = calculateOptimalWidgetHeight(providerInfo, displayDensity)
-        val screenWidthDp = (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
-        val targetWidthDp = (screenWidthDp * 1.0f).toInt() - 24
-
-        val options = Bundle().apply {
-            putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, targetWidthDp)
-            putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, targetWidthDp)
-            putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, optimalHeight)
-            putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, optimalHeight)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val sizes = arrayListOf(android.util.SizeF(targetWidthDp.toFloat(), optimalHeight.toFloat()))
-                putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, sizes)
-            }
-        }
-
-        val canBind = try {
-            val profile = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                providerInfo.profile ?: android.os.Process.myUserHandle()
-            } else {
-                null
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && profile != null) {
-                manager.bindAppWidgetIdIfAllowed(newWidgetId, profile, providerInfo.provider, options)
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                manager.bindAppWidgetIdIfAllowed(newWidgetId, providerInfo.provider, options)
-            } else {
-                manager.bindAppWidgetIdIfAllowed(newWidgetId, providerInfo.provider)
-            }
+        val newWidgetId = try {
+            host.allocateAppWidgetId()
         } catch (_: Exception) {
-            false
+            AppWidgetManager.INVALID_APPWIDGET_ID
         }
 
-        try {
-            manager.updateAppWidgetOptions(newWidgetId, options)
-        } catch (_: Exception) {}
+        if (newWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+            val displayDensity = context.resources.displayMetrics.density
+            val optimalHeight = calculateOptimalWidgetHeight(providerInfo, displayDensity)
+            val screenWidthDp = (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
+            val targetWidthDp = (screenWidthDp * 1.0f).toInt() - 24
 
-        if (canBind) {
-            val finalInfo = manager.getAppWidgetInfo(newWidgetId) ?: providerInfo
-            checkConfigureAndAdd(newWidgetId, finalInfo, options)
-        } else {
-            pendingBindWidgetId = newWidgetId
-            pendingBindProvider = providerInfo
-            try {
-                val bindIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, newWidgetId)
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, providerInfo.provider)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, providerInfo.profile ?: android.os.Process.myUserHandle())
-                    }
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_OPTIONS, options)
+            val options = Bundle().apply {
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, targetWidthDp)
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, targetWidthDp)
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, optimalHeight)
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, optimalHeight)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val sizes = arrayListOf(android.util.SizeF(targetWidthDp.toFloat(), optimalHeight.toFloat()))
+                    putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, sizes)
                 }
-                bindWidgetLauncher.launch(bindIntent)
+            }
+
+            val canBind = try {
+                val profile = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    providerInfo.profile ?: android.os.Process.myUserHandle()
+                } else {
+                    null
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && profile != null) {
+                    manager.bindAppWidgetIdIfAllowed(newWidgetId, profile, providerInfo.provider, options)
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                    manager.bindAppWidgetIdIfAllowed(newWidgetId, providerInfo.provider, options)
+                } else {
+                    manager.bindAppWidgetIdIfAllowed(newWidgetId, providerInfo.provider)
+                }
             } catch (_: Exception) {
-                checkConfigureAndAdd(newWidgetId, providerInfo, options)
+                false
+            }
+
+            try {
+                manager.updateAppWidgetOptions(newWidgetId, options)
+            } catch (_: Exception) {}
+
+            if (canBind) {
+                val finalInfo = manager.getAppWidgetInfo(newWidgetId) ?: providerInfo
+                checkConfigureAndAdd(newWidgetId, finalInfo, options)
+            } else {
+                pendingBindWidgetId = newWidgetId
+                pendingBindProvider = providerInfo
+                try {
+                    val bindIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, newWidgetId)
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, providerInfo.provider)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, providerInfo.profile ?: android.os.Process.myUserHandle())
+                        }
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_OPTIONS, options)
+                    }
+                    bindWidgetLauncher.launch(bindIntent)
+                } catch (_: Exception) {
+                    checkConfigureAndAdd(newWidgetId, providerInfo, options)
+                }
             }
         }
     }

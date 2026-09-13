@@ -137,6 +137,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _animationsEnabled = MutableStateFlow(true)
     val animationsEnabled: StateFlow<Boolean> = _animationsEnabled
 
+    private val _hapticFeedbackEnabled = MutableStateFlow(true)
+    val hapticFeedbackEnabled: StateFlow<Boolean> = _hapticFeedbackEnabled
+
     private val _isWallpaperDark = MutableStateFlow(AccentColor.isWallpaperDark(safeContext))
     val isWallpaperDark: StateFlow<Boolean> = _isWallpaperDark
 
@@ -556,6 +559,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _showSearchWidgets.value = prefs.getBoolean("show_search_widgets", true)
         _showSearchHistory.value = prefs.getBoolean("show_search_history", true)
         _animationsEnabled.value = prefs.getBoolean("animations_enabled", true)
+        _hapticFeedbackEnabled.value = prefs.getBoolean("haptic_feedback_enabled", true)
 
         val savedSearchMethod = prefs.getString("search_method", SearchMethod.SIDE_ALPHABET.name) ?: SearchMethod.SIDE_ALPHABET.name
         val initialMethod = try { SearchMethod.valueOf(savedSearchMethod) } catch (e: Exception) { SearchMethod.SIDE_ALPHABET }
@@ -578,10 +582,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _selectedIconPack.value = savedIconPack
         viewModelScope.launch {
             _installedIconPacks.value = IconPackManager.getInstalledIconPacks(safeContext)
-            if (savedIconPack != null) {
-                IconPackManager.loadIconPack(safeContext, savedIconPack)
-                _iconPackVersion.value = System.currentTimeMillis()
-            }
+            IconPackManager.loadIconPack(safeContext, savedIconPack)
+            _iconPackVersion.value = System.currentTimeMillis()
         }
 
         loadInstalledApps()
@@ -688,6 +690,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun setAnimationsEnabled(enabled: Boolean) {
         _animationsEnabled.value = enabled
         editPrefs { putBoolean("animations_enabled", enabled) }
+    }
+
+    fun setHapticFeedbackEnabled(enabled: Boolean) {
+        _hapticFeedbackEnabled.value = enabled
+        editPrefs { putBoolean("haptic_feedback_enabled", enabled) }
     }
 
     fun setAccentColor(color: AccentColor) {
@@ -874,7 +881,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             if (_isDefaultLauncher.value != isDefault) {
                 _isDefaultLauncher.value = isDefault
             }
-            onResult?.invoke(isDefault)
+            if (onResult != null) {
+                withContext(Dispatchers.Main) {
+                    onResult.invoke(isDefault)
+                }
+            }
         }
     }
 

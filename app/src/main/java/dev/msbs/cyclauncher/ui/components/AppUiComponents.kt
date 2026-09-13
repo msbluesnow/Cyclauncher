@@ -12,6 +12,7 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.vector.ImageVector
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -158,7 +159,7 @@ fun AdaptiveHeaderTitle(
             textAlign = textAlign,
             maxLines = 1,
             softWrap = false,
-            overflow = TextOverflow.Ellipsis
+            modifier = Modifier.basicMarquee()
         )
     }
 }

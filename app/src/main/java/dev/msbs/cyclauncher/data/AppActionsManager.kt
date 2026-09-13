@@ -26,6 +26,16 @@ class AppActionsManager(context: Context) {
     private val context: Context = context.getSafeStorageContext()
     private val prefs: SharedPreferences = this.context.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
 
+    private fun showToast(msg: String, length: Int = Toast.LENGTH_SHORT) {
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            try { Toast.makeText(context, msg, length).show() } catch (_: Exception) {}
+        } else {
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                try { Toast.makeText(context, msg, length).show() } catch (_: Exception) {}
+            }
+        }
+    }
+
     private val _favorites = MutableStateFlow<List<String>>(loadList("favorites"))
     val favorites: StateFlow<List<String>> = _favorites
 
@@ -59,10 +69,10 @@ class AppActionsManager(context: Context) {
         
         if (current.contains(componentKey)) {
             current.remove(componentKey)
-            Toast.makeText(context, "Removed \"$label\" from Favorites", Toast.LENGTH_SHORT).show()
+            showToast("Removed \"$label\" from Favorites")
         } else {
             current.add(componentKey)
-            Toast.makeText(context, "Added \"$label\" to Favorites", Toast.LENGTH_SHORT).show()
+            showToast("Added \"$label\" to Favorites")
         }
         _favorites.value = current
         saveList("favorites", current)
@@ -89,11 +99,7 @@ class AppActionsManager(context: Context) {
         val newVal = !_isHistoryPaused.value
         _isHistoryPaused.value = newVal
         prefs.edit().putBoolean("is_history_paused", newVal).apply()
-        Toast.makeText(
-            context,
-            if (newVal) "History recording paused" else "History recording resumed",
-            Toast.LENGTH_SHORT
-        ).show()
+        showToast(if (newVal) "History recording paused" else "History recording resumed")
         return newVal
     }
 
@@ -161,7 +167,7 @@ class AppActionsManager(context: Context) {
     fun clearSearchHistory() {
         _searchHistory.value = emptyList()
         saveList("search_history", emptyList())
-        Toast.makeText(context, "Search history cleared", Toast.LENGTH_SHORT).show()
+        showToast("Search history cleared")
     }
 
     fun logAppLaunch(componentKey: String) {
@@ -259,7 +265,7 @@ class AppActionsManager(context: Context) {
             saveRecentlyUpdated(updatedSet)
         }
         val label = componentKey.substringBefore('/').substringAfterLast('.').replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-        Toast.makeText(context, "Removed \"$label\" from History", Toast.LENGTH_SHORT).show()
+        showToast("Removed \"$label\" from History")
     }
 
     fun clearHistory() {
@@ -267,7 +273,7 @@ class AppActionsManager(context: Context) {
         saveList("history", emptyList())
         _recentlyUpdated.value = emptySet()
         saveRecentlyUpdated(emptySet())
-        Toast.makeText(context, "History cleared", Toast.LENGTH_SHORT).show()
+        showToast("History cleared")
     }
 
     fun renameApp(componentKey: String, newLabel: String) {
@@ -1274,7 +1280,7 @@ class AppActionsManager(context: Context) {
             parts.add("${preview.favorites.size} favorites")
         }
         val msg = if (parts.isNotEmpty()) parts.joinToString(", ") else "Backup imported successfully"
-        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+        showToast(msg)
     }
 
     private fun saveList(key: String, list: List<String>) {
@@ -1501,7 +1507,7 @@ class AppActionsManager(context: Context) {
         _appTags.value = currentAppTags
         saveAppTags(currentAppTags)
 
-        Toast.makeText(context, "Applied ${preview.tags.size} tags to ${preview.matchedAppsCount} apps", Toast.LENGTH_SHORT).show()
+        showToast("Applied ${preview.tags.size} tags to ${preview.matchedAppsCount} apps")
     }
 
     private fun generateTagColor(name: String): Color {

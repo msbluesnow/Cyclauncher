@@ -148,49 +148,56 @@ fun SearchScreen(
 
     val onSelectWidgetFromPicker: (AppWidgetProviderInfo, WidgetPickTarget) -> Unit = { providerInfo, target ->
         if (host != null) {
-            val newWidgetId = host.allocateAppWidgetId()
-            val options = createWidgetOptions(context)
-
-            val canBind = try {
-                val profile = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    providerInfo.profile ?: android.os.Process.myUserHandle()
-                } else {
-                    null
-                }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && profile != null) {
-                    manager.bindAppWidgetIdIfAllowed(newWidgetId, profile, providerInfo.provider, options)
-                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                    manager.bindAppWidgetIdIfAllowed(newWidgetId, providerInfo.provider, options)
-                } else {
-                    manager.bindAppWidgetIdIfAllowed(newWidgetId, providerInfo.provider)
-                }
+            val newWidgetId = try {
+                host.allocateAppWidgetId()
             } catch (_: Exception) {
-                false
+                AppWidgetManager.INVALID_APPWIDGET_ID
             }
 
-            try {
-                manager.updateAppWidgetOptions(newWidgetId, options)
-            } catch (_: Exception) {}
+            if (newWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                val options = createWidgetOptions(context)
 
-            if (canBind) {
-                val finalInfo = manager.getAppWidgetInfo(newWidgetId) ?: providerInfo
-                checkConfigureAndAdd(newWidgetId, finalInfo, options, target)
-            } else {
-                pendingBindWidgetId = newWidgetId
-                pendingBindProvider = providerInfo
-                pendingBindTarget = target
-                try {
-                    val bindIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
-                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, newWidgetId)
-                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, providerInfo.provider)
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, providerInfo.profile ?: android.os.Process.myUserHandle())
-                        }
-                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_OPTIONS, options)
+                val canBind = try {
+                    val profile = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        providerInfo.profile ?: android.os.Process.myUserHandle()
+                    } else {
+                        null
                     }
-                    bindWidgetLauncher.launch(bindIntent)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && profile != null) {
+                        manager.bindAppWidgetIdIfAllowed(newWidgetId, profile, providerInfo.provider, options)
+                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                        manager.bindAppWidgetIdIfAllowed(newWidgetId, providerInfo.provider, options)
+                    } else {
+                        manager.bindAppWidgetIdIfAllowed(newWidgetId, providerInfo.provider)
+                    }
                 } catch (_: Exception) {
-                    checkConfigureAndAdd(newWidgetId, providerInfo, options, target)
+                    false
+                }
+
+                try {
+                    manager.updateAppWidgetOptions(newWidgetId, options)
+                } catch (_: Exception) {}
+
+                if (canBind) {
+                    val finalInfo = manager.getAppWidgetInfo(newWidgetId) ?: providerInfo
+                    checkConfigureAndAdd(newWidgetId, finalInfo, options, target)
+                } else {
+                    pendingBindWidgetId = newWidgetId
+                    pendingBindProvider = providerInfo
+                    pendingBindTarget = target
+                    try {
+                        val bindIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
+                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, newWidgetId)
+                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, providerInfo.provider)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, providerInfo.profile ?: android.os.Process.myUserHandle())
+                            }
+                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_OPTIONS, options)
+                        }
+                        bindWidgetLauncher.launch(bindIntent)
+                    } catch (_: Exception) {
+                        checkConfigureAndAdd(newWidgetId, providerInfo, options, target)
+                    }
                 }
             }
         }

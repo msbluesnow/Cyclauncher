@@ -137,13 +137,17 @@ class AppColorManager(context: Context) {
 
         return iconPackDrawable ?: try {
             val component = android.content.ComponentName(pkg, activity)
-            val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                pm.getActivityInfo(component, PackageManager.ComponentInfoFlags.of(0L))
-            } else {
-                @Suppress("DEPRECATION")
-                pm.getActivityInfo(component, 0)
+            try {
+                pm.getActivityIcon(component)
+            } catch (_: Exception) {
+                val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    pm.getActivityInfo(component, PackageManager.ComponentInfoFlags.of(0L))
+                } else {
+                    @Suppress("DEPRECATION")
+                    pm.getActivityInfo(component, 0)
+                }
+                info.loadIcon(pm)
             }
-            info.loadIcon(pm)
         } catch (_: Exception) {
             try {
                 pm.getApplicationIcon(pkg)

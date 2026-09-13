@@ -14,7 +14,6 @@ import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
 import coil3.request.Options
-import coil3.toUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -47,12 +46,14 @@ internal class AppIconFetcher private constructor(
             null
         }
 
+        var isFallback = false
         val drawable: Drawable = iconPackDrawable ?: try {
-            resolveIcon(pm, pkg, activity)
+            resolveIcon(context, pm, pkg, activity)
         } catch (_: Exception) {
             try {
                 pm.getApplicationIcon(pkg)
             } catch (_: Exception) {
+                isFallback = true
                 pm.defaultActivityIcon
             }
         }
@@ -62,8 +63,8 @@ internal class AppIconFetcher private constructor(
 
         ImageFetchResult(
             image = bitmap.asImage(),
-            isSampled = false,
-            dataSource = DataSource.MEMORY,
+            isSampled = isFallback,
+            dataSource = if (isFallback) DataSource.NETWORK else DataSource.MEMORY,
         )
     }
 
@@ -94,8 +95,23 @@ internal class AppIconFetcher private constructor(
         return bitmap
     }
 
-    private fun resolveIcon(pm: PackageManager, pkg: String, activity: String): Drawable {
+    private fun resolveIcon(context: Context, pm: PackageManager, pkg: String, activity: String): Drawable {
         val component = android.content.ComponentName(pkg, activity)
+        try {
+            return pm.getActivityIcon(component)
+        } catch (_: Exception) {}
+
+        val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
+        if (launcherApps != null) {
+            try {
+                val list = launcherApps.getActivityList(pkg, android.os.Process.myUserHandle())
+                val activityInfo = list.firstOrNull { it.componentName.className == activity } ?: list.firstOrNull()
+                if (activityInfo != null) {
+                    return activityInfo.getIcon(0)
+                }
+            } catch (_: Exception) {}
+        }
+
         val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             pm.getActivityInfo(component, PackageManager.ComponentInfoFlags.of(0L))
         } else {

@@ -22,6 +22,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -93,6 +94,7 @@ fun SettingsScreen(
     val showSearchWidgets by viewModel.showSearchWidgets.collectAsState()
     val sideAlphabetSlotMode by viewModel.sideAlphabetSlotMode.collectAsState()
     val animationsEnabled by viewModel.animationsEnabled.collectAsState()
+    val hapticFeedbackEnabled by viewModel.hapticFeedbackEnabled.collectAsState()
     val isWpDark by viewModel.isWallpaperDark.collectAsState()
     val customCharMappings by viewModel.customCharMappings.collectAsState()
     val currentIsDefault by viewModel.isDefaultLauncherState.collectAsState()
@@ -203,13 +205,15 @@ fun SettingsScreen(
                         StatusBarAndAnimationsSection(
                             hideStatusBar = hideStatusBar,
                             animationsEnabled = animationsEnabled,
+                            hapticFeedbackEnabled = hapticFeedbackEnabled,
                             accentColor = accentColor,
                             primaryTextColor = primaryTextColor,
                             showShadows = showShadows,
                             shadowColorOverride = shadowColorOverride,
                             shadow = shadow,
                             onToggleStatusBar = { viewModel.setHideStatusBar(!hideStatusBar) },
-                            onAnimationsChange = { viewModel.setAnimationsEnabled(it) }
+                            onAnimationsChange = { viewModel.setAnimationsEnabled(it) },
+                            onHapticFeedbackChange = { viewModel.setHapticFeedbackEnabled(it) }
                         )
 
                         SettingsDivider(primaryTextColor, top = 5.dp, bottom = 8.dp)
@@ -327,7 +331,9 @@ fun SettingsScreen(
                                 text = "Tutorial",
                                 color = buttonTextColor.color,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
+                                fontSize = 14.sp,
+                                maxLines = 1,
+                                modifier = Modifier.basicMarquee()
                             )
                         }
 
@@ -639,11 +645,11 @@ private fun InteractionSection(
                     shadowColorOverride = shadowColorOverride
                 )
                 Text(
-                    "Widget",
+                    text = "Widget",
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    modifier = Modifier.weight(1f, fill = false).basicMarquee()
                 )
             }
             val widgetIcon = if (showSearchWidgets) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff
@@ -669,11 +675,11 @@ private fun InteractionSection(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                "Side Slot",
+                text = "Side Slot",
                 color = primaryTextColor.color,
                 style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                modifier = Modifier.weight(1f, fill = false).basicMarquee()
             )
             var expanded by remember { mutableStateOf(false) }
             val (currentIcon, currentLabel) = when (sideAlphabetSlotMode) {
@@ -704,7 +710,8 @@ private fun InteractionSection(
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
-                        style = TextStyle(shadow = shadow)
+                        style = TextStyle(shadow = shadow),
+                        modifier = Modifier.basicMarquee()
                     )
                     Icon(
                         imageVector = Icons.Outlined.ArrowDropDown,
@@ -739,7 +746,9 @@ private fun InteractionSection(
                                     text = modeLabel,
                                     color = if (isSelected) accentColor.color else popupTheme.contentColor,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 14.sp
+                                    fontSize = 14.sp,
+                                    maxLines = 1,
+                                    modifier = Modifier.basicMarquee()
                                 )
                             },
                             leadingIcon = {
@@ -779,64 +788,103 @@ private fun InteractionSection(
 private fun StatusBarAndAnimationsSection(
     hideStatusBar: Boolean,
     animationsEnabled: Boolean,
+    hapticFeedbackEnabled: Boolean,
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
     shadowColorOverride: PrimaryTextColor?,
     shadow: Shadow?,
     onToggleStatusBar: () -> Unit,
-    onAnimationsChange: (Boolean) -> Unit
+    onAnimationsChange: (Boolean) -> Unit,
+    onHapticFeedbackChange: (Boolean) -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Row(
-            modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                "Status Bar",
-                color = primaryTextColor.color,
-                style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            val visibilityIcon =
-                if (hideStatusBar) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility
-            IconButton(
-                onClick = onToggleStatusBar,
-                modifier = Modifier.size(32.dp)
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                ShadowedIcon(
-                    imageVector = visibilityIcon,
-                    contentDescription = "Toggle status bar visibility",
-                    tint = accentColor.color,
-                    size = 20.dp,
-                    showShadows = showShadows,
-                    primaryTextColor = primaryTextColor,
-                    shadowColorOverride = shadowColorOverride
+                Text(
+                    text = "Status Bar",
+                    color = primaryTextColor.color,
+                    style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f, fill = false).basicMarquee()
+                )
+                val visibilityIcon =
+                    if (hideStatusBar) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility
+                IconButton(
+                    onClick = onToggleStatusBar,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    ShadowedIcon(
+                        imageVector = visibilityIcon,
+                        contentDescription = "Toggle status bar visibility",
+                        tint = accentColor.color,
+                        size = 20.dp,
+                        showShadows = showShadows,
+                        primaryTextColor = primaryTextColor,
+                        shadowColorOverride = shadowColorOverride
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Animations",
+                    color = primaryTextColor.color,
+                    style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f, fill = false).basicMarquee()
+                )
+                Switch(
+                    checked = animationsEnabled,
+                    onCheckedChange = onAnimationsChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = accentColor.color,
+                        checkedTrackColor = accentColor.color.copy(alpha = 0.45f),
+                        checkedBorderColor = accentColor.color.copy(alpha = 0.80f),
+                        uncheckedThumbColor = accentColor.color.copy(alpha = 0.65f),
+                        uncheckedTrackColor = accentColor.color.copy(alpha = 0.12f),
+                        uncheckedBorderColor = accentColor.color.copy(alpha = 0.35f)
+                    )
                 )
             }
         }
 
         Row(
-            modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                "Animations",
-                color = primaryTextColor.color,
-                style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
+                Text(
+                    text = "Haptic Feedback",
+                    color = primaryTextColor.color,
+                    style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                    maxLines = 1,
+                    modifier = Modifier.basicMarquee()
+                )
+            }
             Switch(
-                checked = animationsEnabled,
-                onCheckedChange = onAnimationsChange,
+                checked = hapticFeedbackEnabled,
+                onCheckedChange = onHapticFeedbackChange,
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = accentColor.color,
                     checkedTrackColor = accentColor.color.copy(alpha = 0.45f),
@@ -894,11 +942,11 @@ private fun MappingAndIconPackSection(
                     shadowColorOverride = shadowColorOverride
                 )
                 Text(
-                    "Mapping",
+                    text = "Mapping",
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    modifier = Modifier.basicMarquee()
                 )
             }
             Row(
@@ -918,9 +966,8 @@ private fun MappingAndIconPackSection(
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                     style = TextStyle(shadow = shadow),
-                    modifier = Modifier.weight(1f, fill = false)
+                    modifier = Modifier.weight(1f, fill = false).basicMarquee()
                 )
                 ShadowedIcon(
                     imageVector = Icons.Outlined.Tune,
@@ -949,11 +996,11 @@ private fun MappingAndIconPackSection(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                "Icon Pack",
+                text = "Icon Pack",
                 color = primaryTextColor.color,
                 style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                modifier = Modifier.basicMarquee()
             )
             Row(
                 modifier = Modifier
@@ -1028,9 +1075,11 @@ private fun ThemeAndColorsSection(
                     shadowColorOverride = shadowColorOverride
                 )
                 Text(
-                    "Accent",
+                    text = "Accent",
                     color = primaryTextColor.color,
-                    style = TextStyle(shadow = shadow, fontSize = 15.sp)
+                    style = TextStyle(shadow = shadow, fontSize = 15.sp),
+                    maxLines = 1,
+                    modifier = Modifier.basicMarquee()
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -1043,9 +1092,11 @@ private fun ThemeAndColorsSection(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    "Adaptive",
+                    text = "Adaptive",
                     color = primaryTextColor.color,
-                    style = TextStyle(shadow = shadow, fontSize = 15.sp)
+                    style = TextStyle(shadow = shadow, fontSize = 15.sp),
+                    maxLines = 1,
+                    modifier = Modifier.basicMarquee()
                 )
                 ShadowedIcon(
                     imageVector = Icons.Outlined.Tonality,
@@ -1096,11 +1147,11 @@ private fun ThemeAndColorsSection(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                "Main Color",
+                text = "Main Color",
                 color = primaryTextColor.color,
                 style = TextStyle(shadow = shadow, fontSize = 13.sp),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                modifier = Modifier.basicMarquee()
             )
             Spacer(modifier = Modifier.height(8.dp))
             MainColorSelector(primaryTextColor, primaryTextColor, onPrimaryTextColorChange)
@@ -1108,11 +1159,11 @@ private fun ThemeAndColorsSection(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                "Button Text",
+                text = "Button Text",
                 color = primaryTextColor.color,
                 style = TextStyle(shadow = shadow, fontSize = 13.sp),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                modifier = Modifier.basicMarquee()
             )
             Spacer(modifier = Modifier.height(8.dp))
             MainColorSelector(buttonTextColor, primaryTextColor, onButtonTextColorChange)
@@ -1120,11 +1171,11 @@ private fun ThemeAndColorsSection(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                "Popup Theme",
+                text = "Popup Theme",
                 color = primaryTextColor.color,
                 style = TextStyle(shadow = shadow, fontSize = 13.sp),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                modifier = Modifier.basicMarquee()
             )
             Spacer(modifier = Modifier.height(8.dp))
             PopupThemeSelector(popupTheme, primaryTextColor, onPopupThemeChange)
@@ -1208,7 +1259,9 @@ private fun BackupAndTagsSection(
                 Text(
                     text = "Backup",
                     color = primaryTextColor.color,
-                    style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium),
+                    maxLines = 1,
+                    modifier = Modifier.basicMarquee()
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 IconButton(
@@ -1270,7 +1323,9 @@ private fun BackupAndTagsSection(
                 Text(
                     text = "AI Tags",
                     color = primaryTextColor.color,
-                    style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium),
+                    maxLines = 1,
+                    modifier = Modifier.basicMarquee()
                 )
             }
         }
@@ -1315,7 +1370,9 @@ private fun SupportAndCommunitySection(
                     shadow = shadow,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
-                )
+                ),
+                maxLines = 1,
+                modifier = Modifier.basicMarquee()
             )
         }
 
@@ -1398,7 +1455,8 @@ private fun SettingsVersionText(
         text = "Version $versionName",
         color = primaryTextColor.color.copy(alpha = 0.4f),
         style = TextStyle(shadow = shadow, fontSize = 14.sp),
-        modifier = modifier
+        maxLines = 1,
+        modifier = modifier.basicMarquee()
     )
 }
 
@@ -1476,7 +1534,9 @@ private fun CommunityButton(
                 color = titleColor,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
-                style = TextStyle(shadow = shadow)
+                style = TextStyle(shadow = shadow),
+                maxLines = 1,
+                modifier = Modifier.basicMarquee()
             )
 
             Spacer(modifier = Modifier.height(2.dp))
@@ -1485,7 +1545,9 @@ private fun CommunityButton(
                 text = subtitle,
                 color = primaryTextColor.color.copy(alpha = if (isHighlight) 0.85f else 0.55f),
                 fontSize = 11.sp,
-                style = TextStyle(shadow = shadow)
+                style = TextStyle(shadow = shadow),
+                maxLines = 1,
+                modifier = Modifier.basicMarquee()
             )
         }
     }
@@ -1610,7 +1672,9 @@ private fun AccentColorDialog(
                     text = "Theme Accent",
                     color = popupTheme.contentColor,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
+                    fontSize = 18.sp,
+                    maxLines = 1,
+                    modifier = Modifier.basicMarquee()
                 )
                 IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
                     Icon(
@@ -1646,10 +1710,12 @@ private fun AccentColorDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "Presets & Wallpaper",
+                            text = "Presets & Wallpaper",
                             fontSize = 12.sp,
                             fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
-                            color = if (selectedTab == 0) popupTheme.contentColor else popupTheme.secondaryContentColor
+                            color = if (selectedTab == 0) popupTheme.contentColor else popupTheme.secondaryContentColor,
+                            maxLines = 1,
+                            modifier = Modifier.basicMarquee()
                         )
                     }
                     Box(
@@ -1662,20 +1728,24 @@ private fun AccentColorDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "Custom Color",
+                            text = "Custom Color",
                             fontSize = 12.sp,
                             fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
-                            color = if (selectedTab == 1) popupTheme.contentColor else popupTheme.secondaryContentColor
+                            color = if (selectedTab == 1) popupTheme.contentColor else popupTheme.secondaryContentColor,
+                            maxLines = 1,
+                            modifier = Modifier.basicMarquee()
                         )
                     }
                 }
 
                 if (selectedTab == 0) {
                     Text(
-                        "Adaptive Wallpaper Accent",
+                        text = "Adaptive Wallpaper Accent",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = popupTheme.secondaryContentColor
+                        color = popupTheme.secondaryContentColor,
+                        maxLines = 1,
+                        modifier = Modifier.basicMarquee()
                     )
 
                     Row(
@@ -1721,16 +1791,20 @@ private fun AccentColorDialog(
                             }
                             Column {
                                 Text(
-                                    "Hue Angle Shift",
+                                    text = "Hue Angle Shift",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium,
-                                    color = popupTheme.contentColor
+                                    color = popupTheme.contentColor,
+                                    maxLines = 1,
+                                    modifier = Modifier.basicMarquee()
                                 )
                                 Text(
-                                    if (isWpDark) "Luminous highlight for dark wallpaper"
+                                    text = if (isWpDark) "Luminous highlight for dark wallpaper"
                                     else "Deep dark shade for light wallpaper",
                                     fontSize = 11.sp,
-                                    color = popupTheme.secondaryContentColor
+                                    color = popupTheme.secondaryContentColor,
+                                    maxLines = 1,
+                                    modifier = Modifier.basicMarquee()
                                 )
                             }
                         }
@@ -1739,10 +1813,12 @@ private fun AccentColorDialog(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        "Echo Icon Theme Presets",
+                        text = "Echo Icon Theme Presets",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = popupTheme.secondaryContentColor
+                        color = popupTheme.secondaryContentColor,
+                        maxLines = 1,
+                        modifier = Modifier.basicMarquee()
                     )
 
                     Column(
@@ -1772,10 +1848,12 @@ private fun AccentColorDialog(
                     }
                 } else {
                     Text(
-                        "Interactive Color Picker",
+                        text = "Interactive Color Picker",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = popupTheme.secondaryContentColor
+                        color = popupTheme.secondaryContentColor,
+                        maxLines = 1,
+                        modifier = Modifier.basicMarquee()
                     )
 
                     val quickSwatches = remember {
@@ -1788,7 +1866,13 @@ private fun AccentColorDialog(
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Quick Swatches", fontSize = 11.sp, color = popupTheme.secondaryContentColor)
+                        Text(
+                            text = "Quick Swatches",
+                            fontSize = 11.sp,
+                            color = popupTheme.secondaryContentColor,
+                            maxLines = 1,
+                            modifier = Modifier.basicMarquee()
+                        )
                         FlowRow(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1944,9 +2028,11 @@ private fun AccentColorDialog(
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Text(
-                            "Apply Custom Color",
+                            text = "Apply Custom Color",
                             fontWeight = FontWeight.Bold,
-                            color = if (customPickedColor.luminance() > 0.5f) Color.Black else Color.White
+                            color = if (customPickedColor.luminance() > 0.5f) Color.Black else Color.White,
+                            maxLines = 1,
+                            modifier = Modifier.basicMarquee()
                         )
                     }
                 }
@@ -2026,7 +2112,7 @@ private fun PresetColorChip(
             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
             color = popupTheme.contentColor,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            modifier = Modifier.basicMarquee()
         )
     }
 }
@@ -2052,17 +2138,20 @@ private fun DefaultLauncherAndRelaunchRow(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                "Default Launcher",
+                text = "Default Launcher",
                 color = primaryTextColor.color,
                 style = TextStyle(shadow = shadow, fontWeight = FontWeight.Medium, fontSize = 15.sp),
-                maxLines = 1
+                maxLines = 1,
+                modifier = Modifier.basicMarquee()
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                if (isDefault) "Set as default" else "Not set",
+                text = if (isDefault) "Set as default" else "Not set",
                 color = if (isDefault) Color.Green else accentColor.color.copy(alpha = 0.69f),
                 fontSize = 12.sp,
-                style = TextStyle(shadow = shadow)
+                style = TextStyle(shadow = shadow),
+                maxLines = 1,
+                modifier = Modifier.basicMarquee()
             )
             Spacer(modifier = Modifier.height(8.dp))
             Button(
@@ -2076,26 +2165,31 @@ private fun DefaultLauncherAndRelaunchRow(
                 contentPadding = PaddingValues(horizontal = 8.dp)
             ) {
                 Text(
-                    if (isDefault) "Change" else "Set",
+                    text = if (isDefault) "Change" else "Set",
                     color = if (isDefault) Color.Green else primaryTextColor.color,
-                    style = TextStyle(shadow = shadow, fontWeight = FontWeight.Bold)
+                    style = TextStyle(shadow = shadow, fontWeight = FontWeight.Bold),
+                    maxLines = 1,
+                    modifier = Modifier.basicMarquee()
                 )
             }
         }
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                "Relaunch App",
+                text = "Relaunch App",
                 color = primaryTextColor.color,
                 style = TextStyle(shadow = shadow, fontWeight = FontWeight.Medium, fontSize = 15.sp),
-                maxLines = 1
+                maxLines = 1,
+                modifier = Modifier.basicMarquee()
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                "May fix some issues",
+                text = "May fix some issues",
                 color = accentColor.color.copy(alpha = 0.69f),
                 fontSize = 12.sp,
-                style = TextStyle(shadow = shadow)
+                style = TextStyle(shadow = shadow),
+                maxLines = 1,
+                modifier = Modifier.basicMarquee()
             )
             Spacer(modifier = Modifier.height(8.dp))
             Button(
@@ -2107,9 +2201,11 @@ private fun DefaultLauncherAndRelaunchRow(
                 contentPadding = PaddingValues(horizontal = 8.dp)
             ) {
                 Text(
-                    "Relaunch",
+                    text = "Relaunch",
                     color = accentColor.color,
-                    style = TextStyle(shadow = shadow, fontWeight = FontWeight.Bold)
+                    style = TextStyle(shadow = shadow, fontWeight = FontWeight.Bold),
+                    maxLines = 1,
+                    modifier = Modifier.basicMarquee()
                 )
             }
         }
@@ -2326,9 +2422,11 @@ private fun IconPackSelectionDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                "Icon Pack",
+                text = "Icon Pack",
                 color = accentColor.color,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                modifier = Modifier.basicMarquee()
             )
         },
         text = {
@@ -2382,15 +2480,19 @@ private fun IconPackSelectionDialog(
                         }
                         Column {
                             Text(
-                                "System Default",
+                                text = "System Default",
                                 color = popupTheme.contentColor,
                                 fontWeight = if (isDefaultSelected) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 15.sp
+                                fontSize = 15.sp,
+                                maxLines = 1,
+                                modifier = Modifier.basicMarquee()
                             )
                             Text(
                                 text = if (systemPackName != null) "Auto: $systemPackName (ROM theme)" else "Original application icons",
                                 color = popupTheme.secondaryContentColor,
-                                fontSize = 12.sp
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                modifier = Modifier.basicMarquee()
                             )
                         }
                     }
@@ -2455,14 +2557,14 @@ private fun IconPackSelectionDialog(
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                     fontSize = 15.sp,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    modifier = Modifier.basicMarquee()
                                 )
                                 Text(
                                     text = pack.packageName,
                                     color = popupTheme.secondaryContentColor,
                                     fontSize = 11.sp,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    modifier = Modifier.basicMarquee()
                                 )
                             }
                         }
@@ -2484,7 +2586,12 @@ private fun IconPackSelectionDialog(
                 onClick = onDismiss,
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Close", color = popupTheme.secondaryContentColor)
+                Text(
+                    text = "Close",
+                    color = popupTheme.secondaryContentColor,
+                    maxLines = 1,
+                    modifier = Modifier.basicMarquee()
+                )
             }
         },
         containerColor = popupTheme.solidBackgroundColor,

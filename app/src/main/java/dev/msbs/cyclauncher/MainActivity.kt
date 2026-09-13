@@ -29,7 +29,6 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -109,9 +108,7 @@ class MainActivity : ComponentActivity() {
         
         val onBackPressedCallback = object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (!isDefaultLauncherCached) {
-                    finish()
-                }
+                viewModel.requestReset()
             }
         }
         onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
@@ -185,11 +182,24 @@ class MainActivity : ComponentActivity() {
             CyclauncherTheme {
                 val hideStatusBar by viewModel.hideStatusBar.collectAsState()
                 val animationsEnabled by viewModel.animationsEnabled.collectAsState()
+                val hapticFeedbackEnabled by viewModel.hapticFeedbackEnabled.collectAsState()
                 val showShadows by viewModel.showShadows.collectAsState()
                 val shadowColorOverride by viewModel.shadowColor.collectAsState()
                 val iconPackVersion by viewModel.iconPackVersion.collectAsState()
 
+                val currentHaptic = LocalHapticFeedback.current
+                val customHaptic = remember(hapticFeedbackEnabled, currentHaptic) {
+                    object : androidx.compose.ui.hapticfeedback.HapticFeedback {
+                        override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) {
+                            if (hapticFeedbackEnabled) {
+                                currentHaptic.performHapticFeedback(hapticFeedbackType)
+                            }
+                        }
+                    }
+                }
+
                 CompositionLocalProvider(
+                    LocalHapticFeedback provides customHaptic,
                     dev.msbs.cyclauncher.ui.theme.LocalShadowSettings provides dev.msbs.cyclauncher.ui.theme.ShadowSettings(showShadows, shadowColorOverride),
                     dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled provides animationsEnabled,
                     dev.msbs.cyclauncher.ui.theme.LocalIconPackVersion provides iconPackVersion
@@ -645,13 +655,6 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        isDefaultLauncherCached = viewModel.isDefaultLauncher()
-        if (intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_HOME)) {
-            if (!isDefaultLauncherCached) {
-                finish()
-                return
-            }
-        }
         viewModel.updateDefaultLauncherStatus { isDefault ->
             isDefaultLauncherCached = isDefault
         }
@@ -680,8 +683,10 @@ class MainActivity : ComponentActivity() {
 
             val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
             val launched = try {
-                launcherApps?.startMainActivity(componentName, android.os.Process.myUserHandle(), null, optionsBundle)
-                launcherApps != null
+                if (launcherApps != null) {
+                    launcherApps.startMainActivity(componentName, android.os.Process.myUserHandle(), null, optionsBundle)
+                    true
+                } else false
             } catch (_: Exception) {
                 false
             }
@@ -764,8 +769,16 @@ class MainActivity : ComponentActivity() {
             val method = cachedExpandNotificationsMethod
                 ?: Class.forName("android.app.StatusBarManager").getMethod("expandNotificationsPanel")
             method.invoke(service)
+            return
         } catch (e: Exception) {
-            android.util.Log.e("Cyclauncher", "openNotifications failed", e)
+            android.util.Log.e("Cyclauncher", "openNotifications failed via reflection", e)
+        }
+
+        try {
+            @Suppress("DEPRECATION")
+            sendBroadcast(Intent("android.intent.action.EXPAND_STATUS_BAR"))
+        } catch (fallbackEx: Exception) {
+            android.util.Log.e("Cyclauncher", "openNotifications fallback failed", fallbackEx)
         }
     }
 

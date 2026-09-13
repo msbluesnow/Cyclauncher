@@ -8,6 +8,7 @@ import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -149,12 +150,16 @@ fun KeepAndroidOpenBanner(
                                 shadow = shadow,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
-                            )
+                            ),
+                            maxLines = 1,
+                            modifier = Modifier.basicMarquee()
                         )
                         Text(
                             text = "Your phone is about to stop being yours",
                             color = primaryTextColor.color.copy(alpha = 0.65f),
-                            style = TextStyle(shadow = shadow, fontSize = 11.sp, lineHeight = 14.sp)
+                            style = TextStyle(shadow = shadow, fontSize = 11.sp, lineHeight = 14.sp),
+                            maxLines = 1,
+                            modifier = Modifier.basicMarquee()
                         )
                     }
                 }
@@ -227,7 +232,9 @@ fun KeepAndroidOpenBanner(
                     Text(
                         text = "Learn More",
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 12.5.sp
+                        fontSize = 12.5.sp,
+                        maxLines = 1,
+                        modifier = Modifier.basicMarquee()
                     )
                 }
 
@@ -252,7 +259,9 @@ fun KeepAndroidOpenBanner(
                     Text(
                         text = "Petition ↗",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 12.5.sp
+                        fontSize = 12.5.sp,
+                        maxLines = 1,
+                        modifier = Modifier.basicMarquee()
                     )
                 }
             }
