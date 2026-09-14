@@ -1,0 +1,9 @@
+First Beta release. Stability, ergonomics, and feature improvements.
+- Add monochrome history icons toggle with grayscale filter
+- Add haptic feedback setting and marquee text support
+- Add swipe-down quick actions overlay
+- Add hand-sided persistent scrollbar in folders
+- Add icon color filtering and aerodesign palette
+- Add Edit Tag, Reorder, hold-to-delete in folder menu
+- Fix gesture detector restart after closing action menu
+- Fix side alphabet grid touch bounds
