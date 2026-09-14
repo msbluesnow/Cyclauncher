@@ -44,7 +44,6 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.foundation.layout.*
@@ -1622,11 +1621,10 @@ private fun FavoritesSection(
             .onGloballyPositioned { coordinates ->
                 sectionPositionInRoot = coordinates.positionInRoot()
             }
-            .pointerInput(isReorderMode, isActive) {
-                if (isReorderMode || !isActive) return@pointerInput
+            .pointerInput(isReorderMode, isActive, isActionMenuOpen) {
+                if (isReorderMode || !isActive || isActionMenuOpen) return@pointerInput
                 awaitEachGesture {
                     val down = awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
-                    if (isActionMenuOpen) return@awaitEachGesture
                     var isDrag = false
                     var isHorizontalDrag = false
                     var isSwipeDownActive = false

@@ -13,7 +13,6 @@ import android.appwidget.AppWidgetManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -102,8 +101,10 @@ fun SideAlphabetSearchLayout(
     val density = LocalDensity.current
 
     val currentSelectedLetter by rememberUpdatedState(selectedLetter)
-    val currentOnLetterSelected by rememberUpdatedState { char: Char ->
-        if (char != currentSelectedLetter) {
+    val currentOnLetterSelected by rememberUpdatedState { char: Char, isTap: Boolean ->
+        if (isTap && char == currentSelectedLetter) {
+            viewModel.setSelectedLetter(null)
+        } else {
             viewModel.setSelectedLetter(char)
         }
         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -570,24 +571,30 @@ private fun SideAlphabetGrid(
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
-    onLetterSelected: (Char) -> Unit,
+    onLetterSelected: (Char, Boolean) -> Unit,
     maxGridHeight: androidx.compose.ui.unit.Dp
 ) {
     val cols = 4
     val rows = 7
+    val density = LocalDensity.current
+    val currentOnLetterSelected by rememberUpdatedState(onLetterSelected)
     var gridBoundsSize by remember { mutableStateOf(androidx.compose.ui.geometry.Size.Zero) }
 
-    fun processTouchOffset(offset: Offset) {
-        if (gridBoundsSize.width > 0f && gridBoundsSize.height > 0f) {
+    fun getCharFromOffset(offset: Offset): Char? {
+        if (gridBoundsSize.width > 0f) {
             val cellW = gridBoundsSize.width / cols
-            val cellH = gridBoundsSize.height / rows
-            val c = (offset.x / cellW).toInt().coerceIn(0, cols - 1)
-            val r = (offset.y / cellH).toInt().coerceIn(0, rows - 1)
-            val index = r * cols + c
-            if (index in alphabet.indices) {
-                onLetterSelected(alphabet[index])
+            val spacingPx = with(density) { 4.dp.toPx() }
+            val stepY = cellW + spacingPx
+            if (cellW > 0f && stepY > 0f) {
+                val c = (offset.x / cellW).toInt().coerceIn(0, cols - 1)
+                val r = (offset.y / stepY).toInt().coerceIn(0, rows - 1)
+                val index = r * cols + c
+                if (index in alphabet.indices) {
+                    return alphabet[index]
+                }
             }
         }
+        return null
     }
 
     Box(
@@ -599,13 +606,24 @@ private fun SideAlphabetGrid(
             .pointerInput(alphabet) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
-                    processTouchOffset(down.position)
+                    val downChar = getCharFromOffset(down.position)
+                    var lastChar = downChar
+
+                    if (downChar != null) {
+                        currentOnLetterSelected(downChar, true)
+                    }
+
                     while (true) {
                         val event = awaitPointerEvent()
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
                         if (!change.pressed) break
-                        change.consume()
-                        processTouchOffset(change.position)
+
+                        val char = getCharFromOffset(change.position)
+                        if (char != null && char != lastChar) {
+                            lastChar = char
+                            change.consume()
+                            currentOnLetterSelected(char, false)
+                        }
                     }
                 }
             }
