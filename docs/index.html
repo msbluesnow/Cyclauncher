@@ -3,10 +3,231 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="refresh" content="0; url=privacy-policy.html" />
-  <title>Cyclauncher</title>
+  <meta name="description" content="Cyclauncher — a fast, open-source Android home screen launcher built with Jetpack Compose. Featuring ergonomic one-handed navigation, tag folders, widgets, and deep theme customization." />
+  <title>Cyclauncher — Open-Source Android Launcher</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+  <style>
+    :root {
+      --pico-primary: #6c9bef;
+      --pico-primary-hover: #90b5ff;
+      --pico-font-family-sans-serif: "Inter", system-ui, sans-serif;
+    }
+
+    body { padding-bottom: 4rem; }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 4rem 1rem 3rem;
+      border-bottom: 1px solid var(--pico-muted-border-color);
+      margin-bottom: 3rem;
+    }
+    .hero img {
+      width: 96px; height: 96px;
+      border-radius: 22%;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 8px 32px color-mix(in srgb, var(--pico-primary) 25%, transparent);
+    }
+    .hero h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+    .hero p.tagline {
+      font-size: 1.1rem;
+      color: var(--pico-muted-color);
+      max-width: 540px;
+      margin: 0 auto 1.75rem;
+    }
+    .badge-row {
+      display: flex;
+      gap: 0.6rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 1.75rem;
+    }
+    .badge-row img { height: 28px; }
+
+    .btn-row {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-row a { min-width: 160px; text-align: center; }
+
+    /* ── Features grid ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem;
+      margin-bottom: 3rem;
+    }
+    .feature-card {
+      background: var(--pico-card-background-color);
+      border: 1px solid var(--pico-muted-border-color);
+      border-radius: var(--pico-border-radius);
+      padding: 1.25rem 1.4rem;
+      transition: border-color 0.2s;
+    }
+    .feature-card:hover { border-color: var(--pico-primary); }
+    .feature-card .icon {
+      font-size: 1.6rem;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+    .feature-card h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+    .feature-card p {
+      font-size: 0.85rem;
+      color: var(--pico-muted-color);
+      margin: 0;
+    }
+
+    /* ── Section titles ── */
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      color: var(--pico-primary);
+    }
+
+    /* ── Beta notice ── */
+    .beta-notice {
+      background: color-mix(in srgb, var(--pico-primary) 10%, transparent);
+      border: 1px solid color-mix(in srgb, var(--pico-primary) 25%, transparent);
+      border-radius: var(--pico-border-radius);
+      padding: 0.85rem 1.2rem;
+      margin-bottom: 3rem;
+      font-size: 0.9rem;
+      color: var(--pico-muted-color);
+    }
+    .beta-notice strong { color: var(--pico-primary); }
+
+    /* ── Links section ── */
+    .link-list { list-style: none; padding: 0; }
+    .link-list li {
+      padding: 0.55rem 0;
+      border-bottom: 1px solid var(--pico-muted-border-color);
+      font-size: 0.9rem;
+    }
+    .link-list li:last-child { border-bottom: none; }
+    .link-list a { color: var(--pico-primary); }
+
+    footer {
+      margin-top: 3rem;
+      border-top: 1px solid var(--pico-muted-border-color);
+      padding-top: 1.5rem;
+      color: var(--pico-muted-color);
+      font-size: 0.82rem;
+      text-align: center;
+    }
+    footer a { color: var(--pico-primary); }
+  </style>
 </head>
 <body>
-  <p>Redirecting to <a href="privacy-policy.html">Privacy Policy</a>...</p>
+  <main class="container">
+
+    <!-- Hero -->
+    <section class="hero">
+      <img src="https://raw.githubusercontent.com/msbluesnow/Cyclauncher/master/assets/logo.png" alt="Cyclauncher logo" />
+      <h1>Cyclauncher</h1>
+      <p class="tagline">
+        A fast, open-source Android home screen launcher built with Jetpack Compose.
+        Ergonomic one-handed navigation, tag folders, and deep theme customization.
+      </p>
+      <div class="badge-row">
+        <a href="https://f-droid.org/packages/dev.msbs.cyclauncher/" target="_blank" rel="noopener">
+          <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" />
+        </a>
+      </div>
+      <div class="btn-row">
+        <a href="https://github.com/msbluesnow/Cyclauncher/releases/latest" role="button" target="_blank" rel="noopener">
+          Download APK
+        </a>
+        <a href="https://github.com/msbluesnow/Cyclauncher" role="button" class="secondary" target="_blank" rel="noopener">
+          View on GitHub
+        </a>
+      </div>
+    </section>
+
+    <!-- Beta notice -->
+    <div class="beta-notice">
+      <strong>Beta v1.0.0-beta.1 (Build 20)</strong> &mdash;
+      Core features are stable. Further refinements and new mechanics are actively in development.
+      Feedback and bug reports are welcome.
+    </div>
+
+    <!-- Features -->
+    <section>
+      <p class="section-title">Key Features</p>
+      <div class="features-grid">
+
+        <div class="feature-card">
+          <span class="icon">🔤</span>
+          <h3>Versatile Search</h3>
+          <p>Rectangular Alphabet Wheel with inertia physics, Side Alphabet Index strip, and instant text search.</p>
+        </div>
+
+        <div class="feature-card">
+          <span class="icon">🗂</span>
+          <h3>Tag Folder System</h3>
+          <p>Color-accented tag folders with 2x2 icon previews, 2D drag-to-reorder, and proximity-aware popup menus.</p>
+        </div>
+
+        <div class="feature-card">
+          <span class="icon">📌</span>
+          <h3>Highlights &amp; Widgets</h3>
+          <p>Daily app install and update overview with full Android widget support — add, resize, reconfigure, remove.</p>
+        </div>
+
+        <div class="feature-card">
+          <span class="icon">🎨</span>
+          <h3>Deep Theme Control</h3>
+          <p>Echo Icon Theme palettes, Material You wallpaper colors, custom Color Picker, and adaptive text shadows.</p>
+        </div>
+
+        <div class="feature-card">
+          <span class="icon">🌐</span>
+          <h3>Character Mapping</h3>
+          <p>Bind Cyrillic, Arabic, emoji, and any symbol to search index buckets. Built-in presets included.</p>
+        </div>
+
+        <div class="feature-card">
+          <span class="icon">🤖</span>
+          <h3>AI-Assisted Tagging</h3>
+          <p>Batch-categorize apps via an Export &rarr; AI Prompt &rarr; Import workflow with full JSON backup.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Links -->
+    <section>
+      <p class="section-title">Links &amp; Community</p>
+      <ul class="link-list">
+        <li><a href="https://github.com/msbluesnow/Cyclauncher" target="_blank" rel="noopener">GitHub Repository</a> — Source code, issues, pull requests</li>
+        <li><a href="https://github.com/msbluesnow/Cyclauncher/releases" target="_blank" rel="noopener">GitHub Releases</a> — Signed APK downloads</li>
+        <li><a href="https://f-droid.org/packages/dev.msbs.cyclauncher/" target="_blank" rel="noopener">F-Droid</a> — Reproducible open-source builds</li>
+        <li><a href="https://discord.gg/Zw4EBe92Qn" target="_blank" rel="noopener">Discord</a> — Community feedback and development discussion</li>
+        <li><a href="https://github.com/msbluesnow/Cyclauncher/blob/master/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing Guide</a> — Architecture, code standards, PR workflow</li>
+        <li><a href="privacy-policy.html">Privacy Policy</a> — No data collected</li>
+      </ul>
+    </section>
+
+    <footer>
+      <p>
+        &copy; 2026 msbluesnow &nbsp;&middot;&nbsp;
+        Licensed under <a href="https://github.com/msbluesnow/Cyclauncher/blob/master/LICENSE" target="_blank" rel="noopener">GNU GPLv3</a>
+        &nbsp;&middot;&nbsp;
+        Built with Jetpack Compose
+      </p>
+    </footer>
+
+  </main>
 </body>
 </html>
