@@ -1,0 +1,179 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Privacy Policy for Cyclauncher — an open-source Android launcher. We collect no personal data." />
+  <title>Privacy Policy — Cyclauncher</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+  <style>
+    :root {
+      --pico-font-family-sans-serif: "Inter", system-ui, sans-serif;
+      --pico-primary: #6c9bef;
+      --pico-primary-hover: #90b5ff;
+    }
+    body { padding-top: 2rem; padding-bottom: 4rem; }
+    header { margin-bottom: 3rem; border-bottom: 1px solid var(--pico-muted-border-color); padding-bottom: 1.5rem; }
+    header hgroup p { color: var(--pico-muted-color); font-size: 0.95rem; margin-bottom: 0; }
+    .badge {
+      display: inline-block;
+      background: color-mix(in srgb, var(--pico-primary) 15%, transparent);
+      color: var(--pico-primary);
+      border: 1px solid color-mix(in srgb, var(--pico-primary) 30%, transparent);
+      border-radius: var(--pico-border-radius);
+      font-size: 0.75rem; font-weight: 600; padding: 0.15em 0.6em;
+      letter-spacing: 0.04em; text-transform: uppercase; vertical-align: middle;
+    }
+    article h2 { font-size: 1.1rem; margin-top: 0; color: var(--pico-primary); }
+    .highlight-box {
+      background: color-mix(in srgb, #4caf50 10%, transparent);
+      border: 1px solid color-mix(in srgb, #4caf50 30%, transparent);
+      border-radius: var(--pico-border-radius);
+      padding: 1rem 1.25rem; margin-bottom: 2rem;
+    }
+    .highlight-box p { margin: 0; font-size: 1rem; color: #a5d6a7; }
+    .highlight-box strong { color: #81c784; }
+    footer {
+      margin-top: 3rem; border-top: 1px solid var(--pico-muted-border-color);
+      padding-top: 1.5rem; color: var(--pico-muted-color); font-size: 0.85rem;
+    }
+    footer a { color: var(--pico-primary); }
+    table thead th { color: var(--pico-muted-color); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  </style>
+</head>
+<body>
+  <main class="container">
+
+    <header>
+      <hgroup>
+        <h1>Cyclauncher <span class="badge">Privacy Policy</span></h1>
+        <p>Effective date: September 14, 2026 &nbsp;&middot;&nbsp; Version 1.0.0-beta.1</p>
+      </hgroup>
+    </header>
+
+    <div class="highlight-box">
+      <p>
+        <strong>Short version:</strong> Cyclauncher collects no personal data whatsoever.
+        No accounts, no analytics, no tracking, no internet connection required.
+        Everything stays on your device.
+      </p>
+    </div>
+
+    <article>
+      <h2>1. Overview</h2>
+      <p>
+        Cyclauncher ("the App") is a free and open-source Android home screen launcher
+        developed and maintained by <strong>msbluesnow</strong>. This Privacy Policy
+        describes what information the App accesses, why it accesses it, and what happens
+        to that information.
+      </p>
+      <p>
+        The source code of Cyclauncher is publicly available under the
+        <strong>GNU General Public License v3.0</strong> at
+        <a href="https://github.com/msbluesnow/Cyclauncher" target="_blank" rel="noopener">github.com/msbluesnow/Cyclauncher</a>.
+        Anyone may audit the code to verify the statements in this policy.
+      </p>
+    </article>
+
+    <article>
+      <h2>2. Data We Do Not Collect</h2>
+      <p>Cyclauncher does <strong>not</strong> collect, transmit, store remotely, or share any of the following:</p>
+      <ul>
+        <li>Personal identifiers (name, email, phone number, device ID)</li>
+        <li>Location data</li>
+        <li>Usage statistics or analytics</li>
+        <li>Crash reports sent to external servers</li>
+        <li>Advertising identifiers</li>
+        <li>Any data sent to the developer or third parties</li>
+      </ul>
+      <p>The App requires <strong>no internet permission</strong>. It cannot transmit any data even if it wanted to.</p>
+    </article>
+
+    <article>
+      <h2>3. Android Permissions</h2>
+      <p>
+        Cyclauncher requests only the permissions necessary to function as a home screen launcher.
+        All data accessed through these permissions is processed <em>locally on your device</em> and never leaves it.
+      </p>
+      <div class="overflow-auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Permission</th>
+              <th>Purpose</th>
+              <th>Data leaves device?</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>QUERY_ALL_PACKAGES</code></td><td>Display the list of installed apps</td><td>No</td></tr>
+            <tr><td><code>READ_EXTERNAL_STORAGE</code></td><td>Access wallpaper colors for theme adaptation</td><td>No</td></tr>
+            <tr><td><code>BIND_APPWIDGET</code></td><td>Host Android widgets in the Highlights panel</td><td>No</td></tr>
+            <tr><td><code>VIBRATE</code></td><td>Optional haptic feedback on interactions</td><td>No</td></tr>
+            <tr><td><code>SET_WALLPAPER</code></td><td>Allow setting wallpaper if supported</td><td>No</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article>
+      <h2>4. Local Data Storage</h2>
+      <p>
+        The App stores user preferences and configuration (such as favorites, tag folders,
+        character mappings, and theme settings) exclusively in
+        <strong>Android SharedPreferences</strong> on the local device.
+        This data is scoped to the App's private storage, is never backed up to any
+        external server, and is permanently deleted when the App is uninstalled.
+      </p>
+    </article>
+
+    <article>
+      <h2>5. Third-Party Services</h2>
+      <p>
+        Cyclauncher does not integrate any third-party SDKs, advertising networks,
+        analytics services, or crash reporting tools. The only external dependency is
+        <a href="https://github.com/FreeDroidWarn/FreeDroidWarn" target="_blank" rel="noopener">FreeDroidWarn</a>,
+        a fully open-source library that displays an in-app warning when the launcher
+        detects it is not set as the default home app. It does not transmit any data.
+      </p>
+    </article>
+
+    <article>
+      <h2>6. Children's Privacy</h2>
+      <p>
+        Cyclauncher is a general-purpose launcher with no age restrictions.
+        Because we collect no personal data from any user, there are no special
+        considerations or risks for users under the age of 13 (or the applicable local age of digital consent).
+      </p>
+    </article>
+
+    <article>
+      <h2>7. Changes to This Policy</h2>
+      <p>
+        If this Privacy Policy is updated in a future release, the new version will be
+        published at this URL and the effective date at the top of the page will be updated.
+        Significant changes will be noted in the GitHub release changelog.
+      </p>
+    </article>
+
+    <article>
+      <h2>8. Contact</h2>
+      <p>If you have any questions about this Privacy Policy or the App's data practices, you can reach the developer via:</p>
+      <ul>
+        <li><strong>GitHub Issues:</strong> <a href="https://github.com/msbluesnow/Cyclauncher/issues" target="_blank" rel="noopener">github.com/msbluesnow/Cyclauncher/issues</a></li>
+        <li><strong>Discord:</strong> <a href="https://discord.gg/Zw4EBe92Qn" target="_blank" rel="noopener">discord.gg/Zw4EBe92Qn</a></li>
+      </ul>
+    </article>
+
+    <footer>
+      <p>
+        &copy; 2026 msbluesnow &nbsp;&middot;&nbsp;
+        Cyclauncher is licensed under the
+        <a href="https://github.com/msbluesnow/Cyclauncher/blob/master/LICENSE" target="_blank" rel="noopener">GNU GPLv3</a>
+        &nbsp;&middot;&nbsp;
+        <a href="https://github.com/msbluesnow/Cyclauncher" target="_blank" rel="noopener">Source code</a>
+      </p>
+    </footer>
+
+  </main>
+</body>
+</html>
