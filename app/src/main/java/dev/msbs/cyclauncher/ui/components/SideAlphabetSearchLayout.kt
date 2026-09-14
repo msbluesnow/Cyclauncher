@@ -31,6 +31,10 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.HistoryToggleOff
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.HistoryToggleOff
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.graphicsLayer
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
@@ -89,8 +93,15 @@ fun SideAlphabetSearchLayout(
     val accentColor by viewModel.accentColor.collectAsState()
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
+    val monochromeHistory by viewModel.monochromeHistory.collectAsState()
     val shadowSettings = LocalShadowSettings.current
     val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
+
+    val historyColorFilter = remember(monochromeHistory) {
+        if (monochromeHistory) {
+            ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+        } else null
+    }
     val savedYRatio by viewModel.sideAlphabetButtonYRatio.collectAsState()
     var localYRatio by remember(savedYRatio) { mutableStateOf(savedYRatio) }
 
@@ -186,6 +197,7 @@ fun SideAlphabetSearchLayout(
                                             showShadows = showShadows,
                                             viewModel = viewModel,
                                             isEditMode = isHistoryEditMode,
+                                            colorFilter = historyColorFilter,
                                             onAppClick = onAppClick,
                                             onAppLongClick = onAppLongClick,
                                             modifier = Modifier
@@ -326,6 +338,7 @@ fun SideAlphabetSearchLayout(
                                             showShadows = showShadows,
                                             viewModel = viewModel,
                                             isEditMode = isHistoryEditMode,
+                                            colorFilter = historyColorFilter,
                                             onAppClick = onAppClick,
                                             onAppLongClick = onAppLongClick,
                                             modifier = Modifier
@@ -747,6 +760,7 @@ private fun SideSearchHistoryBlock(
     showShadows: Boolean,
     viewModel: LauncherViewModel,
     isEditMode: Boolean,
+    colorFilter: ColorFilter? = null,
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit,
     modifier: Modifier = Modifier
@@ -763,6 +777,7 @@ private fun SideSearchHistoryBlock(
             accentColor = accentColor,
             primaryTextColor = primaryTextColor,
             shadowSettings = shadowSettings,
+            colorFilter = colorFilter,
             onAppClick = onAppClick,
             onAppLongClick = onAppLongClick,
             onRemoveFromHistory = { componentKey ->
@@ -780,6 +795,7 @@ private fun SnakeHistoryLazyColumn(
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     shadowSettings: dev.msbs.cyclauncher.ui.theme.ShadowSettings,
+    colorFilter: ColorFilter? = null,
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit,
     onRemoveFromHistory: (String) -> Unit,
@@ -885,6 +901,7 @@ private fun SnakeHistoryLazyColumn(
                                 app = app,
                                 iconSize = 44.dp,
                                 isEditMode = isEditMode,
+                                colorFilter = colorFilter,
                                 onClick = { onAppClick("${app.packageName}/${app.activityName}") },
                                 onLongClick = { offset -> onAppLongClick(app, offset) },
                                 onRemove = { onRemoveFromHistory(app.componentKey) }
@@ -903,6 +920,7 @@ private fun SnakeHistoryLazyColumn(
                                 app = app,
                                 iconSize = 44.dp,
                                 isEditMode = isEditMode,
+                                colorFilter = colorFilter,
                                 onClick = { onAppClick("${app.packageName}/${app.activityName}") },
                                 onLongClick = { offset -> onAppLongClick(app, offset) },
                                 onRemove = { onRemoveFromHistory(app.componentKey) }
@@ -921,6 +939,7 @@ private fun SnakeHistoryLazyColumn(
                                 app = app,
                                 iconSize = 44.dp,
                                 isEditMode = isEditMode,
+                                colorFilter = colorFilter,
                                 onClick = { onAppClick("${app.packageName}/${app.activityName}") },
                                 onLongClick = { offset -> onAppLongClick(app, offset) },
                                 onRemove = { onRemoveFromHistory(app.componentKey) }
@@ -938,6 +957,7 @@ private fun SnakeAppIcon(
     app: AppInfo,
     iconSize: Dp,
     isEditMode: Boolean,
+    colorFilter: ColorFilter? = null,
     onClick: () -> Unit,
     onLongClick: (Offset) -> Unit,
     onRemove: () -> Unit
@@ -993,6 +1013,7 @@ private fun SnakeAppIcon(
             painter = painter,
             contentDescription = app.label,
             contentScale = ContentScale.Fit,
+            colorFilter = colorFilter,
             modifier = Modifier
                 .fillMaxSize()
                 .clip(CircleShape)

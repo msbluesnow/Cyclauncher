@@ -140,6 +140,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _hapticFeedbackEnabled = MutableStateFlow(true)
     val hapticFeedbackEnabled: StateFlow<Boolean> = _hapticFeedbackEnabled
 
+    private val _monochromeHistory = MutableStateFlow(false)
+    val monochromeHistory: StateFlow<Boolean> = _monochromeHistory
+
     private val _isWallpaperDark = MutableStateFlow(AccentColor.isWallpaperDark(safeContext))
     val isWallpaperDark: StateFlow<Boolean> = _isWallpaperDark
 
@@ -560,6 +563,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _showSearchHistory.value = prefs.getBoolean("show_search_history", true)
         _animationsEnabled.value = prefs.getBoolean("animations_enabled", true)
         _hapticFeedbackEnabled.value = prefs.getBoolean("haptic_feedback_enabled", true)
+        _monochromeHistory.value = prefs.getBoolean("monochrome_history", false)
 
         val savedSearchMethod = prefs.getString("search_method", SearchMethod.SIDE_ALPHABET.name) ?: SearchMethod.SIDE_ALPHABET.name
         val initialMethod = try { SearchMethod.valueOf(savedSearchMethod) } catch (e: Exception) { SearchMethod.SIDE_ALPHABET }
@@ -695,6 +699,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun setHapticFeedbackEnabled(enabled: Boolean) {
         _hapticFeedbackEnabled.value = enabled
         editPrefs { putBoolean("haptic_feedback_enabled", enabled) }
+    }
+
+    fun setMonochromeHistory(enabled: Boolean) {
+        _monochromeHistory.value = enabled
+        editPrefs { putBoolean("monochrome_history", enabled) }
     }
 
     fun setAccentColor(color: AccentColor) {

@@ -118,6 +118,14 @@ fun MainMenuScreen(
     val popupTheme by viewModel.popupTheme.collectAsState()
     val isHistoryPaused by viewModel.isHistoryPaused.collectAsState()
     val recentlyUpdatedApps by viewModel.recentlyUpdatedApps.collectAsState()
+    val monochromeHistory by viewModel.monochromeHistory.collectAsState()
+    val historyColorFilter = remember(monochromeHistory, primaryTextColor) {
+        if (monochromeHistory) {
+            androidx.compose.ui.graphics.ColorFilter.colorMatrix(
+                androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) }
+            )
+        } else null
+    }
     var isReorderMode by remember { mutableStateOf(false) }
     var isHistoryEditMode by remember { mutableStateOf(false) }
     var isTagFolderReorderMode by remember { mutableStateOf(false) }
@@ -452,6 +460,7 @@ fun MainMenuScreen(
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
                     accentColor = accentColor,
+                    colorFilter = historyColorFilter,
                     isHistoryPaused = isHistoryPaused,
                     isHistoryEditMode = isHistoryEditMode,
                     setHistoryEditMode = {
@@ -504,6 +513,7 @@ fun MainMenuScreen(
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
                     accentColor = accentColor,
+                    colorFilter = historyColorFilter,
                     isHistoryPaused = isHistoryPaused,
                     isHistoryEditMode = isHistoryEditMode,
                     setHistoryEditMode = {
@@ -772,6 +782,7 @@ private fun HistorySection(
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
     accentColor: AccentColor,
+    colorFilter: androidx.compose.ui.graphics.ColorFilter? = null,
     isHistoryPaused: Boolean,
     isHistoryEditMode: Boolean,
     setHistoryEditMode: (Boolean) -> Unit,
@@ -836,6 +847,7 @@ private fun HistorySection(
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
                     accentColor = accentColor,
+                    colorFilter = colorFilter,
                     isHistoryPaused = isHistoryPaused,
                     isHistoryEditMode = isHistoryEditMode,
                     setHistoryEditMode = setHistoryEditMode,
@@ -922,6 +934,7 @@ private fun HistorySection(
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
                     accentColor = accentColor,
+                    colorFilter = colorFilter,
                     isHistoryPaused = isHistoryPaused,
                     isHistoryEditMode = isHistoryEditMode,
                     setHistoryEditMode = setHistoryEditMode,
@@ -1312,6 +1325,7 @@ private fun ColumnScope.HistoryContentBlock(
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
     accentColor: AccentColor,
+    colorFilter: androidx.compose.ui.graphics.ColorFilter? = null,
     isHistoryPaused: Boolean,
     isHistoryEditMode: Boolean,
     setHistoryEditMode: (Boolean) -> Unit,
@@ -1390,6 +1404,7 @@ private fun ColumnScope.HistoryContentBlock(
                     modifier = Modifier.weight(1f),
                     isRecentlyUpdated = isRecentlyUpdated,
                     accentColor = accentColor,
+                    colorFilter = colorFilter,
                     onClick = {
                         if (!isHistoryEditMode) {
                             onAppClick(appKey)
@@ -1569,9 +1584,13 @@ private fun FavoritesSection(
     onCancelSwipeDownOverlay: () -> Unit,
     onSettingsClick: () -> Unit,
     isActive: Boolean,
-    isActionMenuOpen: Boolean = false
+    isActionMenuOpen: Boolean = false,
+    monochromeFavorites: Boolean = false
 ) {
     val shadow = primaryTextColor.getShadow(showShadows, LocalShadowSettings.current.shadowColorOverride)
+    val favoriteColorFilter = remember(monochromeFavorites, primaryTextColor) {
+        if (monochromeFavorites) androidx.compose.ui.graphics.ColorFilter.tint(primaryTextColor.color) else null
+    }
 
     val haptic = LocalHapticFeedback.current
     var draggingKey by remember { mutableStateOf<String?>(null) }
@@ -1904,6 +1923,7 @@ private fun FavoritesSection(
                                             painter = painter,
                                             contentDescription = item.appInfo.label,
                                             contentScale = ContentScale.Fit,
+                                            colorFilter = favoriteColorFilter,
                                             modifier = Modifier
                                                 .size(48.dp)
                                                 .clip(CircleShape)
@@ -1911,6 +1931,7 @@ private fun FavoritesSection(
                                     } else {
                                         AppIconItem(
                                             app = item.appInfo,
+                                            colorFilter = favoriteColorFilter,
                                             onClick = { onAppClick(itemKey) },
                                             onLongClick = { offset -> onAppLongClick(currentAppItem.appInfo, offset) }
                                         )
@@ -1951,6 +1972,7 @@ private fun FavoritesSection(
                                     TagFolderIcon(
                                         tag = item.tag,
                                         apps = item.apps,
+                                        colorFilter = favoriteColorFilter,
                                         modifier = tagModifier
                                     )
                                 }

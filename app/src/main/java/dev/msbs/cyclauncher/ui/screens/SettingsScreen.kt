@@ -95,6 +95,7 @@ fun SettingsScreen(
     val sideAlphabetSlotMode by viewModel.sideAlphabetSlotMode.collectAsState()
     val animationsEnabled by viewModel.animationsEnabled.collectAsState()
     val hapticFeedbackEnabled by viewModel.hapticFeedbackEnabled.collectAsState()
+    val monochromeHistory by viewModel.monochromeHistory.collectAsState()
     val isWpDark by viewModel.isWallpaperDark.collectAsState()
     val customCharMappings by viewModel.customCharMappings.collectAsState()
     val currentIsDefault by viewModel.isDefaultLauncherState.collectAsState()
@@ -206,6 +207,7 @@ fun SettingsScreen(
                             hideStatusBar = hideStatusBar,
                             animationsEnabled = animationsEnabled,
                             hapticFeedbackEnabled = hapticFeedbackEnabled,
+                            monochromeHistory = monochromeHistory,
                             accentColor = accentColor,
                             primaryTextColor = primaryTextColor,
                             showShadows = showShadows,
@@ -213,7 +215,8 @@ fun SettingsScreen(
                             shadow = shadow,
                             onToggleStatusBar = { viewModel.setHideStatusBar(!hideStatusBar) },
                             onAnimationsChange = { viewModel.setAnimationsEnabled(it) },
-                            onHapticFeedbackChange = { viewModel.setHapticFeedbackEnabled(it) }
+                            onHapticFeedbackChange = { viewModel.setHapticFeedbackEnabled(it) },
+                            onMonochromeHistoryChange = { viewModel.setMonochromeHistory(it) }
                         )
 
                         SettingsDivider(primaryTextColor, top = 5.dp, bottom = 8.dp)
@@ -789,6 +792,7 @@ private fun StatusBarAndAnimationsSection(
     hideStatusBar: Boolean,
     animationsEnabled: Boolean,
     hapticFeedbackEnabled: Boolean,
+    monochromeHistory: Boolean,
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
@@ -796,7 +800,8 @@ private fun StatusBarAndAnimationsSection(
     shadow: Shadow?,
     onToggleStatusBar: () -> Unit,
     onAnimationsChange: (Boolean) -> Unit,
-    onHapticFeedbackChange: (Boolean) -> Unit
+    onHapticFeedbackChange: (Boolean) -> Unit,
+    onMonochromeHistoryChange: (Boolean) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -866,34 +871,74 @@ private fun StatusBarAndAnimationsSection(
 
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
+                modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.weight(1f, fill = false)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
                     text = "Haptic Feedback",
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                     maxLines = 1,
-                    modifier = Modifier.basicMarquee()
+                    modifier = Modifier.weight(1f, fill = false).basicMarquee()
+                )
+                Switch(
+                    checked = hapticFeedbackEnabled,
+                    onCheckedChange = onHapticFeedbackChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = accentColor.color,
+                        checkedTrackColor = accentColor.color.copy(alpha = 0.45f),
+                        checkedBorderColor = accentColor.color.copy(alpha = 0.80f),
+                        uncheckedThumbColor = accentColor.color.copy(alpha = 0.65f),
+                        uncheckedTrackColor = accentColor.color.copy(alpha = 0.12f),
+                        uncheckedBorderColor = accentColor.color.copy(alpha = 0.35f)
+                    )
                 )
             }
-            Switch(
-                checked = hapticFeedbackEnabled,
-                onCheckedChange = onHapticFeedbackChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = accentColor.color,
-                    checkedTrackColor = accentColor.color.copy(alpha = 0.45f),
-                    checkedBorderColor = accentColor.color.copy(alpha = 0.80f),
-                    uncheckedThumbColor = accentColor.color.copy(alpha = 0.65f),
-                    uncheckedTrackColor = accentColor.color.copy(alpha = 0.12f),
-                    uncheckedBorderColor = accentColor.color.copy(alpha = 0.35f)
+
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
+                    Text(
+                        text = "Monochrome",
+                        color = primaryTextColor.color,
+                        style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                        maxLines = 1,
+                        modifier = Modifier.basicMarquee()
+                    )
+                    ShadowedIcon(
+                        imageVector = Icons.Outlined.History,
+                        tint = primaryTextColor.color,
+                        size = 16.dp,
+                        showShadows = showShadows,
+                        primaryTextColor = primaryTextColor,
+                        shadowColorOverride = shadowColorOverride
+                    )
+                }
+                Switch(
+                    checked = monochromeHistory,
+                    onCheckedChange = onMonochromeHistoryChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = accentColor.color,
+                        checkedTrackColor = accentColor.color.copy(alpha = 0.45f),
+                        checkedBorderColor = accentColor.color.copy(alpha = 0.80f),
+                        uncheckedThumbColor = accentColor.color.copy(alpha = 0.65f),
+                        uncheckedTrackColor = accentColor.color.copy(alpha = 0.12f),
+                        uncheckedBorderColor = accentColor.color.copy(alpha = 0.35f)
+                    )
                 )
-            )
+            }
         }
     }
 }

@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
@@ -322,6 +323,7 @@ fun Modifier.appItemGestures(
 fun AppIconItem(
     app: AppInfo,
     size: Int = 48,
+    colorFilter: ColorFilter? = null,
     onClick: () -> Unit,
     onLongClick: (Offset) -> Unit = {}
 ) {
@@ -331,6 +333,7 @@ fun AppIconItem(
         painter = painter,
         contentDescription = app.label,
         contentScale = ContentScale.Fit,
+        colorFilter = colorFilter,
         modifier = Modifier
             .size(size.dp)
             .clip(CircleShape)
@@ -383,6 +386,7 @@ fun AppListItemWithIcon(
     modifier: Modifier = Modifier,
     isRecentlyUpdated: Boolean = false,
     accentColor: AccentColor = AccentColor.SKY,
+    colorFilter: ColorFilter? = null,
     onClick: () -> Unit,
     onLongClick: (Offset) -> Unit = {},
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
@@ -403,6 +407,7 @@ fun AppListItemWithIcon(
                 painter = painter,
                 contentDescription = app.label,
                 contentScale = ContentScale.Fit,
+                colorFilter = colorFilter,
                 modifier = Modifier
                     .size(iconSize.dp)
                     .clip(CircleShape)
@@ -439,6 +444,7 @@ fun AppListItemWithIcon(
                 painter = painter,
                 contentDescription = app.label,
                 contentScale = ContentScale.Fit,
+                colorFilter = colorFilter,
                 modifier = Modifier
                     .size(iconSize.dp)
                     .clip(CircleShape)

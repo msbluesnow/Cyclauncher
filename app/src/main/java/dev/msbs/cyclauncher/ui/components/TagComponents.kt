@@ -56,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -180,6 +181,7 @@ fun TagFolderItem(
 private fun TagFolderAppIconsGrid(
     previewApps: List<AppInfo>,
     iconSizeDp: androidx.compose.ui.unit.Dp,
+    colorFilter: ColorFilter? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -195,10 +197,10 @@ private fun TagFolderAppIconsGrid(
                 .weight(1f)
         ) {
             if (previewApps.isNotEmpty()) {
-                MiniAppIconPreview(app = previewApps[0], sizeDp = iconSizeDp)
+                MiniAppIconPreview(app = previewApps[0], sizeDp = iconSizeDp, colorFilter = colorFilter)
             }
             if (previewApps.size > 1) {
-                MiniAppIconPreview(app = previewApps[1], sizeDp = iconSizeDp)
+                MiniAppIconPreview(app = previewApps[1], sizeDp = iconSizeDp, colorFilter = colorFilter)
             } else if (previewApps.size == 1) {
                 Spacer(modifier = Modifier.size(iconSizeDp))
             }
@@ -211,9 +213,9 @@ private fun TagFolderAppIconsGrid(
                     .fillMaxWidth()
                     .weight(1f)
             ) {
-                MiniAppIconPreview(app = previewApps[2], sizeDp = iconSizeDp)
+                MiniAppIconPreview(app = previewApps[2], sizeDp = iconSizeDp, colorFilter = colorFilter)
                 if (previewApps.size > 3) {
-                    MiniAppIconPreview(app = previewApps[3], sizeDp = iconSizeDp)
+                    MiniAppIconPreview(app = previewApps[3], sizeDp = iconSizeDp, colorFilter = colorFilter)
                 } else {
                     Spacer(modifier = Modifier.size(iconSizeDp))
                 }
@@ -225,11 +227,16 @@ private fun TagFolderAppIconsGrid(
 }
 
 @Composable
-private fun MiniAppIconPreview(app: AppInfo, sizeDp: androidx.compose.ui.unit.Dp = 16.dp) {
+private fun MiniAppIconPreview(
+    app: AppInfo,
+    sizeDp: androidx.compose.ui.unit.Dp = 16.dp,
+    colorFilter: ColorFilter? = null
+) {
     val painter = rememberAppIconPainter(app.iconKey, sizeDp.value.toInt())
     Image(
         painter = painter,
         contentDescription = null,
+        colorFilter = colorFilter,
         modifier = Modifier
             .size(sizeDp)
             .clip(CircleShape),
@@ -947,6 +954,7 @@ fun TagFolderIcon(
     tag: Tag,
     apps: List<AppInfo>,
     size: Int = 48,
+    colorFilter: ColorFilter? = null,
     modifier: Modifier = Modifier
 ) {
     val previewApps = remember(apps) { apps.take(4) }
@@ -974,7 +982,7 @@ fun TagFolderIcon(
                         }
                     }
             ) {
-                TagFolderAppIconsGrid(previewApps = previewApps, iconSizeDp = (size * 0.33f).dp)
+                TagFolderAppIconsGrid(previewApps = previewApps, iconSizeDp = (size * 0.33f).dp, colorFilter = colorFilter)
             }
         }
 
