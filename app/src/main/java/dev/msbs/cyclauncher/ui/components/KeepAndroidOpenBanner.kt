@@ -10,6 +10,8 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -67,6 +69,8 @@ fun KeepAndroidOpenBanner(
     primaryTextColor: PrimaryTextColor,
     popupTheme: PopupTheme,
     showShadows: Boolean,
+    showDaysCount: Boolean = true,
+    onToggleShowDaysCount: () -> Unit = {},
     onLearnMoreClick: () -> Unit,
     onWebsiteClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -170,27 +174,53 @@ fun KeepAndroidOpenBanner(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
                         .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(WarningRed, DarkWarningRed)
-                            )
+                            if (showDaysCount) {
+                                Brush.horizontalGradient(colors = listOf(WarningRed, DarkWarningRed))
+                            } else {
+                                Brush.horizontalGradient(colors = listOf(Color.Transparent, Color.Transparent))
+                            }
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onToggleShowDaysCount
                         )
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "$daysRemaining",
-                            color = Color.White,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 15.sp,
-                            lineHeight = 16.sp
-                        )
-                        Text(
-                            text = "DAYS LEFT",
-                            color = Color.White.copy(alpha = 0.85f),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 8.5.sp,
-                            letterSpacing = 0.5.sp
+                    if (showDaysCount) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Outlined.Visibility,
+                                contentDescription = "Hide days remaining",
+                                tint = Color.White.copy(alpha = 0.22f),
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .padding(2.dp)
+                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "$daysRemaining",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 15.sp,
+                                    lineHeight = 16.sp
+                                )
+                                Text(
+                                    text = "DAYS LEFT",
+                                    color = Color.White.copy(alpha = 0.85f),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 8.5.sp,
+                                    letterSpacing = 0.5.sp
+                                )
+                            }
+                        }
+                    } else {
+                        Icon(
+                            imageVector = Icons.Outlined.VisibilityOff,
+                            contentDescription = "Show days remaining",
+                            tint = primaryTextColor.color.copy(alpha = 0.50f),
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }

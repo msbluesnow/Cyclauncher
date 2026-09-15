@@ -96,6 +96,7 @@ fun SettingsScreen(
     val animationsEnabled by viewModel.animationsEnabled.collectAsState()
     val hapticFeedbackEnabled by viewModel.hapticFeedbackEnabled.collectAsState()
     val monochromeHistory by viewModel.monochromeHistory.collectAsState()
+    val showKeepAndroidOpenDays by viewModel.showKeepAndroidOpenDays.collectAsState()
     val isWpDark by viewModel.isWallpaperDark.collectAsState()
     val customCharMappings by viewModel.customCharMappings.collectAsState()
     val currentIsDefault by viewModel.isDefaultLauncherState.collectAsState()
@@ -363,6 +364,8 @@ fun SettingsScreen(
                 primaryTextColor = primaryTextColor,
                 popupTheme = popupTheme,
                 showShadows = showShadows,
+                showDaysCount = showKeepAndroidOpenDays,
+                onToggleShowDaysCount = { viewModel.setShowKeepAndroidOpenDays(!showKeepAndroidOpenDays) },
                 onLearnMoreClick = { showKeepAndroidOpenDialog = true },
                 onWebsiteClick = { viewModel.openKeepAndroidOpenPage() }
             )
