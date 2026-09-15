@@ -38,7 +38,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
-import kotlin.math.roundToInt
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -267,7 +266,6 @@ fun MainMenuScreen(
     val isAnyEditMode =
         isReorderMode || isHistoryEditMode || isTagFolderReorderMode || selectedTagForPopup != null || selectedTagForMenu != null || selectedTagSectionMenuOffset != null || selectedTagSortPopupOffset != null || selectedHistoryMenuOffset != null
     val currentOnSettingsClick by rememberUpdatedState(onSettingsClick)
-    val currentOnSwipeUp by rememberUpdatedState(onSwipeUp)
     val currentOnSwipeDown by rememberUpdatedState(onSwipeDown)
     val currentOnOpenQuickSettings by rememberUpdatedState(onOpenQuickSettings)
     val currentOnOpenHighlightScreen by rememberUpdatedState(onOpenHighlightScreen)
@@ -1606,8 +1604,8 @@ private fun FavoritesSection(
 
     val haptic = LocalHapticFeedback.current
     var draggingKey by remember { mutableStateOf<String?>(null) }
-    var dragVerticalOffset by remember { mutableStateOf(0f) }
-    var itemHeightPx by remember { mutableStateOf(0f) }
+    var dragVerticalOffset by remember { mutableFloatStateOf(0f) }
+    var itemHeightPx by remember { mutableFloatStateOf(0f) }
 
     val localFavorites = remember(favorites) { mutableStateListOf(*favorites.toTypedArray()) }
     LaunchedEffect(favorites, draggingKey) {
@@ -1617,7 +1615,6 @@ private fun FavoritesSection(
         }
     }
 
-    val currentSetReorderMode by rememberUpdatedState(setReorderMode)
     val currentOnReorder by rememberUpdatedState(onReorder)
     LaunchedEffect(isReorderMode) {
         if (!isReorderMode) {
@@ -1628,12 +1625,10 @@ private fun FavoritesSection(
 
     val currentOnSwipeUp by rememberUpdatedState(onSwipeUp)
     val currentOnSwipeDown by rememberUpdatedState(onSwipeDown)
-    val currentOnOpenQuickSettings by rememberUpdatedState(onOpenQuickSettings)
     val currentOnStartSwipeDownOverlay by rememberUpdatedState(onStartSwipeDownOverlay)
     val currentOnUpdateSwipeDownOverlay by rememberUpdatedState(onUpdateSwipeDownOverlay)
     val currentOnEndSwipeDownOverlay by rememberUpdatedState(onEndSwipeDownOverlay)
     val currentOnCancelSwipeDownOverlay by rememberUpdatedState(onCancelSwipeDownOverlay)
-    val currentOnSettingsClick by rememberUpdatedState(onSettingsClick)
     val currentIsActive by rememberUpdatedState(isActive)
     val viewConfiguration = LocalViewConfiguration.current
     val configuration = LocalConfiguration.current
@@ -2003,7 +1998,6 @@ private fun FavoritesSection(
                         }
 
                         val showMinusOnLeft = handSide == HandSide.LEFT
-                        val showMinusOnRight = handSide == HandSide.RIGHT
 
                         if (isReorderMode) {
                             val minusOffset = if (showMinusOnLeft) (-48).dp else 48.dp

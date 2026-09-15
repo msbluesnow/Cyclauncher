@@ -299,7 +299,6 @@ fun TagFolderPopup(
 
     val currentOnReorderApp by rememberUpdatedState(onReorderApp)
     val currentOnSaveOrder by rememberUpdatedState(onSaveOrder)
-    val currentApps by rememberUpdatedState(apps)
 
     var autoScrollSpeed by remember { mutableFloatStateOf(0f) }
     var lastSwapTime by remember { mutableLongStateOf(0L) }
@@ -438,9 +437,6 @@ fun TagFolderPopup(
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
                 } else {
-                    val colSpacingPx = with(density) { 8.dp.toPx() }
-                    val rowSpacingPx = with(density) { 12.dp.toPx() }
-
                     val infiniteTransition = rememberInfiniteTransition(label = "tag_popup_shake")
                     val shakeRotation by infiniteTransition.animateFloat(
                         initialValue = -3.2f,

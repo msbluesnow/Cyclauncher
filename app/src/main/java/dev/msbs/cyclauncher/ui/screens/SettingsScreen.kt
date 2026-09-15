@@ -1683,7 +1683,7 @@ private fun AccentColorDialog(
     onSelect: (AccentColor) -> Unit
 ) {
     val context = LocalContext.current
-    var selectedTab by remember { mutableStateOf(if (selectedColor.isCustom) 1 else 0) }
+    var selectedTab by remember { mutableIntStateOf(if (selectedColor.isCustom) 1 else 0) }
     val isWpDark = isWallpaperDark
     val wallpaperColor = remember(context, isWpDark, selectedColor) { AccentColor.getWallpaperAccentColor(context) }
 

@@ -5,7 +5,6 @@ import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
-import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -36,7 +35,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -674,7 +672,6 @@ fun TagEditDialog(
             )
         },
         text = {
-            val animationsEnabled = LocalAnimationsEnabled.current
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1589,7 +1586,6 @@ fun RenameDialog(
     popupTheme: PopupTheme = PopupTheme.DARK
 ) {
     var text by remember { mutableStateOf(initialValue) }
-    val animationsEnabled = LocalAnimationsEnabled.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
