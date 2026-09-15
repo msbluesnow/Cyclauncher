@@ -813,12 +813,18 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun updateStatusBarVisibility(hide: Boolean) {
-        val insetsController = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
-        insetsController.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        if (hide) {
-            insetsController.hide(androidx.core.view.WindowInsetsCompat.Type.statusBars())
-        } else {
-            insetsController.show(androidx.core.view.WindowInsetsCompat.Type.statusBars())
+        val decorView = window.decorView
+        decorView.post {
+            if (!isFinishing && !isDestroyed) {
+                val insetsController = androidx.core.view.WindowCompat.getInsetsController(window, decorView)
+                insetsController.systemBarsBehavior =
+                    androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                if (hide) {
+                    insetsController.hide(androidx.core.view.WindowInsetsCompat.Type.statusBars())
+                } else {
+                    insetsController.show(androidx.core.view.WindowInsetsCompat.Type.statusBars())
+                }
+            }
         }
     }
 }

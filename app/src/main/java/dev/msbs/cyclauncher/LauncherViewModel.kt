@@ -1288,6 +1288,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val pm = getApplication<Application>().packageManager
             val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
             val resolvedInfos = pm.queryIntentActivities(mainIntent, 0)
+                .distinctBy { "${it.activityInfo.packageName}/${it.activityInfo.name}" }
 
             // Immediately map and emit the app list so the launcher UI displays apps in ~20-30ms with 0ms waiting
             val appList = resolvedInfos.map { info ->
