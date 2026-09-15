@@ -534,6 +534,29 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val tutorialStep: StateFlow<Int> = _tutorialStep
 
     init {
+        reloadSettings()
+
+        val isTutorialCompleted = prefs.getBoolean("is_tutorial_completed", false)
+        if (!isTutorialCompleted) {
+            _showTutorial.value = true
+            _tutorialStep.value = 0
+        }
+
+        val savedIconPack = prefs.getString("icon_pack_package", null)?.takeIf { it.isNotBlank() }
+        _selectedIconPack.value = savedIconPack
+        viewModelScope.launch {
+            _installedIconPacks.value = IconPackManager.getInstalledIconPacks(safeContext)
+            IconPackManager.loadIconPack(safeContext, savedIconPack)
+            _iconPackVersion.value = System.currentTimeMillis()
+        }
+
+        loadInstalledApps()
+        updateDefaultLauncherStatus()
+        refreshDynamicWallpaperColor(safeContext)
+        _searchListAlignment.value = if (_handSide.value == HandSide.LEFT) TextAlign.End else TextAlign.Start
+    }
+
+    fun reloadSettings() {
         val savedHand = prefs.getString("hand_side", HandSide.LEFT.name) ?: HandSide.LEFT.name
         _handSide.value = try { HandSide.valueOf(savedHand) } catch (e: Exception) { HandSide.LEFT }
         
@@ -575,25 +598,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         lastAlphabetSearchMethod = if (initialLastAlphabet == SearchMethod.TEXT) SearchMethod.SIDE_ALPHABET else initialLastAlphabet
 
         _sideAlphabetButtonYRatio.value = prefs.getFloat("side_alphabet_button_y_ratio", 0.23f).coerceIn(0.05f, 0.85f)
-
-        val isTutorialCompleted = prefs.getBoolean("is_tutorial_completed", false)
-        if (!isTutorialCompleted) {
-            _showTutorial.value = true
-            _tutorialStep.value = 0
-        }
-
-        val savedIconPack = prefs.getString("icon_pack_package", null)?.takeIf { it.isNotBlank() }
-        _selectedIconPack.value = savedIconPack
-        viewModelScope.launch {
-            _installedIconPacks.value = IconPackManager.getInstalledIconPacks(safeContext)
-            IconPackManager.loadIconPack(safeContext, savedIconPack)
-            _iconPackVersion.value = System.currentTimeMillis()
-        }
-
-        loadInstalledApps()
-        updateDefaultLauncherStatus()
-        refreshDynamicWallpaperColor(safeContext)
-        _searchListAlignment.value = if (_handSide.value == HandSide.LEFT) TextAlign.End else TextAlign.Start
     }
 
     fun startTutorial() {
@@ -796,7 +800,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun reorderFavorites(fromIndex: Int, toIndex: Int) {
-        actionsManager.reorderFavorites(fromIndex, toIndex)
+        val items = favoriteItems.value
+        if (fromIndex in items.indices && toIndex in items.indices && fromIndex != toIndex) {
+            val fromKey = items[fromIndex].key
+            val toKey = items[toIndex].key
+            actionsManager.reorderFavoritesByKeys(fromKey, toKey)
+        } else {
+            actionsManager.reorderFavorites(fromIndex, toIndex)
+        }
     }
 
     fun reorderAppInTag(tagId: String, fromIndex: Int, toIndex: Int, currentApps: List<AppInfo>) {
@@ -1123,6 +1134,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun applyTagsBackup() {
         _tagsBackupPreview.value?.let { preview ->
             actionsManager.applyTagsBackup(preview, apps.value)
+            reloadSettings()
             _tagsBackupPreview.value = null
         }
     }

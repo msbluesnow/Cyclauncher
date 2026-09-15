@@ -1107,11 +1107,14 @@ private fun ColumnScope.TagsContentBlock(
                         Modifier.pointerInput(tag.id, localPopularTags.size) {
                             detectDragGestures(
                                 onDragStart = {
-                                    draggingTagId = tag.id
-                                    dragOffset = Offset.Zero
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    if (draggingTagId == null || draggingTagId == tag.id) {
+                                        draggingTagId = tag.id
+                                        dragOffset = Offset.Zero
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    }
                                 },
                                 onDrag = { change, dragAmount ->
+                                    if (draggingTagId != tag.id) return@detectDragGestures
                                     change.consume()
                                     dragOffset += dragAmount
 
@@ -1122,21 +1125,30 @@ private fun ColumnScope.TagsContentBlock(
                                         val effectiveDx = if (isRtl) -dragOffset.x else dragOffset.x
                                         val effectiveDy = -dragOffset.y
 
-                                        val colDelta = (effectiveDx / colStep).roundToInt()
-                                        val rowDelta = (effectiveDy / rowStep).roundToInt()
+                                        // 35% Hysteresis to prevent flickering near cell boundaries
+                                        val colSteps = effectiveDx / colStep
+                                        val hysteresisX = if (colSteps > 0) 0.35f else -0.35f
+                                        val colDelta = (colSteps + hysteresisX).toInt()
+
+                                        val rowSteps = effectiveDy / rowStep
+                                        val hysteresisY = if (rowSteps > 0) 0.35f else -0.35f
+                                        val rowDelta = (rowSteps + hysteresisY).toInt()
 
                                         val curIndex = localPopularTags.indexOfFirst { it.first.id == tag.id }
                                         if (curIndex != -1) {
                                             val curCol = curIndex % 3
                                             val curRow = curIndex / 3
-                                            val targetCol = (curCol + colDelta).coerceIn(0, 2)
-                                            val targetRow = (curRow + rowDelta).coerceAtLeast(0)
+                                            val maxRow = localPopularTags.lastIndex / 3
+                                            val targetRow = (curRow + rowDelta).coerceIn(0, maxRow)
+                                            val maxColInTargetRow =
+                                                if (targetRow == maxRow) localPopularTags.lastIndex % 3 else 2
+                                            val targetCol = (curCol + colDelta).coerceIn(0, maxColInTargetRow)
                                             val targetIndex =
-                                                (targetRow * 3 + targetCol).coerceIn(0, localPopularTags.size - 1)
+                                                (targetRow * 3 + targetCol).coerceIn(0, localPopularTags.lastIndex)
 
                                             if (targetIndex != curIndex && targetIndex in localPopularTags.indices) {
-                                                val actualColChange = targetCol - curCol
-                                                val actualRowChange = targetRow - curRow
+                                                val actualColChange = (targetIndex % 3) - curCol
+                                                val actualRowChange = (targetIndex / 3) - curRow
 
                                                 val dxToSub =
                                                     if (isRtl) -actualColChange * colStep else actualColChange * colStep
@@ -1851,30 +1863,41 @@ private fun FavoritesSection(
                         Modifier.pointerInput(itemKey, localFavorites.size) {
                             detectDragGestures(
                                 onDragStart = {
-                                    dragVerticalOffset = 0f
-                                    draggingKey = itemKey
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    if (draggingKey == null || draggingKey == itemKey) {
+                                        dragVerticalOffset = 0f
+                                        draggingKey = itemKey
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    }
                                 },
                                 onDragEnd = {
-                                    draggingKey = null
-                                    dragVerticalOffset = 0f
+                                    if (draggingKey == itemKey) {
+                                        draggingKey = null
+                                        dragVerticalOffset = 0f
+                                    }
                                 },
                                 onDragCancel = {
-                                    draggingKey = null
-                                    dragVerticalOffset = 0f
+                                    if (draggingKey == itemKey) {
+                                        draggingKey = null
+                                        dragVerticalOffset = 0f
+                                    }
                                 },
                                 onDrag = { change, dragAmount ->
+                                    if (draggingKey != itemKey) return@detectDragGestures
                                     change.consume()
                                     dragVerticalOffset += dragAmount.y
 
                                     val stepHeight =
                                         (if (itemHeightPx > 0f) itemHeightPx else fallbackItemHeightPx) + spacingPx
                                     val effectiveDy = -dragVerticalOffset
-                                    val rowDelta = (effectiveDy / stepHeight).roundToInt()
+
+                                    // 35% Hysteresis to prevent flickering near item boundaries
+                                    val rowSteps = effectiveDy / stepHeight
+                                    val hysteresisY = if (rowSteps > 0) 0.35f else -0.35f
+                                    val rowDelta = (rowSteps + hysteresisY).toInt()
 
                                     val curIndex = localFavorites.indexOfFirst { it.key == itemKey }
                                     if (curIndex != -1) {
-                                        val targetIndex = (curIndex + rowDelta).coerceIn(0, localFavorites.size - 1)
+                                        val targetIndex = (curIndex + rowDelta).coerceIn(0, localFavorites.lastIndex)
                                         if (targetIndex != curIndex) {
                                             val actualChange = targetIndex - curIndex
                                             val dyToSub = -actualChange * stepHeight

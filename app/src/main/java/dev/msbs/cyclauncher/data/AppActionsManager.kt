@@ -88,6 +88,18 @@ class AppActionsManager(context: Context) {
         }
     }
 
+    fun reorderFavoritesByKeys(fromKey: String, toKey: String) {
+        val current = _favorites.value.toMutableList()
+        val fromPos = current.indexOf(fromKey)
+        val toPos = current.indexOf(toKey)
+        if (fromPos != -1 && toPos != -1 && fromPos != toPos) {
+            val item = current.removeAt(fromPos)
+            current.add(toPos, item)
+            _favorites.value = current
+            saveList("favorites", current)
+        }
+    }
+
     fun isFavorite(componentKey: String): Boolean {
         return _favorites.value.contains(componentKey)
     }
@@ -928,13 +940,14 @@ class AppActionsManager(context: Context) {
     }
 
     /**
-     * Exports a backup (tags, assignments, custom labels, favorites, and app metadata) to JSON at [uri].
+     * Exports a backup (tags, assignments, custom labels, favorites, settings, and app metadata) to JSON at [uri].
      */
     fun exportTagsBackupToUri(uri: Uri, apps: List<dev.msbs.cyclauncher.model.AppInfo> = emptyList()) {
         val idToName = _tags.value.associate { it.id to it.name }
         val tagsArray = JSONArray()
         _tags.value.forEach { tag ->
             val obj = JSONObject()
+            obj.put("id", tag.id)
             obj.put("name", tag.name)
             obj.put("color", colorToHex(tag.color))
             if (!tag.emoji.isNullOrBlank()) {
@@ -981,6 +994,23 @@ class AppActionsManager(context: Context) {
             root.put("tag_app_orders", tagOrdersObj)
         }
 
+        val settingsObj = JSONObject()
+        val settingsKeys = listOf(
+            "hand_side", "accent_color", "primary_text_color", "button_text_color",
+            "popup_theme", "show_shadows", "shadow_color", "hide_status_bar",
+            "show_search_widgets", "show_search_history", "animations_enabled",
+            "haptic_feedback_enabled", "monochrome_history", "monochrome_favorites",
+            "search_method", "side_alphabet_button_y_ratio", "icon_pack_package"
+        )
+        settingsKeys.forEach { key ->
+            if (prefs.contains(key)) {
+                settingsObj.put(key, prefs.all[key].toString())
+            }
+        }
+        if (settingsObj.length() > 0) {
+            root.put("settings", settingsObj)
+        }
+
         if (apps.isNotEmpty()) {
             val favs = _favorites.value.toSet()
             val appsArray = JSONArray()
@@ -1017,6 +1047,8 @@ class AppActionsManager(context: Context) {
         val assignments = mutableListOf<TagsBackupPreview.AssignmentInfo>()
         val parsedCustomLabels = mutableMapOf<String, String>()
         val parsedFavorites = mutableListOf<String>()
+        val parsedTagAppOrders = mutableMapOf<String, List<String>>()
+        val parsedSettings = mutableMapOf<String, String>()
 
         fun extractIsFavorite(obj: JSONObject): Boolean {
             return when {
@@ -1099,6 +1131,8 @@ class AppActionsManager(context: Context) {
             val customLabelsObj = root.optJSONObject("custom_labels") ?: root.optJSONObject("labels")
             val favoritesArray = root.optJSONArray("favorites")
             val appsArray = root.optJSONArray("apps")
+            val tagOrdersObj = root.optJSONObject("tag_app_orders")
+            val settingsObj = root.optJSONObject("settings")
 
             if (customLabelsObj != null) {
                 val keys = customLabelsObj.keys()
@@ -1116,6 +1150,35 @@ class AppActionsManager(context: Context) {
                     val favKey = favoritesArray.optString(i).trim()
                     if (favKey.isNotEmpty()) {
                         parsedFavorites.add(favKey)
+                    }
+                }
+            }
+
+            if (tagOrdersObj != null) {
+                val keys = tagOrdersObj.keys()
+                while (keys.hasNext()) {
+                    val tagName = keys.next()
+                    val arr = tagOrdersObj.optJSONArray(tagName)
+                    if (arr != null) {
+                        val orderList = mutableListOf<String>()
+                        for (idx in 0 until arr.length()) {
+                            val k = arr.optString(idx).trim()
+                            if (k.isNotEmpty()) orderList.add(k)
+                        }
+                        if (orderList.isNotEmpty()) {
+                            parsedTagAppOrders[tagName] = orderList
+                        }
+                    }
+                }
+            }
+
+            if (settingsObj != null) {
+                val keys = settingsObj.keys()
+                while (keys.hasNext()) {
+                    val k = keys.next()
+                    val v = settingsObj.optString(k).trim()
+                    if (v.isNotEmpty()) {
+                        parsedSettings[k] = v
                     }
                 }
             }
@@ -1141,6 +1204,7 @@ class AppActionsManager(context: Context) {
                 tagsArray?.let { array ->
                     for (i in 0 until array.length()) {
                         val obj = array.optJSONObject(i) ?: continue
+                        val oldId = obj.optString("id").trim().takeIf { it.isNotEmpty() }
                         val name = obj.optString("name").trim()
                         val colorHex = obj.optString("color").trim()
                         val emoji = (if (obj.has("emoji")) obj.optString("emoji", "") else if (obj.has("icon")) obj.optString("icon", "") else "").trim().takeIf { it.isNotBlank() }
@@ -1148,7 +1212,7 @@ class AppActionsManager(context: Context) {
                         val lower = name.lowercase().trim()
                         if (lower !in existingNames && lower !in createdNamesSet) {
                             val resolvedColor = if (colorHex.isNotEmpty()) parseHexColor(colorHex) else generateTagColor(name)
-                            tagsToCreate.add(TagsBackupPreview.TagInfo(name = name, color = resolvedColor, emoji = emoji))
+                            tagsToCreate.add(TagsBackupPreview.TagInfo(name = name, color = resolvedColor, emoji = emoji, oldId = oldId))
                             createdNamesSet.add(lower)
                         }
                     }
@@ -1173,7 +1237,7 @@ class AppActionsManager(context: Context) {
             } else {
                 val packageToTagNames = mutableMapOf<String, MutableList<String>>()
                 root.keys().forEach { tagName ->
-                    if (tagName in setOf("custom_labels", "labels", "favorites", "apps", "version")) return@forEach
+                    if (tagName in setOf("custom_labels", "labels", "favorites", "apps", "version", "tag_app_orders", "settings")) return@forEach
                     val lower = tagName.lowercase().trim()
                     if (lower !in existingNames && lower !in createdNamesSet) {
                         tagsToCreate.add(TagsBackupPreview.TagInfo(name = tagName, color = generateTagColor(tagName)))
@@ -1203,7 +1267,9 @@ class AppActionsManager(context: Context) {
             parsedAssignments = assignments,
             existingTagCount = _tags.value.size,
             customLabels = parsedCustomLabels,
-            favorites = parsedFavorites.distinct()
+            favorites = parsedFavorites.distinct(),
+            tagAppOrders = parsedTagAppOrders,
+            settings = parsedSettings
         )
     }
 
@@ -1213,24 +1279,39 @@ class AppActionsManager(context: Context) {
     fun applyTagsBackup(preview: TagsBackupPreview, installedApps: List<dev.msbs.cyclauncher.model.AppInfo> = emptyList()) {
         val currentTags = _tags.value.toMutableList()
         val nameToId = currentTags.associate { it.name.lowercase().trim() to it.id }.toMutableMap()
+        val oldIdToNewId = mutableMapOf<String, String>()
+
+        currentTags.forEach { tag ->
+            oldIdToNewId[tag.id] = tag.id
+            oldIdToNewId[tag.name.lowercase().trim()] = tag.id
+        }
 
         preview.newTags.forEach { info ->
             val lower = info.name.lowercase().trim()
             if (lower !in nameToId) {
                 val newTag = Tag(
-                    id = UUID.randomUUID().toString(),
+                    id = info.oldId?.ifEmpty { null } ?: UUID.randomUUID().toString(),
                     name = info.name,
                     color = info.color,
                     emoji = info.emoji
                 )
                 currentTags.add(newTag)
                 nameToId[lower] = newTag.id
+                if (!info.oldId.isNullOrBlank()) {
+                    oldIdToNewId[info.oldId] = newTag.id
+                }
+            } else {
+                val existingId = nameToId[lower]!!
+                if (!info.oldId.isNullOrBlank()) {
+                    oldIdToNewId[info.oldId] = existingId
+                }
             }
         }
         _tags.value = currentTags
         saveTags(currentTags)
 
         val packageToApps = installedApps.groupBy { it.packageName }
+        val componentMap = installedApps.associateBy { it.componentKey }
         val currentAppTags = _appTags.value.toMutableMap()
 
         preview.parsedAssignments.forEach { (targetKey, tagNames) ->
@@ -1265,7 +1346,69 @@ class AppActionsManager(context: Context) {
         }
 
         if (preview.favorites.isNotEmpty()) {
-            importFavorites(preview.favorites)
+            val resolvedFavorites = mutableListOf<String>()
+            preview.favorites.forEach { favKey ->
+                if (favKey.startsWith("tag:")) {
+                    val tagRef = favKey.removePrefix("tag:")
+                    val targetTagId = oldIdToNewId[tagRef] ?: nameToId[tagRef.lowercase().trim()]
+                    if (targetTagId != null) {
+                        val newKey = "tag:$targetTagId"
+                        if (!resolvedFavorites.contains(newKey)) {
+                            resolvedFavorites.add(newKey)
+                        }
+                    }
+                } else {
+                    if (componentMap.containsKey(favKey)) {
+                        if (!resolvedFavorites.contains(favKey)) {
+                            resolvedFavorites.add(favKey)
+                        }
+                    } else if (packageToApps.containsKey(favKey)) {
+                        val appKey = packageToApps[favKey]?.firstOrNull()?.componentKey ?: favKey
+                        if (!resolvedFavorites.contains(appKey)) {
+                            resolvedFavorites.add(appKey)
+                        }
+                    } else if (installedApps.isEmpty()) {
+                        if (!resolvedFavorites.contains(favKey)) {
+                            resolvedFavorites.add(favKey)
+                        }
+                    }
+                }
+            }
+            if (resolvedFavorites.isNotEmpty()) {
+                _favorites.value = resolvedFavorites
+                saveList("favorites", resolvedFavorites)
+            }
+        }
+
+        if (preview.tagAppOrders.isNotEmpty()) {
+            val currentOrders = _tagAppOrders.value.toMutableMap()
+            preview.tagAppOrders.forEach { (tagName, orderList) ->
+                val tagId = nameToId[tagName.lowercase().trim()]
+                if (tagId != null && orderList.isNotEmpty()) {
+                    currentOrders[tagId] = orderList
+                }
+            }
+            _tagAppOrders.value = currentOrders
+            saveTagAppOrders(currentOrders)
+        }
+
+        if (preview.settings.isNotEmpty()) {
+            val editor = prefs.edit()
+            preview.settings.forEach { (key, value) ->
+                when (value) {
+                    "true" -> editor.putBoolean(key, true)
+                    "false" -> editor.putBoolean(key, false)
+                    else -> {
+                        val floatVal = value.toFloatOrNull()
+                        if (floatVal != null && key.contains("ratio")) {
+                            editor.putFloat(key, floatVal)
+                        } else {
+                            editor.putString(key, value)
+                        }
+                    }
+                }
+            }
+            editor.apply()
         }
 
         val created = preview.newTags.size
@@ -1278,6 +1421,9 @@ class AppActionsManager(context: Context) {
         }
         if (preview.favorites.isNotEmpty()) {
             parts.add("${preview.favorites.size} favorites")
+        }
+        if (preview.settings.isNotEmpty()) {
+            parts.add("Settings restored")
         }
         val msg = if (parts.isNotEmpty()) parts.joinToString(", ") else "Backup imported successfully"
         showToast(msg)
@@ -1570,12 +1716,19 @@ data class TagsBackupPreview(
     val parsedAssignments: List<AssignmentInfo>,
     val existingTagCount: Int,
     val customLabels: Map<String, String> = emptyMap(),
-    val favorites: List<String> = emptyList()
+    val favorites: List<String> = emptyList(),
+    val tagAppOrders: Map<String, List<String>> = emptyMap(),
+    val settings: Map<String, String> = emptyMap()
 ) {
     /**
      * Holds basic tag definition metadata in a backup.
      */
-    data class TagInfo(val name: String, val color: Color, val emoji: String? = null)
+    data class TagInfo(
+        val name: String,
+        val color: Color,
+        val emoji: String? = null,
+        val oldId: String? = null
+    )
 
     /**
      * Holds assignment mapping of tags to an application component.
