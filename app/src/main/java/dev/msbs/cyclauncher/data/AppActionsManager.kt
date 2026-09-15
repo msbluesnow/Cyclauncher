@@ -693,12 +693,10 @@ class AppActionsManager(context: Context) {
         _customCharMappings.value = result
         saveCustomCharMappings(result)
         return parsed.size
-    }    // App list export / import (unified — used by both Settings and AutoTags).
-    // Exports the list of installed apps as { "package", "component", "label", "is_favorite", "tags" } objects.
-    // JSON is machine-friendly (the original format), TXT is human-readable.
+    }
 
     /**
-     * Holds the result of importing application metadata from JSON/text.
+     * Holds the result of importing application metadata from JSON or plain text formats.
      */
     data class AppNamesImportResult(
         val labels: Map<String, String>,

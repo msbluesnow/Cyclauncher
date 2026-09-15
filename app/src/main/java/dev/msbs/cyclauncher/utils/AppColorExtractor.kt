@@ -105,8 +105,8 @@ object AppColorExtractor {
         val topRatio = topCount.toFloat() / chromaticCount
         val secondRatio = secondCount.toFloat() / chromaticCount
 
-        // Если доминирующий цвет занимает более 69%, иконка не может быть в радуге.
-        // Если доминирующий цвет занимает <= 69% и среди других цветов есть хотя бы один с долей >= 19%:
+        // If the dominant color ratio exceeds 69%, the icon cannot be classified as rainbow/multicolor.
+        // If the dominant color ratio is <= 69% and a secondary color ratio is >= 19%, classify as MULTICOLOR:
         val isMulticolor = topRatio <= 0.69f && secondRatio >= 0.19f
 
         if (isMulticolor) {
