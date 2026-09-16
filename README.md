@@ -24,7 +24,7 @@
   </a>
 </p>
 
-Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**, it is focused on speed, effortless app accessibility, and seamless one-handed usability. New features and mechanics are continuously designed not just to be unique, but to deliver a genuinely convenient, ergonomic, and practical daily experience. Fast and intuitive navigation is provided via versatile search methods including a custom rectangular alphabet wheel, an ergonomic side alphabet index strip, and instant text filtering.
+Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**, it is focused on speed, effortless app accessibility, and seamless one-handed usability. New features and mechanics are continuously designed not just to be unique, but to deliver a genuinely convenient, ergonomic, and practical daily experience. Fast and intuitive navigation is provided via versatile search methods including a custom rectangular alphabet wheel, an ergonomic side alphabet index strip, chromatic color palette search, and instant text filtering.
 
 > [!IMPORTANT]
 > **Beta Version**: This project is currently in Beta. Core features are stable, but further refinements and new mechanics are actively being developed. Feedback and bug reports are highly appreciated.
@@ -58,7 +58,7 @@ Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**,
 
 - **Highlights Screen**: Dedicated home screen panel showing daily app installs and updates overview, with a full **Widgets section** — add, resize, reconfigure, and remove Android widgets via a custom picker with search, expandable accordions, and live previews.
 - **Tag Folder System & 2D Reordering**: Interactive tag folders with color accents, 2x2 live icon previews, proximity-aware popup menus, **2D drag-to-reorder** for both folder positions and apps within folders, and a sort dialog (by name / app count). Pin tag folders directly alongside favorite apps.
-- **Versatile Search Modes**: Rapid app navigation via a custom **Rectangular Alphabet Wheel** (with inertia physics), an ergonomic **Side Alphabet Index** strip for instant thumb scrubbing, or instant **Text Search**.
+- **Versatile Search Modes**: Rapid app navigation via a custom **Rectangular Alphabet Wheel** (with inertia physics), an ergonomic **Side Alphabet Index** strip for instant thumb scrubbing, a **Chromatic Color Search Palette** to filter apps by primary icon color (Red, Amber, Green, Blue, Purple, Rainbow, History, Monochrome), or instant **Text Search**.
 - **Character & Symbol Mapping**: Comprehensive custom mapping engine to bind any symbol, emoji (🤗, 🎮...), or international alphabet letter (Cyrillic, Arabic, German/Nordic, Romance) to specific search index buckets (`A`–`Z`, `#`) with instant presets.
 - **Interactive Gesture Tutorial**: Guided onboarding overlay teaching launcher gestures (search, notifications, favorites & history management, Highlights navigation) with animated visualizers — 7 steps.
 - **Dynamic Favorites & History Badges**: Organize top apps with intuitive drag-and-drop reordering, and track newly installed or updated apps via subtle visual update badges in history.
@@ -127,6 +127,7 @@ A continuous, unified timeline of completed milestones and planned updates.
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Letter-Based Scroll Wheel</b> — Interactive rectangular scroll wheel for high-performance app retrieval.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Side Alphabet Search Mode</b> — Ergonomic alphabet index strip for swift one-handed scrubbing and app indexing.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Custom Character & Symbol Search Indexing</b> — Customize first-character rules, emojis, and international alphabets mapped to search letters.<br>
+<kbd>&nbsp;✓&nbsp;</kbd> <b>Chromatic Color Search Palette</b> — Filter and retrieve applications based on dominant icon color categories (Red, Amber, Green, Blue, Purple, Rainbow, History, Monochrome) using direct HSV pixel-histogram analysis.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Tag Folder System & Tag Pinning</b> — On-screen tag folders with multi-app previews, quick popups, and favorite pin support.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Application Tag System</b> — Grouping apps with an AI-assisted tagging workflow and full JSON backup options.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Adaptive Text & Theme Accents</b> — Selectable accent palettes, a custom Main Color (Black/White) switcher, dynamic shadow inversion, and animation controls.<br>
