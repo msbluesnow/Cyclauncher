@@ -1060,7 +1060,7 @@ private fun ColumnScope.TagsContentBlock(
         modifier = Modifier
             .fillMaxWidth()
             .weight(1f, fill = false)
-            .padding(bottom = 8.dp),
+            .padding(bottom = 2.dp),
         horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start,
         verticalArrangement = Arrangement.Bottom
     ) {
