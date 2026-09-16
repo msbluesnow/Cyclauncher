@@ -998,8 +998,8 @@ class AppActionsManager(context: Context) {
             "popup_theme", "show_shadows", "shadow_color", "hide_status_bar",
             "show_search_widgets", "show_search_history", "animations_enabled",
             "haptic_feedback_enabled", "monochrome_history", "monochrome_favorites",
-            "search_method", "side_alphabet_button_y_ratio", "icon_pack_package",
-            "show_keep_android_open_days"
+            "monochrome_tags", "search_method", "side_alphabet_button_y_ratio",
+            "icon_pack_package", "show_keep_android_open_days"
         )
         settingsKeys.forEach { key ->
             if (prefs.contains(key)) {

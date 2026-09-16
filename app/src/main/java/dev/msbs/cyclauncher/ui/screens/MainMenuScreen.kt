@@ -118,6 +118,7 @@ fun MainMenuScreen(
     val isHistoryPaused by viewModel.isHistoryPaused.collectAsState()
     val recentlyUpdatedApps by viewModel.recentlyUpdatedApps.collectAsState()
     val monochromeHistory by viewModel.monochromeHistory.collectAsState()
+    val monochromeTags by viewModel.monochromeTags.collectAsState()
     val historyColorFilter = remember(monochromeHistory, primaryTextColor) {
         if (monochromeHistory) {
             androidx.compose.ui.graphics.ColorFilter.colorMatrix(
@@ -404,6 +405,7 @@ fun MainMenuScreen(
                     primaryTextColor,
                     showShadows,
                     isReorderMode,
+                    monochromeTags = monochromeTags,
                     setReorderMode = {
                         markItemAction()
                         isReorderMode = it
@@ -454,6 +456,7 @@ fun MainMenuScreen(
                     history = history,
                     popularTags = popularTagsWithApps,
                     recentlyUpdatedApps = recentlyUpdatedApps,
+                    monochromeTags = monochromeTags,
                     handSide = handSide,
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
@@ -507,6 +510,7 @@ fun MainMenuScreen(
                     history = history,
                     popularTags = popularTagsWithApps,
                     recentlyUpdatedApps = recentlyUpdatedApps,
+                    monochromeTags = monochromeTags,
                     handSide = handSide,
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
@@ -562,6 +566,7 @@ fun MainMenuScreen(
                     primaryTextColor,
                     showShadows,
                     isReorderMode,
+                    monochromeTags = monochromeTags,
                     setReorderMode = {
                         markItemAction()
                         isReorderMode = it
@@ -776,6 +781,7 @@ private fun HistorySection(
     history: List<AppInfo>,
     popularTags: List<Pair<Tag, List<AppInfo>>>,
     recentlyUpdatedApps: Set<String>,
+    monochromeTags: Boolean = false,
     handSide: HandSide,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
@@ -877,6 +883,7 @@ private fun HistorySection(
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
                     accentColor = accentColor,
+                    monochromeTags = monochromeTags,
                     isReorderMode = isTagFolderReorderMode,
                     setReorderMode = setTagFolderReorderMode,
                     onReorderTag = onReorderTag,
@@ -901,6 +908,7 @@ private fun HistorySection(
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows,
                     accentColor = accentColor,
+                    monochromeTags = monochromeTags,
                     isReorderMode = isTagFolderReorderMode,
                     setReorderMode = setTagFolderReorderMode,
                     onReorderTag = onReorderTag,
@@ -990,6 +998,7 @@ private fun ColumnScope.TagsContentBlock(
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
     accentColor: AccentColor,
+    monochromeTags: Boolean = false,
     isReorderMode: Boolean = false,
     setReorderMode: (Boolean) -> Unit = {},
     onReorderTag: (Int, Int) -> Unit = { _, _ -> },
@@ -1219,7 +1228,8 @@ private fun ColumnScope.TagsContentBlock(
                                     }
                                 },
                                 primaryTextColor = primaryTextColor,
-                                showShadows = showShadows
+                                showShadows = showShadows,
+                                monochromeTags = monochromeTags
                             )
                         }
                     }
@@ -1595,7 +1605,8 @@ private fun FavoritesSection(
     onSettingsClick: () -> Unit,
     isActive: Boolean,
     isActionMenuOpen: Boolean = false,
-    monochromeFavorites: Boolean = false
+    monochromeFavorites: Boolean = false,
+    monochromeTags: Boolean = false
 ) {
     val shadow = primaryTextColor.getShadow(showShadows, LocalShadowSettings.current.shadowColorOverride)
     val favoriteColorFilter = remember(monochromeFavorites, primaryTextColor) {
@@ -1991,6 +2002,7 @@ private fun FavoritesSection(
                                         tag = item.tag,
                                         apps = item.apps,
                                         colorFilter = favoriteColorFilter,
+                                        monochromeTags = monochromeTags,
                                         modifier = tagModifier
                                     )
                                 }

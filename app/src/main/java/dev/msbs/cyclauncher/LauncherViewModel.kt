@@ -143,6 +143,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _monochromeHistory = MutableStateFlow(false)
     val monochromeHistory: StateFlow<Boolean> = _monochromeHistory
 
+    private val _monochromeTags = MutableStateFlow(false)
+    val monochromeTags: StateFlow<Boolean> = _monochromeTags
+
     private val _showKeepAndroidOpenDays = MutableStateFlow(true)
     val showKeepAndroidOpenDays: StateFlow<Boolean> = _showKeepAndroidOpenDays
 
@@ -590,6 +593,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _animationsEnabled.value = prefs.getBoolean("animations_enabled", true)
         _hapticFeedbackEnabled.value = prefs.getBoolean("haptic_feedback_enabled", true)
         _monochromeHistory.value = prefs.getBoolean("monochrome_history", false)
+        _monochromeTags.value = prefs.getBoolean("monochrome_tags", false)
         _showKeepAndroidOpenDays.value = prefs.getBoolean("show_keep_android_open_days", true)
 
         val savedSearchMethod = prefs.getString("search_method", SearchMethod.SIDE_ALPHABET.name) ?: SearchMethod.SIDE_ALPHABET.name
@@ -712,6 +716,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun setMonochromeHistory(enabled: Boolean) {
         _monochromeHistory.value = enabled
         editPrefs { putBoolean("monochrome_history", enabled) }
+    }
+
+    fun setMonochromeTags(enabled: Boolean) {
+        _monochromeTags.value = enabled
+        editPrefs { putBoolean("monochrome_tags", enabled) }
     }
 
     fun setShowKeepAndroidOpenDays(show: Boolean) {

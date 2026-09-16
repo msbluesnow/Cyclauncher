@@ -57,6 +57,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -95,12 +96,20 @@ fun TagFolderItem(
     onClick: (Offset) -> Unit,
     onLongClick: (Offset) -> Unit = {},
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
-    showShadows: Boolean = false
+    showShadows: Boolean = false,
+    monochromeTags: Boolean = false
 ) {
     val previewApps = remember(apps) { apps.take(4) }
     var itemPosition by remember { mutableStateOf(Offset.Zero) }
     val currentOnClick by rememberUpdatedState(onClick)
     val currentOnLongClick by rememberUpdatedState(onLongClick)
+
+    val effectiveTagColor = remember(tag.color, monochromeTags) {
+        if (monochromeTags) tag.color.toGrayscale() else tag.color
+    }
+    val tagColorFilter = remember(monochromeTags) {
+        if (monochromeTags) ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }) else null
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -120,8 +129,8 @@ fun TagFolderItem(
                 .size(52.dp)
                 .clip(RoundedCornerShape(14.dp))
                 .background(Color.Black.copy(alpha = 0.45f))
-                .background(tag.color.copy(alpha = 0.12f))
-                .border(BorderStroke(1.5.dp, tag.color), shape = RoundedCornerShape(14.dp))
+                .background(effectiveTagColor.copy(alpha = 0.12f))
+                .border(BorderStroke(1.5.dp, effectiveTagColor), shape = RoundedCornerShape(14.dp))
                 .padding(4.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -139,7 +148,7 @@ fun TagFolderItem(
                             }
                         }
                 ) {
-                    TagFolderAppIconsGrid(previewApps = previewApps, iconSizeDp = 16.dp)
+                    TagFolderAppIconsGrid(previewApps = previewApps, iconSizeDp = 16.dp, colorFilter = tagColorFilter)
                 }
             }
 
@@ -148,7 +157,7 @@ fun TagFolderItem(
                 Icon(
                     imageVector = vectorIcon,
                     contentDescription = null,
-                    tint = tag.color,
+                    tint = effectiveTagColor,
                     modifier = Modifier.size(28.dp)
                 )
             } else if (!tag.emoji.isNullOrBlank()) {
@@ -951,16 +960,24 @@ fun TagFolderIcon(
     apps: List<AppInfo>,
     size: Int = 48,
     colorFilter: ColorFilter? = null,
+    monochromeTags: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val previewApps = remember(apps) { apps.take(4) }
+    val effectiveTagColor = remember(tag.color, monochromeTags) {
+        if (monochromeTags) tag.color.toGrayscale() else tag.color
+    }
+    val effectiveColorFilter = remember(monochromeTags, colorFilter) {
+        colorFilter ?: if (monochromeTags) ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }) else null
+    }
+
     Box(
         modifier = modifier
             .size(size.dp)
             .clip(RoundedCornerShape(13.dp))
             .background(Color.Black.copy(alpha = 0.45f))
-            .background(tag.color.copy(alpha = 0.12f))
-            .border(BorderStroke(1.5.dp, tag.color), shape = RoundedCornerShape(13.dp))
+            .background(effectiveTagColor.copy(alpha = 0.12f))
+            .border(BorderStroke(1.5.dp, effectiveTagColor), shape = RoundedCornerShape(13.dp))
             .padding(3.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -978,7 +995,7 @@ fun TagFolderIcon(
                         }
                     }
             ) {
-                TagFolderAppIconsGrid(previewApps = previewApps, iconSizeDp = (size * 0.33f).dp, colorFilter = colorFilter)
+                TagFolderAppIconsGrid(previewApps = previewApps, iconSizeDp = (size * 0.33f).dp, colorFilter = effectiveColorFilter)
             }
         }
 
@@ -987,7 +1004,7 @@ fun TagFolderIcon(
             Icon(
                 imageVector = vectorIcon,
                 contentDescription = null,
-                tint = tag.color,
+                tint = effectiveTagColor,
                 modifier = Modifier.size((size * 0.58f).dp)
             )
         } else if (!tag.emoji.isNullOrBlank()) {
@@ -998,6 +1015,11 @@ fun TagFolderIcon(
             )
         }
     }
+}
+
+private fun Color.toGrayscale(): Color {
+    val gray = (red * 0.299f + green * 0.587f + blue * 0.114f).coerceIn(0f, 1f)
+    return Color(gray, gray, gray, alpha)
 }
 
 /**

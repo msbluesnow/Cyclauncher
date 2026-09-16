@@ -96,6 +96,7 @@ fun SettingsScreen(
     val animationsEnabled by viewModel.animationsEnabled.collectAsState()
     val hapticFeedbackEnabled by viewModel.hapticFeedbackEnabled.collectAsState()
     val monochromeHistory by viewModel.monochromeHistory.collectAsState()
+    val monochromeTags by viewModel.monochromeTags.collectAsState()
     val showKeepAndroidOpenDays by viewModel.showKeepAndroidOpenDays.collectAsState()
     val isWpDark by viewModel.isWallpaperDark.collectAsState()
     val customCharMappings by viewModel.customCharMappings.collectAsState()
@@ -209,15 +210,18 @@ fun SettingsScreen(
                             animationsEnabled = animationsEnabled,
                             hapticFeedbackEnabled = hapticFeedbackEnabled,
                             monochromeHistory = monochromeHistory,
+                            monochromeTags = monochromeTags,
                             accentColor = accentColor,
                             primaryTextColor = primaryTextColor,
+                            popupTheme = popupTheme,
                             showShadows = showShadows,
                             shadowColorOverride = shadowColorOverride,
                             shadow = shadow,
                             onToggleStatusBar = { viewModel.setHideStatusBar(!hideStatusBar) },
                             onAnimationsChange = { viewModel.setAnimationsEnabled(it) },
                             onHapticFeedbackChange = { viewModel.setHapticFeedbackEnabled(it) },
-                            onMonochromeHistoryChange = { viewModel.setMonochromeHistory(it) }
+                            onMonochromeHistoryChange = { viewModel.setMonochromeHistory(it) },
+                            onMonochromeTagsChange = { viewModel.setMonochromeTags(it) }
                         )
 
                         SettingsDivider(primaryTextColor, top = 5.dp, bottom = 8.dp)
@@ -796,15 +800,18 @@ private fun StatusBarAndAnimationsSection(
     animationsEnabled: Boolean,
     hapticFeedbackEnabled: Boolean,
     monochromeHistory: Boolean,
+    monochromeTags: Boolean,
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
+    popupTheme: PopupTheme,
     showShadows: Boolean,
     shadowColorOverride: PrimaryTextColor?,
     shadow: Shadow?,
     onToggleStatusBar: () -> Unit,
     onAnimationsChange: (Boolean) -> Unit,
     onHapticFeedbackChange: (Boolean) -> Unit,
-    onMonochromeHistoryChange: (Boolean) -> Unit
+    onMonochromeHistoryChange: (Boolean) -> Unit,
+    onMonochromeTagsChange: (Boolean) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -883,7 +890,7 @@ private fun StatusBarAndAnimationsSection(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Haptic Feedback",
+                    text = "Haptics",
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                     maxLines = 1,
@@ -908,39 +915,137 @@ private fun StatusBarAndAnimationsSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.weight(1f, fill = false)
-                ) {
-                    Text(
-                        text = "Monochrome",
-                        color = primaryTextColor.color,
-                        style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                        maxLines = 1,
-                        modifier = Modifier.basicMarquee()
-                    )
-                    ShadowedIcon(
-                        imageVector = Icons.Outlined.History,
-                        tint = primaryTextColor.color,
-                        size = 16.dp,
-                        showShadows = showShadows,
-                        primaryTextColor = primaryTextColor,
-                        shadowColorOverride = shadowColorOverride
-                    )
-                }
-                Switch(
-                    checked = monochromeHistory,
-                    onCheckedChange = onMonochromeHistoryChange,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = accentColor.color,
-                        checkedTrackColor = accentColor.color.copy(alpha = 0.45f),
-                        checkedBorderColor = accentColor.color.copy(alpha = 0.80f),
-                        uncheckedThumbColor = accentColor.color.copy(alpha = 0.65f),
-                        uncheckedTrackColor = accentColor.color.copy(alpha = 0.12f),
-                        uncheckedBorderColor = accentColor.color.copy(alpha = 0.35f)
-                    )
+                Text(
+                    text = "Monochrome",
+                    color = primaryTextColor.color,
+                    style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f, fill = false).basicMarquee()
                 )
+
+                var monochromeExpanded by remember { mutableStateOf(false) }
+
+                Box {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(primaryTextColor.color.copy(alpha = 0.08f))
+                            .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
+                            .clickable { monochromeExpanded = true }
+                            .padding(horizontal = 7.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (!monochromeHistory && !monochromeTags) {
+                            Icon(
+                                imageVector = Icons.Outlined.VisibilityOff,
+                                contentDescription = "Monochrome disabled",
+                                tint = primaryTextColor.color.copy(alpha = 0.5f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        } else {
+                            if (monochromeHistory) {
+                                Icon(
+                                    imageVector = Icons.Outlined.History,
+                                    contentDescription = "History Monochrome",
+                                    tint = accentColor.color,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            if (monochromeTags) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Folder,
+                                    contentDescription = "Tags Monochrome",
+                                    tint = accentColor.color,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.Outlined.ArrowDropDown,
+                            contentDescription = "Select Monochrome Options",
+                            tint = primaryTextColor.color.copy(alpha = 0.7f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = monochromeExpanded,
+                        onDismissRequest = { monochromeExpanded = false },
+                        shape = RoundedCornerShape(14.dp),
+                        containerColor = popupTheme.solidBackgroundColor,
+                        border = BorderStroke(1.dp, popupTheme.borderColor),
+                        shadowElevation = 8.dp
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = "History",
+                                    color = if (monochromeHistory) accentColor.color else popupTheme.contentColor,
+                                    fontWeight = if (monochromeHistory) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 14.sp,
+                                    maxLines = 1,
+                                    modifier = Modifier.basicMarquee()
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.History,
+                                    contentDescription = null,
+                                    tint = if (monochromeHistory) accentColor.color else popupTheme.contentColor.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            trailingIcon = if (monochromeHistory) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Check,
+                                        contentDescription = null,
+                                        tint = accentColor.color,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            } else null,
+                            onClick = {
+                                onMonochromeHistoryChange(!monochromeHistory)
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = "Tags",
+                                    color = if (monochromeTags) accentColor.color else popupTheme.contentColor,
+                                    fontWeight = if (monochromeTags) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 14.sp,
+                                    maxLines = 1,
+                                    modifier = Modifier.basicMarquee()
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Folder,
+                                    contentDescription = null,
+                                    tint = if (monochromeTags) accentColor.color else popupTheme.contentColor.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            trailingIcon = if (monochromeTags) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Check,
+                                        contentDescription = null,
+                                        tint = accentColor.color,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            } else null,
+                            onClick = {
+                                onMonochromeTagsChange(!monochromeTags)
+                            }
+                        )
+                    }
+                }
             }
         }
     }
