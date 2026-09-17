@@ -44,6 +44,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -75,11 +76,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -127,7 +131,8 @@ fun HighlightScreen(
     appWidgetHost: AppWidgetHost? = null,
     appWidgetManager: AppWidgetManager? = null,
     onClose: () -> Unit,
-    onConfigureWidget: ((widgetId: Int, isReconfigure: Boolean, options: Bundle?, callback: (Boolean) -> Unit) -> Unit)? = null
+    onConfigureWidget: ((widgetId: Int, isReconfigure: Boolean, options: Bundle?, callback: (Boolean) -> Unit) -> Unit)? = null,
+    onAppLongClick: (AppInfo, Offset) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
     val handSide by viewModel.handSide.collectAsState()
@@ -140,6 +145,7 @@ fun HighlightScreen(
 
     val apps by viewModel.apps.collectAsState()
     val tags by viewModel.tags.collectAsState()
+    val appTagsMap by viewModel.appTags.collectAsState()
     val favoriteItems by viewModel.favoriteItems.collectAsState()
     val historyApps by viewModel.historyApps.collectAsState()
     val recentlyUpdatedKeys by viewModel.recentlyUpdatedApps.collectAsState()
@@ -391,14 +397,17 @@ fun HighlightScreen(
                         showShadows = showShadows,
                         shadowSettings = shadowSettings,
                         animationsEnabled = animationsEnabled,
+                        appTagsMap = appTagsMap,
                         onAppClick = { componentKey ->
+                            viewModel.logAppLaunch(componentKey)
                             val parts = componentKey.split("/")
                             if (parts.size == 2) {
                                 context.packageManager.getLaunchIntentForPackage(parts[0])?.let { intent ->
                                     context.startActivity(intent)
                                 }
                             }
-                        }
+                        },
+                        onAppLongClick = onAppLongClick
                     )
                 }
 
@@ -414,14 +423,17 @@ fun HighlightScreen(
                         showShadows = showShadows,
                         shadowSettings = shadowSettings,
                         animationsEnabled = animationsEnabled,
+                        appTagsMap = appTagsMap,
                         onAppClick = { componentKey ->
+                            viewModel.logAppLaunch(componentKey)
                             val parts = componentKey.split("/")
                             if (parts.size == 2) {
                                 context.packageManager.getLaunchIntentForPackage(parts[0])?.let { intent ->
                                     context.startActivity(intent)
                                 }
                             }
-                        }
+                        },
+                        onAppLongClick = onAppLongClick
                     )
                 }
 
@@ -634,7 +646,9 @@ private fun CollapsibleAppSection(
     showShadows: Boolean,
     shadowSettings: ShadowSettings,
     animationsEnabled: Boolean,
-    onAppClick: (String) -> Unit
+    appTagsMap: Map<String, List<String>> = emptyMap(),
+    onAppClick: (String) -> Unit,
+    onAppLongClick: (AppInfo, Offset) -> Unit = { _, _ -> }
 ) {
     var isExpanded by remember { mutableStateOf(false) }
     val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
@@ -724,12 +738,16 @@ private fun CollapsibleAppSection(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             items(apps) { app ->
+                                val hasTags = (appTagsMap[app.componentKey]?.isNotEmpty() == true) || (appTagsMap[app.packageName]?.isNotEmpty() == true)
                                 RecentAppChip(
                                     app = app,
+                                    hasTags = hasTags,
+                                    accentColor = accentColor,
                                     primaryTextColor = primaryTextColor,
                                     showShadows = showShadows,
                                     shadowSettings = shadowSettings,
-                                    onClick = { onAppClick(app.componentKey) }
+                                    onClick = { onAppClick(app.componentKey) },
+                                    onLongClick = { offset -> onAppLongClick(app, offset) }
                                 )
                             }
                         }
@@ -804,31 +822,53 @@ private fun CompactMetricItem(
 @Composable
 private fun RecentAppChip(
     app: AppInfo,
+    hasTags: Boolean = false,
+    accentColor: AccentColor = AccentColor.SKY,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
     shadowSettings: ShadowSettings,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: (Offset) -> Unit = {}
 ) {
     val painter = rememberAppIconPainter(app.componentKey, 24)
     val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
+    var touchPosition by remember { mutableStateOf(Offset.Zero) }
 
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
             .background(primaryTextColor.color.copy(alpha = 0.08f))
             .border(1.dp, primaryTextColor.color.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
+            .onGloballyPositioned { touchPosition = it.positionInRoot() }
+            .pointerInput(app.componentKey) {
+                detectTapGestures(
+                    onTap = { onClick() },
+                    onLongPress = { offset -> onLongClick(touchPosition + offset) }
+                )
+            }
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Image(
-            painter = painter,
-            contentDescription = null,
-            modifier = Modifier
-                .size(22.dp)
-                .clip(CircleShape)
-        )
+        Box(contentAlignment = Alignment.BottomEnd) {
+            Image(
+                painter = painter,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(22.dp)
+                    .clip(CircleShape)
+            )
+            if (hasTags) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.Label,
+                    contentDescription = "Has Tag",
+                    tint = accentColor.color,
+                    modifier = Modifier
+                        .size(11.dp)
+                        .offset(x = 3.dp, y = 3.dp)
+                )
+            }
+        }
         Text(
             text = app.label,
             fontSize = 12.5.sp,

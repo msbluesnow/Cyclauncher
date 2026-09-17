@@ -365,7 +365,12 @@ class MainActivity : ComponentActivity() {
                                                         appWidgetHost = appWidgetHost,
                                                         appWidgetManager = appWidgetManager,
                                                         onClose = { isHighlightScreenVisible = false },
-                                                        onConfigureWidget = ::startWidgetConfiguration
+                                                        onConfigureWidget = ::startWidgetConfiguration,
+                                                        onAppLongClick = { app, offset ->
+                                                            showActionMenuFor = app
+                                                            menuOffset = offset
+                                                            menuSource = "highlight"
+                                                        }
                                                     )
                                                 } else {
                                                     MainMenuScreen(
