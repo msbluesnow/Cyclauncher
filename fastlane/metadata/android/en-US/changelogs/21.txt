@@ -1,0 +1,9 @@
+Second Beta release. Tag folders, limits, and stability fixes.
+- Add monochrome effect for tag folders with area selector
+- Add 13-item favorites limit and dead key pruning
+- Add tag indicator and action menu to recent app chips
+- Add toggleable countdown in KeepAndroidOpen banner
+- Improve drag-and-drop reordering with hysteresis
+- Unify launch tracking and isolate search history
+- Fix unlock freeze and status bar glitch on resume
+- Expand backup restore with settings and tag order
