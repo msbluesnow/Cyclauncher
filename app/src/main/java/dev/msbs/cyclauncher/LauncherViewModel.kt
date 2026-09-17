@@ -867,17 +867,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun logSearchLaunch(componentKey: String) {
-        actionsManager.logSearchLaunch(componentKey)
-        actionsManager.logAppLaunch(componentKey)
+        logAppLaunch(componentKey)
     }
 
     fun removeFromSearchHistory(componentKey: String) {
-        actionsManager.removeFromHistory(componentKey)
         actionsManager.removeFromSearchHistory(componentKey)
     }
 
     fun clearSearchHistory() {
-        actionsManager.clearHistory()
         actionsManager.clearSearchHistory()
     }
 

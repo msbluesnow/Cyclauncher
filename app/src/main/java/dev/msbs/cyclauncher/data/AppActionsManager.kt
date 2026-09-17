@@ -156,36 +156,42 @@ class AppActionsManager(context: Context) {
         return emptyList()
     }
 
-    fun logSearchLaunch(componentKey: String) {
-        if (_isHistoryPaused.value) return
-        val current = _searchHistory.value.toMutableList()
-        current.remove(componentKey)
-        current.add(0, componentKey)
-        val limited = current.take(20)
-        _searchHistory.value = limited
-        saveList("search_history", limited)
-    }
-
     fun removeFromSearchHistory(componentKey: String) {
-        val current = _searchHistory.value.toMutableList()
         val pkg = componentKey.substringBefore('/')
-        val removed = current.removeAll { it == componentKey || it == pkg || it.startsWith("$pkg/") }
-        if (removed) {
-            _searchHistory.value = current
-            saveList("search_history", current)
+        val currentSearch = _searchHistory.value.filterNot { it == componentKey || it == pkg || it.startsWith("$pkg/") }
+        _searchHistory.value = currentSearch
+        saveList("search_history", currentSearch)
+
+        val recentSet = _recentlyUpdated.value
+        val currentMain = _history.value.filterNot { key ->
+            (key == componentKey || key == pkg || key.startsWith("$pkg/")) &&
+                    !recentSet.contains(key) && !recentSet.contains(pkg)
         }
+        _history.value = currentMain
+        saveList("history", currentMain)
     }
 
     fun clearSearchHistory() {
         _searchHistory.value = emptyList()
         saveList("search_history", emptyList())
+
+        val recentSet = _recentlyUpdated.value
+        val preservedMainHistory = _history.value.filter { key ->
+            recentSet.contains(key) || recentSet.contains(key.substringBefore('/'))
+        }
+        _history.value = preservedMainHistory
+        saveList("history", preservedMainHistory)
+
         showToast("Search history cleared")
     }
 
     fun logAppLaunch(componentKey: String) {
-        val hasRecentlyUpdated = _recentlyUpdated.value.contains(componentKey)
+        val pkg = componentKey.substringBefore('/')
+        val hasRecentlyUpdated = _recentlyUpdated.value.contains(componentKey) || _recentlyUpdated.value.contains(pkg)
         val updatedRecentlyUpdated = if (hasRecentlyUpdated) {
-            val set = _recentlyUpdated.value - componentKey
+            val set = _recentlyUpdated.value.filter { key ->
+                key != componentKey && key != pkg && !key.startsWith("$pkg/")
+            }.toSet()
             _recentlyUpdated.value = set
             set
         } else null
@@ -196,6 +202,14 @@ class AppActionsManager(context: Context) {
             current.add(0, componentKey)
             val limited = current.take(15)
             _history.value = limited
+
+            val currentSearch = _searchHistory.value.toMutableList()
+            currentSearch.remove(componentKey)
+            currentSearch.add(0, componentKey)
+            val limitedSearch = currentSearch.take(20)
+            _searchHistory.value = limitedSearch
+            saveList("search_history", limitedSearch)
+
             limited
         } else null
 
@@ -281,6 +295,8 @@ class AppActionsManager(context: Context) {
     }
 
     fun clearHistory() {
+        _searchHistory.value = emptyList()
+        saveList("search_history", emptyList())
         _history.value = emptyList()
         saveList("history", emptyList())
         _recentlyUpdated.value = emptySet()
