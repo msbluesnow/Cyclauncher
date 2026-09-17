@@ -476,6 +476,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         tagAppOrders,
         actionsManager.favorites
     ) { allApps, allTags, allAppTags, allTagOrders, ids ->
+        if (allApps.isEmpty()) return@combine emptyList()
         val appMap = allApps.associateBy { it.componentKey }
         val tagMap = allTags.associateBy { it.id }
         val tagToAppsMap = mutableMapOf<String, MutableList<AppInfo>>()
@@ -485,18 +486,25 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 tagToAppsMap.getOrPut(tagId) { mutableListOf() }.add(app)
             }
         }
-        ids.mapNotNull { id ->
+        val validIds = mutableListOf<String>()
+        val result = ids.mapNotNull { id ->
             if (id.startsWith("tag:")) {
                 val tagId = id.removePrefix("tag:")
                 val tag = tagMap[tagId] ?: return@mapNotNull null
                 val taggedApps = tagToAppsMap[tag.id] ?: emptyList()
                 val orderedApps = orderTagApps(taggedApps, allTagOrders[tag.id])
+                validIds.add(id)
                 FavoriteItem.TagFolder(tag, orderedApps)
             } else {
                 val app = appMap[id] ?: return@mapNotNull null
+                validIds.add(id)
                 FavoriteItem.App(app)
             }
         }
+        if (validIds.size < ids.size && validIds.isNotEmpty()) {
+            actionsManager.setFavorites(validIds)
+        }
+        result
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val favoriteApps: StateFlow<List<AppInfo>> = favoriteItems.map { items ->

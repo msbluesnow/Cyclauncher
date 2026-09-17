@@ -36,7 +36,7 @@ class AppActionsManager(context: Context) {
         }
     }
 
-    private val _favorites = MutableStateFlow<List<String>>(loadList("favorites"))
+    private val _favorites = MutableStateFlow<List<String>>(loadList("favorites").take(13))
     val favorites: StateFlow<List<String>> = _favorites
 
     private val _history = MutableStateFlow<List<String>>(loadList("history"))
@@ -57,8 +57,14 @@ class AppActionsManager(context: Context) {
     private val _customCharMappings = MutableStateFlow<Map<String, Char>>(loadCustomCharMappings())
     val customCharMappings: StateFlow<Map<String, Char>> = _customCharMappings
 
+    fun setFavorites(newList: List<String>) {
+        val capped = newList.distinct().take(13)
+        _favorites.value = capped
+        saveList("favorites", capped)
+    }
+
     fun toggleFavorite(componentKey: String) {
-        val current = _favorites.value.toMutableList()
+        var current = _favorites.value.toMutableList()
         val isTag = componentKey.startsWith("tag:")
         val label = if (isTag) {
             val tagId = componentKey.removePrefix("tag:")
@@ -71,11 +77,23 @@ class AppActionsManager(context: Context) {
             current.remove(componentKey)
             showToast("Removed \"$label\" from Favorites")
         } else {
+            val existingTagIds = _tags.value.map { it.id }.toSet()
+            current = current.filter { key ->
+                if (key.startsWith("tag:")) {
+                    existingTagIds.contains(key.removePrefix("tag:"))
+                } else true
+            }.toMutableList()
+
+            if (current.size >= 13) {
+                showToast("Favorites limit reached (max 13 items)")
+                return
+            }
             current.add(componentKey)
             showToast("Added \"$label\" to Favorites")
         }
-        _favorites.value = current
-        saveList("favorites", current)
+        val capped = current.take(13)
+        _favorites.value = capped
+        saveList("favorites", capped)
     }
 
     fun reorderFavorites(fromIndex: Int, toIndex: Int) {
