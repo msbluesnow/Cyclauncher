@@ -1,10 +1,10 @@
 [versions]
-agp = "9.3.2"
-kotlin = "2.2.10"
-coreKtx = "1.10.1"
-composeBom = "2026.06.01"
-activityCompose = "1.9.0"
-coil = "3.4.0"
+agp = "9.3.3"
+kotlin = "2.4.20"
+coreKtx = "1.19.0"
+composeBom = "2026.09.00"
+activityCompose = "1.13.0"
+coil = "3.6.3"
 freeDroidWarn = "V1.13"
 palette = "1.0.0"
 
@@ -22,6 +22,4 @@ freedroidwarn = { group = "com.github.woheller69", name = "FreeDroidWarn", versi
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-
