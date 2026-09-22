@@ -920,15 +920,15 @@ private fun GestureAnimationCanvas(
 
             val notifShape = remember(leftIsNotifications) {
                 if (leftIsNotifications)
-                    RoundedCornerShape(topStart = 18.dp, bottomStart = 18.dp, topEnd = 3.dp, bottomEnd = 3.dp)
+                    RoundedCornerShape(topStart = 18.dp, bottomStart = 18.dp, topEnd = 0.dp, bottomEnd = 0.dp)
                 else
-                    RoundedCornerShape(topStart = 3.dp, bottomStart = 3.dp, topEnd = 18.dp, bottomEnd = 18.dp)
+                    RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 18.dp, bottomEnd = 18.dp)
             }
             val qsShape = remember(leftIsNotifications) {
                 if (leftIsNotifications)
-                    RoundedCornerShape(topStart = 3.dp, bottomStart = 3.dp, topEnd = 18.dp, bottomEnd = 18.dp)
+                    RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 18.dp, bottomEnd = 18.dp)
                 else
-                    RoundedCornerShape(topStart = 18.dp, bottomStart = 18.dp, topEnd = 3.dp, bottomEnd = 3.dp)
+                    RoundedCornerShape(topStart = 18.dp, bottomStart = 18.dp, topEnd = 0.dp, bottomEnd = 0.dp)
             }
 
             Row(
@@ -1000,14 +1000,13 @@ private fun TutorialPreviewCard(
         modifier = modifier
             .width(135.dp)
             .height(84.dp)
-            .scale(if (isActive) 1.05f else 0.98f)
             .clip(shape)
             .background(
                 if (isActive) accentColor.copy(alpha = 0.28f)
                 else popupTheme.solidBackgroundColor.copy(alpha = 0.92f)
             )
             .border(
-                width = if (isActive) 2.5.dp else 1.dp,
+                width = if (isActive) 2.dp else 1.dp,
                 color = if (isActive) accentColor else popupTheme.borderColor,
                 shape = shape
             )

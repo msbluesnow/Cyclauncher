@@ -198,11 +198,11 @@ fun SwipeDownQuickActionsOverlay(
 
     val (notifShape, qsShape) = remember(state.handSide) {
         if (state.handSide == HandSide.LEFT) {
-            RoundedCornerShape(topStart = 22.dp, bottomStart = 22.dp, topEnd = 4.dp, bottomEnd = 4.dp) to
-                    RoundedCornerShape(topStart = 4.dp, bottomStart = 4.dp, topEnd = 22.dp, bottomEnd = 22.dp)
+            RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp, topEnd = 0.dp, bottomEnd = 0.dp) to
+                    RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 20.dp, bottomEnd = 20.dp)
         } else {
-            RoundedCornerShape(topStart = 4.dp, bottomStart = 4.dp, topEnd = 22.dp, bottomEnd = 22.dp) to
-                    RoundedCornerShape(topStart = 22.dp, bottomStart = 22.dp, topEnd = 4.dp, bottomEnd = 4.dp)
+            RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 20.dp, bottomEnd = 20.dp) to
+                    RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp, topEnd = 0.dp, bottomEnd = 0.dp)
         }
     }
 
@@ -258,13 +258,6 @@ private fun ActionTargetCard(
     shape: RoundedCornerShape,
     modifier: Modifier = Modifier
 ) {
-    val animationsEnabled = LocalAnimationsEnabled.current
-    val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.04f else 0.98f,
-        animationSpec = if (animationsEnabled) spring(dampingRatio = 0.75f, stiffness = 500f) else snap(),
-        label = "targetCardScale"
-    )
-
     val textColor = if (popupTheme == PopupTheme.LIGHT) Color.Black else Color.White
 
     val backgroundBrush = remember(isSelected, accentColor.color, popupTheme.backgroundColor, popupTheme.solidBackgroundColor) {
@@ -287,7 +280,7 @@ private fun ActionTargetCard(
 
     val borderStroke = remember(isSelected, accentColor.color, popupTheme.borderColor) {
         if (isSelected) {
-            BorderStroke(2.5.dp, accentColor.color)
+            BorderStroke(2.dp, accentColor.color)
         } else {
             BorderStroke(1.dp, popupTheme.borderColor)
         }
@@ -305,7 +298,6 @@ private fun ActionTargetCard(
 
     Box(
         modifier = modifier
-            .scale(scale)
             .clip(shape)
             .background(backgroundBrush)
             .border(border = borderStroke, shape = shape)
