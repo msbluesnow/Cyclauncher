@@ -91,12 +91,21 @@ class MainActivity : ComponentActivity() {
     private val systemReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val action = intent?.action
-            if (action == Intent.ACTION_USER_UNLOCKED) {
-                if (viewModel.apps.value.isEmpty()) {
+            when (action) {
+                Intent.ACTION_USER_UNLOCKED -> {
+                    if (viewModel.apps.value.isEmpty()) {
+                        viewModel.refreshApps()
+                    }
+                }
+                Intent.ACTION_CONFIGURATION_CHANGED,
+                "android.intent.action.OVERLAY_CHANGED",
+                "android.intent.action.THEME_CHANGED",
+                "com.samsung.android.theme.SAMSUNG_THEME_CHANGED" -> {
+                    viewModel.invalidateAllIconCaches()
+                }
+                else -> {
                     viewModel.refreshApps()
                 }
-            } else {
-                viewModel.refreshApps()
             }
         }
     }
@@ -147,12 +156,17 @@ class MainActivity : ComponentActivity() {
             addAction(Intent.ACTION_USER_UNLOCKED)
             addAction(Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE)
             addAction(Intent.ACTION_EXTERNAL_APPLICATIONS_UNAVAILABLE)
+            addAction(Intent.ACTION_CONFIGURATION_CHANGED)
+            addAction("android.intent.action.OVERLAY_CHANGED")
+            addAction("android.intent.action.THEME_CHANGED")
+            addAction("com.samsung.android.theme.SAMSUNG_THEME_CHANGED")
         }
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(systemReceiver, systemFilter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(systemReceiver, systemFilter)
-        }
+        androidx.core.content.ContextCompat.registerReceiver(
+            this,
+            systemReceiver,
+            systemFilter,
+            androidx.core.content.ContextCompat.RECEIVER_EXPORTED
+        )
         
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
             val wpManager = getSystemService(android.app.WallpaperManager::class.java)
@@ -635,6 +649,7 @@ class MainActivity : ComponentActivity() {
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
         viewModel.refreshDynamicWallpaperColor(this)
+        viewModel.invalidateAllIconCaches()
     }
 
     override fun onDestroy() {

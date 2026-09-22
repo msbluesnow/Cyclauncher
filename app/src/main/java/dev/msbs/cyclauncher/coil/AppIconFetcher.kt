@@ -78,39 +78,48 @@ internal class AppIconFetcher private constructor(
     }
 
     private fun drawableToBitmap(drawable: Drawable, size: Int): Bitmap {
-        if (drawable is BitmapDrawable && drawable.bitmap != null) {
-            val src = drawable.bitmap
-            if (src.width == size && src.height == size) {
-                return src
-            }
-            if (src.width > 0 && src.height > 0) {
-                return Bitmap.createScaledBitmap(src, size, size, true)
-            }
-        }
         val safeSize = size.coerceAtLeast(1)
         val bitmap = Bitmap.createBitmap(safeSize, safeSize, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, safeSize, safeSize)
-        drawable.draw(canvas)
+
+        val shapePath = dev.msbs.cyclauncher.icons.IconShapeHelper.getSystemPath(context)
+        val scale = safeSize / 100f
+        val matrix = android.graphics.Matrix().apply { setScale(scale, scale) }
+        val scaledPath = android.graphics.Path(shapePath).apply { transform(matrix) }
+
+        canvas.save()
+        canvas.clipPath(scaledPath)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && drawable is android.graphics.drawable.AdaptiveIconDrawable) {
+            drawable.setBounds(0, 0, safeSize, safeSize)
+            drawable.draw(canvas)
+        } else {
+            val inset = (safeSize * 0.10f).toInt()
+            drawable.setBounds(inset, inset, safeSize - inset, safeSize - inset)
+            drawable.draw(canvas)
+        }
+
+        canvas.restore()
         return bitmap
     }
 
     private fun resolveIcon(context: Context, pm: PackageManager, pkg: String, activity: String): Drawable {
-        val component = android.content.ComponentName(pkg, activity)
-        try {
-            return pm.getActivityIcon(component)
-        } catch (_: Exception) {}
-
+        val density = context.resources.displayMetrics.densityDpi
         val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
         if (launcherApps != null) {
             try {
                 val list = launcherApps.getActivityList(pkg, android.os.Process.myUserHandle())
                 val activityInfo = list.firstOrNull { it.componentName.className == activity } ?: list.firstOrNull()
                 if (activityInfo != null) {
-                    return activityInfo.getIcon(0)
+                    return activityInfo.getIcon(density)
                 }
             } catch (_: Exception) {}
         }
+
+        val component = android.content.ComponentName(pkg, activity)
+        try {
+            return pm.getActivityIcon(component)
+        } catch (_: Exception) {}
 
         val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             pm.getActivityInfo(component, PackageManager.ComponentInfoFlags.of(0L))

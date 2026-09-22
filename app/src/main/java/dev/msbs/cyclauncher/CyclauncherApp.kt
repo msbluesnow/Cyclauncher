@@ -61,6 +61,13 @@ class CyclauncherApp : Application(), SingletonImageLoader.Factory {
         } catch (_: Exception) {}
     }
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        try {
+            memoryCache?.clear()
+        } catch (_: Exception) {}
+    }
+
     private companion object {
         const val MAX_MEMORY_BYTES = 24L * 1024L * 1024L
     }

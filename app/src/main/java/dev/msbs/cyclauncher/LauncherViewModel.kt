@@ -576,7 +576,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _handSide.value = try { HandSide.valueOf(savedHand) } catch (e: Exception) { HandSide.LEFT }
         
         val savedColor = prefs.getString("accent_color", AccentColor.SKY.name) ?: AccentColor.SKY.name
-        _accentColor.value = AccentColor.fromName(savedColor, null)
+        _accentColor.value = AccentColor.fromName(savedColor, safeContext)
         
         val savedTextColor = prefs.getString("primary_text_color", PrimaryTextColor.WHITE.name) ?: PrimaryTextColor.WHITE.name
         _primaryTextColor.value = PrimaryTextColor.fromName(savedTextColor)
@@ -1159,6 +1159,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _tagsBackupPreview.value?.let { preview ->
             actionsManager.applyTagsBackup(preview, apps.value)
             reloadSettings()
+            refreshDynamicWallpaperColor(safeContext)
             _tagsBackupPreview.value = null
         }
     }
@@ -1277,12 +1278,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         refreshApps()
     }
 
-    fun onPackageChanged(packageName: String) {
-        invalidateIconCache(packageName)
-        reloadInstalledIconPacks()
-        loadInstalledApps()
-    }
-
     fun onPackageAddedOrUpdated(packageName: String) {
         invalidateIconCache(packageName)
         reloadInstalledIconPacks()
@@ -1302,6 +1297,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             }
             loadInstalledApps()
         }
+    }
+
+    fun invalidateAllIconCaches() {
+        try {
+            val imageLoader = coil3.SingletonImageLoader.get(getApplication())
+            imageLoader.memoryCache?.clear()
+        } catch (_: Exception) {}
+        _iconPackVersion.value = System.currentTimeMillis()
+        reloadInstalledIconPacks()
+        loadInstalledApps()
     }
 
     private fun invalidateIconCache(packageName: String) {
