@@ -254,7 +254,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     val todayActivity: StateFlow<Pair<List<AppInfo>, List<AppInfo>>> = combine(apps, actionsManager.recentlyUpdated) { allApps, recentlyUpdatedKeys ->
         withContext(Dispatchers.IO) {
-            val recentThreshold = System.currentTimeMillis() - 48 * 60 * 60 * 1000L
+            val recentThreshold = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
             val pm = safeContext.packageManager
             val installs = mutableListOf<AppInfo>()
             val updates = mutableListOf<AppInfo>()
@@ -273,10 +273,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     val isMarkedRecentlyUpdated = recentlyUpdatedKeys.contains(app.componentKey) ||
                             recentlyUpdatedKeys.contains(app.packageName)
 
-                    // Fresh install: installed within last 48h and no subsequent update
-                    val isNewInstall = firstInstall >= recentThreshold && (lastUpdate - firstInstall < 60000L)
+                    // Fresh install: installed within last 24h or marked as unlaunched fresh install
+                    val isNewInstall = (firstInstall >= recentThreshold && lastUpdate - firstInstall < 60000L) ||
+                            (isMarkedRecentlyUpdated && lastUpdate - firstInstall < 60000L)
 
-                    // Updated: lastUpdate is within 48h (or marked in recentlyUpdated), and distinctly after firstInstall
+                    // Updated: lastUpdate is within 24h (or marked in recentlyUpdated), and distinctly after firstInstall
                     val isRecentUpdate = (lastUpdate > firstInstall + 60000L) &&
                             (lastUpdate >= recentThreshold || isMarkedRecentlyUpdated)
 
@@ -1276,16 +1277,28 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         refreshApps()
     }
 
+    fun onPackageChanged(packageName: String) {
+        invalidateIconCache(packageName)
+        reloadInstalledIconPacks()
+        loadInstalledApps()
+    }
+
     fun onPackageAddedOrUpdated(packageName: String) {
         invalidateIconCache(packageName)
         reloadInstalledIconPacks()
         viewModelScope.launch(Dispatchers.IO) {
             val pm = getApplication<Application>().packageManager
+            val pInfo = pm.getPackageInfoCompat(packageName)
             val launchIntent = pm.getLaunchIntentForPackage(packageName)
             val component = launchIntent?.component
-            if (component != null) {
+            if (component != null && pInfo != null) {
                 val compKey = "${component.packageName}/${component.className}"
-                actionsManager.onAppInstalledOrUpdated(compKey)
+                val prevUpdateTimes = actionsManager.loadAppUpdateTimes()
+                val prevTime = prevUpdateTimes[packageName]
+                val lastUpdate = pInfo.lastUpdateTime
+                if (prevTime == null || lastUpdate > prevTime) {
+                    actionsManager.onAppInstalledOrUpdated(compKey)
+                }
             }
             loadInstalledApps()
         }
