@@ -82,6 +82,7 @@ class MainActivity : ComponentActivity() {
     private var launcherAppsCallback: android.content.pm.LauncherApps.Callback? = null
     private var appWidgetHost: AppWidgetHost? = null
     private var appWidgetManager: AppWidgetManager? = null
+    private var unlockReceiver: BroadcastReceiver? = null
 
     companion object {
         private const val REQUEST_CONFIGURE_WIDGET = 1025
@@ -379,6 +380,7 @@ class MainActivity : ComponentActivity() {
                                                         appWidgetHost = appWidgetHost,
                                                         appWidgetManager = appWidgetManager,
                                                         onClose = { isHighlightScreenVisible = false },
+                                                        onAppClick = ::openApp,
                                                         onConfigureWidget = ::startWidgetConfiguration,
                                                         onAppLongClick = { app, offset ->
                                                             showActionMenuFor = app
@@ -555,14 +557,17 @@ class MainActivity : ComponentActivity() {
             initAppWidgets()
         } else {
             val filter = android.content.IntentFilter(Intent.ACTION_USER_UNLOCKED)
-            registerReceiver(object : android.content.BroadcastReceiver() {
+            val receiver = object : android.content.BroadcastReceiver() {
                 override fun onReceive(context: Context?, intent: Intent?) {
                     if (intent?.action == Intent.ACTION_USER_UNLOCKED) {
                         try { unregisterReceiver(this) } catch (_: Exception) {}
+                        unlockReceiver = null
                         initAppWidgets()
                     }
                 }
-            }, filter)
+            }
+            unlockReceiver = receiver
+            registerReceiver(receiver, filter)
         }
     }
 
@@ -654,6 +659,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        unlockReceiver?.let {
+            try { unregisterReceiver(it) } catch (_: Exception) {}
+            unlockReceiver = null
+        }
         unregisterReceiver(systemReceiver)
         launcherAppsCallback?.let { cb ->
             val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps

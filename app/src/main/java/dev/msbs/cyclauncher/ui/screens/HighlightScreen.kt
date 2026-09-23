@@ -131,6 +131,7 @@ fun HighlightScreen(
     appWidgetHost: AppWidgetHost? = null,
     appWidgetManager: AppWidgetManager? = null,
     onClose: () -> Unit,
+    onAppClick: (String) -> Unit = {},
     onConfigureWidget: ((widgetId: Int, isReconfigure: Boolean, options: Bundle?, callback: (Boolean) -> Unit) -> Unit)? = null,
     onAppLongClick: (AppInfo, Offset) -> Unit = { _, _ -> }
 ) {
@@ -398,15 +399,7 @@ fun HighlightScreen(
                         shadowSettings = shadowSettings,
                         animationsEnabled = animationsEnabled,
                         appTagsMap = appTagsMap,
-                        onAppClick = { componentKey ->
-                            viewModel.logAppLaunch(componentKey)
-                            val parts = componentKey.split("/")
-                            if (parts.size == 2) {
-                                context.packageManager.getLaunchIntentForPackage(parts[0])?.let { intent ->
-                                    context.startActivity(intent)
-                                }
-                            }
-                        },
+                        onAppClick = onAppClick,
                         onAppLongClick = onAppLongClick
                     )
                 }
@@ -424,15 +417,7 @@ fun HighlightScreen(
                         shadowSettings = shadowSettings,
                         animationsEnabled = animationsEnabled,
                         appTagsMap = appTagsMap,
-                        onAppClick = { componentKey ->
-                            viewModel.logAppLaunch(componentKey)
-                            val parts = componentKey.split("/")
-                            if (parts.size == 2) {
-                                context.packageManager.getLaunchIntentForPackage(parts[0])?.let { intent ->
-                                    context.startActivity(intent)
-                                }
-                            }
-                        },
+                        onAppClick = onAppClick,
                         onAppLongClick = onAppLongClick
                     )
                 }

@@ -48,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -61,6 +62,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 data class AppWidgetGroup(
@@ -657,14 +660,16 @@ private fun SingleWidgetPreviewCard(
         widgetInfo.safeLabel(pm)
     }
 
-    val previewBitmap = remember(widgetInfo) {
-        try {
-            val drawable = widgetInfo.loadPreviewImage(context, 0)
-                ?: widgetInfo.loadIcon(context, 0)
-                ?: appIcon
-            drawable?.toSafeBitmap()?.asImageBitmap()
-        } catch (_: Exception) {
-            null
+    val previewBitmap by produceState<ImageBitmap?>(initialValue = null, widgetInfo) {
+        value = withContext(Dispatchers.IO) {
+            try {
+                val drawable = widgetInfo.loadPreviewImage(context, 0)
+                    ?: widgetInfo.loadIcon(context, 0)
+                    ?: appIcon
+                drawable?.toSafeBitmap()?.asImageBitmap()
+            } catch (_: Exception) {
+                null
+            }
         }
     }
 
@@ -741,9 +746,10 @@ private fun SingleWidgetPreviewCard(
                     .padding(6.dp),
                 contentAlignment = Alignment.Center
             ) {
-                if (previewBitmap != null) {
+                val bmp = previewBitmap
+                if (bmp != null) {
                     Image(
-                        bitmap = previewBitmap,
+                        bitmap = bmp,
                         contentDescription = null,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.fillMaxSize()
