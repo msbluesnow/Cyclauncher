@@ -11,10 +11,18 @@ import androidx.core.graphics.PathParser
  */
 object IconShapeHelper {
 
+    @Volatile
+    private var cachedSystemPath: Path? = null
+
     /**
      * Resolves the Path for a normalized 100x100 box corresponding to the system icon shape overlay.
+     * Caches the resolved path to prevent repeated Binder IPC queries and SVG parsing.
      */
-    fun getSystemPath(context: Context): Path {
+    fun getSystemPath(context: Context, forceRefresh: Boolean = false): Path {
+        if (!forceRefresh) {
+            cachedSystemPath?.let { return Path(it) }
+        }
+
         val cr = context.contentResolver
         var shapeName = ""
 
@@ -38,7 +46,7 @@ object IconShapeHelper {
             }
         }
 
-        return when {
+        val resolved = when {
             shapeName.contains("circle") || shapeName.contains("circular") ->
                 Path().apply { addCircle(50f, 50f, 50f, Path.Direction.CW) }
             shapeName.contains("rounded") || shapeName.contains("roundedrect") ->
@@ -53,6 +61,16 @@ object IconShapeHelper {
                 // Default: Squircle (modern Android standard)
                 parseOrFallback("M 50 0 C 80 0 100 20 100 50 C 100 80 80 100 50 100 C 20 100 0 80 0 50 C 0 20 20 0 50 0 Z", 30f)
         }
+
+        cachedSystemPath = resolved
+        return Path(resolved)
+    }
+
+    /**
+     * Clears the cached system path so it can be re-queried upon system theme changes.
+     */
+    fun invalidateCache() {
+        cachedSystemPath = null
     }
 
     private fun parseOrFallback(pathData: String, cornerRadius: Float): Path {

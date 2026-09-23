@@ -34,6 +34,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 /** Preference key for hand side preference */
 const val PREF_HAND_SIDE = "pref_hand_side"
@@ -1293,6 +1294,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun invalidateAllIconCaches() {
+        dev.msbs.cyclauncher.icons.IconShapeHelper.invalidateCache()
         try {
             val imageLoader = coil3.SingletonImageLoader.get(getApplication())
             imageLoader.memoryCache?.clear()
@@ -1439,7 +1441,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 val app = getApplication<Application>()
                 val imageLoader = coil3.SingletonImageLoader.get(app)
                 val density = app.resources.displayMetrics.density
-                val px = (48 * density).toInt().coerceAtLeast(1)
+                val px = (48 * density).roundToInt().coerceAtLeast(1)
                 for (key in componentKeys.take(40)) {
                     if (key.startsWith("tag:")) continue
                     val request = coil3.request.ImageRequest.Builder(app)

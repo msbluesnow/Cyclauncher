@@ -214,7 +214,7 @@ class AppActionsManager(context: Context) {
             set
         } else null
 
-        val updatedHistory = if (!_isHistoryPaused.value) {
+        val (updatedHistory, updatedSearchHistory) = if (!_isHistoryPaused.value) {
             val current = _history.value.toMutableList()
             current.remove(componentKey)
             current.add(0, componentKey)
@@ -226,12 +226,11 @@ class AppActionsManager(context: Context) {
             currentSearch.add(0, componentKey)
             val limitedSearch = currentSearch.take(20)
             _searchHistory.value = limitedSearch
-            saveList("search_history", limitedSearch)
 
-            limited
-        } else null
+            Pair(limited, limitedSearch)
+        } else Pair(null, null)
 
-        if (updatedRecentlyUpdated != null || updatedHistory != null) {
+        if (updatedRecentlyUpdated != null || updatedHistory != null || updatedSearchHistory != null) {
             try {
                 val editor = prefs.edit()
                 if (updatedRecentlyUpdated != null) {
@@ -241,6 +240,9 @@ class AppActionsManager(context: Context) {
                 }
                 if (updatedHistory != null) {
                     editor.putString("history", JSONArray(updatedHistory).toString())
+                }
+                if (updatedSearchHistory != null) {
+                    editor.putString("search_history", JSONArray(updatedSearchHistory).toString())
                 }
                 editor.apply()
             } catch (_: Exception) {}
