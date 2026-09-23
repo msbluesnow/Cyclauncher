@@ -1461,14 +1461,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
  */
 fun orderTagApps(apps: List<AppInfo>, customOrder: List<String>?): List<AppInfo> {
     if (customOrder.isNullOrEmpty()) return apps
-    val appMap = apps.associateBy { it.componentKey }
-    val ordered = mutableListOf<AppInfo>()
-    customOrder.forEach { key ->
-        appMap[key]?.let { ordered.add(it) }
-    }
-    val orderedKeys = ordered.map { it.componentKey }.toSet()
-    apps.filter { it.componentKey !in orderedKeys }.forEach { ordered.add(it) }
-    return ordered
+    val orderMap = customOrder.withIndex().associate { it.value to it.index }
+    return apps.sortedBy { orderMap[it.componentKey] ?: Int.MAX_VALUE }
 }
 
 private fun SharedPreferences.getNullableInt(key: String): Int? =

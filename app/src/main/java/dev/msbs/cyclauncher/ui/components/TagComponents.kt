@@ -466,7 +466,7 @@ fun TagFolderPopup(
                         label = "popup_shake_trans"
                     )
 
-                    val localApps = remember(apps) { mutableStateListOf(*apps.toTypedArray()) }
+                    val localApps = remember(apps) { mutableStateListOf<AppInfo>().apply { addAll(apps) } }
                     LaunchedEffect(apps, draggingKey) {
                         if (draggingKey == null) {
                             localApps.clear()

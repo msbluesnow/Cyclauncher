@@ -397,220 +397,125 @@ fun MainMenuScreen(
             val favoritesWeight = 1f
             val historyWeight = 1.6f
 
+            val renderFavorites: @Composable (Modifier) -> Unit = { modifier ->
+                FavoritesSection(
+                    modifier = modifier,
+                    favorites = favoriteItems,
+                    handSide = handSide,
+                    accentColor = accentColor,
+                    primaryTextColor = primaryTextColor,
+                    showShadows = showShadows,
+                    isReorderMode = isReorderMode,
+                    monochromeTags = monochromeTags,
+                    setReorderMode = {
+                        markItemAction()
+                        isReorderMode = it
+                    },
+                    onReorder = { from, to -> viewModel.reorderFavorites(from, to) },
+                    onToggleFavorite = { viewModel.toggleFavorite(it) },
+                    onAppClick = handleAppClick,
+                    onAppLongClick = handleAppLongClick,
+                    onTagFolderClick = handleTagFolderClick,
+                    onTagFolderLongClick = handleTagFolderLongClick,
+                    onSwipeUp = onSwipeUp,
+                    onSwipeDown = onSwipeDown,
+                    onOpenQuickSettings = onOpenQuickSettings,
+                    onStartSwipeDownOverlay = { anchor ->
+                        swipeDownOverlayState = SwipeDownOverlayState(
+                            anchorPosition = anchor,
+                            currentPosition = anchor,
+                            handSide = handSide,
+                            selectedTarget = SwipeDownTarget.NOTIFICATIONS
+                        )
+                    },
+                    onUpdateSwipeDownOverlay = { current, target ->
+                        if (swipeDownOverlayState?.selectedTarget != target) {
+                            swipeDownOverlayState = swipeDownOverlayState?.copy(
+                                selectedTarget = target
+                            )
+                        }
+                    },
+                    onEndSwipeDownOverlay = { target ->
+                        android.util.Log.d("Cyclauncher", "onEndSwipeDownOverlay target=$target")
+                        swipeDownOverlayState = null
+                        when (target) {
+                            SwipeDownTarget.NOTIFICATIONS -> currentOnSwipeDown()
+                            SwipeDownTarget.QUICK_SETTINGS -> currentOnOpenQuickSettings()
+                        }
+                    },
+                    onCancelSwipeDownOverlay = {
+                        swipeDownOverlayState = null
+                    },
+                    onSettingsClick = safeOnSettingsClick,
+                    isActive = isActive,
+                    isActionMenuOpen = isActionMenuOpen || isAnyEditMode
+                )
+            }
+
+            val renderHistory: @Composable (Modifier) -> Unit = { modifier ->
+                HistorySection(
+                    viewModel = viewModel,
+                    modifier = modifier,
+                    history = history,
+                    popularTags = popularTagsWithApps,
+                    recentlyUpdatedApps = recentlyUpdatedApps,
+                    monochromeTags = monochromeTags,
+                    handSide = handSide,
+                    primaryTextColor = primaryTextColor,
+                    showShadows = showShadows,
+                    accentColor = accentColor,
+                    colorFilter = historyColorFilter,
+                    isHistoryPaused = isHistoryPaused,
+                    isHistoryEditMode = isHistoryEditMode,
+                    setHistoryEditMode = {
+                        markItemAction()
+                        isHistoryEditMode = it
+                    },
+                    isTagFolderReorderMode = isTagFolderReorderMode,
+                    setTagFolderReorderMode = {
+                        markItemAction()
+                        isTagFolderReorderMode = it
+                    },
+                    onReorderTag = { from, to ->
+                        if (from in popularTagsWithApps.indices && to in popularTagsWithApps.indices) {
+                            viewModel.reorderTagById(
+                                popularTagsWithApps[from].first.id,
+                                popularTagsWithApps[to].first.id
+                            )
+                        }
+                    },
+                    onRemoveFromHistory = { viewModel.removeFromHistory(it) },
+                    onHistoryIconClick = { offset ->
+                        markItemAction()
+                        selectedTagForMenu = null
+                        selectedTagForPopup = null
+                        selectedTagSectionMenuOffset = null
+                        selectedHistoryMenuOffset = offset
+                    },
+                    onTagSectionIconClick = { offset ->
+                        markItemAction()
+                        selectedTagForMenu = null
+                        selectedTagForPopup = null
+                        selectedHistoryMenuOffset = null
+                        selectedTagSectionMenuOffset = offset
+                    },
+                    onAppClick = handleAppClick,
+                    onAppLongClick = handleAppLongClick,
+                    onTagFolderClick = handleTagFolderClick,
+                    onTagFolderLongClick = handleTagFolderLongClick,
+                    onSettingsClick = safeOnSettingsClick,
+                    isActive = isActive
+                )
+            }
+
             if (handSide == HandSide.LEFT) {
-                FavoritesSection(
-                    Modifier.weight(favoritesWeight),
-                    favoriteItems,
-                    handSide,
-                    accentColor,
-                    primaryTextColor,
-                    showShadows,
-                    isReorderMode,
-                    monochromeTags = monochromeTags,
-                    setReorderMode = {
-                        markItemAction()
-                        isReorderMode = it
-                    },
-                    onReorder = { from, to -> viewModel.reorderFavorites(from, to) },
-                    onToggleFavorite = { viewModel.toggleFavorite(it) },
-                    onAppClick = handleAppClick,
-                    onAppLongClick = handleAppLongClick,
-                    onTagFolderClick = handleTagFolderClick,
-                    onTagFolderLongClick = handleTagFolderLongClick,
-                    onSwipeUp = onSwipeUp,
-                    onSwipeDown = onSwipeDown,
-                    onOpenQuickSettings = onOpenQuickSettings,
-                    onStartSwipeDownOverlay = { anchor ->
-                        swipeDownOverlayState = SwipeDownOverlayState(
-                            anchorPosition = anchor,
-                            currentPosition = anchor,
-                            handSide = handSide,
-                            selectedTarget = SwipeDownTarget.NOTIFICATIONS
-                        )
-                    },
-                    onUpdateSwipeDownOverlay = { current, target ->
-                        if (swipeDownOverlayState?.selectedTarget != target) {
-                            swipeDownOverlayState = swipeDownOverlayState?.copy(
-                                selectedTarget = target
-                            )
-                        }
-                    },
-                    onEndSwipeDownOverlay = { target ->
-                        android.util.Log.d("Cyclauncher", "onEndSwipeDownOverlay target=$target")
-                        swipeDownOverlayState = null
-                        when (target) {
-                            SwipeDownTarget.NOTIFICATIONS -> currentOnSwipeDown()
-                            SwipeDownTarget.QUICK_SETTINGS -> currentOnOpenQuickSettings()
-                        }
-                    },
-                    onCancelSwipeDownOverlay = {
-                        swipeDownOverlayState = null
-                    },
-                    onSettingsClick = safeOnSettingsClick,
-                    isActive = isActive,
-                    isActionMenuOpen = isActionMenuOpen || isAnyEditMode
-                )
+                renderFavorites(Modifier.weight(favoritesWeight))
                 Spacer(modifier = Modifier.width(16.dp))
-                HistorySection(
-                    viewModel = viewModel,
-                    modifier = Modifier.weight(historyWeight),
-                    history = history,
-                    popularTags = popularTagsWithApps,
-                    recentlyUpdatedApps = recentlyUpdatedApps,
-                    monochromeTags = monochromeTags,
-                    handSide = handSide,
-                    primaryTextColor = primaryTextColor,
-                    showShadows = showShadows,
-                    accentColor = accentColor,
-                    colorFilter = historyColorFilter,
-                    isHistoryPaused = isHistoryPaused,
-                    isHistoryEditMode = isHistoryEditMode,
-                    setHistoryEditMode = {
-                        markItemAction()
-                        isHistoryEditMode = it
-                    },
-                    isTagFolderReorderMode = isTagFolderReorderMode,
-                    setTagFolderReorderMode = {
-                        markItemAction()
-                        isTagFolderReorderMode = it
-                    },
-                    onReorderTag = { from, to ->
-                        if (from in popularTagsWithApps.indices && to in popularTagsWithApps.indices) {
-                            viewModel.reorderTagById(
-                                popularTagsWithApps[from].first.id,
-                                popularTagsWithApps[to].first.id
-                            )
-                        }
-                    },
-                    onRemoveFromHistory = { viewModel.removeFromHistory(it) },
-                    onHistoryIconClick = { offset ->
-                        markItemAction()
-                        selectedTagForMenu = null
-                        selectedTagForPopup = null
-                        selectedTagSectionMenuOffset = null
-                        selectedHistoryMenuOffset = offset
-                    },
-                    onTagSectionIconClick = { offset ->
-                        markItemAction()
-                        selectedTagForMenu = null
-                        selectedTagForPopup = null
-                        selectedHistoryMenuOffset = null
-                        selectedTagSectionMenuOffset = offset
-                    },
-                    onAppClick = handleAppClick,
-                    onAppLongClick = handleAppLongClick,
-                    onTagFolderClick = handleTagFolderClick,
-                    onTagFolderLongClick = handleTagFolderLongClick,
-                    onSettingsClick = safeOnSettingsClick,
-                    isActive = isActive
-                )
+                renderHistory(Modifier.weight(historyWeight))
             } else {
-                HistorySection(
-                    viewModel = viewModel,
-                    modifier = Modifier.weight(historyWeight),
-                    history = history,
-                    popularTags = popularTagsWithApps,
-                    recentlyUpdatedApps = recentlyUpdatedApps,
-                    monochromeTags = monochromeTags,
-                    handSide = handSide,
-                    primaryTextColor = primaryTextColor,
-                    showShadows = showShadows,
-                    accentColor = accentColor,
-                    colorFilter = historyColorFilter,
-                    isHistoryPaused = isHistoryPaused,
-                    isHistoryEditMode = isHistoryEditMode,
-                    setHistoryEditMode = {
-                        markItemAction()
-                        isHistoryEditMode = it
-                    },
-                    isTagFolderReorderMode = isTagFolderReorderMode,
-                    setTagFolderReorderMode = {
-                        markItemAction()
-                        isTagFolderReorderMode = it
-                    },
-                    onReorderTag = { from, to ->
-                        if (from in popularTagsWithApps.indices && to in popularTagsWithApps.indices) {
-                            viewModel.reorderTagById(
-                                popularTagsWithApps[from].first.id,
-                                popularTagsWithApps[to].first.id
-                            )
-                        }
-                    },
-                    onRemoveFromHistory = { viewModel.removeFromHistory(it) },
-                    onHistoryIconClick = { offset ->
-                        markItemAction()
-                        selectedTagForMenu = null
-                        selectedTagForPopup = null
-                        selectedTagSectionMenuOffset = null
-                        selectedHistoryMenuOffset = offset
-                    },
-                    onTagSectionIconClick = { offset ->
-                        markItemAction()
-                        selectedTagForMenu = null
-                        selectedTagForPopup = null
-                        selectedHistoryMenuOffset = null
-                        selectedTagSectionMenuOffset = offset
-                    },
-                    onAppClick = handleAppClick,
-                    onAppLongClick = handleAppLongClick,
-                    onTagFolderClick = handleTagFolderClick,
-                    onTagFolderLongClick = handleTagFolderLongClick,
-                    onSettingsClick = safeOnSettingsClick,
-                    isActive = isActive
-                )
+                renderHistory(Modifier.weight(historyWeight))
                 Spacer(modifier = Modifier.width(16.dp))
-                FavoritesSection(
-                    Modifier.weight(favoritesWeight),
-                    favoriteItems,
-                    handSide,
-                    accentColor,
-                    primaryTextColor,
-                    showShadows,
-                    isReorderMode,
-                    monochromeTags = monochromeTags,
-                    setReorderMode = {
-                        markItemAction()
-                        isReorderMode = it
-                    },
-                    onReorder = { from, to -> viewModel.reorderFavorites(from, to) },
-                    onToggleFavorite = { viewModel.toggleFavorite(it) },
-                    onAppClick = handleAppClick,
-                    onAppLongClick = handleAppLongClick,
-                    onTagFolderClick = handleTagFolderClick,
-                    onTagFolderLongClick = handleTagFolderLongClick,
-                    onSwipeUp = onSwipeUp,
-                    onSwipeDown = onSwipeDown,
-                    onOpenQuickSettings = onOpenQuickSettings,
-                    onStartSwipeDownOverlay = { anchor ->
-                        swipeDownOverlayState = SwipeDownOverlayState(
-                            anchorPosition = anchor,
-                            currentPosition = anchor,
-                            handSide = handSide,
-                            selectedTarget = SwipeDownTarget.NOTIFICATIONS
-                        )
-                    },
-                    onUpdateSwipeDownOverlay = { current, target ->
-                        if (swipeDownOverlayState?.selectedTarget != target) {
-                            swipeDownOverlayState = swipeDownOverlayState?.copy(
-                                selectedTarget = target
-                            )
-                        }
-                    },
-                    onEndSwipeDownOverlay = { target ->
-                        android.util.Log.d("Cyclauncher", "onEndSwipeDownOverlay target=$target")
-                        swipeDownOverlayState = null
-                        when (target) {
-                            SwipeDownTarget.NOTIFICATIONS -> currentOnSwipeDown()
-                            SwipeDownTarget.QUICK_SETTINGS -> currentOnOpenQuickSettings()
-                        }
-                    },
-                    onCancelSwipeDownOverlay = {
-                        swipeDownOverlayState = null
-                    },
-                    onSettingsClick = safeOnSettingsClick,
-                    isActive = isActive,
-                    isActionMenuOpen = isActionMenuOpen || isAnyEditMode
-                )
+                renderFavorites(Modifier.weight(favoritesWeight))
             }
         }
 
@@ -1046,7 +951,7 @@ private fun ColumnScope.TagsContentBlock(
     var itemWidthPx by remember { mutableFloatStateOf(0f) }
     var itemHeightPx by remember { mutableFloatStateOf(0f) }
 
-    val localPopularTags = remember(popularTags) { mutableStateListOf(*popularTags.toTypedArray()) }
+    val localPopularTags = remember(popularTags) { mutableStateListOf<Pair<Tag, List<AppInfo>>>().apply { addAll(popularTags) } }
     LaunchedEffect(popularTags, draggingTagId) {
         if (draggingTagId == null) {
             localPopularTags.clear()
@@ -1619,7 +1524,7 @@ private fun FavoritesSection(
     var dragVerticalOffset by remember { mutableFloatStateOf(0f) }
     var itemHeightPx by remember { mutableFloatStateOf(0f) }
 
-    val localFavorites = remember(favorites) { mutableStateListOf(*favorites.toTypedArray()) }
+    val localFavorites = remember(favorites) { mutableStateListOf<FavoriteItem>().apply { addAll(favorites) } }
     LaunchedEffect(favorites, draggingKey) {
         if (draggingKey == null) {
             localFavorites.clear()
