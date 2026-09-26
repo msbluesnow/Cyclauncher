@@ -1,0 +1,7 @@
+Beta release focusing on gesture responsiveness, icon rendering, and performance.
+- Upgraded project dependencies, Kotlin 2.4, and Compose BOM.
+- Added adaptive icon shape mask rendering and high-DPI LauncherApps resolution.
+- Fixed swipe-down actions overlay border overlap and seam alignment.
+- Resolved top wheel drag gesture initialization on initial screen entry.
+- Fixed AppInfo search copy bug, lifecycle leaks, and widget preview jank.
+- Optimized tag sorting and cached icon shape path rendering.
