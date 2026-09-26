@@ -23,11 +23,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.msbs.cyclauncher.ui.components.ALPHABET_WHEEL_CHARS
 import dev.msbs.cyclauncher.ui.components.alphabetWheelDragGesture
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -304,31 +307,56 @@ fun WheelSearchLayout(
         val configuration = LocalConfiguration.current
         val scaleFactor = ((configuration.screenWidthDp.dp / 360.dp).coerceIn(0.7f, 1.2f)) * 0.93f
         val stepSize = 34.dp * scaleFactor
+        val animationsEnabled = LocalAnimationsEnabled.current
+        val haptic = LocalHapticFeedback.current
+
+        val handleTopDragStart = {
+            if (viewModel.selectedLetter.value == null) {
+                val count = ALPHABET_WHEEL_CHARS.size
+                val raw = ((scrollOffset.value % count) + count) % count
+                val activeIndex = raw.coerceIn(0f, count - 0.0001f).roundToInt() % count
+                viewModel.setSelectedLetter(ALPHABET_WHEEL_CHARS[activeIndex])
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
+        }
+
+        val scrollModifier = Modifier
+            .fillMaxHeight()
+            .weight(1f)
+            .alphabetWheelDragGesture(
+                scrollOffset = scrollOffset,
+                density = density,
+                stepSize = stepSize,
+                animationsEnabled = animationsEnabled,
+                onDragStart = handleTopDragStart
+            )
 
         Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            if (selectedLetter == null) {
-                if (showSearchWidgets) {
-                    widgetCompartment?.invoke(
-                        Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
-                }
-            } else {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    val animationsEnabled = LocalAnimationsEnabled.current
-                    val scrollModifier = Modifier
+            if (selectedLetter == null && showSearchWidgets) {
+                widgetCompartment?.invoke(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+            }
+
+            Row(modifier = Modifier.fillMaxSize()) {
+                val appsSideModifier = if (selectedLetter == null && !showSearchWidgets) {
+                    scrollModifier
+                } else {
+                    Modifier
                         .fillMaxHeight()
                         .weight(1f)
-                        .alphabetWheelDragGesture(scrollOffset, density, stepSize, animationsEnabled)
+                }
 
-                    if (listAlignment == TextAlign.End) {
-                        Box(modifier = scrollModifier)
-                        Box(modifier = Modifier.weight(1f)) {
+                if (listAlignment == TextAlign.End) {
+                    Box(modifier = scrollModifier)
+                    Box(modifier = appsSideModifier) {
+                        if (selectedLetter != null) {
                             AppListContent(
                                 apps = filteredApps,
                                 alignment = listAlignment,
@@ -341,22 +369,24 @@ fun WheelSearchLayout(
                                 onAppLongClick = onAppLongClick
                             )
                         }
-                    } else {
-                        Box(modifier = Modifier.weight(1f)) {
-                            AppListContent(
-                                apps = filteredApps,
-                                alignment = listAlignment,
-                                primaryTextColor = primaryTextColor,
-                                showShadows = showShadows,
-                                onAppClick = { appKey ->
-                                    viewModel.setSelectedLetter(null)
-                                    onAppClick(appKey)
-                                },
-                                onAppLongClick = onAppLongClick
-                            )
-                        }
-                        Box(modifier = scrollModifier)
                     }
+                } else {
+                    Box(modifier = appsSideModifier) {
+                        if (selectedLetter != null) {
+                            AppListContent(
+                                apps = filteredApps,
+                                alignment = listAlignment,
+                                primaryTextColor = primaryTextColor,
+                                showShadows = showShadows,
+                                onAppClick = { appKey ->
+                                    viewModel.setSelectedLetter(null)
+                                    onAppClick(appKey)
+                                },
+                                onAppLongClick = onAppLongClick
+                            )
+                        }
+                    }
+                    Box(modifier = scrollModifier)
                 }
             }
         }

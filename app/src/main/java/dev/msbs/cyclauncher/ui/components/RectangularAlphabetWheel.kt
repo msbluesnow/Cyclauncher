@@ -49,6 +49,11 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
+ * Full character set displayed on the rectangular alphabet wheel ('#' followed by 'A'..'Z').
+ */
+val ALPHABET_WHEEL_CHARS: List<Char> = listOf('#') + ('A'..'Z').toList()
+
+/**
  * Interactive rectangular alphabet wheel displaying letters A-Z and '#' with drag-to-scroll selection.
  */
 @Composable
@@ -64,7 +69,7 @@ fun RectangularAlphabetWheel(
     showShadows: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    val alphabet = remember { listOf('#') + ('A'..'Z').toList() }
+    val alphabet = ALPHABET_WHEEL_CHARS
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
@@ -75,9 +80,7 @@ fun RectangularAlphabetWheel(
     var userHasInteracted by remember { mutableStateOf(false) }
 
     LaunchedEffect(selectedLetter) {
-        if (selectedLetter == null) {
-            userHasInteracted = false
-        }
+        userHasInteracted = (selectedLetter != null)
     }
 
     BoxWithConstraints(modifier = modifier) {
