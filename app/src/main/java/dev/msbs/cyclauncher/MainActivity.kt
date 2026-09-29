@@ -603,9 +603,50 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        clearPendingProfileLaunch()
         try {
             appWidgetHost?.stopListening()
         } catch (_: Exception) {}
+    }
+
+    private var pendingProfileLaunchComponent: android.content.ComponentName? = null
+    private var pendingProfileLaunchUser: android.os.UserHandle? = null
+    private var pendingProfileLaunchTimeMs: Long = 0L
+    private var pendingProfileLaunchRetried: Boolean = false
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var retryLaunchRunnable: Runnable? = null
+
+    private fun clearPendingProfileLaunch() {
+        retryLaunchRunnable?.let { mainHandler.removeCallbacks(it) }
+        retryLaunchRunnable = null
+        pendingProfileLaunchComponent = null
+        pendingProfileLaunchUser = null
+        pendingProfileLaunchTimeMs = 0L
+        pendingProfileLaunchRetried = false
+    }
+
+    private fun executeProfileLaunchRetry() {
+        retryLaunchRunnable = null
+        val comp = pendingProfileLaunchComponent
+        val user = pendingProfileLaunchUser
+        pendingProfileLaunchComponent = null
+        pendingProfileLaunchUser = null
+        if (comp != null && user != null && !isFinishing && !isDestroyed &&
+            lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+        ) {
+            val decor = window.decorView
+            val width = decor.width.coerceAtLeast(1)
+            val height = decor.height.coerceAtLeast(1)
+            val optionsBundle = try {
+                android.app.ActivityOptions.makeClipRevealAnimation(decor, width / 2, height / 2, width, height).toBundle()
+            } catch (_: Exception) {
+                null
+            }
+            try {
+                val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
+                launcherApps?.startMainActivity(comp, user, null, optionsBundle)
+            } catch (_: Exception) {}
+        }
     }
 
     private var pendingWidgetConfigureCallback: ((Boolean) -> Unit)? = null
@@ -644,6 +685,18 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (pendingProfileLaunchComponent != null && !pendingProfileLaunchRetried) {
+            val elapsed = android.os.SystemClock.elapsedRealtime() - pendingProfileLaunchTimeMs
+            if (elapsed in 0L..600L) {
+                pendingProfileLaunchRetried = true
+                retryLaunchRunnable?.let { mainHandler.removeCallbacks(it) }
+                val runnable = Runnable { executeProfileLaunchRetry() }
+                retryLaunchRunnable = runnable
+                mainHandler.postDelayed(runnable, 100L)
+            } else {
+                clearPendingProfileLaunch()
+            }
+        }
         viewModel.refreshDynamicWallpaperColor(this)
         updateStatusBarVisibility(viewModel.hideStatusBar.value)
         viewModel.updateDefaultLauncherStatus { isDefault ->
@@ -675,6 +728,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        clearPendingProfileLaunch()
         unlockReceiver?.let {
             try { unregisterReceiver(it) } catch (_: Exception) {}
             unlockReceiver = null
@@ -699,6 +753,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        clearPendingProfileLaunch()
         setIntent(intent)
         viewModel.updateDefaultLauncherStatus { isDefault ->
             isDefaultLauncherCached = isDefault
@@ -707,6 +762,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openApp(componentKey: String) {
+        clearPendingProfileLaunch()
         viewModel.resetSearchFilters()
         viewModel.logAppLaunch(componentKey)
         viewModel.requestHistoryScrollToBottom()
@@ -732,10 +788,27 @@ class MainActivity : ComponentActivity() {
             val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
             val launched = try {
                 if (launcherApps != null) {
+                    if (userHandle != android.os.Process.myUserHandle()) {
+                        pendingProfileLaunchComponent = componentName
+                        pendingProfileLaunchUser = userHandle
+                        pendingProfileLaunchTimeMs = android.os.SystemClock.elapsedRealtime()
+                        pendingProfileLaunchRetried = false
+                        val fallbackRunnable = Runnable {
+                            if (!pendingProfileLaunchRetried &&
+                                lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+                            ) {
+                                pendingProfileLaunchRetried = true
+                                executeProfileLaunchRetry()
+                            }
+                        }
+                        retryLaunchRunnable = fallbackRunnable
+                        mainHandler.postDelayed(fallbackRunnable, 250L)
+                    }
                     launcherApps.startMainActivity(componentName, userHandle, null, optionsBundle)
                     true
                 } else false
             } catch (_: Exception) {
+                clearPendingProfileLaunch()
                 false
             }
 

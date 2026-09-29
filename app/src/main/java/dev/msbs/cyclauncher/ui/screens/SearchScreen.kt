@@ -219,8 +219,6 @@ fun SearchScreen(
     }
 
     val onSearchAppClick: (String) -> Unit = { appKey ->
-        viewModel.logSearchLaunch(appKey)
-        viewModel.resetSearchFilters()
         onAppClick(appKey)
     }
 

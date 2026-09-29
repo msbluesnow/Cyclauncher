@@ -1482,6 +1482,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                         val activityList = launcherApps.getActivityList(null, profile)
                         for (info in activityList) {
                             val pkgName = info.componentName.packageName
+                            if (profile != myUser && pkgName == context.packageName) continue
                             val actName = info.componentName.className
                             val label = try { info.label.toString().trim().ifEmpty { pkgName } } catch (_: Exception) { pkgName }
                             val compKey = if (profile == myUser) "$pkgName/$actName" else "$pkgName/$actName#${profile.hashCode()}"
