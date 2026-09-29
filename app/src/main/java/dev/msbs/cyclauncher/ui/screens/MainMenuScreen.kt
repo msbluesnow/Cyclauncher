@@ -626,7 +626,9 @@ fun MainMenuScreen(
             val currentTag = tags.find { it.id == tag.id } ?: tag
             val currentTaggedApps = remember(tags, appTags, tagAppOrders, apps, currentTag.id) {
                 val rawApps = apps.filter { app ->
-                    val tagIds = appTags[app.componentKey] ?: appTags[app.packageName] ?: emptyList()
+                    val tagIds = appTags[app.componentKey]
+                        ?: (if (app.profileType == dev.msbs.cyclauncher.model.ProfileType.PERSONAL) appTags[app.packageName] else null)
+                        ?: emptyList()
                     tagIds.contains(currentTag.id)
                 }
                 dev.msbs.cyclauncher.orderTagApps(rawApps, tagAppOrders[currentTag.id])
@@ -1272,10 +1274,11 @@ private fun ColumnScope.HistoryContentBlock(
         reverseLayout = true,
         userScrollEnabled = true
     ) {
-        items(history, key = { "${it.packageName}/${it.activityName}" }) { app ->
-            val appKey = "${app.packageName}/${app.activityName}"
+        items(history, key = { it.componentKey }) { app ->
+            val appKey = app.componentKey
             val isRecentlyUpdated =
-                recentlyUpdatedApps.contains(appKey) || recentlyUpdatedApps.contains(app.componentKey)
+                recentlyUpdatedApps.contains(appKey) ||
+                (app.profileType == dev.msbs.cyclauncher.model.ProfileType.PERSONAL && recentlyUpdatedApps.contains(app.baseComponentKey))
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,

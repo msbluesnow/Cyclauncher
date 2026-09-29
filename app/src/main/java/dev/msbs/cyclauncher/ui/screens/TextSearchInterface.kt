@@ -78,12 +78,12 @@ fun TextSearchInterface(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = if (handSide == HandSide.LEFT) Alignment.Start else Alignment.End
         ) {
-            items(filteredApps, key = { "${it.packageName}/${it.activityName}" }) { app ->
+            items(filteredApps, key = { it.componentKey }) { app ->
                 AppListItemWithIcon(
                     app = app,
                     handSide = handSide,
                     modifier = Modifier.padding(vertical = 4.dp),
-                    onClick = { onAppClick("${app.packageName}/${app.activityName}") },
+                    onClick = { onAppClick(app.componentKey) },
                     onLongClick = { offset -> onAppLongClick(app, offset) },
                     primaryTextColor = primaryTextColor,
                     showShadows = showShadows

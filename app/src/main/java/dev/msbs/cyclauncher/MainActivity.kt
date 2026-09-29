@@ -93,10 +93,14 @@ class MainActivity : ComponentActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val action = intent?.action
             when (action) {
-                Intent.ACTION_USER_UNLOCKED -> {
-                    if (viewModel.apps.value.isEmpty()) {
-                        viewModel.refreshApps()
-                    }
+                Intent.ACTION_USER_UNLOCKED,
+                "android.intent.action.PROFILE_AVAILABLE",
+                "android.intent.action.PROFILE_UNAVAILABLE",
+                "android.intent.action.PROFILE_ACCESSIBLE",
+                "android.intent.action.PROFILE_INACCESSIBLE",
+                "android.intent.action.MANAGED_PROFILE_AVAILABLE",
+                "android.intent.action.MANAGED_PROFILE_UNAVAILABLE" -> {
+                    viewModel.refreshApps()
                 }
                 Intent.ACTION_CONFIGURATION_CHANGED,
                 "android.intent.action.OVERLAY_CHANGED",
@@ -134,13 +138,13 @@ class MainActivity : ComponentActivity() {
             val handler = android.os.Handler(thread.looper)
             val callback = object : android.content.pm.LauncherApps.Callback() {
                 override fun onPackageAdded(packageName: String, user: android.os.UserHandle) {
-                    viewModel.onPackageAddedOrUpdated(packageName)
+                    viewModel.onPackageAddedOrUpdated(packageName, user)
                 }
                 override fun onPackageChanged(packageName: String, user: android.os.UserHandle) {
-                    viewModel.onPackageAddedOrUpdated(packageName)
+                    viewModel.onPackageAddedOrUpdated(packageName, user)
                 }
                 override fun onPackageRemoved(packageName: String, user: android.os.UserHandle) {
-                    viewModel.onPackageRemoved(packageName)
+                    viewModel.onPackageRemoved(packageName, user)
                 }
                 override fun onPackagesAvailable(packageNames: Array<out String>, user: android.os.UserHandle, replacing: Boolean) {
                     viewModel.refreshApps()
@@ -161,6 +165,12 @@ class MainActivity : ComponentActivity() {
             addAction("android.intent.action.OVERLAY_CHANGED")
             addAction("android.intent.action.THEME_CHANGED")
             addAction("com.samsung.android.theme.SAMSUNG_THEME_CHANGED")
+            addAction("android.intent.action.PROFILE_AVAILABLE")
+            addAction("android.intent.action.PROFILE_UNAVAILABLE")
+            addAction("android.intent.action.PROFILE_ACCESSIBLE")
+            addAction("android.intent.action.PROFILE_INACCESSIBLE")
+            addAction("android.intent.action.MANAGED_PROFILE_AVAILABLE")
+            addAction("android.intent.action.MANAGED_PROFILE_UNAVAILABLE")
         }
         androidx.core.content.ContextCompat.registerReceiver(
             this,
@@ -448,15 +458,15 @@ class MainActivity : ComponentActivity() {
                             }
 
                             showActionMenuFor?.let { app ->
-                                val componentKey = "${app.packageName}/${app.activityName}"
+                                val componentKey = app.componentKey
                                 AppActionMenu(
                                     app = app,
                                     isFavorite = viewModel.isFavorite(componentKey),
                                     offset = menuOffset,
                                     onDismiss = { showActionMenuFor = null },
                                     onToggleFavorite = { viewModel.toggleFavorite(componentKey) },
-                                    onUninstall = { uninstallApp(app.packageName) },
-                                    onInfo = { openAppInfo(app.packageName) },
+                                    onUninstall = { uninstallApp(app) },
+                                    onInfo = { openAppInfo(app) },
                                     onRename = { showRenameDialogFor = app },
                                     onTagsClick = { showTagDialogFor = app },
                                     accentColor = accentColor,
@@ -472,18 +482,20 @@ class MainActivity : ComponentActivity() {
                                     popupTheme = popupTheme,
                                     onDismiss = { showRenameDialogFor = null },
                                     onConfirm = { newName ->
-                                        viewModel.renameApp("${app.packageName}/${app.activityName}", newName)
+                                        viewModel.renameApp(app.componentKey, newName)
                                         showRenameDialogFor = null
                                     }
                                 )
                             }
 
                             showTagDialogFor?.let { app ->
-                                val key = "${app.packageName}/${app.activityName}"
+                                val key = app.componentKey
                                 TagSelectionDialog(
                                     app = app,
                                     allTags = allTags,
-                                    assignedTagIds = appTagsMap[key] ?: appTagsMap[app.packageName] ?: emptyList(),
+                                    assignedTagIds = appTagsMap[key]
+                                        ?: (if (app.profileType == dev.msbs.cyclauncher.model.ProfileType.PERSONAL) appTagsMap[app.packageName] else null)
+                                        ?: emptyList(),
                                     onToggleTag = { tagId -> viewModel.toggleTagForApp(key, tagId) },
                                     onCreateTag = { name, color, emoji -> viewModel.createTag(Tag(name = name, color = color, emoji = emoji)) },
                                     onUpdateTag = { tag -> viewModel.updateTag(tag) },
@@ -635,9 +647,13 @@ class MainActivity : ComponentActivity() {
         viewModel.refreshDynamicWallpaperColor(this)
         updateStatusBarVisibility(viewModel.hideStatusBar.value)
         viewModel.updateDefaultLauncherStatus { isDefault ->
+            val changed = isDefaultLauncherCached != isDefault
             isDefaultLauncherCached = isDefault
+            if (changed) {
+                viewModel.refreshApps()
+            }
         }
-        if (viewModel.apps.value.isEmpty()) {
+        if (viewModel.apps.value.isEmpty() || viewModel.hasProfileStateChanged()) {
             viewModel.refreshApps()
         } else {
             viewModel.prewarmActiveIcons()
@@ -704,16 +720,19 @@ class MainActivity : ComponentActivity() {
             null
         }
 
-        val parts = componentKey.split("/")
+        val parts = componentKey.substringBefore('#').split("/")
         if (parts.size == 2) {
             val packageName = parts[0]
             val activityName = parts[1]
             val componentName = android.content.ComponentName(packageName, activityName)
 
+            val app = viewModel.apps.value.find { it.componentKey == componentKey }
+            val userHandle = app?.userHandle ?: android.os.Process.myUserHandle()
+
             val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
             val launched = try {
                 if (launcherApps != null) {
-                    launcherApps.startMainActivity(componentName, android.os.Process.myUserHandle(), null, optionsBundle)
+                    launcherApps.startMainActivity(componentName, userHandle, null, optionsBundle)
                     true
                 } else false
             } catch (_: Exception) {
@@ -741,10 +760,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun uninstallApp(packageName: String) {
+    private fun uninstallApp(app: AppInfo) {
         try {
             val uninstallIntent = Intent(Intent.ACTION_DELETE).apply {
-                data = Uri.fromParts("package", packageName, null)
+                data = Uri.fromParts("package", app.packageName, null)
+                if (app.userHandle != android.os.Process.myUserHandle()) {
+                    putExtra(Intent.EXTRA_USER, app.userHandle)
+                }
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             Toast.makeText(this, "Opening uninstaller...", Toast.LENGTH_SHORT).show()
@@ -754,10 +776,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun openAppInfo(packageName: String) {
+    private fun openAppInfo(app: AppInfo) {
+        try {
+            val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
+            if (launcherApps != null) {
+                val componentName = android.content.ComponentName(app.packageName, app.activityName)
+                launcherApps.startAppDetailsActivity(componentName, app.userHandle, null, null)
+                return
+            }
+        } catch (_: Exception) {}
+
         try {
             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                data = Uri.fromParts("package", packageName, null)
+                data = Uri.fromParts("package", app.packageName, null)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             startActivity(intent)

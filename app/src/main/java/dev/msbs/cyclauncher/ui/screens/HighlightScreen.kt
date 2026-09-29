@@ -25,6 +25,12 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.ViewGroup
+import androidx.compose.material.icons.outlined.AddCircleOutline
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -59,6 +65,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.Label
+import androidx.compose.material.icons.automirrored.outlined.LabelOff
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.AspectRatio
@@ -151,6 +158,11 @@ fun HighlightScreen(
     val historyApps by viewModel.historyApps.collectAsState()
     val recentlyUpdatedKeys by viewModel.recentlyUpdatedApps.collectAsState()
     val highlightWidgets by viewModel.highlightWidgets.collectAsState()
+    val untaggedApps by viewModel.untaggedApps.collectAsState()
+    val isPrivateSpaceLocked by viewModel.isPrivateSpaceLocked.collectAsState()
+    val privateSpaceUser by viewModel.privateSpaceUser.collectAsState()
+    val privateSpaceApps by viewModel.privateSpaceApps.collectAsState()
+    val workProfileApps by viewModel.workProfileApps.collectAsState()
 
     val viewConfiguration = LocalViewConfiguration.current
     val density = LocalDensity.current
@@ -420,6 +432,66 @@ fun HighlightScreen(
                         onAppClick = onAppClick,
                         onAppLongClick = onAppLongClick
                     )
+                }
+
+                // Separate Collapsible Menu: Untagged Apps
+                Box(modifier = Modifier.padding(horizontal = 24.dp)) {
+                    CollapsibleAppSection(
+                        title = "UNTAGGED APPS",
+                        icon = Icons.AutoMirrored.Outlined.LabelOff,
+                        apps = untaggedApps,
+                        emptyMessage = "No untagged apps",
+                        accentColor = accentColor,
+                        primaryTextColor = primaryTextColor,
+                        showShadows = showShadows,
+                        shadowSettings = shadowSettings,
+                        animationsEnabled = animationsEnabled,
+                        appTagsMap = appTagsMap,
+                        onAppClick = onAppClick,
+                        onAppLongClick = onAppLongClick
+                    )
+                }
+
+                // Separate Collapsible Menu: Private Space (Android 15)
+                if (privateSpaceUser != null || privateSpaceApps.isNotEmpty()) {
+                    Box(modifier = Modifier.padding(horizontal = 24.dp)) {
+                        PrivateSpaceSection(
+                            isLocked = isPrivateSpaceLocked,
+                            apps = privateSpaceApps,
+                            accentColor = accentColor,
+                            primaryTextColor = primaryTextColor,
+                            buttonTextColor = buttonTextColor,
+                            showShadows = showShadows,
+                            shadowSettings = shadowSettings,
+                            animationsEnabled = animationsEnabled,
+                            appTagsMap = appTagsMap,
+                            onLockClick = { viewModel.lockPrivateSpace() },
+                            onUnlockClick = { viewModel.unlockPrivateSpace() },
+                            onInstallAppsClick = { viewModel.installAppInPrivateSpace() },
+                            onAppClick = onAppClick,
+                            onAppLongClick = onAppLongClick
+                        )
+                    }
+                }
+
+                // Separate Collapsible Menu: Work Profile
+                if (workProfileApps.isNotEmpty()) {
+                    Box(modifier = Modifier.padding(horizontal = 24.dp)) {
+                        CollapsibleAppSection(
+                            title = "WORK PROFILE",
+                            icon = Icons.Outlined.WorkOutline,
+                            apps = workProfileApps,
+                            emptyMessage = "No work profile apps",
+                            accentColor = accentColor,
+                            primaryTextColor = primaryTextColor,
+                            showShadows = showShadows,
+                            shadowSettings = shadowSettings,
+                            animationsEnabled = animationsEnabled,
+                            appTagsMap = appTagsMap,
+                            onAppClick = onAppClick,
+                            onAppLongClick = onAppLongClick
+                        )
+                    }
                 }
 
                 // Widgets Section with hand-side docking, custom picker, and pencil reconfigure button
@@ -722,8 +794,9 @@ private fun CollapsibleAppSection(
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            items(apps) { app ->
-                                val hasTags = (appTagsMap[app.componentKey]?.isNotEmpty() == true) || (appTagsMap[app.packageName]?.isNotEmpty() == true)
+                            items(apps, key = { it.componentKey }) { app ->
+                                val hasTags = (appTagsMap[app.componentKey]?.isNotEmpty() == true) ||
+                                    (app.profileType == dev.msbs.cyclauncher.model.ProfileType.PERSONAL && appTagsMap[app.packageName]?.isNotEmpty() == true)
                                 RecentAppChip(
                                     app = app,
                                     hasTags = hasTags,
@@ -1538,6 +1611,172 @@ private fun WidgetResizeDialog(
                             text = "Apply",
                             color = buttonTextColor.color,
                             fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PrivateSpaceSection(
+    isLocked: Boolean,
+    apps: List<AppInfo>,
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    buttonTextColor: PrimaryTextColor,
+    showShadows: Boolean,
+    shadowSettings: ShadowSettings,
+    animationsEnabled: Boolean,
+    appTagsMap: Map<String, List<String>>,
+    onLockClick: () -> Unit,
+    onUnlockClick: () -> Unit,
+    onInstallAppsClick: () -> Unit,
+    onAppClick: (String) -> Unit,
+    onAppLongClick: (AppInfo, Offset) -> Unit
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(primaryTextColor.color.copy(alpha = 0.06f))
+            .border(1.dp, primaryTextColor.color.copy(alpha = 0.12f), RoundedCornerShape(18.dp))
+            .padding(14.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { isExpanded = !isExpanded },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = if (isLocked) Icons.Outlined.Lock else Icons.Outlined.LockOpen,
+                    contentDescription = null,
+                    tint = accentColor.color,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = "PRIVATE SPACE",
+                    color = primaryTextColor.color,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                if (!isLocked) {
+                    androidx.compose.material3.IconButton(
+                        onClick = onInstallAppsClick,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Outlined.AddCircleOutline,
+                            contentDescription = "Install Apps in Private Space",
+                            tint = accentColor.color,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                androidx.compose.material3.IconButton(
+                    onClick = { if (isLocked) onUnlockClick() else onLockClick() },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    androidx.compose.material3.Icon(
+                        imageVector = if (isLocked) Icons.Outlined.LockOpen else Icons.Outlined.Lock,
+                        contentDescription = if (isLocked) "Unlock Private Space" else "Lock Private Space",
+                        tint = accentColor.color,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                androidx.compose.material3.Icon(
+                    imageVector = if (isExpanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = primaryTextColor.color.copy(alpha = 0.6f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        if (isExpanded) {
+            Spacer(modifier = Modifier.height(12.dp))
+            if (isLocked) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Private Space is locked",
+                        color = primaryTextColor.color.copy(alpha = 0.7f),
+                        fontSize = 13.sp
+                    )
+                    Button(
+                        onClick = onUnlockClick,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = accentColor.color,
+                            contentColor = buttonTextColor.color
+                        )
+                    ) {
+                        Text("Unlock", color = buttonTextColor.color, fontWeight = FontWeight.Bold)
+                    }
+                }
+            } else if (apps.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "No private apps installed",
+                        color = primaryTextColor.color.copy(alpha = 0.5f),
+                        fontSize = 13.sp
+                    )
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = onInstallAppsClick,
+                        border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Outlined.AddCircleOutline,
+                            contentDescription = null,
+                            tint = accentColor.color,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Install Apps", color = primaryTextColor.color, fontSize = 12.sp)
+                    }
+                }
+            } else {
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    for (app in apps) {
+                        dev.msbs.cyclauncher.ui.components.AppListItemWithIcon(
+                            app = app,
+                            handSide = HandSide.LEFT,
+                            iconSize = 44,
+                            fontSize = 14,
+                            accentColor = accentColor,
+                            onClick = { onAppClick(app.componentKey) },
+                            onLongClick = { offset -> onAppLongClick(app, offset) }
                         )
                     }
                 }

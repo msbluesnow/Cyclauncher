@@ -499,7 +499,7 @@ fun TagFolderPopup(
 
                     fun checkForMove() {
                         val curKey = draggingKey ?: return
-                        val curIndex = localApps.indexOfFirst { "${it.packageName}/${it.activityName}" == curKey }
+                        val curIndex = localApps.indexOfFirst { it.componentKey == curKey }
                         if (curIndex == -1) return
 
                         val visibleItems = gridState.layoutInfo.visibleItemsInfo
@@ -573,8 +573,8 @@ fun TagFolderPopup(
                                     end = if (isEditMode && handSide == HandSide.RIGHT) 14.dp else 0.dp
                                 )
                         ) {
-                            itemsIndexed(localApps, key = { _, item -> "${item.packageName}/${item.activityName}" }) { index, app ->
-                                val appKey = "${app.packageName}/${app.activityName}"
+                            itemsIndexed(localApps, key = { _, item -> item.componentKey }) { index, app ->
+                                val appKey = app.componentKey
                                 val isDraggingThis = draggingKey == appKey
 
                                 val scale by animateFloatAsState(
@@ -691,7 +691,7 @@ fun TagFolderPopup(
                                         isDragging = isDraggingThis,
                                         onClick = {
                                             if (!isEditMode) {
-                                                onAppClick("${app.packageName}/${app.activityName}")
+                                                onAppClick(app.componentKey)
                                                 onDismiss()
                                             }
                                         },
@@ -883,7 +883,7 @@ private fun TagFolderAppItem(
     val currentOnClick by rememberUpdatedState(onClick)
     val currentOnLongClick by rememberUpdatedState(onLongClick)
     val currentOnRemoveApp by rememberUpdatedState(onRemoveAppFromTag)
-    val appKey = "${app.packageName}/${app.activityName}"
+    val appKey = app.componentKey
 
     val itemTapModifier = if (!isEditMode) {
         Modifier.pointerInput(appKey) {

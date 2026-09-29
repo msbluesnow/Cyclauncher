@@ -103,31 +103,52 @@ internal class AppIconFetcher private constructor(
         return bitmap
     }
 
-    private fun resolveIcon(context: Context, pm: PackageManager, pkg: String, activity: String): Drawable {
+    private fun resolveIcon(context: Context, pm: PackageManager, pkg: String, activityWithUser: String): Drawable {
         val density = context.resources.displayMetrics.densityDpi
         val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
+        val userManager = context.getSystemService(Context.USER_SERVICE) as? android.os.UserManager
+
+        val activity = activityWithUser.substringBefore('#')
+        val userHashCodeStr = activityWithUser.substringAfter('#', "")
+
+        val targetUser = if (userHashCodeStr.isNotEmpty() && userManager != null) {
+            userManager.userProfiles.find { it.hashCode().toString() == userHashCodeStr } ?: android.os.Process.myUserHandle()
+        } else {
+            android.os.Process.myUserHandle()
+        }
+
         if (launcherApps != null) {
             try {
-                val list = launcherApps.getActivityList(pkg, android.os.Process.myUserHandle())
+                val list = launcherApps.getActivityList(pkg, targetUser)
                 val activityInfo = list.firstOrNull { it.componentName.className == activity } ?: list.firstOrNull()
                 if (activityInfo != null) {
-                    return activityInfo.getIcon(density)
+                    return if (targetUser != android.os.Process.myUserHandle()) {
+                        activityInfo.getBadgedIcon(density)
+                    } else {
+                        activityInfo.getIcon(density)
+                    }
                 }
             } catch (_: Exception) {}
         }
 
         val component = android.content.ComponentName(pkg, activity)
-        try {
-            return pm.getActivityIcon(component)
-        } catch (_: Exception) {}
-
-        val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            pm.getActivityInfo(component, PackageManager.ComponentInfoFlags.of(0L))
-        } else {
-            @Suppress("DEPRECATION")
-            pm.getActivityInfo(component, 0)
+        val drawable = try {
+            pm.getActivityIcon(component)
+        } catch (_: Exception) {
+            val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pm.getActivityInfo(component, PackageManager.ComponentInfoFlags.of(0L))
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getActivityInfo(component, 0)
+            }
+            info.loadIcon(pm)
         }
-        return info.loadIcon(pm)
+
+        return if (targetUser != android.os.Process.myUserHandle()) {
+            pm.getUserBadgedIcon(drawable, targetUser)
+        } else {
+            drawable
+        }
     }
 
     class Factory(private val context: Context) : Fetcher.Factory<Any> {

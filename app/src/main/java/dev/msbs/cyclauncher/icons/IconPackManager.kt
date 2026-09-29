@@ -342,8 +342,9 @@ object IconPackManager {
         val res = activeResources ?: return null
         val pkgName = activePackageName ?: return null
 
-        val drawableName = componentToDrawableMap[componentKey]
-            ?: packageToDrawableMap[componentKey.substringBefore('/')]
+        val baseKey = componentKey.substringBefore('#')
+        val drawableName = componentToDrawableMap[baseKey]
+            ?: packageToDrawableMap[baseKey.substringBefore('/')]
             ?: return null
 
         val resId = drawableToResIdMap.getOrPut(drawableName) {

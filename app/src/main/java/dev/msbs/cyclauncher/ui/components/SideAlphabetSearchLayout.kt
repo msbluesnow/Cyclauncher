@@ -736,7 +736,7 @@ private fun SideAppListContent(
                 handSide = handSide,
                 fontSize = 16,
                 iconSize = 36,
-                onClick = { onAppClick("${app.packageName}/${app.activityName}") },
+                onClick = { onAppClick(app.componentKey) },
                 onLongClick = { offset -> onAppLongClick(app, offset) },
                 primaryTextColor = primaryTextColor,
                 showShadows = showShadows
@@ -902,7 +902,7 @@ private fun SnakeHistoryLazyColumn(
                                 iconSize = 44.dp,
                                 isEditMode = isEditMode,
                                 colorFilter = colorFilter,
-                                onClick = { onAppClick("${app.packageName}/${app.activityName}") },
+                                onClick = { onAppClick(app.componentKey) },
                                 onLongClick = { offset -> onAppLongClick(app, offset) },
                                 onRemove = { onRemoveFromHistory(app.componentKey) }
                             )
@@ -913,7 +913,7 @@ private fun SnakeHistoryLazyColumn(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight(),
-                        contentAlignment = Alignment.Center
+                            contentAlignment = Alignment.Center
                     ) {
                         col1App?.let { app ->
                             SnakeAppIcon(
@@ -921,7 +921,7 @@ private fun SnakeHistoryLazyColumn(
                                 iconSize = 44.dp,
                                 isEditMode = isEditMode,
                                 colorFilter = colorFilter,
-                                onClick = { onAppClick("${app.packageName}/${app.activityName}") },
+                                onClick = { onAppClick(app.componentKey) },
                                 onLongClick = { offset -> onAppLongClick(app, offset) },
                                 onRemove = { onRemoveFromHistory(app.componentKey) }
                             )
@@ -940,7 +940,7 @@ private fun SnakeHistoryLazyColumn(
                                 iconSize = 44.dp,
                                 isEditMode = isEditMode,
                                 colorFilter = colorFilter,
-                                onClick = { onAppClick("${app.packageName}/${app.activityName}") },
+                                onClick = { onAppClick(app.componentKey) },
                                 onLongClick = { offset -> onAppLongClick(app, offset) },
                                 onRemove = { onRemoveFromHistory(app.componentKey) }
                             )

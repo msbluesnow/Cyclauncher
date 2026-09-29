@@ -104,7 +104,7 @@ class AppColorManager(context: Context) {
                     val chunkResults = coroutineScope {
                         chunk.map { app ->
                             async(Dispatchers.Default) {
-                                val drawable = resolveAppIcon(pm, app.componentKey, app.packageName, app.activityName)
+                                val drawable = resolveAppIcon(pm, app.componentKey, app.packageName, app.activityName, app.userHandle)
                                 if (drawable != null) {
                                     val bucket = AppColorExtractor.extractColorBucket(drawable)
                                     Pair(app.componentKey, bucket)
@@ -128,14 +128,32 @@ class AppColorManager(context: Context) {
         }
     }
 
-    private fun resolveAppIcon(pm: PackageManager, compKey: String, pkg: String, activity: String): Drawable? {
+    private fun resolveAppIcon(
+        pm: PackageManager,
+        compKey: String,
+        pkg: String,
+        activity: String,
+        userHandle: android.os.UserHandle
+    ): Drawable? {
         val iconPackDrawable: Drawable? = try {
             IconPackManager.getIcon(compKey)
         } catch (_: Exception) {
             null
         }
+        if (iconPackDrawable != null) return iconPackDrawable
 
-        return iconPackDrawable ?: try {
+        if (userHandle != android.os.Process.myUserHandle()) {
+            try {
+                val launcherApps = appContext.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
+                val list = launcherApps?.getActivityList(pkg, userHandle)
+                val info = list?.firstOrNull { it.componentName.className == activity } ?: list?.firstOrNull()
+                if (info != null) {
+                    return info.getIcon(appContext.resources.displayMetrics.densityDpi)
+                }
+            } catch (_: Throwable) {}
+        }
+
+        return try {
             val component = android.content.ComponentName(pkg, activity)
             try {
                 pm.getActivityIcon(component)

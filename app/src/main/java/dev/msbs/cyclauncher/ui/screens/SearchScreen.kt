@@ -406,7 +406,7 @@ fun WheelSearchLayout(
                     onAppClick(appKey)
                 },
                 onAppLongClick = { componentKey, offset -> 
-                    filteredApps.find { "${it.packageName}/${it.activityName}" == componentKey }?.let { app ->
+                    filteredApps.find { it.componentKey == componentKey }?.let { app ->
                         onAppLongClick(app, offset)
                     }
                 },
@@ -441,7 +441,7 @@ private fun AppListContent(
         apps.take(15).forEach { app ->
             AppListItem(
                 app = app, 
-                onClick = { onAppClick("${app.packageName}/${app.activityName}") },
+                onClick = { onAppClick(app.componentKey) },
                 onLongClick = { offset -> onAppLongClick(app, offset) },
                 textAlign = alignment,
                 primaryTextColor = primaryTextColor,
