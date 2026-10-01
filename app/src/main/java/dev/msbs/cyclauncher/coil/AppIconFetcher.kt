@@ -29,8 +29,27 @@ internal class AppIconFetcher private constructor(
     private val options: Options,
 ) : Fetcher {
 
-    private companion object {
-        val iconDispatcher = Dispatchers.IO.limitedParallelism(4)
+    companion object {
+        private val iconDispatcher = Dispatchers.IO.limitedParallelism(4)
+        private val userProfilesCache = java.util.concurrent.ConcurrentHashMap<String, android.os.UserHandle>()
+
+        fun updateUserProfiles(profiles: List<android.os.UserHandle>) {
+            userProfilesCache.clear()
+            for (p in profiles) {
+                userProfilesCache[p.hashCode().toString()] = p
+            }
+        }
+
+        fun evictProfileIcons(imageLoader: ImageLoader, userHashCodeStr: String) {
+            try {
+                val memoryCache = imageLoader.memoryCache ?: return
+                val suffix = "#$userHashCodeStr"
+                val keysToRemove = memoryCache.keys.filter { it.toString().contains(suffix) }
+                for (k in keysToRemove) {
+                    memoryCache.remove(k)
+                }
+            } catch (_: Exception) {}
+        }
     }
 
     override suspend fun fetch(): FetchResult? = withContext(iconDispatcher) {
@@ -111,8 +130,17 @@ internal class AppIconFetcher private constructor(
         val activity = activityWithUser.substringBefore('#')
         val userHashCodeStr = activityWithUser.substringAfter('#', "")
 
-        val targetUser = if (userHashCodeStr.isNotEmpty() && userManager != null) {
-            userManager.userProfiles.find { it.hashCode().toString() == userHashCodeStr } ?: android.os.Process.myUserHandle()
+        val targetUser = if (userHashCodeStr.isNotEmpty()) {
+            userProfilesCache[userHashCodeStr] ?: run {
+                val userManager = context.getSystemService(Context.USER_SERVICE) as? android.os.UserManager
+                val found = userManager?.userProfiles?.find { it.hashCode().toString() == userHashCodeStr }
+                if (found != null) {
+                    userProfilesCache[userHashCodeStr] = found
+                    found
+                } else {
+                    android.os.Process.myUserHandle()
+                }
+            }
         } else {
             android.os.Process.myUserHandle()
         }

@@ -458,6 +458,7 @@ fun HighlightScreen(
                         PrivateSpaceSection(
                             isLocked = isPrivateSpaceLocked,
                             apps = privateSpaceApps,
+                            handSide = handSide,
                             accentColor = accentColor,
                             primaryTextColor = primaryTextColor,
                             buttonTextColor = buttonTextColor,
@@ -1623,6 +1624,7 @@ private fun WidgetResizeDialog(
 private fun PrivateSpaceSection(
     isLocked: Boolean,
     apps: List<AppInfo>,
+    handSide: HandSide,
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     buttonTextColor: PrimaryTextColor,
@@ -1771,7 +1773,7 @@ private fun PrivateSpaceSection(
                     for (app in apps) {
                         dev.msbs.cyclauncher.ui.components.AppListItemWithIcon(
                             app = app,
-                            handSide = HandSide.LEFT,
+                            handSide = handSide,
                             iconSize = 44,
                             fontSize = 14,
                             accentColor = accentColor,

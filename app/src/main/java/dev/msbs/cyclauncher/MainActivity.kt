@@ -93,13 +93,29 @@ class MainActivity : ComponentActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val action = intent?.action
             when (action) {
-                Intent.ACTION_USER_UNLOCKED,
                 "android.intent.action.PROFILE_AVAILABLE",
+                "android.intent.action.MANAGED_PROFILE_AVAILABLE" -> {
+                    val user = androidx.core.content.IntentCompat.getParcelableExtra(intent, Intent.EXTRA_USER, android.os.UserHandle::class.java)
+                    if (user != null) {
+                        viewModel.onProfileAvailabilityChanged(user, isAvailable = true)
+                    } else {
+                        viewModel.refreshApps()
+                    }
+                }
                 "android.intent.action.PROFILE_UNAVAILABLE",
-                "android.intent.action.PROFILE_ACCESSIBLE",
-                "android.intent.action.PROFILE_INACCESSIBLE",
-                "android.intent.action.MANAGED_PROFILE_AVAILABLE",
                 "android.intent.action.MANAGED_PROFILE_UNAVAILABLE" -> {
+                    val user = androidx.core.content.IntentCompat.getParcelableExtra(intent, Intent.EXTRA_USER, android.os.UserHandle::class.java)
+                    if (user != null) {
+                        viewModel.onProfileAvailabilityChanged(user, isAvailable = false)
+                    } else {
+                        viewModel.refreshApps()
+                    }
+                }
+                Intent.ACTION_USER_UNLOCKED,
+                Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE,
+                Intent.ACTION_EXTERNAL_APPLICATIONS_UNAVAILABLE,
+                "android.intent.action.PROFILE_ACCESSIBLE",
+                "android.intent.action.PROFILE_INACCESSIBLE" -> {
                     viewModel.refreshApps()
                 }
                 Intent.ACTION_CONFIGURATION_CHANGED,
@@ -147,10 +163,18 @@ class MainActivity : ComponentActivity() {
                     viewModel.onPackageRemoved(packageName, user)
                 }
                 override fun onPackagesAvailable(packageNames: Array<out String>, user: android.os.UserHandle, replacing: Boolean) {
-                    viewModel.refreshApps()
+                    if (user != android.os.Process.myUserHandle()) {
+                        viewModel.onProfileAvailabilityChanged(user, isAvailable = true)
+                    } else {
+                        viewModel.refreshApps()
+                    }
                 }
                 override fun onPackagesUnavailable(packageNames: Array<out String>, user: android.os.UserHandle, replacing: Boolean) {
-                    viewModel.refreshApps()
+                    if (user != android.os.Process.myUserHandle()) {
+                        viewModel.onProfileAvailabilityChanged(user, isAvailable = false)
+                    } else {
+                        viewModel.refreshApps()
+                    }
                 }
             }
             launcherAppsCallback = callback
@@ -706,9 +730,9 @@ class MainActivity : ComponentActivity() {
                 viewModel.refreshApps()
             }
         }
-        if (viewModel.apps.value.isEmpty() || viewModel.hasProfileStateChanged()) {
+        if (viewModel.apps.value.isEmpty()) {
             viewModel.refreshApps()
-        } else {
+        } else if (!viewModel.hasProfileStateChanged()) {
             viewModel.prewarmActiveIcons()
         }
     }

@@ -203,8 +203,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 userManager?.requestQuietModeEnabled(true, user)
             }
-            _isPrivateSpaceLocked.value = true
-            loadInstalledApps()
+            onProfileAvailabilityChanged(user, isAvailable = false)
         } catch (_: Throwable) {}
     }
 
@@ -215,11 +214,47 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 val immediate = userManager?.requestQuietModeEnabled(false, user) ?: false
                 if (immediate) {
-                    _isPrivateSpaceLocked.value = false
-                    loadInstalledApps()
+                    onProfileAvailabilityChanged(user, isAvailable = true)
                 }
             }
         } catch (_: Throwable) {}
+    }
+
+    fun onProfileAvailabilityChanged(user: UserHandle, isAvailable: Boolean) {
+        val profileType = ProfileType.fromUserHandle(safeContext, user)
+        if (profileType == ProfileType.PRIVATE) {
+            _privateSpaceUser.value = user
+            _isPrivateSpaceLocked.value = !isAvailable
+            if (!isAvailable) {
+                privateAppsCache = emptyList()
+                updateCombinedApps()
+                try {
+                    val imageLoader = coil3.SingletonImageLoader.get(getApplication())
+                    dev.msbs.cyclauncher.coil.AppIconFetcher.evictProfileIcons(imageLoader, user.hashCode().toString())
+                } catch (_: Exception) {}
+            } else {
+                viewModelScope.launch(Dispatchers.IO) {
+                    val loaded = loadAppsForProfile(user, ProfileType.PRIVATE)
+                    privateAppsCache = loaded
+                    updateCombinedApps()
+                    val keysToPrewarm = loaded.map { it.componentKey }
+                    prewarmIcons(keysToPrewarm)
+                    appColorManager.indexApps(viewModelScope, loaded, _iconPackVersion.value)
+                }
+            }
+        } else if (profileType == ProfileType.WORK) {
+            if (!isAvailable) {
+                workAppsCache = emptyList()
+                updateCombinedApps()
+            } else {
+                viewModelScope.launch(Dispatchers.IO) {
+                    val loaded = loadAppsForProfile(user, ProfileType.WORK)
+                    workAppsCache = loaded
+                    updateCombinedApps()
+                    appColorManager.indexApps(viewModelScope, loaded, _iconPackVersion.value)
+                }
+            }
+        }
     }
 
     fun hasProfileStateChanged(): Boolean {
@@ -228,7 +263,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val privateUser = _privateSpaceUser.value
             if (privateUser != null) {
                 val isQuiet = userManager.isQuietModeEnabled(privateUser)
-                if (isQuiet != _isPrivateSpaceLocked.value) return true
+                if (isQuiet != _isPrivateSpaceLocked.value) {
+                    onProfileAvailabilityChanged(privateUser, isAvailable = !isQuiet)
+                    return true
+                }
             } else if (Build.VERSION.SDK_INT >= 35) {
                 val profiles = userManager.userProfiles
                 val hasPrivate = profiles.any { ProfileType.fromUserHandle(safeContext, it) == ProfileType.PRIVATE }
@@ -251,7 +289,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 val pkg = info.componentName.packageName.lowercase()
                 pkg.contains("vending") || pkg.contains("fdroid") || pkg.contains("aurora") ||
                         pkg.contains("store") || pkg.contains("market") || pkg.contains("appgallery")
-            } ?: privateApps.firstOrNull()
+            }
 
             if (!packageName.isNullOrBlank()) {
                 val detailIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName")).apply {
@@ -259,35 +297,41 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 }
                 if (privateMarketApp != null) {
                     detailIntent.setPackage(privateMarketApp.componentName.packageName)
+                    safeContext.startActivity(detailIntent)
+                } else {
+                    launcherApps.startMainActivity(
+                        ComponentName("com.android.vending", "com.google.android.finsky.main.MainActivity"),
+                        user,
+                        null,
+                        null
+                    )
                 }
-                safeContext.startActivity(detailIntent)
             } else if (privateMarketApp != null) {
                 launcherApps.startMainActivity(privateMarketApp.componentName, user, null, null)
             } else {
                 val marketIntent = Intent(Intent.ACTION_MAIN).apply {
                     addCategory(Intent.CATEGORY_APP_MARKET)
                 }
-                val marketInfo = pm.resolveActivity(marketIntent, 0)
-                val marketPkg = marketInfo?.activityInfo?.packageName ?: "com.android.vending"
-                val mainMarketIntent = Intent(Intent.ACTION_MAIN).apply {
-                    addCategory(Intent.CATEGORY_LAUNCHER)
-                    setPackage(marketPkg)
+                val resolvedList = pm.queryIntentActivities(marketIntent, 0)
+                var launched = false
+                for (res in resolvedList) {
+                    val comp = ComponentName(res.activityInfo.packageName, res.activityInfo.name)
+                    try {
+                        launcherApps.startMainActivity(comp, user, null, null)
+                        launched = true
+                        break
+                    } catch (_: Exception) {}
                 }
-                val resolvedList = pm.queryIntentActivities(mainMarketIntent, 0)
-                val marketAct = resolvedList.firstOrNull()?.activityInfo?.name ?: "com.google.android.finsky.main.MainActivity"
-                val marketComp = ComponentName(marketPkg, marketAct)
-                launcherApps.startMainActivity(marketComp, user, null, null)
-            }
-        } catch (_: Exception) {
-            try {
-                val marketIntent = Intent(Intent.ACTION_MAIN).apply {
-                    addCategory(Intent.CATEGORY_APP_MARKET)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                if (!launched) {
+                    val settingsIntent = Intent(android.provider.Settings.ACTION_SETTINGS).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    safeContext.startActivity(settingsIntent)
+                    showToast("No store found in Private Space. Install a store or use system Settings.")
                 }
-                safeContext.startActivity(marketIntent)
-            } catch (e: Exception) {
-                showToast("Cannot launch app store in Private Space: ${e.message}")
             }
+        } catch (e: Exception) {
+            showToast("Cannot launch app store in Private Space: ${e.message}")
         }
     }
 
@@ -1398,9 +1442,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun onPackageRemoved(packageName: String, user: UserHandle = Process.myUserHandle()) {
         invalidateIconCache(packageName)
-        if (user == Process.myUserHandle()) {
-            actionsManager.onPackageRemoved(packageName)
+        if (user != Process.myUserHandle()) {
+            onProfileAvailabilityChanged(user, isAvailable = true)
+            return
         }
+        actionsManager.onPackageRemoved(packageName)
         reloadInstalledIconPacks()
         refreshApps()
     }
@@ -1408,23 +1454,25 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun onPackageAddedOrUpdated(packageName: String, user: UserHandle = Process.myUserHandle()) {
         invalidateIconCache(packageName)
         reloadInstalledIconPacks()
+        if (user != Process.myUserHandle()) {
+            onProfileAvailabilityChanged(user, isAvailable = true)
+            return
+        }
         viewModelScope.launch(Dispatchers.IO) {
-            if (user == Process.myUserHandle()) {
-                val pm = getApplication<Application>().packageManager
-                val pInfo = pm.getPackageInfoCompat(packageName)
-                val launchIntent = pm.getLaunchIntentForPackage(packageName)
-                val component = launchIntent?.component
-                if (component != null && pInfo != null) {
-                    val compKey = "${component.packageName}/${component.className}"
-                    val prevUpdateTimes = actionsManager.loadAppUpdateTimes()
-                    val prevTime = prevUpdateTimes[packageName]
-                    val lastUpdate = pInfo.lastUpdateTime
-                    if (prevTime == null || lastUpdate > prevTime) {
-                        actionsManager.onAppInstalledOrUpdated(compKey)
-                    }
+            val pm = getApplication<Application>().packageManager
+            val pInfo = pm.getPackageInfoCompat(packageName)
+            val launchIntent = pm.getLaunchIntentForPackage(packageName)
+            val component = launchIntent?.component
+            if (component != null && pInfo != null) {
+                val compKey = "${component.packageName}/${component.className}"
+                val prevUpdateTimes = actionsManager.loadAppUpdateTimes()
+                val prevTime = prevUpdateTimes[packageName]
+                val lastUpdate = pInfo.lastUpdateTime
+                if (prevTime == null || lastUpdate > prevTime) {
+                    actionsManager.onAppInstalledOrUpdated(compKey)
                 }
             }
-            loadInstalledApps()
+            refreshApps()
         }
     }
 
@@ -1451,6 +1499,46 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         } catch (_: Exception) {}
     }
 
+    private var personalAppsCache: List<AppInfo> = emptyList()
+    private var workAppsCache: List<AppInfo> = emptyList()
+    private var privateAppsCache: List<AppInfo> = emptyList()
+
+    private fun updateCombinedApps() {
+        val combined = (personalAppsCache + workAppsCache + privateAppsCache)
+            .distinctBy { it.componentKey }
+            .sortedBy { it.label.lowercase() }
+        _apps.value = combined
+    }
+
+    private fun loadAppsForProfile(profile: UserHandle, profileType: ProfileType): List<AppInfo> {
+        val launcherApps = safeContext.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? LauncherApps ?: return emptyList()
+        val myUser = Process.myUserHandle()
+        val result = mutableListOf<AppInfo>()
+        try {
+            val activityList = launcherApps.getActivityList(null, profile)
+            for (info in activityList) {
+                val pkgName = info.componentName.packageName
+                if (profile != myUser && pkgName == safeContext.packageName) continue
+                val actName = info.componentName.className
+                val label = try { info.label.toString().trim().ifEmpty { pkgName } } catch (_: Exception) { pkgName }
+                val compKey = if (profile == myUser) "$pkgName/$actName" else "$pkgName/$actName#${profile.hashCode()}"
+                val firstSymbol = extractFirstSymbol(label)
+                result.add(
+                    AppInfo(
+                        label = label,
+                        packageName = pkgName,
+                        activityName = actName,
+                        iconKey = compKey,
+                        searchChar = mapToSearchChar(firstSymbol, actionsManager.customCharMappings.value),
+                        userHandle = profile,
+                        profileType = profileType
+                    )
+                )
+            }
+        } catch (_: Throwable) {}
+        return result
+    }
+
     private var loadAppsJob: kotlinx.coroutines.Job? = null
 
     private fun loadInstalledApps() {
@@ -1458,54 +1546,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         loadAppsJob = viewModelScope.launch(Dispatchers.IO) {
             val context = safeContext
             val userManager = context.getSystemService(Context.USER_SERVICE) as? UserManager
-            val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? LauncherApps
             val myUser = Process.myUserHandle()
             val profiles = try { userManager?.userProfiles ?: listOf(myUser) } catch (_: Throwable) { listOf(myUser) }
 
-            val rawAppList = mutableListOf<AppInfo>()
+            dev.msbs.cyclauncher.coil.AppIconFetcher.updateUserProfiles(profiles)
+
             var foundPrivateUser: UserHandle? = null
             var privateLocked = true
 
-            for (profile in profiles) {
-                val profileType = ProfileType.fromUserHandle(context, profile)
-                val isQuiet = try { userManager?.isQuietModeEnabled(profile) ?: false } catch (_: Throwable) { false }
-
-                if (profileType == ProfileType.PRIVATE) {
-                    foundPrivateUser = profile
-                    privateLocked = isQuiet
-                    // If Private Space is locked, do NOT load apps from Private Space
-                    if (isQuiet) continue
-                }
-
-                if (launcherApps != null) {
-                    try {
-                        val activityList = launcherApps.getActivityList(null, profile)
-                        for (info in activityList) {
-                            val pkgName = info.componentName.packageName
-                            if (profile != myUser && pkgName == context.packageName) continue
-                            val actName = info.componentName.className
-                            val label = try { info.label.toString().trim().ifEmpty { pkgName } } catch (_: Exception) { pkgName }
-                            val compKey = if (profile == myUser) "$pkgName/$actName" else "$pkgName/$actName#${profile.hashCode()}"
-                            val firstSymbol = extractFirstSymbol(label)
-
-                            rawAppList.add(
-                                AppInfo(
-                                    label = label,
-                                    packageName = pkgName,
-                                    activityName = actName,
-                                    iconKey = compKey,
-                                    searchChar = mapToSearchChar(firstSymbol, actionsManager.customCharMappings.value),
-                                    userHandle = profile,
-                                    profileType = profileType
-                                )
-                            )
-                        }
-                    } catch (_: Throwable) {}
-                }
-            }
+            val newPersonalApps = loadAppsForProfile(myUser, ProfileType.PERSONAL).toMutableList()
 
             // Fallback for personal apps if launcherApps was empty
-            if (rawAppList.isEmpty()) {
+            if (newPersonalApps.isEmpty()) {
                 val pm = context.packageManager
                 val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
                 val resolvedInfos = pm.queryIntentActivities(mainIntent, 0)
@@ -1516,7 +1568,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     val actName = info.activityInfo.name
                     val label = try { info.loadLabel(pm).toString().trim().ifEmpty { pkgName } } catch (_: Exception) { pkgName }
                     val firstSymbol = extractFirstSymbol(label)
-                    rawAppList.add(
+                    newPersonalApps.add(
                         AppInfo(
                             label = label,
                             packageName = pkgName,
@@ -1530,16 +1582,39 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 }
             }
 
-            val sortedAppList = rawAppList
-                .distinctBy { it.componentKey }
-                .sortedBy { it.label.lowercase() }
+            var newWorkApps = emptyList<AppInfo>()
+            var newPrivateApps = emptyList<AppInfo>()
+
+            for (profile in profiles) {
+                if (profile == myUser) continue
+                val profileType = ProfileType.fromUserHandle(context, profile)
+                val isQuiet = try { userManager?.isQuietModeEnabled(profile) ?: false } catch (_: Throwable) { false }
+
+                if (profileType == ProfileType.PRIVATE) {
+                    foundPrivateUser = profile
+                    privateLocked = isQuiet
+                    if (!isQuiet) {
+                        newPrivateApps = loadAppsForProfile(profile, ProfileType.PRIVATE)
+                    }
+                } else if (profileType == ProfileType.WORK) {
+                    if (!isQuiet) {
+                        newWorkApps = loadAppsForProfile(profile, ProfileType.WORK)
+                    }
+                }
+            }
+
+            personalAppsCache = newPersonalApps
+            workAppsCache = newWorkApps
+            privateAppsCache = newPrivateApps
+
             _privateSpaceUser.value = foundPrivateUser
             _isPrivateSpaceLocked.value = privateLocked
-            _apps.value = sortedAppList
+
+            updateCombinedApps()
 
             val keysToPrewarm = (actionsManager.favorites.value + actionsManager.history.value).distinct()
             prewarmIcons(keysToPrewarm)
-            appColorManager.indexApps(viewModelScope, sortedAppList, _iconPackVersion.value)
+            appColorManager.indexApps(viewModelScope, _apps.value, _iconPackVersion.value)
 
             // In the background without blocking app list presentation, track update timestamps
             launch(Dispatchers.IO) {
@@ -1555,8 +1630,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 }
 
                 if (!isFirstTimeTracking) {
-                    for (app in sortedAppList) {
-                        if (app.profileType != ProfileType.PERSONAL) continue
+                    for (app in personalAppsCache) {
                         val pkgName = app.packageName
                         val compKey = app.componentKey
                         val updateTime = currentUpdateTimes[pkgName] ?: pm.getPackageInfoCompat(pkgName)?.lastUpdateTime ?: 0L
@@ -1577,8 +1651,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                         actionsManager.onAppsInstalledOrUpdated(sortedKeys)
                     }
                 } else if (actionsManager.history.value.isEmpty()) {
-                    val topRecent = sortedAppList
-                        .filter { it.profileType == ProfileType.PERSONAL }
+                    val topRecent = personalAppsCache
                         .mapNotNull { app ->
                             val pkg = app.packageName
                             val time = currentUpdateTimes[pkg] ?: 0L
