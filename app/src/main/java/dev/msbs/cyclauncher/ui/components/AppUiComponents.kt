@@ -271,21 +271,23 @@ fun ShadowedIcon(
     shadowAlpha: Float = 0.25f,
     offset: androidx.compose.ui.unit.Dp = 1.dp
 ) {
-    val iconModifier = if (size != null) modifier.size(size) else modifier
-    Box(contentAlignment = Alignment.Center) {
+    val boxModifier = if (size != null) modifier.size(size) else modifier
+    Box(modifier = boxModifier, contentAlignment = Alignment.Center) {
         if (showShadows) {
             Icon(
                 imageVector = imageVector,
                 contentDescription = null,
                 tint = primaryTextColor.getShadowColor(shadowColorOverride).copy(alpha = shadowAlpha),
-                modifier = iconModifier.offset(offset, offset)
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(offset, offset)
             )
         }
         Icon(
             imageVector = imageVector,
             contentDescription = contentDescription,
             tint = tint,
-            modifier = iconModifier
+            modifier = if (size != null) Modifier.fillMaxSize() else Modifier
         )
     }
 }

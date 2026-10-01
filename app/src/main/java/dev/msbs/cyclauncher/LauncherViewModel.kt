@@ -9,6 +9,7 @@ import dev.msbs.cyclauncher.data.TagsBackupPreview
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.model.ProfileType
 import dev.msbs.cyclauncher.model.FavoriteItem
+import dev.msbs.cyclauncher.model.HighlightSection
 import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.icons.IconPackInfo
 import dev.msbs.cyclauncher.icons.IconPackManager
@@ -551,6 +552,46 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    private val _highlightSectionOrder = MutableStateFlow<List<HighlightSection>>(loadHighlightSectionOrder())
+    val highlightSectionOrder: StateFlow<List<HighlightSection>> = _highlightSectionOrder.asStateFlow()
+
+    private fun loadHighlightSectionOrder(): List<HighlightSection> {
+        val saved = prefs.getString("highlight_section_order", null)
+        val defaultList = HighlightSection.values().toList()
+        if (!saved.isNullOrBlank()) {
+            val savedList = saved.split(",")
+                .mapNotNull { name ->
+                    try { HighlightSection.valueOf(name.trim()) } catch (_: Exception) { null }
+                }
+            val missing = defaultList.filter { it !in savedList }
+            return savedList + missing
+        }
+        return defaultList
+    }
+
+    fun setHighlightSectionVisibleOrder(
+        section: HighlightSection,
+        targetVisibleIndex: Int,
+        currentVisibleSections: List<HighlightSection>
+    ) {
+        val visibleList = currentVisibleSections.toMutableList()
+        val curIndex = visibleList.indexOf(section)
+        if (curIndex == -1) return
+        val clampedIndex = targetVisibleIndex.coerceIn(0, visibleList.size - 1)
+        if (curIndex == clampedIndex) return
+        visibleList.removeAt(curIndex)
+        visibleList.add(clampedIndex, section)
+
+        val fullOrder = _highlightSectionOrder.value.toMutableList()
+        val nonVisible = fullOrder.filter { it !in visibleList }
+        val newFullOrder = visibleList + nonVisible
+
+        _highlightSectionOrder.value = newFullOrder
+        editPrefs {
+            putString("highlight_section_order", newFullOrder.joinToString(",") { it.name })
+        }
+    }
+
     private val _searchWidgetsConfig = MutableStateFlow<SearchWidgetsConfig>(loadSearchWidgetsConfig())
     val searchWidgetsConfig: StateFlow<SearchWidgetsConfig> = _searchWidgetsConfig.asStateFlow()
 
@@ -784,6 +825,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         lastAlphabetSearchMethod = if (initialLastAlphabet == SearchMethod.TEXT) SearchMethod.SIDE_ALPHABET else initialLastAlphabet
 
         _sideAlphabetButtonYRatio.value = prefs.getFloat("side_alphabet_button_y_ratio", 0.23f).coerceIn(0.05f, 0.85f)
+        _highlightSectionOrder.value = loadHighlightSectionOrder()
     }
 
     fun startTutorial() {

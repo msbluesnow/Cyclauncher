@@ -4,12 +4,14 @@ import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.HighlightWidgetConfig
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.model.AppInfo
+import dev.msbs.cyclauncher.model.HighlightSection
 import dev.msbs.cyclauncher.ui.components.CustomWidgetPickerSheet
 import dev.msbs.cyclauncher.ui.components.rememberAppIconPainter
 import dev.msbs.cyclauncher.ui.components.ScreenTopBar
 import dev.msbs.cyclauncher.ui.components.ShadowedIcon
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
+import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.ShadowSettings
@@ -30,22 +32,33 @@ import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.ArrowDropDown
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationEndReason
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.draw.rotate
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -149,7 +162,9 @@ fun HighlightScreen(
     val buttonTextColor by viewModel.buttonTextColor.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
     val shadowSettings = LocalShadowSettings.current
-    val animationsEnabled = LocalAnimationsEnabled.current
+    val animationsEnabled by viewModel.animationsEnabled.collectAsState()
+    val highlightSectionOrder by viewModel.highlightSectionOrder.collectAsState()
+    val popupTheme by viewModel.popupTheme.collectAsState()
 
     val apps by viewModel.apps.collectAsState()
     val tags by viewModel.tags.collectAsState()
@@ -174,6 +189,7 @@ fun HighlightScreen(
     var showCustomWidgetPicker by remember { mutableStateOf(false) }
     var pendingBindWidgetId by remember { mutableIntStateOf(AppWidgetManager.INVALID_APPWIDGET_ID) }
     var pendingBindProvider by remember { mutableStateOf<AppWidgetProviderInfo?>(null) }
+    var expandedSection by remember { mutableStateOf<HighlightSection?>(null) }
 
     // Today's Installs and Updates computed on background thread via LauncherViewModel (filtered for real user activity in last 24h)
     val todayActivity by viewModel.todayActivity.collectAsState()
@@ -383,115 +399,252 @@ fun HighlightScreen(
                     .padding(vertical = 6.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Collapsible Overview Dashboard
-                Box(modifier = Modifier.padding(horizontal = 24.dp)) {
-                    CompactCollapsibleOverview(
-                        totalApps = apps.size,
-                        tagsCount = tags.size,
-                        favoritesCount = favoriteItems.size,
-                        historyCount = historyApps.size,
-                        accentColor = accentColor,
-                        primaryTextColor = primaryTextColor,
-                        showShadows = showShadows,
-                        shadowSettings = shadowSettings,
-                        animationsEnabled = animationsEnabled
-                    )
+                // Compact Highlight Section Squares Dock (Accordion Layout)
+                val sections = remember(
+                    apps.size,
+                    untaggedApps.size,
+                    todayUpdates.size,
+                    todayInstalls.size,
+                    workProfileApps.size,
+                    privateSpaceApps.size,
+                    isPrivateSpaceLocked,
+                    privateSpaceUser,
+                    highlightSectionOrder
+                ) {
+                    val availableMap = buildMap<HighlightSection, HighlightSectionData> {
+                        put(
+                            HighlightSection.OVERVIEW,
+                            HighlightSectionData(
+                                section = HighlightSection.OVERVIEW,
+                                title = "OVERVIEW",
+                                icon = Icons.Outlined.AutoAwesome,
+                                count = apps.size
+                            )
+                        )
+                        put(
+                            HighlightSection.UNTAGGED,
+                            HighlightSectionData(
+                                section = HighlightSection.UNTAGGED,
+                                title = "UNTAGGED APPS",
+                                icon = Icons.AutoMirrored.Outlined.LabelOff,
+                                count = untaggedApps.size
+                            )
+                        )
+                        put(
+                            HighlightSection.UPDATES,
+                            HighlightSectionData(
+                                section = HighlightSection.UPDATES,
+                                title = "TODAY'S UPDATES",
+                                icon = Icons.Outlined.Update,
+                                count = todayUpdates.size
+                            )
+                        )
+                        put(
+                            HighlightSection.INSTALLS,
+                            HighlightSectionData(
+                                section = HighlightSection.INSTALLS,
+                                title = "TODAY'S INSTALLS",
+                                icon = Icons.Outlined.Download,
+                                count = todayInstalls.size
+                            )
+                        )
+                        if (workProfileApps.isNotEmpty()) {
+                            put(
+                                HighlightSection.WORK_PROFILE,
+                                HighlightSectionData(
+                                    section = HighlightSection.WORK_PROFILE,
+                                    title = "WORK PROFILE",
+                                    icon = Icons.Outlined.WorkOutline,
+                                    count = workProfileApps.size
+                                )
+                            )
+                        }
+                        if (privateSpaceUser != null || privateSpaceApps.isNotEmpty()) {
+                            put(
+                                HighlightSection.PRIVATE_SPACE,
+                                HighlightSectionData(
+                                    section = HighlightSection.PRIVATE_SPACE,
+                                    title = "PRIVATE SPACE",
+                                    icon = if (isPrivateSpaceLocked) Icons.Outlined.Lock else Icons.Outlined.LockOpen,
+                                    count = privateSpaceApps.size
+                                )
+                            )
+                        }
+                    }
+
+                    val ordered = highlightSectionOrder.mapNotNull { availableMap[it] }
+                    val missing = availableMap.values.filter { it !in ordered }
+                    ordered + missing
                 }
 
-                // Separate Collapsible Menu: Today's Installs
-                Box(modifier = Modifier.padding(horizontal = 24.dp)) {
-                    CollapsibleAppSection(
-                        title = "TODAY'S INSTALLS",
-                        icon = Icons.Outlined.Download,
-                        apps = todayInstalls,
-                        emptyMessage = "No new apps installed today",
-                        accentColor = accentColor,
-                        primaryTextColor = primaryTextColor,
-                        showShadows = showShadows,
-                        shadowSettings = shadowSettings,
-                        animationsEnabled = animationsEnabled,
-                        appTagsMap = appTagsMap,
-                        onAppClick = onAppClick,
-                        onAppLongClick = onAppLongClick
-                    )
-                }
-
-                // Separate Collapsible Menu: Today's Updates
-                Box(modifier = Modifier.padding(horizontal = 24.dp)) {
-                    CollapsibleAppSection(
-                        title = "TODAY'S UPDATES",
-                        icon = Icons.Outlined.Update,
-                        apps = todayUpdates,
-                        emptyMessage = "No apps updated today",
-                        accentColor = accentColor,
-                        primaryTextColor = primaryTextColor,
-                        showShadows = showShadows,
-                        shadowSettings = shadowSettings,
-                        animationsEnabled = animationsEnabled,
-                        appTagsMap = appTagsMap,
-                        onAppClick = onAppClick,
-                        onAppLongClick = onAppLongClick
-                    )
-                }
-
-                // Separate Collapsible Menu: Untagged Apps
-                Box(modifier = Modifier.padding(horizontal = 24.dp)) {
-                    CollapsibleAppSection(
-                        title = "UNTAGGED APPS",
-                        icon = Icons.AutoMirrored.Outlined.LabelOff,
-                        apps = untaggedApps,
-                        emptyMessage = "No untagged apps",
-                        accentColor = accentColor,
-                        primaryTextColor = primaryTextColor,
-                        showShadows = showShadows,
-                        shadowSettings = shadowSettings,
-                        animationsEnabled = animationsEnabled,
-                        appTagsMap = appTagsMap,
-                        onAppClick = onAppClick,
-                        onAppLongClick = onAppLongClick
-                    )
-                }
-
-                // Separate Collapsible Menu: Private Space (Android 15)
-                if (privateSpaceUser != null || privateSpaceApps.isNotEmpty()) {
-                    Box(modifier = Modifier.padding(horizontal = 24.dp)) {
-                        PrivateSpaceSection(
-                            isLocked = isPrivateSpaceLocked,
-                            apps = privateSpaceApps,
-                            handSide = handSide,
+                val isScrollable = sections.size > 4
+                val sectionsScrollState = rememberScrollState()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(if (isScrollable) Modifier.horizontalScroll(sectionsScrollState) else Modifier)
+                        .padding(horizontal = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    sections.forEach { sectionData ->
+                        val itemModifier = if (isScrollable) Modifier.width(74.dp) else Modifier.weight(1f)
+                        HighlightSectionSquare(
+                            data = sectionData,
+                            isSelected = expandedSection == sectionData.section,
                             accentColor = accentColor,
                             primaryTextColor = primaryTextColor,
-                            buttonTextColor = buttonTextColor,
                             showShadows = showShadows,
                             shadowSettings = shadowSettings,
                             animationsEnabled = animationsEnabled,
-                            appTagsMap = appTagsMap,
-                            onLockClick = { viewModel.lockPrivateSpace() },
-                            onUnlockClick = { viewModel.unlockPrivateSpace() },
-                            onInstallAppsClick = { viewModel.installAppInPrivateSpace() },
-                            onAppClick = onAppClick,
-                            onAppLongClick = onAppLongClick
+                            onClick = {
+                                expandedSection = if (expandedSection == sectionData.section) null else sectionData.section
+                            },
+                            modifier = itemModifier.height(56.dp)
                         )
                     }
                 }
 
-                // Separate Collapsible Menu: Work Profile
-                if (workProfileApps.isNotEmpty()) {
+                // In-place Expanded Section Content Card
+                AnimatedVisibility(
+                    visible = expandedSection != null,
+                    enter = if (animationsEnabled) expandVertically(tween(220)) + fadeIn(tween(180)) else EnterTransition.None,
+                    exit = if (animationsEnabled) shrinkVertically(tween(180)) + fadeOut(tween(150)) else ExitTransition.None
+                ) {
                     Box(modifier = Modifier.padding(horizontal = 24.dp)) {
-                        CollapsibleAppSection(
-                            title = "WORK PROFILE",
-                            icon = Icons.Outlined.WorkOutline,
-                            apps = workProfileApps,
-                            emptyMessage = "No work profile apps",
-                            accentColor = accentColor,
-                            primaryTextColor = primaryTextColor,
-                            showShadows = showShadows,
-                            shadowSettings = shadowSettings,
-                            animationsEnabled = animationsEnabled,
-                            appTagsMap = appTagsMap,
-                            onAppClick = onAppClick,
-                            onAppLongClick = onAppLongClick
-                        )
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(if (animationsEnabled) Modifier.animateContentSize(animationSpec = tween(180)) else Modifier),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.05f)),
+                            border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = if (showShadows) 0.22f else 0.12f))
+                        ) {
+                            AnimatedContent(
+                                targetState = expandedSection,
+                                transitionSpec = {
+                                    if (animationsEnabled) {
+                                        fadeIn(animationSpec = tween(150)) togetherWith fadeOut(animationSpec = tween(100))
+                                    } else {
+                                        EnterTransition.None togetherWith ExitTransition.None
+                                    }
+                                },
+                                label = "HighlightSectionContent"
+                            ) { currentSection ->
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    val visibleSections = remember(sections) { sections.map { it.section } }
+                                    val currentVisibleIndex = if (currentSection != null) visibleSections.indexOf(currentSection) else -1
+                                    val currentPosition = if (currentVisibleIndex != -1) currentVisibleIndex + 1 else 1
+                                    val totalPositions = visibleSections.size
+                                    val onSetPosition: (Int) -> Unit = { newPos ->
+                                        if (currentSection != null) {
+                                            viewModel.setHighlightSectionVisibleOrder(currentSection, newPos - 1, visibleSections)
+                                        }
+                                    }
+
+                                    val renderAppSection = @Composable { title: String, icon: ImageVector, list: List<AppInfo>, emptyMsg: String ->
+                                        HighlightAppSectionExpanded(
+                                            title = title,
+                                            icon = icon,
+                                            apps = list,
+                                            emptyMessage = emptyMsg,
+                                            accentColor = accentColor,
+                                            primaryTextColor = primaryTextColor,
+                                            popupTheme = popupTheme,
+                                            showShadows = showShadows,
+                                            shadowSettings = shadowSettings,
+                                            appTagsMap = appTagsMap,
+                                            currentPosition = currentPosition,
+                                            totalPositions = totalPositions,
+                                            onSetPosition = onSetPosition,
+                                            onAppClick = onAppClick,
+                                            onAppLongClick = onAppLongClick,
+                                            onClose = { expandedSection = null }
+                                        )
+                                    }
+
+                                    when (currentSection) {
+                                        HighlightSection.OVERVIEW -> {
+                                            HighlightSectionHeader(
+                                                title = "OVERVIEW",
+                                                icon = Icons.Outlined.AutoAwesome,
+                                                count = apps.size,
+                                                showCount = false,
+                                                accentColor = accentColor,
+                                                primaryTextColor = primaryTextColor,
+                                                popupTheme = popupTheme,
+                                                showShadows = showShadows,
+                                                shadowSettings = shadowSettings,
+                                                currentPosition = currentPosition,
+                                                totalPositions = totalPositions,
+                                                onSetPosition = onSetPosition,
+                                                onClose = { expandedSection = null }
+                                            )
+                                            HorizontalDivider(
+                                                color = primaryTextColor.color.copy(alpha = 0.08f),
+                                                modifier = Modifier.padding(top = 10.dp, bottom = 12.dp)
+                                            )
+                                            OverviewMetricsContent(
+                                                totalApps = apps.size,
+                                                tagsCount = tags.size,
+                                                favoritesCount = favoriteItems.size,
+                                                historyCount = historyApps.size,
+                                                accentColor = accentColor,
+                                                primaryTextColor = primaryTextColor,
+                                                showShadows = showShadows,
+                                                shadowSettings = shadowSettings
+                                            )
+                                        }
+                                        HighlightSection.UNTAGGED -> renderAppSection(
+                                            "UNTAGGED APPS",
+                                            Icons.AutoMirrored.Outlined.LabelOff,
+                                            untaggedApps,
+                                            "No untagged apps"
+                                        )
+                                        HighlightSection.UPDATES -> renderAppSection(
+                                            "TODAY'S UPDATES",
+                                            Icons.Outlined.Update,
+                                            todayUpdates,
+                                            "No apps updated today"
+                                        )
+                                        HighlightSection.INSTALLS -> renderAppSection(
+                                            "TODAY'S INSTALLS",
+                                            Icons.Outlined.Download,
+                                            todayInstalls,
+                                            "No new apps installed today"
+                                        )
+                                        HighlightSection.WORK_PROFILE -> renderAppSection(
+                                            "WORK PROFILE",
+                                            Icons.Outlined.WorkOutline,
+                                            workProfileApps,
+                                            "No work profile apps"
+                                        )
+                                        HighlightSection.PRIVATE_SPACE -> {
+                                            HighlightPrivateSpaceContent(
+                                                isLocked = isPrivateSpaceLocked,
+                                                apps = privateSpaceApps,
+                                                handSide = handSide,
+                                                accentColor = accentColor,
+                                                primaryTextColor = primaryTextColor,
+                                                buttonTextColor = buttonTextColor,
+                                                popupTheme = popupTheme,
+                                                showShadows = showShadows,
+                                                shadowSettings = shadowSettings,
+                                                currentPosition = currentPosition,
+                                                totalPositions = totalPositions,
+                                                onSetPosition = onSetPosition,
+                                                onLockClick = { viewModel.lockPrivateSpace() },
+                                                onUnlockClick = { viewModel.unlockPrivateSpace() },
+                                                onInstallAppsClick = { viewModel.installAppInPrivateSpace() },
+                                                onAppClick = onAppClick,
+                                                onAppLongClick = onAppLongClick,
+                                                onClose = { expandedSection = null }
+                                            )
+                                        }
+                                        null -> {}
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -564,11 +717,434 @@ private fun HighlightTopBar(
     )
 }
 
+private data class HighlightSectionData(
+    val section: HighlightSection,
+    val title: String,
+    val icon: ImageVector,
+    val count: Int
+)
+
 /**
- * Compact Overview bar styled with Settings Card design logic.
+ * Compact rectangular section tile:
+ * - Height 56dp, subtle 12dp rounded corners
+ * - Top-left: flush rounded badge with count/number matching outer topStart curvature
+ * - Center: prominent centered section icon (23dp)
+ * - Bottom-center: expand/collapse chevron arrow (flips 180° when expanded)
  */
 @Composable
-private fun CompactCollapsibleOverview(
+private fun HighlightSectionSquare(
+    data: HighlightSectionData,
+    isSelected: Boolean,
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    showShadows: Boolean,
+    shadowSettings: ShadowSettings,
+    animationsEnabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (isSelected) 180f else 0f,
+        animationSpec = if (animationsEnabled) tween(durationMillis = 200) else snap(),
+        label = "arrowRotation"
+    )
+
+    val cardCornerRadius = 12.dp
+
+    Card(
+        modifier = modifier
+            .clip(RoundedCornerShape(cardCornerRadius))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(cardCornerRadius),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) accentColor.color.copy(alpha = 0.12f)
+            else primaryTextColor.color.copy(alpha = 0.05f)
+        ),
+        border = BorderStroke(
+            width = if (isSelected) 1.5.dp else 1.dp,
+            color = if (isSelected) accentColor.color.copy(alpha = 0.8f)
+            else primaryTextColor.color.copy(alpha = if (showShadows) 0.22f else 0.12f)
+        )
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Flush Top-Left Badge (shares outer card's top-left corner)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .clip(
+                        RoundedCornerShape(
+                            topStart = cardCornerRadius,
+                            bottomEnd = 7.dp,
+                            bottomStart = 0.dp,
+                            topEnd = 0.dp
+                        )
+                    )
+                    .background(
+                        if (isSelected) accentColor.color.copy(alpha = 0.25f)
+                        else if (data.count > 0) accentColor.color.copy(alpha = 0.16f)
+                        else primaryTextColor.color.copy(alpha = 0.08f)
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = if (isSelected || data.count > 0) accentColor.color.copy(alpha = 0.35f)
+                        else primaryTextColor.color.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(
+                            topStart = cardCornerRadius,
+                            bottomEnd = 7.dp,
+                            bottomStart = 0.dp,
+                            topEnd = 0.dp
+                        )
+                    )
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = if (data.count > 999) "999+" else data.count.toString(),
+                    color = if (isSelected || data.count > 0) accentColor.color
+                    else primaryTextColor.color.copy(alpha = 0.55f),
+                    fontSize = 10.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    style = TextStyle(shadow = shadow)
+                )
+            }
+
+            // Centered Prominent Section Icon
+            ShadowedIcon(
+                imageVector = data.icon,
+                contentDescription = null,
+                tint = if (isSelected) accentColor.color else primaryTextColor.color.copy(alpha = 0.88f),
+                size = 23.dp,
+                modifier = Modifier.align(Alignment.Center),
+                showShadows = showShadows,
+                primaryTextColor = primaryTextColor,
+                shadowSettings = shadowSettings
+            )
+
+            // Bottom: Chevron Arrow (points down, flips up when expanded)
+            ShadowedIcon(
+                imageVector = Icons.Outlined.KeyboardArrowDown,
+                contentDescription = if (isSelected) "Collapse ${data.title}" else "Expand ${data.title}",
+                tint = if (isSelected) accentColor.color else primaryTextColor.color.copy(alpha = 0.55f),
+                size = 14.dp,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 2.dp)
+                    .rotate(arrowRotation),
+                showShadows = showShadows,
+                primaryTextColor = primaryTextColor,
+                shadowSettings = shadowSettings
+            )
+        }
+    }
+}
+
+/**
+ * Compact dropdown menu allowing the user to reorder the current section card.
+ * Displays the current 1-based position (e.g., "#1", "#2"...) and expands into a list
+ * of selectable positions (1, 2, 3...) styled to match the theme.
+ */
+@Composable
+private fun HighlightSectionOrderMenu(
+    currentPosition: Int,
+    totalPositions: Int,
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    popupTheme: PopupTheme,
+    showShadows: Boolean,
+    shadowSettings: ShadowSettings,
+    onSelectPosition: (Int) -> Unit
+) {
+    if (totalPositions <= 1) return
+
+    var expanded by remember { mutableStateOf(false) }
+    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
+
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(primaryTextColor.color.copy(alpha = 0.08f))
+                .border(1.dp, primaryTextColor.color.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                .clickable { expanded = !expanded }
+                .padding(horizontal = 6.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = "#$currentPosition",
+                color = accentColor.color,
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.Bold,
+                style = TextStyle(shadow = shadow)
+            )
+            Icon(
+                imageVector = Icons.Outlined.ArrowDropDown,
+                contentDescription = "Set card position",
+                tint = primaryTextColor.color.copy(alpha = 0.65f),
+                modifier = Modifier.size(15.dp)
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            shape = RoundedCornerShape(12.dp),
+            containerColor = popupTheme.solidBackgroundColor,
+            border = BorderStroke(1.dp, popupTheme.borderColor),
+            shadowElevation = 8.dp
+        ) {
+            (1..totalPositions).forEach { pos ->
+                val isSelected = (pos == currentPosition)
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "$pos",
+                                color = if (isSelected) accentColor.color else popupTheme.contentColor,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 14.sp
+                            )
+                            if (isSelected) {
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Icon(
+                                    imageVector = Icons.Outlined.Check,
+                                    contentDescription = null,
+                                    tint = accentColor.color,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
+                        }
+                    },
+                    onClick = {
+                        expanded = false
+                        if (pos != currentPosition) {
+                            onSelectPosition(pos)
+                        }
+                    },
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Reusable container for an expanded app list section in HighlightScreen.
+ */
+@Composable
+private fun HighlightAppSectionExpanded(
+    title: String,
+    icon: ImageVector,
+    apps: List<AppInfo>,
+    emptyMessage: String,
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    popupTheme: PopupTheme,
+    showShadows: Boolean,
+    shadowSettings: ShadowSettings,
+    appTagsMap: Map<String, List<String>>,
+    currentPosition: Int? = null,
+    totalPositions: Int = 0,
+    onSetPosition: ((Int) -> Unit)? = null,
+    onAppClick: (String) -> Unit,
+    onAppLongClick: (AppInfo, Offset) -> Unit,
+    onClose: () -> Unit
+) {
+    HighlightSectionHeader(
+        title = title,
+        icon = icon,
+        count = apps.size,
+        showCount = true,
+        accentColor = accentColor,
+        primaryTextColor = primaryTextColor,
+        popupTheme = popupTheme,
+        showShadows = showShadows,
+        shadowSettings = shadowSettings,
+        currentPosition = currentPosition,
+        totalPositions = totalPositions,
+        onSetPosition = onSetPosition,
+        onClose = onClose
+    )
+    HorizontalDivider(
+        color = primaryTextColor.color.copy(alpha = 0.08f),
+        modifier = Modifier.padding(top = 10.dp, bottom = 12.dp)
+    )
+    HighlightAppsRow(
+        apps = apps,
+        emptyMessage = emptyMessage,
+        accentColor = accentColor,
+        primaryTextColor = primaryTextColor,
+        showShadows = showShadows,
+        shadowSettings = shadowSettings,
+        appTagsMap = appTagsMap,
+        onAppClick = onAppClick,
+        onAppLongClick = onAppLongClick
+    )
+}
+
+/**
+ * Standard header for expanded highlight sections.
+ */
+@Composable
+private fun HighlightSectionHeader(
+    title: String,
+    icon: ImageVector,
+    count: Int,
+    showCount: Boolean,
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    popupTheme: PopupTheme,
+    showShadows: Boolean,
+    shadowSettings: ShadowSettings,
+    currentPosition: Int? = null,
+    totalPositions: Int = 0,
+    onSetPosition: ((Int) -> Unit)? = null,
+    onClose: () -> Unit
+) {
+    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f, fill = false)
+        ) {
+            ShadowedIcon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accentColor.color,
+                modifier = Modifier.size(18.dp),
+                showShadows = showShadows,
+                primaryTextColor = primaryTextColor,
+                shadowSettings = shadowSettings
+            )
+            Text(
+                text = title,
+                color = primaryTextColor.color,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.8.sp,
+                style = TextStyle(shadow = shadow)
+            )
+            if (showCount) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(
+                            if (count > 0) accentColor.color.copy(alpha = 0.18f)
+                            else primaryTextColor.color.copy(alpha = 0.08f)
+                        )
+                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = count.toString(),
+                        color = if (count > 0) accentColor.color else primaryTextColor.color.copy(alpha = 0.6f),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        style = TextStyle(shadow = shadow)
+                    )
+                }
+            }
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (currentPosition != null && totalPositions > 1 && onSetPosition != null) {
+                HighlightSectionOrderMenu(
+                    currentPosition = currentPosition,
+                    totalPositions = totalPositions,
+                    accentColor = accentColor,
+                    primaryTextColor = primaryTextColor,
+                    popupTheme = popupTheme,
+                    showShadows = showShadows,
+                    shadowSettings = shadowSettings,
+                    onSelectPosition = onSetPosition
+                )
+            }
+
+            IconButton(
+                onClick = onClose,
+                modifier = Modifier.size(24.dp)
+            ) {
+                ShadowedIcon(
+                    imageVector = Icons.Outlined.Close,
+                    contentDescription = "Collapse section",
+                    tint = primaryTextColor.color.copy(alpha = 0.6f),
+                    modifier = Modifier.size(16.dp),
+                    showShadows = showShadows,
+                    primaryTextColor = primaryTextColor,
+                    shadowSettings = shadowSettings
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Horizontal row of app chips for expanded app sections.
+ */
+@Composable
+private fun HighlightAppsRow(
+    apps: List<AppInfo>,
+    emptyMessage: String,
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    showShadows: Boolean,
+    shadowSettings: ShadowSettings,
+    appTagsMap: Map<String, List<String>>,
+    onAppClick: (String) -> Unit,
+    onAppLongClick: (AppInfo, Offset) -> Unit
+) {
+    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
+
+    if (apps.isNotEmpty()) {
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(apps, key = { it.componentKey }) { app ->
+                val hasTags = (appTagsMap[app.componentKey]?.isNotEmpty() == true) ||
+                    (app.profileType == dev.msbs.cyclauncher.model.ProfileType.PERSONAL && appTagsMap[app.packageName]?.isNotEmpty() == true)
+                RecentAppChip(
+                    app = app,
+                    hasTags = hasTags,
+                    accentColor = accentColor,
+                    primaryTextColor = primaryTextColor,
+                    showShadows = showShadows,
+                    shadowSettings = shadowSettings,
+                    onClick = { onAppClick(app.componentKey) },
+                    onLongClick = { offset -> onAppLongClick(app, offset) }
+                )
+            }
+        }
+    } else {
+        Text(
+            text = emptyMessage,
+            fontSize = 12.5.sp,
+            color = primaryTextColor.color.copy(alpha = 0.6f),
+            style = TextStyle(shadow = shadow),
+            modifier = Modifier.padding(vertical = 4.dp)
+        )
+    }
+}
+
+/**
+ * 2x2 grid of launcher statistics for the expanded Overview section.
+ */
+@Composable
+private fun OverviewMetricsContent(
     totalApps: Int,
     tagsCount: Int,
     favoritesCount: Int,
@@ -576,251 +1152,63 @@ private fun CompactCollapsibleOverview(
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
-    shadowSettings: ShadowSettings,
-    animationsEnabled: Boolean
+    shadowSettings: ShadowSettings
 ) {
-    var isExpanded by remember { mutableStateOf(false) }
-    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { isExpanded = !isExpanded },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.05f)),
-        border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = if (showShadows) 0.22f else 0.12f))
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Header Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "OVERVIEW",
-                    color = accentColor.color,
-                    fontSize = 12.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp,
-                    style = TextStyle(shadow = shadow)
-                )
-
-                ShadowedIcon(
-                    imageVector = if (isExpanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
-                    contentDescription = if (isExpanded) "Collapse Overview" else "Expand Overview",
-                    tint = primaryTextColor.color.copy(alpha = 0.7f),
-                    modifier = Modifier.size(20.dp),
-                    showShadows = showShadows,
-                    primaryTextColor = primaryTextColor,
-                    shadowSettings = shadowSettings
-                )
-            }
-
-            // Expanded Details (2x2 Dashboard grid of core launcher metrics)
-            AnimatedVisibility(
-                visible = isExpanded,
-                enter = if (animationsEnabled) expandVertically(animationSpec = tween(180)) + fadeIn(animationSpec = tween(150)) else EnterTransition.None,
-                exit = if (animationsEnabled) shrinkVertically(animationSpec = tween(150)) + fadeOut(animationSpec = tween(120)) else ExitTransition.None
-            ) {
-                Column(modifier = Modifier.padding(top = 12.dp)) {
-                    HorizontalDivider(
-                        color = primaryTextColor.color.copy(alpha = 0.08f),
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-
-                    // Row 1: Installed Apps & Tags
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        CompactMetricItem(
-                            modifier = Modifier.weight(1f),
-                            label = "Installed Apps",
-                            value = totalApps.toString(),
-                            icon = Icons.Outlined.Apps,
-                            accentColor = accentColor,
-                            primaryTextColor = primaryTextColor,
-                            showShadows = showShadows,
-                            shadowSettings = shadowSettings
-                        )
-                        CompactMetricItem(
-                            modifier = Modifier.weight(1f),
-                            label = "Created Tags",
-                            value = tagsCount.toString(),
-                            icon = Icons.AutoMirrored.Outlined.Label,
-                            accentColor = accentColor,
-                            primaryTextColor = primaryTextColor,
-                            showShadows = showShadows,
-                            shadowSettings = shadowSettings
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Row 2: Favorites & Recent Launches
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        CompactMetricItem(
-                            modifier = Modifier.weight(1f),
-                            label = "Favorites",
-                            value = favoritesCount.toString(),
-                            icon = Icons.Outlined.Favorite,
-                            accentColor = accentColor,
-                            primaryTextColor = primaryTextColor,
-                            showShadows = showShadows,
-                            shadowSettings = shadowSettings
-                        )
-                        CompactMetricItem(
-                            modifier = Modifier.weight(1f),
-                            label = "Recent Launches",
-                            value = historyCount.toString(),
-                            icon = Icons.Outlined.History,
-                            accentColor = accentColor,
-                            primaryTextColor = primaryTextColor,
-                            showShadows = showShadows,
-                            shadowSettings = shadowSettings
-                        )
-                    }
-                }
-            }
+    Column {
+        // Row 1: Installed Apps & Tags
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            CompactMetricItem(
+                modifier = Modifier.weight(1f),
+                label = "Installed Apps",
+                value = totalApps.toString(),
+                icon = Icons.Outlined.Apps,
+                accentColor = accentColor,
+                primaryTextColor = primaryTextColor,
+                showShadows = showShadows,
+                shadowSettings = shadowSettings
+            )
+            CompactMetricItem(
+                modifier = Modifier.weight(1f),
+                label = "Created Tags",
+                value = tagsCount.toString(),
+                icon = Icons.AutoMirrored.Outlined.Label,
+                accentColor = accentColor,
+                primaryTextColor = primaryTextColor,
+                showShadows = showShadows,
+                shadowSettings = shadowSettings
+            )
         }
-    }
-}
 
-/**
- * Generic collapsible section for Today's Installs and Today's Updates.
- */
-@Composable
-private fun CollapsibleAppSection(
-    title: String,
-    icon: ImageVector,
-    apps: List<AppInfo>,
-    emptyMessage: String,
-    accentColor: AccentColor,
-    primaryTextColor: PrimaryTextColor,
-    showShadows: Boolean,
-    shadowSettings: ShadowSettings,
-    animationsEnabled: Boolean,
-    appTagsMap: Map<String, List<String>> = emptyMap(),
-    onAppClick: (String) -> Unit,
-    onAppLongClick: (AppInfo, Offset) -> Unit = { _, _ -> }
-) {
-    var isExpanded by remember { mutableStateOf(false) }
-    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
+        Spacer(modifier = Modifier.height(10.dp))
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { isExpanded = !isExpanded },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.05f)),
-        border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = if (showShadows) 0.22f else 0.12f))
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Header Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ShadowedIcon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = accentColor.color,
-                        modifier = Modifier.size(18.dp),
-                        showShadows = showShadows,
-                        primaryTextColor = primaryTextColor,
-                        shadowSettings = shadowSettings
-                    )
-                    Text(
-                        text = title,
-                        color = primaryTextColor.color,
-                        fontSize = 12.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.8.sp,
-                        style = TextStyle(shadow = shadow)
-                    )
-
-                    // Count Badge
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(
-                                if (apps.isNotEmpty()) accentColor.color.copy(alpha = 0.18f)
-                                else primaryTextColor.color.copy(alpha = 0.08f)
-                            )
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = apps.size.toString(),
-                            color = if (apps.isNotEmpty()) accentColor.color else primaryTextColor.color.copy(alpha = 0.6f),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            style = TextStyle(shadow = shadow)
-                        )
-                    }
-                }
-
-                ShadowedIcon(
-                    imageVector = if (isExpanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
-                    contentDescription = if (isExpanded) "Collapse" else "Expand",
-                    tint = primaryTextColor.color.copy(alpha = 0.7f),
-                    modifier = Modifier.size(20.dp),
-                    showShadows = showShadows,
-                    primaryTextColor = primaryTextColor,
-                    shadowSettings = shadowSettings
-                )
-            }
-
-            // Expandable Apps List
-            AnimatedVisibility(
-                visible = isExpanded,
-                enter = if (animationsEnabled) expandVertically(animationSpec = tween(180)) + fadeIn(animationSpec = tween(150)) else EnterTransition.None,
-                exit = if (animationsEnabled) shrinkVertically(animationSpec = tween(150)) + fadeOut(animationSpec = tween(120)) else ExitTransition.None
-            ) {
-                Column(modifier = Modifier.padding(top = 12.dp)) {
-                    HorizontalDivider(
-                        color = primaryTextColor.color.copy(alpha = 0.08f),
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-                    if (apps.isNotEmpty()) {
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            items(apps, key = { it.componentKey }) { app ->
-                                val hasTags = (appTagsMap[app.componentKey]?.isNotEmpty() == true) ||
-                                    (app.profileType == dev.msbs.cyclauncher.model.ProfileType.PERSONAL && appTagsMap[app.packageName]?.isNotEmpty() == true)
-                                RecentAppChip(
-                                    app = app,
-                                    hasTags = hasTags,
-                                    accentColor = accentColor,
-                                    primaryTextColor = primaryTextColor,
-                                    showShadows = showShadows,
-                                    shadowSettings = shadowSettings,
-                                    onClick = { onAppClick(app.componentKey) },
-                                    onLongClick = { offset -> onAppLongClick(app, offset) }
-                                )
-                            }
-                        }
-                    } else {
-                        Text(
-                            text = emptyMessage,
-                            fontSize = 12.5.sp,
-                            color = primaryTextColor.color.copy(alpha = 0.6f),
-                            style = TextStyle(shadow = shadow),
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        )
-                    }
-                }
-            }
+        // Row 2: Favorites & Recent Launches
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            CompactMetricItem(
+                modifier = Modifier.weight(1f),
+                label = "Favorites",
+                value = favoritesCount.toString(),
+                icon = Icons.Outlined.Favorite,
+                accentColor = accentColor,
+                primaryTextColor = primaryTextColor,
+                showShadows = showShadows,
+                shadowSettings = shadowSettings
+            )
+            CompactMetricItem(
+                modifier = Modifier.weight(1f),
+                label = "Recent Launches",
+                value = historyCount.toString(),
+                icon = Icons.Outlined.History,
+                accentColor = accentColor,
+                primaryTextColor = primaryTextColor,
+                showShadows = showShadows,
+                shadowSettings = shadowSettings
+            )
         }
     }
 }
@@ -1621,167 +2009,193 @@ private fun WidgetResizeDialog(
 }
 
 @Composable
-private fun PrivateSpaceSection(
+private fun HighlightPrivateSpaceContent(
     isLocked: Boolean,
     apps: List<AppInfo>,
     handSide: HandSide,
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     buttonTextColor: PrimaryTextColor,
+    popupTheme: PopupTheme = PopupTheme.DARK,
     showShadows: Boolean,
     shadowSettings: ShadowSettings,
-    animationsEnabled: Boolean,
-    appTagsMap: Map<String, List<String>>,
+    currentPosition: Int? = null,
+    totalPositions: Int = 0,
+    onSetPosition: ((Int) -> Unit)? = null,
     onLockClick: () -> Unit,
     onUnlockClick: () -> Unit,
     onInstallAppsClick: () -> Unit,
     onAppClick: (String) -> Unit,
-    onAppLongClick: (AppInfo, Offset) -> Unit
+    onAppLongClick: (AppInfo, Offset) -> Unit,
+    onClose: () -> Unit
 ) {
-    var isExpanded by remember { mutableStateOf(false) }
+    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(primaryTextColor.color.copy(alpha = 0.06f))
-            .border(1.dp, primaryTextColor.color.copy(alpha = 0.12f), RoundedCornerShape(18.dp))
-            .padding(14.dp)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { isExpanded = !isExpanded },
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f, fill = false)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                androidx.compose.material3.Icon(
-                    imageVector = if (isLocked) Icons.Outlined.Lock else Icons.Outlined.LockOpen,
-                    contentDescription = null,
-                    tint = accentColor.color,
-                    modifier = Modifier.size(20.dp)
-                )
-                Text(
-                    text = "PRIVATE SPACE",
-                    color = primaryTextColor.color,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
+            ShadowedIcon(
+                imageVector = if (isLocked) Icons.Outlined.Lock else Icons.Outlined.LockOpen,
+                contentDescription = null,
+                tint = accentColor.color,
+                modifier = Modifier.size(18.dp),
+                showShadows = showShadows,
+                primaryTextColor = primaryTextColor,
+                shadowSettings = shadowSettings
+            )
+            Text(
+                text = "PRIVATE SPACE",
+                color = primaryTextColor.color,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.8.sp,
+                style = TextStyle(shadow = shadow)
+            )
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            if (currentPosition != null && totalPositions > 1 && onSetPosition != null) {
+                HighlightSectionOrderMenu(
+                    currentPosition = currentPosition,
+                    totalPositions = totalPositions,
+                    accentColor = accentColor,
+                    primaryTextColor = primaryTextColor,
+                    popupTheme = popupTheme,
+                    showShadows = showShadows,
+                    shadowSettings = shadowSettings,
+                    onSelectPosition = onSetPosition
                 )
             }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                if (!isLocked) {
-                    androidx.compose.material3.IconButton(
-                        onClick = onInstallAppsClick,
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        androidx.compose.material3.Icon(
-                            imageVector = Icons.Outlined.AddCircleOutline,
-                            contentDescription = "Install Apps in Private Space",
-                            tint = accentColor.color,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-
-                androidx.compose.material3.IconButton(
-                    onClick = { if (isLocked) onUnlockClick() else onLockClick() },
-                    modifier = Modifier.size(28.dp)
+            if (!isLocked) {
+                IconButton(
+                    onClick = onInstallAppsClick,
+                    modifier = Modifier.size(24.dp)
                 ) {
-                    androidx.compose.material3.Icon(
-                        imageVector = if (isLocked) Icons.Outlined.LockOpen else Icons.Outlined.Lock,
-                        contentDescription = if (isLocked) "Unlock Private Space" else "Lock Private Space",
+                    ShadowedIcon(
+                        imageVector = Icons.Outlined.AddCircleOutline,
+                        contentDescription = "Install Apps in Private Space",
                         tint = accentColor.color,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp),
+                        showShadows = showShadows,
+                        primaryTextColor = primaryTextColor,
+                        shadowSettings = shadowSettings
                     )
                 }
-
-                androidx.compose.material3.Icon(
-                    imageVector = if (isExpanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
-                    contentDescription = null,
+            }
+            IconButton(
+                onClick = { if (isLocked) onUnlockClick() else onLockClick() },
+                modifier = Modifier.size(24.dp)
+            ) {
+                ShadowedIcon(
+                    imageVector = if (isLocked) Icons.Outlined.LockOpen else Icons.Outlined.Lock,
+                    contentDescription = if (isLocked) "Unlock Private Space" else "Lock Private Space",
+                    tint = accentColor.color,
+                    modifier = Modifier.size(16.dp),
+                    showShadows = showShadows,
+                    primaryTextColor = primaryTextColor,
+                    shadowSettings = shadowSettings
+                )
+            }
+            IconButton(
+                onClick = onClose,
+                modifier = Modifier.size(24.dp)
+            ) {
+                ShadowedIcon(
+                    imageVector = Icons.Outlined.Close,
+                    contentDescription = "Collapse section",
                     tint = primaryTextColor.color.copy(alpha = 0.6f),
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(16.dp),
+                    showShadows = showShadows,
+                    primaryTextColor = primaryTextColor,
+                    shadowSettings = shadowSettings
                 )
             }
         }
+    }
 
-        if (isExpanded) {
-            Spacer(modifier = Modifier.height(12.dp))
-            if (isLocked) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "Private Space is locked",
-                        color = primaryTextColor.color.copy(alpha = 0.7f),
-                        fontSize = 13.sp
-                    )
-                    Button(
-                        onClick = onUnlockClick,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = accentColor.color,
-                            contentColor = buttonTextColor.color
-                        )
-                    ) {
-                        Text("Unlock", color = buttonTextColor.color, fontWeight = FontWeight.Bold)
-                    }
-                }
-            } else if (apps.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "No private apps installed",
-                        color = primaryTextColor.color.copy(alpha = 0.5f),
-                        fontSize = 13.sp
-                    )
-                    androidx.compose.material3.OutlinedButton(
-                        onClick = onInstallAppsClick,
-                        border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.5f)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        androidx.compose.material3.Icon(
-                            imageVector = Icons.Outlined.AddCircleOutline,
-                            contentDescription = null,
-                            tint = accentColor.color,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Install Apps", color = primaryTextColor.color, fontSize = 12.sp)
-                    }
-                }
-            } else {
-                androidx.compose.foundation.layout.FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    for (app in apps) {
-                        dev.msbs.cyclauncher.ui.components.AppListItemWithIcon(
-                            app = app,
-                            handSide = handSide,
-                            iconSize = 44,
-                            fontSize = 14,
-                            accentColor = accentColor,
-                            onClick = { onAppClick(app.componentKey) },
-                            onLongClick = { offset -> onAppLongClick(app, offset) }
-                        )
-                    }
-                }
+    HorizontalDivider(
+        color = primaryTextColor.color.copy(alpha = 0.08f),
+        modifier = Modifier.padding(top = 10.dp, bottom = 12.dp)
+    )
+
+    if (isLocked) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Private Space is locked",
+                color = primaryTextColor.color.copy(alpha = 0.7f),
+                fontSize = 13.sp,
+                style = TextStyle(shadow = shadow)
+            )
+            Button(
+                onClick = onUnlockClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = accentColor.color,
+                    contentColor = buttonTextColor.color
+                )
+            ) {
+                Text("Unlock", color = buttonTextColor.color, fontWeight = FontWeight.Bold)
+            }
+        }
+    } else if (apps.isEmpty()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "No private apps installed",
+                color = primaryTextColor.color.copy(alpha = 0.5f),
+                fontSize = 13.sp,
+                style = TextStyle(shadow = shadow)
+            )
+            OutlinedButton(
+                onClick = onInstallAppsClick,
+                border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.AddCircleOutline,
+                    contentDescription = null,
+                    tint = accentColor.color,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Install Apps", color = primaryTextColor.color, fontSize = 12.sp)
+            }
+        }
+    } else {
+        androidx.compose.foundation.layout.FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            for (app in apps) {
+                dev.msbs.cyclauncher.ui.components.AppListItemWithIcon(
+                    app = app,
+                    handSide = handSide,
+                    iconSize = 44,
+                    fontSize = 14,
+                    accentColor = accentColor,
+                    onClick = { onAppClick(app.componentKey) },
+                    onLongClick = { offset -> onAppLongClick(app, offset) }
+                )
             }
         }
     }
