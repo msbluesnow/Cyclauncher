@@ -1125,7 +1125,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun isFavorite(componentKey: String): Boolean = actionsManager.isFavorite(componentKey)
 
-    private val _isDefaultLauncher = MutableStateFlow(false)
+    private val _isDefaultLauncher = MutableStateFlow(
+        prefs.getBoolean("is_default_launcher", false)
+    )
     val isDefaultLauncherState: StateFlow<Boolean> = _isDefaultLauncher
 
     fun isDefaultLauncher(): Boolean = _isDefaultLauncher.value
@@ -1133,6 +1135,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun updateDefaultLauncherStatus(onResult: ((Boolean) -> Unit)? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             val isDefault = checkIsDefaultLauncher(getApplication())
+            editPrefs { putBoolean("is_default_launcher", isDefault) }
             if (_isDefaultLauncher.value != isDefault) {
                 _isDefaultLauncher.value = isDefault
             }

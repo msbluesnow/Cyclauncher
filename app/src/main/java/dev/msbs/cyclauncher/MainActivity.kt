@@ -136,9 +136,16 @@ class MainActivity : ComponentActivity() {
         
         initAppWidgetsIfUnlocked()
         
+        isDefaultLauncherCached = viewModel.isDefaultLauncher()
         val onBackPressedCallback = object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                viewModel.requestReset()
+                if (!isDefaultLauncherCached) {
+                    if (!moveTaskToBack(true)) {
+                        viewModel.exitToSystemHome(this@MainActivity)
+                    }
+                } else {
+                    viewModel.requestReset()
+                }
             }
         }
         onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
@@ -974,11 +981,13 @@ class MainActivity : ComponentActivity() {
         decorView.post {
             if (!isFinishing && !isDestroyed) {
                 val insetsController = androidx.core.view.WindowCompat.getInsetsController(window, decorView)
-                insetsController.systemBarsBehavior =
-                    androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 if (hide) {
+                    insetsController.systemBarsBehavior =
+                        androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                     insetsController.hide(androidx.core.view.WindowInsetsCompat.Type.statusBars())
                 } else {
+                    insetsController.systemBarsBehavior =
+                        androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
                     insetsController.show(androidx.core.view.WindowInsetsCompat.Type.statusBars())
                 }
             }
