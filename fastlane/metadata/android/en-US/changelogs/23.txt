@@ -1,0 +1,6 @@
+Release Candidate 1 focusing on multi-profile support and navigation refinement.
+- Added Private Space, Work Profile, and Untagged Apps sections on Highlights.
+- Redesigned Highlights section tiles into compact accordions with reordering.
+- Implemented cold-start profile launch retries and memory-isolated caches.
+- Fixed back navigation to smoothly minimize when running as non-default launcher.
+- Restored standard edge gesture pass-through when status bar is visible.
