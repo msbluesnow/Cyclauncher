@@ -1,9 +1,11 @@
-Cyclauncher is not just yet another bicycle. Built with Jetpack Compose, it is focused on speed, effortless app accessibility, and seamless one-handed usability. New features and mechanics are continuously designed not just to be unique, but to deliver a genuinely convenient and ergonomic daily user experience.
+Cyclauncher is a fast, ergonomic Android launcher built entirely with Jetpack Compose, designed from the ground up for comfortable one-handed navigation and instant app access.
 
 Key Features:
-- Tag Folder System: On-screen interactive tag folders with live icon previews and quick-access popups.
-- Versatile Search Modes: Rectangular alphabet wheel, ergonomic side alphabet index strip, and instant text filtering.
-- Ergonomic one-handed optimization with full Left/Right hand layout support.
-- Dynamic accent colors, customizable main text color, and adaptive shadow inversion.
-- Dynamic favorites with drag-and-drop reordering and launch history tracking.
-- Fast, minimalist, and battery-efficient.
+- Ergonomic One-Handed Control: Complete layout mirroring for Left-Handed and Right-Handed use, keeping all apps and controls within natural thumb reach.
+- Multi-Modal App Search: Rapid app retrieval through an ergonomic Side Alphabet Grid, an alternative rectangular alphabet wheel with inertia physics, chromatic icon color filtering, and instant text search.
+- Interactive Tag Folders: Group applications with 2x2 live icon previews, proximity-aware popup menus, 2D drag-to-reorder on grid and within folders, and home screen favorite pinning.
+- Highlights Hub & Widgets: Dedicated second screen featuring customizable Android widgets in compact accordions (search, resize, reconfigure), daily update tracking, and an untagged apps drawer.
+- Private Space & Work Profiles: Built-in support for multi-profile environments (Personal, Work, Private Space) with biometric lock/unlock and isolated app caching.
+- Character & Symbol Mapping: Customize search buckets by binding emojis, Cyrillic, Arabic, and international alphabets directly to A-Z and #.
+- Adaptive Theming & Hue Angle Shift: Dynamic wallpaper theming powered by an adaptive Hue Angle Shift algorithm, Echo Icon Theme presets, custom HSV picker, and drop-shadow tuning.
+- Privacy-First & Battery-Efficient: 100% Jetpack Compose with zero telemetry, no background network calls, and an accessibility toggle to disable all animations.

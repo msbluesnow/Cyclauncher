@@ -24,7 +24,7 @@
   </a>
 </p>
 
-Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**, it is focused on speed, effortless app accessibility, and seamless one-handed usability. New features and mechanics are continuously designed not just to be unique, but to deliver a genuinely convenient, ergonomic, and practical daily experience. Fast and intuitive navigation is provided via versatile search methods including a custom rectangular alphabet wheel, an ergonomic side alphabet index strip, chromatic color palette search, and instant text filtering.
+Cyclauncher is **not just yet another bicycle**. Built entirely with **Jetpack Compose**, it is designed from the ground up for comfortable one-handed navigation and instant app access. Daily workflows are streamlined through an ergonomic side alphabet grid, an alternative rectangular alphabet wheel with inertia physics, chromatic icon color search, interactive tag folders, adaptive Hue Angle Shift theming, and an expandable widget hub.
 
 > [!IMPORTANT]
 > **Beta Version**: This project is currently in Beta. Core features are stable, but further refinements and new mechanics are actively being developed. Feedback and bug reports are highly appreciated.
@@ -56,14 +56,16 @@ Cyclauncher is **not just yet another bicycle**. Built with **Jetpack Compose**,
 
 ## ✨ Key Features
 
-- **Highlights Screen**: Dedicated home screen panel showing daily app installs and updates overview, with a full **Widgets section** — add, resize, reconfigure, and remove Android widgets via a custom picker with search, expandable accordions, and live previews.
+- **Ergonomic One-Handed Layout**: Complete interface mirroring for Left-Handed and Right-Handed use, placing all apps, controls, and search elements within natural thumb reach.
+- **Multi-Modal App Search**: Rapid app navigation via an ergonomic **Side Alphabet Grid** for instant one-handed scrubbing, an alternative **Rectangular Alphabet Wheel** (with inertia physics), a **Chromatic Color Search Palette** to filter apps by primary icon color (Red, Amber, Green, Blue, Purple, Rainbow, Monochrome), or instant **Text Search**.
 - **Tag Folder System & 2D Reordering**: Interactive tag folders with color accents, 2x2 live icon previews, proximity-aware popup menus, **2D drag-to-reorder** for both folder positions and apps within folders, and a sort dialog (by name / app count). Pin tag folders directly alongside favorite apps.
-- **Versatile Search Modes**: Rapid app navigation via a custom **Rectangular Alphabet Wheel** (with inertia physics), an ergonomic **Side Alphabet Index** strip for instant thumb scrubbing, a **Chromatic Color Search Palette** to filter apps by primary icon color (Red, Amber, Green, Blue, Purple, Rainbow, Monochrome), or instant **Text Search**.
+- **Highlights Screen & Widgets**: Dedicated home screen panel showing daily app installs and updates overview, with a full **Widgets section** — add, resize, reconfigure, and remove Android widgets via a custom picker with search, expandable accordions, live previews, and an untagged apps drawer.
+- **Private Space & Work Profiles**: Native multi-profile support (Personal, Work, Private Space) with biometric lock/unlock toggles, private app installer shortcuts, and memory-isolated caching.
 - **Character & Symbol Mapping**: Comprehensive custom mapping engine to bind any symbol, emoji (🤗, 🎮...), or international alphabet letter (Cyrillic, Arabic, German/Nordic, Romance) to specific search index buckets (`A`–`Z`, `#`) with instant presets.
 - **Interactive Gesture Tutorial**: Guided onboarding overlay teaching launcher gestures (search, notifications, favorites & history management, Highlights navigation) with animated visualizers — 7 steps.
 - **Dynamic Favorites & History Badges**: Organize top apps with intuitive drag-and-drop reordering, and track newly installed or updated apps via subtle visual update badges in history.
 - **AI-Assisted App Tagging**: Fast batch categorization of applications with an external AI tagging workflow (Export → Process via External Prompt → Import) and full JSON backup options.
-- **Deep Theme Customization & Accessibility**: Echo Icon Theme accent palettes, dynamic Material You wallpaper colors, interactive custom Color Picker, primary text color modes (Black/White) with adaptive wallpaper drop-shadows, customizable shadow colors, and an accessibility toggle to disable all animations including cursor blinking.
+- **Deep Theme Customization & Accessibility**: Adaptive **Hue Angle Shift** dynamic wallpaper theming, Echo Icon Theme accent palettes, interactive custom Color Picker, primary text color modes (Black/White) with adaptive wallpaper drop-shadows, customizable shadow colors, and an accessibility toggle to disable all animations including cursor blinking.
 
 ## 🤝 Contributing & Help Wanted
 
