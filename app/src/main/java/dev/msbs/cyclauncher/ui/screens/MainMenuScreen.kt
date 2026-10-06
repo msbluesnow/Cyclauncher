@@ -26,9 +26,10 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.res.stringResource
+import dev.msbs.cyclauncher.R
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -1204,7 +1205,7 @@ private fun ColumnScope.TagsContentBlock(
                         }
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Exit Tag Reorder Mode",
+                            contentDescription = stringResource(R.string.main_exit_tag_reorder),
                             tint = accentColor.color,
                             modifier = Modifier.size(22.dp)
                         )
@@ -1225,7 +1226,7 @@ private fun ColumnScope.TagsContentBlock(
                         }
                         Icon(
                             imageVector = tagIcon,
-                            contentDescription = "Tag Folders",
+                            contentDescription = stringResource(R.string.main_tag_folders),
                             tint = accentColor.color,
                             modifier = Modifier.size(22.dp)
                         )
@@ -1314,7 +1315,7 @@ private fun ColumnScope.HistoryContentBlock(
                                     }
                                     Icon(
                                         imageVector = Icons.Default.RemoveCircle,
-                                        contentDescription = "Remove from History",
+                                        contentDescription = stringResource(R.string.main_remove_from_history),
                                         tint = Color.Red.copy(alpha = 0.8f),
                                         modifier = Modifier.size(24.dp)
                                     )
@@ -1373,7 +1374,7 @@ private fun ColumnScope.HistoryContentBlock(
                                     }
                                     Icon(
                                         imageVector = Icons.Default.RemoveCircle,
-                                        contentDescription = "Remove from History",
+                                        contentDescription = stringResource(R.string.main_remove_from_history),
                                         tint = Color.Red.copy(alpha = 0.8f),
                                         modifier = Modifier.size(24.dp)
                                     )
@@ -1446,7 +1447,7 @@ private fun ColumnScope.HistoryContentBlock(
                     }
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Exit History Edit Mode",
+                        contentDescription = stringResource(R.string.main_exit_history_edit),
                         tint = accentColor.color,
                         modifier = Modifier.size(22.dp)
                     )
@@ -1467,7 +1468,7 @@ private fun ColumnScope.HistoryContentBlock(
                     }
                     Icon(
                         imageVector = historyIcon,
-                        contentDescription = if (isHistoryPaused) "History (Paused)" else "History",
+                        contentDescription = if (isHistoryPaused) stringResource(R.string.history_menu_paused) else stringResource(R.string.history_menu_title),
                         tint = if (isHistoryPaused) accentColor.color.copy(alpha = 0.5f) else accentColor.color,
                         modifier = Modifier.size(22.dp)
                     )
@@ -1942,7 +1943,7 @@ private fun FavoritesSection(
                                     }
                                     Icon(
                                         imageVector = Icons.Default.RemoveCircle,
-                                        contentDescription = "Remove",
+                                        contentDescription = stringResource(R.string.main_remove),
                                         tint = Color.Red.copy(alpha = 0.8f),
                                         modifier = Modifier.size(24.dp)
                                     )
@@ -1991,7 +1992,7 @@ private fun FavoritesSection(
                         }
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Exit Edit Mode",
+                            contentDescription = stringResource(R.string.main_exit_edit_mode),
                             tint = accentColor.color,
                             modifier = Modifier.size(24.dp)
                         )

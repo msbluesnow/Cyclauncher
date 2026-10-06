@@ -8,6 +8,8 @@ import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.ui.components.AppListItemWithIcon
+import androidx.compose.ui.res.stringResource
+import dev.msbs.cyclauncher.R
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -157,7 +159,7 @@ private fun SearchTextField(
         modifier = modifier.fillMaxWidth(),
         placeholder = { 
             Text(
-                "Search apps...", 
+                stringResource(R.string.search_apps_placeholder), 
                 color = primaryTextColor.color.copy(alpha = 0.6f),
                 textAlign = alignment,
                 modifier = Modifier.fillMaxWidth(),

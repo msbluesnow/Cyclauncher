@@ -38,6 +38,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.res.stringResource
+import dev.msbs.cyclauncher.R
 import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.widget.LauncherAppWidgetHostView
@@ -186,15 +188,17 @@ fun SearchWidgetCompartment(
     // Context options dialog for a configured widget
     slotForOptions?.let { isLeft ->
         val targetWidgetId = if (isLeft) config.leftWidgetId else config.rightWidgetId
-        val widgetLabel = remember(targetWidgetId) {
+        val defaultTitle = if (isLeft) stringResource(R.string.widget_left_title) else stringResource(R.string.widget_right_title)
+        val customLabel = remember(targetWidgetId) {
             targetWidgetId?.let { id ->
                 try {
                     manager.getAppWidgetInfo(id)?.loadLabel(context.packageManager)
                 } catch (_: Exception) {
                     null
                 }
-            } ?: (if (isLeft) "Left Widget" else "Right Widget")
+            }
         }
+        val widgetLabel = customLabel ?: defaultTitle
 
         AlertDialog(
             onDismissRequest = { slotForOptions = null },
@@ -227,7 +231,7 @@ fun SearchWidgetCompartment(
                         ) {
                             Icon(Icons.Outlined.Edit, contentDescription = null, tint = accentColor.color)
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Change Widget", fontSize = 15.sp)
+                            Text(stringResource(R.string.widget_action_change), fontSize = 15.sp)
                         }
                     }
 
@@ -248,7 +252,7 @@ fun SearchWidgetCompartment(
                         ) {
                             Icon(Icons.Outlined.RestartAlt, contentDescription = null, tint = accentColor.color)
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Reset Split (50/50)", fontSize = 15.sp)
+                            Text(stringResource(R.string.widget_action_reset_split), fontSize = 15.sp)
                         }
                     }
 
@@ -273,7 +277,7 @@ fun SearchWidgetCompartment(
                         ) {
                             Icon(Icons.Outlined.Delete, contentDescription = null, tint = Color(0xFFFF5252))
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Remove Widget", fontSize = 15.sp)
+                            Text(stringResource(R.string.widget_action_remove), fontSize = 15.sp)
                         }
                     }
                 }
@@ -283,7 +287,7 @@ fun SearchWidgetCompartment(
                     onClick = { slotForOptions = null },
                     colors = ButtonDefaults.textButtonColors(contentColor = popupTheme.contentColor)
                 ) {
-                    Text("Close")
+                    Text(stringResource(R.string.common_close))
                 }
             }
         )
@@ -337,13 +341,13 @@ private fun SingleWidgetSlot(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Add,
-                    contentDescription = "Add Widget",
+                    contentDescription = stringResource(R.string.widget_action_add),
                     tint = accentColor.copy(alpha = 0.8f),
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Add Widget",
+                    text = stringResource(R.string.widget_action_add),
                     color = primaryTextColor.copy(alpha = 0.6f),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
@@ -395,7 +399,7 @@ private fun SingleWidgetSlot(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.MoreVert,
-                    contentDescription = "Widget Options",
+                    contentDescription = stringResource(R.string.widget_action_options),
                     tint = Color.White.copy(alpha = 0.85f),
                     modifier = Modifier.size(13.dp)
                 )
@@ -471,13 +475,13 @@ fun SideSearchWidgetSlot(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Add,
-                        contentDescription = "Add Widget",
+                        contentDescription = stringResource(R.string.widget_action_add),
                         tint = accentColor.color.copy(alpha = 0.8f),
                         modifier = Modifier.size(28.dp)
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Add Widget",
+                        text = stringResource(R.string.widget_action_add),
                         color = primaryTextColor.color.copy(alpha = 0.6f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
@@ -527,7 +531,7 @@ fun SideSearchWidgetSlot(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.MoreVert,
-                        contentDescription = "Widget Options",
+                        contentDescription = stringResource(R.string.widget_action_options),
                         tint = Color.White.copy(alpha = 0.85f),
                         modifier = Modifier.size(14.dp)
                     )
@@ -537,15 +541,17 @@ fun SideSearchWidgetSlot(
     }
 
     if (showOptions) {
-        val widgetLabel = remember(widgetId) {
+        val defaultTitle = stringResource(R.string.widget_title)
+        val customLabel = remember(widgetId) {
             widgetId?.let { id ->
                 try {
                     manager.getAppWidgetInfo(id)?.loadLabel(context.packageManager)
                 } catch (_: Exception) {
                     null
                 }
-            } ?: "Widget"
+            }
         }
+        val widgetLabel = customLabel ?: defaultTitle
 
         AlertDialog(
             onDismissRequest = { showOptions = false },
@@ -578,7 +584,7 @@ fun SideSearchWidgetSlot(
                         ) {
                             Icon(Icons.Outlined.Edit, contentDescription = null, tint = accentColor.color)
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Change Widget", fontSize = 15.sp)
+                            Text(stringResource(R.string.widget_action_change), fontSize = 15.sp)
                         }
                     }
 
@@ -604,7 +610,7 @@ fun SideSearchWidgetSlot(
                         ) {
                             Icon(Icons.Outlined.Delete, contentDescription = null, tint = Color(0xFFFF5252))
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Remove Widget", fontSize = 15.sp)
+                            Text(stringResource(R.string.widget_action_remove), fontSize = 15.sp)
                         }
                     }
                 }
@@ -614,7 +620,7 @@ fun SideSearchWidgetSlot(
                     onClick = { showOptions = false },
                     colors = ButtonDefaults.textButtonColors(contentColor = popupTheme.contentColor)
                 ) {
-                    Text("Close")
+                    Text(stringResource(R.string.common_close))
                 }
             }
         )
@@ -683,13 +689,13 @@ fun SideAlphabetWidgetSlot(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Add,
-                        contentDescription = "Add Widget",
+                        contentDescription = stringResource(R.string.widget_action_add),
                         tint = accentColor.color.copy(alpha = 0.8f),
                         modifier = Modifier.size(28.dp)
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Add Widget",
+                        text = stringResource(R.string.widget_action_add),
                         color = primaryTextColor.color.copy(alpha = 0.6f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
@@ -738,7 +744,7 @@ fun SideAlphabetWidgetSlot(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.MoreVert,
-                        contentDescription = "Widget Options",
+                        contentDescription = stringResource(R.string.widget_action_options),
                         tint = Color.White.copy(alpha = 0.85f),
                         modifier = Modifier.size(14.dp)
                     )
@@ -748,15 +754,17 @@ fun SideAlphabetWidgetSlot(
     }
 
     if (showOptions) {
-        val widgetLabel = remember(widgetId) {
+        val defaultTitle = stringResource(R.string.widget_title)
+        val customLabel = remember(widgetId) {
             widgetId?.let { id ->
                 try {
                     manager.getAppWidgetInfo(id)?.loadLabel(context.packageManager)
                 } catch (_: Exception) {
                     null
                 }
-            } ?: "Widget"
+            }
         }
+        val widgetLabel = customLabel ?: defaultTitle
 
         AlertDialog(
             onDismissRequest = { showOptions = false },
@@ -789,7 +797,7 @@ fun SideAlphabetWidgetSlot(
                         ) {
                             Icon(Icons.Outlined.Edit, contentDescription = null, tint = accentColor.color)
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Change Widget", fontSize = 15.sp)
+                            Text(stringResource(R.string.widget_action_change), fontSize = 15.sp)
                         }
                     }
 
@@ -815,7 +823,7 @@ fun SideAlphabetWidgetSlot(
                         ) {
                             Icon(Icons.Outlined.Delete, contentDescription = null, tint = Color(0xFFFF5252))
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Remove Widget", fontSize = 15.sp)
+                            Text(stringResource(R.string.widget_action_remove), fontSize = 15.sp)
                         }
                     }
                 }
@@ -825,7 +833,7 @@ fun SideAlphabetWidgetSlot(
                     onClick = { showOptions = false },
                     colors = ButtonDefaults.textButtonColors(contentColor = popupTheme.contentColor)
                 ) {
-                    Text("Close")
+                    Text(stringResource(R.string.common_close))
                 }
             }
         )

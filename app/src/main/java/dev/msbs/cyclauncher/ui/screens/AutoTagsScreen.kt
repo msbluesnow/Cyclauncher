@@ -7,6 +7,8 @@ import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.ui.components.ScreenTopBar
+import dev.msbs.cyclauncher.R
+import androidx.compose.ui.res.stringResource
 
 import android.content.ClipData
 import android.content.Context
@@ -88,7 +90,7 @@ fun AutoTagsScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         ScreenTopBar(
-            title = "TAGS",
+            title = stringResource(R.string.auto_tags_title),
             handSide = handSide,
             accentColor = accentColor,
             primaryTextColor = primaryTextColor,
@@ -108,7 +110,7 @@ fun AutoTagsScreen(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Use AI to automatically categorize your apps into tags",
+                text = stringResource(R.string.auto_tags_subtitle),
                 color = primaryTextColor.color.copy(alpha = 0.7f),
                 fontSize = 13.sp,
                 style = TextStyle(shadow = shadow)
@@ -124,12 +126,12 @@ fun AutoTagsScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
 
-                    StepHeader(1, "Export App List", accentColor, primaryTextColor, buttonTextColor, shadow)
+                    StepHeader(1, stringResource(R.string.auto_tags_step1_title), accentColor, primaryTextColor, buttonTextColor, shadow)
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Export your installed app list (labels, package names, favorites & tags). Choose JSON (for AI categorization) or TXT (human-readable).",
+                        text = stringResource(R.string.auto_tags_step1_desc),
                         color = primaryTextColor.color.copy(alpha = 0.6f),
                         fontSize = 13.sp
                     )
@@ -145,7 +147,7 @@ fun AutoTagsScreen(
                         Icon(Icons.Outlined.Upload, contentDescription = null, tint = buttonTextColor.color)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "Export App List",
+                            stringResource(R.string.auto_tags_step1_button),
                             color = buttonTextColor.color,
                             fontWeight = FontWeight.Bold
                         )
@@ -156,12 +158,12 @@ fun AutoTagsScreen(
                         modifier = Modifier.padding(vertical = 16.dp)
                     )
 
-                    StepHeader(2, "Send to AI", accentColor, primaryTextColor, buttonTextColor, shadow)
+                    StepHeader(2, stringResource(R.string.auto_tags_step2_title), accentColor, primaryTextColor, buttonTextColor, shadow)
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Copy the prompt below and send it to an AI model (ChatGPT, Claude, Gemini, etc.) along with the exported app list file.",
+                        text = stringResource(R.string.auto_tags_step2_desc),
                         color = primaryTextColor.color.copy(alpha = 0.6f),
                         fontSize = 13.sp
                     )
@@ -192,6 +194,7 @@ fun AutoTagsScreen(
 
                             Spacer(modifier = Modifier.height(8.dp))
 
+                            val promptCopiedToastText = stringResource(R.string.auto_tags_prompt_copied_toast)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.End
@@ -201,7 +204,7 @@ fun AutoTagsScreen(
                                         copyToClipboard(context, AI_PROMPT)
                                         copiedToClipboard = true
                                         Toast
-                                            .makeText(context, "Prompt copied!", Toast.LENGTH_SHORT)
+                                            .makeText(context, promptCopiedToastText, Toast.LENGTH_SHORT)
                                             .show()
                                     }
                                 ) {
@@ -213,7 +216,7 @@ fun AutoTagsScreen(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        if (copiedToClipboard) "Copied!" else "Copy Prompt",
+                                        if (copiedToClipboard) stringResource(R.string.auto_tags_copied) else stringResource(R.string.auto_tags_copy_prompt),
                                         color = if (copiedToClipboard) Color.Green else accentColor.color,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
@@ -228,12 +231,12 @@ fun AutoTagsScreen(
                         modifier = Modifier.padding(vertical = 16.dp)
                     )
 
-                    StepHeader(3, "Import Tagged Apps", accentColor, primaryTextColor, buttonTextColor, shadow)
+                    StepHeader(3, stringResource(R.string.auto_tags_step3_title), accentColor, primaryTextColor, buttonTextColor, shadow)
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "After the AI generates the tagged JSON result, save it as a .json file and import it here. All tags, colors, and assignments will be previewed before applying.",
+                        text = stringResource(R.string.auto_tags_step3_desc),
                         color = primaryTextColor.color.copy(alpha = 0.6f),
                         fontSize = 13.sp
                     )
@@ -249,7 +252,7 @@ fun AutoTagsScreen(
                         Icon(Icons.Outlined.Download, contentDescription = null, tint = buttonTextColor.color)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "Upload Tagged Result",
+                            stringResource(R.string.auto_tags_step3_button),
                             color = buttonTextColor.color,
                             fontWeight = FontWeight.Bold
                         )
@@ -293,11 +296,11 @@ private fun ExportFormatDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Export Format", color = accentColor.color, fontWeight = FontWeight.Bold) },
+        title = { Text(stringResource(R.string.auto_tags_export_dialog_title), color = accentColor.color, fontWeight = FontWeight.Bold) },
         text = {
             Column {
                 Text(
-                    "Choose a format for the exported app list:",
+                    stringResource(R.string.auto_tags_export_dialog_message),
                     color = popupTheme.contentColor.copy(alpha = 0.85f),
                     fontSize = 14.sp
                 )
@@ -328,7 +331,7 @@ private fun ExportFormatDialog(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "JSON — includes labels, favorites & tags.   TXT — human-readable list.",
+                    stringResource(R.string.auto_tags_export_dialog_hint),
                     color = popupTheme.secondaryContentColor,
                     fontSize = 11.sp
                 )
@@ -340,7 +343,7 @@ private fun ExportFormatDialog(
                 onClick = onDismiss,
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Cancel", color = popupTheme.secondaryContentColor)
+                Text(stringResource(R.string.common_cancel), color = popupTheme.secondaryContentColor)
             }
         },
         containerColor = popupTheme.solidBackgroundColor,

@@ -5,6 +5,8 @@ import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
+import dev.msbs.cyclauncher.R
+import androidx.compose.ui.res.stringResource
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -148,7 +150,7 @@ fun KeepAndroidOpenBanner(
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text(
-                            text = "Keep Android Open",
+                            text = stringResource(R.string.kao_title),
                             color = primaryTextColor.color,
                             style = TextStyle(
                                 shadow = shadow,
@@ -159,7 +161,7 @@ fun KeepAndroidOpenBanner(
                             modifier = Modifier.basicMarquee()
                         )
                         Text(
-                            text = "Your phone is about to stop being yours",
+                            text = stringResource(R.string.kao_subtitle),
                             color = primaryTextColor.color.copy(alpha = 0.65f),
                             style = TextStyle(shadow = shadow, fontSize = 11.sp, lineHeight = 14.sp),
                             maxLines = 1,
@@ -192,7 +194,7 @@ fun KeepAndroidOpenBanner(
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Outlined.Visibility,
-                                contentDescription = "Hide days remaining",
+                                contentDescription = stringResource(R.string.kao_hide_days),
                                 tint = Color.White.copy(alpha = 0.22f),
                                 modifier = Modifier
                                     .matchParentSize()
@@ -207,7 +209,7 @@ fun KeepAndroidOpenBanner(
                                     lineHeight = 16.sp
                                 )
                                 Text(
-                                    text = "DAYS LEFT",
+                                    text = stringResource(R.string.kao_days_left),
                                     color = Color.White.copy(alpha = 0.85f),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 8.5.sp,
@@ -218,7 +220,7 @@ fun KeepAndroidOpenBanner(
                     } else {
                         Icon(
                             imageVector = Icons.Outlined.VisibilityOff,
-                            contentDescription = "Show days remaining",
+                            contentDescription = stringResource(R.string.kao_show_days),
                             tint = primaryTextColor.color.copy(alpha = 0.50f),
                             modifier = Modifier.size(24.dp)
                         )
@@ -229,7 +231,7 @@ fun KeepAndroidOpenBanner(
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = "Starting in 2027, Google will block every Android app whose developer hasn't registered with Google and submitted government ID.",
+                text = stringResource(R.string.kao_banner_summary),
                 color = primaryTextColor.color.copy(alpha = 0.85f),
                 style = TextStyle(shadow = shadow, fontSize = 12.sp, lineHeight = 16.sp)
             )
@@ -260,7 +262,7 @@ fun KeepAndroidOpenBanner(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Learn More",
+                        text = stringResource(R.string.kao_learn_more),
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 12.5.sp,
                         maxLines = 1,
@@ -287,7 +289,7 @@ fun KeepAndroidOpenBanner(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Petition ↗",
+                        text = stringResource(R.string.kao_petition),
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.5.sp,
                         maxLines = 1,
@@ -347,7 +349,7 @@ fun KeepAndroidOpenDialog(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
-                    text = "Keep Android Open",
+                    text = stringResource(R.string.kao_title),
                     color = popupTheme.contentColor,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
@@ -355,7 +357,7 @@ fun KeepAndroidOpenDialog(
                 )
 
                 Text(
-                    text = "Your phone is about to stop being yours.",
+                    text = stringResource(R.string.kao_subtitle_dot),
                     color = WarningRed,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -386,7 +388,7 @@ fun KeepAndroidOpenDialog(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "DAYS UNTIL LOCKDOWN",
+                            text = stringResource(R.string.kao_days_until_lockdown),
                             color = Color.White.copy(alpha = 0.9f),
                             fontWeight = FontWeight.Bold,
                             fontSize = 11.5.sp,
@@ -405,14 +407,14 @@ fun KeepAndroidOpenDialog(
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Text(
-                            text = "What is happening?",
+                            text = stringResource(R.string.kao_what_is_happening),
                             color = popupTheme.contentColor,
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Starting in 2027, a silent update pushed by Google will block every Android app whose developer hasn't registered with Google, paid their fee, and handed over government ID.\n\nEvery app and every device, worldwide, with no opt-out.",
+                            text = stringResource(R.string.kao_dialog_explanation),
                             color = popupTheme.secondaryContentColor,
                             fontSize = 12.5.sp,
                             lineHeight = 17.sp
@@ -428,22 +430,22 @@ fun KeepAndroidOpenDialog(
                 ) {
                     InitiativeFeatureItem(
                         icon = Icons.Outlined.VisibilityOff,
-                        title = "Developer Privacy",
-                        desc = "Individual developers and volunteers should not be forced to hand over government IDs to a single corporation.",
+                        title = stringResource(R.string.kao_feat_privacy_title),
+                        desc = stringResource(R.string.kao_feat_privacy_desc),
                         popupTheme = popupTheme,
                         accentColor = accentColor
                     )
                     InitiativeFeatureItem(
                         icon = Icons.Outlined.InstallMobile,
-                        title = "Right to Sideload",
-                        desc = "You bought your phone. You should have the freedom to run the software of your choice and use F-Droid freely.",
+                        title = stringResource(R.string.kao_feat_sideload_title),
+                        desc = stringResource(R.string.kao_feat_sideload_desc),
                         popupTheme = popupTheme,
                         accentColor = accentColor
                     )
                     InitiativeFeatureItem(
                         icon = Icons.Outlined.Code,
-                        title = "FOSS & Forks",
-                        desc = "Volunteers and forks will be crippled if every customized version requires corporate registration and ID verification.",
+                        title = stringResource(R.string.kao_feat_foss_title),
+                        desc = stringResource(R.string.kao_feat_foss_desc),
                         popupTheme = popupTheme,
                         accentColor = accentColor
                     )
@@ -452,7 +454,7 @@ fun KeepAndroidOpenDialog(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = "Free & de-Googled alternatives: LineageOS, GrapheneOS, /e/OS, CalyxOS.",
+                    text = stringResource(R.string.kao_alternatives),
                     color = popupTheme.secondaryContentColor,
                     fontSize = 11.5.sp,
                     textAlign = TextAlign.Center
@@ -473,7 +475,7 @@ fun KeepAndroidOpenDialog(
                         border = androidx.compose.foundation.BorderStroke(1.dp, popupTheme.borderColor),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = popupTheme.contentColor)
                     ) {
-                        Text("Close", fontSize = 13.sp)
+                        Text(stringResource(R.string.common_close), fontSize = 13.sp)
                     }
 
                     Button(
@@ -492,7 +494,7 @@ fun KeepAndroidOpenDialog(
                     ) {
                         Icon(Icons.Outlined.Public, null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Take Action ↗", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(stringResource(R.string.kao_take_action), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
             }

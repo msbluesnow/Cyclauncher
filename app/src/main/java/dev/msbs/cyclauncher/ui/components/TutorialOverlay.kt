@@ -47,11 +47,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import dev.msbs.cyclauncher.R
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -110,55 +113,56 @@ fun TutorialOverlay(
         tutorialSelectedFeedback = null
     }
 
+    val context = LocalContext.current
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
     val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
     val cardWidthPx = with(density) { 160.dp.toPx() }
     val screenMarginPx = with(density) { 16.dp.toPx() }
 
-    val steps = remember(handSide) {
+    val steps = remember(handSide, context) {
         listOf(
             TutorialStepInfo(
-                title = "Swipe Up — App Search",
-                description = "Swipe upwards over the Favorites icons area on the Home Screen to open application search.",
+                title = context.getString(R.string.tutorial_step1_title),
+                description = context.getString(R.string.tutorial_step1_desc),
                 gestureType = GestureType.SWIPE_UP,
-                hintText = "Swipe up over the Favorites icons area!"
+                hintText = context.getString(R.string.tutorial_step1_hint)
             ),
             TutorialStepInfo(
-                title = "System Back — Return to Home",
-                description = "Use your device's native Back gesture (swipe from edge) or press the system Back button to return to the Home Screen from Search or Settings.",
+                title = context.getString(R.string.tutorial_step2_title),
+                description = context.getString(R.string.tutorial_step2_desc),
                 gestureType = GestureType.SIDE_BACK,
-                hintText = "Use the native Back gesture or Back button!"
+                hintText = context.getString(R.string.tutorial_step2_hint)
             ),
             TutorialStepInfo(
-                title = "Swipe Down — Quick Actions",
-                description = "Swipe downwards over the Favorites area to activate quick action cards. Release directly under your finger to open Notifications, or slide to the adjacent card to open Quick Settings.",
+                title = context.getString(R.string.tutorial_step3_title),
+                description = context.getString(R.string.tutorial_step3_desc),
                 gestureType = GestureType.SWIPE_DOWN,
-                hintText = "Try it below: swipe down, slide between cards, and release!"
+                hintText = context.getString(R.string.tutorial_step3_hint)
             ),
             TutorialStepInfo(
-                title = "Swipe Sideways — Highlights",
-                description = "Swipe horizontally from the center area (left-to-right or right-to-left based on your hand preference) to open the Highlights workspace. Access launcher overview metrics and customizable Android widgets.",
+                title = context.getString(R.string.tutorial_step4_title),
+                description = context.getString(R.string.tutorial_step4_desc),
                 gestureType = GestureType.SWIPE_HIGHLIGHTS,
-                hintText = "Swipe horizontally from the center area!"
+                hintText = context.getString(R.string.tutorial_step4_hint)
             ),
             TutorialStepInfo(
-                title = "Long Press — Menu & Settings",
-                description = "Press and hold any empty area of the screen to open Launcher Settings, or long-press an app item for quick actions.",
+                title = context.getString(R.string.tutorial_step5_title),
+                description = context.getString(R.string.tutorial_step5_desc),
                 gestureType = GestureType.LONG_PRESS,
-                hintText = "Press and hold on the screen!"
+                hintText = context.getString(R.string.tutorial_step5_hint)
             ),
             TutorialStepInfo(
-                title = "Favorites, History & Tags",
-                description = "Press and hold a Favorite item to reorder or remove it. Tap the History icon to open the menu (edit list, pause/resume recording, or clear history). Tap a Tag folder to open apps, or long-press it to edit the group or add/remove from Favorites.",
+                title = context.getString(R.string.tutorial_step6_title),
+                description = context.getString(R.string.tutorial_step6_desc),
                 gestureType = GestureType.FAVORITES_HISTORY,
-                hintText = "Hold Favorite, tap History icon, or tap/hold Tag folder!"
+                hintText = context.getString(R.string.tutorial_step6_hint)
             ),
             TutorialStepInfo(
-                title = "History Position Shift",
-                description = "Swipe UP on the History list when it is at the bottom to shift it to the top section of the screen. Swipe DOWN on the Tags area when history is at the top to swap their positions.",
+                title = context.getString(R.string.tutorial_step7_title),
+                description = context.getString(R.string.tutorial_step7_desc),
                 gestureType = GestureType.HISTORY_POSITION_TOGGLE,
-                hintText = "Swipe UP on History or DOWN on Tags area!"
+                hintText = context.getString(R.string.tutorial_step7_hint)
             )
         )
     }
@@ -256,9 +260,9 @@ fun TutorialOverlay(
                                         tutorialOverlayState = null
                                         val chosen = lastTarget
                                         tutorialSelectedFeedback = if (chosen == SwipeDownTarget.NOTIFICATIONS) {
-                                            "Notifications"
+                                            context.getString(R.string.quick_action_notifications_title)
                                         } else {
-                                            "Quick Settings"
+                                            context.getString(R.string.quick_action_quick_settings_title)
                                         }
                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                         coroutineScope.launch {
@@ -345,7 +349,7 @@ fun TutorialOverlay(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Tested: $tutorialSelectedFeedback!",
+                            text = stringResource(R.string.tutorial_tested_feedback, tutorialSelectedFeedback ?: ""),
                             color = buttonTextColor.color,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
@@ -386,11 +390,11 @@ fun TutorialOverlay(
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = Color.White.copy(alpha = 0.8f))
                 ) {
-                    Text(text = "Skip", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    Text(text = stringResource(R.string.tutorial_skip), fontSize = 14.sp, fontWeight = FontWeight.Medium)
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
+                        contentDescription = stringResource(R.string.common_close),
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -480,11 +484,11 @@ fun TutorialOverlay(
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back",
+                                    contentDescription = stringResource(R.string.common_back),
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Back")
+                                Text(stringResource(R.string.common_back))
                             }
                         } else {
                             Spacer(modifier = Modifier.width(1.dp))
@@ -495,15 +499,16 @@ fun TutorialOverlay(
                             colors = ButtonDefaults.buttonColors(containerColor = accentColor),
                             shape = RoundedCornerShape(12.dp)
                         ) {
+                            val buttonText = stringResource(if (stepIndex == steps.lastIndex) R.string.tutorial_finish else R.string.tutorial_next)
                             Text(
-                                text = if (stepIndex == steps.lastIndex) "Finish" else "Next",
+                                text = buttonText,
                                 color = buttonTextColor.color,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = "Next",
+                                contentDescription = buttonText,
                                 tint = buttonTextColor.color,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -824,14 +829,14 @@ private fun GestureAnimationCanvas(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Star,
-                            contentDescription = "Favorites",
+                            contentDescription = stringResource(R.string.tutorial_favorites),
                             tint = accentColor,
                             modifier = Modifier.size(32.dp)
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Favorites",
+                        text = stringResource(R.string.tutorial_favorites),
                         color = Color.White,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -850,14 +855,14 @@ private fun GestureAnimationCanvas(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.History,
-                            contentDescription = "History",
+                            contentDescription = stringResource(R.string.history_menu_title),
                             tint = accentColor,
                             modifier = Modifier.size(32.dp)
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "History",
+                        text = stringResource(R.string.history_menu_title),
                         color = Color.White.copy(alpha = 0.8f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
@@ -876,14 +881,14 @@ private fun GestureAnimationCanvas(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.Label,
-                            contentDescription = "Tag Folder",
+                            contentDescription = stringResource(R.string.tutorial_tags),
                             tint = accentColor,
                             modifier = Modifier.size(30.dp)
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Tags",
+                        text = stringResource(R.string.tutorial_tags),
                         color = Color.White.copy(alpha = 0.8f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
@@ -905,7 +910,7 @@ private fun GestureAnimationCanvas(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Widgets,
-                    contentDescription = "Highlights",
+                    contentDescription = stringResource(R.string.highlight_title),
                     tint = accentColor,
                     modifier = Modifier.size(32.dp)
                 )
@@ -938,8 +943,8 @@ private fun GestureAnimationCanvas(
             ) {
                 if (leftIsNotifications) {
                     TutorialPreviewCard(
-                        title = "Notifications",
-                        subtitle = "Notification Shade",
+                        title = stringResource(R.string.quick_action_notifications_title),
+                        subtitle = stringResource(R.string.quick_action_notifications_subtitle),
                         icon = Icons.Outlined.Notifications,
                         isActive = isNotifActive,
                         shape = notifShape,
@@ -948,8 +953,8 @@ private fun GestureAnimationCanvas(
                         textColor = previewTextColor
                     )
                     TutorialPreviewCard(
-                        title = "Quick Settings",
-                        subtitle = "Wi-Fi, Bluetooth",
+                        title = stringResource(R.string.quick_action_quick_settings_title),
+                        subtitle = stringResource(R.string.quick_action_quick_settings_subtitle),
                         icon = Icons.Outlined.Tune,
                         isActive = isQsActive,
                         shape = qsShape,
@@ -959,8 +964,8 @@ private fun GestureAnimationCanvas(
                     )
                 } else {
                     TutorialPreviewCard(
-                        title = "Quick Settings",
-                        subtitle = "Wi-Fi, Bluetooth",
+                        title = stringResource(R.string.quick_action_quick_settings_title),
+                        subtitle = stringResource(R.string.quick_action_quick_settings_subtitle),
                         icon = Icons.Outlined.Tune,
                         isActive = isQsActive,
                         shape = qsShape,
@@ -969,8 +974,8 @@ private fun GestureAnimationCanvas(
                         textColor = previewTextColor
                     )
                     TutorialPreviewCard(
-                        title = "Notifications",
-                        subtitle = "Notification Shade",
+                        title = stringResource(R.string.quick_action_notifications_title),
+                        subtitle = stringResource(R.string.quick_action_notifications_subtitle),
                         icon = Icons.Outlined.Notifications,
                         isActive = isNotifActive,
                         shape = notifShape,

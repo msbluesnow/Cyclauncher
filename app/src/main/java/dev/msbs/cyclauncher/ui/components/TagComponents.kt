@@ -48,6 +48,8 @@ import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.ui.res.stringResource
+import dev.msbs.cyclauncher.R
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -410,7 +412,7 @@ fun TagFolderPopup(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "Done",
+                                    text = stringResource(R.string.common_done),
                                     color = accentColor.color,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
@@ -440,7 +442,7 @@ fun TagFolderPopup(
 
                 if (apps.isEmpty()) {
                     Text(
-                        text = "No apps in this tag",
+                        text = stringResource(R.string.tag_empty_folder),
                         color = popupTheme.secondaryContentColor,
                         fontSize = 13.sp,
                         modifier = Modifier.padding(vertical = 8.dp)
@@ -930,7 +932,7 @@ private fun TagFolderAppItem(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Remove,
-                        contentDescription = "Remove from tag",
+                        contentDescription = stringResource(R.string.tag_remove_from_tag),
                         tint = Color.White,
                         modifier = Modifier.size(16.dp)
                     )
@@ -1136,7 +1138,7 @@ fun TagFolderActionMenu(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Edit Tag",
+                        text = stringResource(R.string.tag_menu_edit),
                         color = popupTheme.contentColor,
                         style = MaterialTheme.typography.bodyLarge
                     )
@@ -1161,7 +1163,7 @@ fun TagFolderActionMenu(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Reorder",
+                        text = stringResource(R.string.tag_menu_reorder),
                         color = popupTheme.contentColor,
                         style = MaterialTheme.typography.bodyLarge
                     )
@@ -1186,7 +1188,7 @@ fun TagFolderActionMenu(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
+                        text = if (isFavorite) stringResource(R.string.action_menu_remove_favorite) else stringResource(R.string.action_menu_add_favorite),
                         color = popupTheme.contentColor,
                         style = MaterialTheme.typography.bodyLarge
                     )
@@ -1235,13 +1237,13 @@ fun TagFolderActionMenu(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Delete,
-                        contentDescription = "Hold to delete tag",
+                        contentDescription = stringResource(R.string.tag_menu_hold_to_delete),
                         tint = if (deleteProgress.value > 0f) deleteColor else deleteColor.copy(alpha = 0.85f),
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Delete Tag",
+                        text = stringResource(R.string.tag_menu_delete),
                         color = if (deleteProgress.value > 0f) deleteColor else deleteColor.copy(alpha = 0.85f),
                         style = MaterialTheme.typography.bodyLarge
                     )
@@ -1337,7 +1339,7 @@ fun TagSectionActionMenu(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Tag Folders",
+                        text = stringResource(R.string.tag_folders_title),
                         style = MaterialTheme.typography.titleSmall,
                         color = popupTheme.contentColor,
                         fontWeight = FontWeight.Bold
@@ -1367,7 +1369,7 @@ fun TagSectionActionMenu(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Reorder Folders",
+                        text = stringResource(R.string.tag_folders_reorder),
                         color = popupTheme.contentColor,
                         style = MaterialTheme.typography.bodyLarge
                     )
@@ -1391,7 +1393,7 @@ fun TagSectionActionMenu(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Sort by...",
+                        text = stringResource(R.string.tag_sort_by_ellipsis),
                         color = popupTheme.contentColor,
                         style = MaterialTheme.typography.bodyLarge
                     )
@@ -1462,7 +1464,7 @@ fun TagSortPopup(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Sort Folders",
+                        text = stringResource(R.string.tag_sort_title),
                         style = MaterialTheme.typography.titleSmall,
                         color = popupTheme.contentColor,
                         fontWeight = FontWeight.Bold
@@ -1484,7 +1486,7 @@ fun TagSortPopup(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "By Name",
+                        text = stringResource(R.string.tag_sort_by_name),
                         color = popupTheme.contentColor,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium
@@ -1504,7 +1506,7 @@ fun TagSortPopup(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.KeyboardArrowUp,
-                                contentDescription = "Name A to Z",
+                                contentDescription = stringResource(R.string.tag_sort_name_az),
                                 tint = accentColor.color,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -1523,7 +1525,7 @@ fun TagSortPopup(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.KeyboardArrowDown,
-                                contentDescription = "Name Z to A",
+                                contentDescription = stringResource(R.string.tag_sort_name_za),
                                 tint = accentColor.color,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -1542,7 +1544,7 @@ fun TagSortPopup(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "By App Count",
+                        text = stringResource(R.string.tag_sort_by_count),
                         color = popupTheme.contentColor,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium
@@ -1562,7 +1564,7 @@ fun TagSortPopup(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.KeyboardArrowDown,
-                                contentDescription = "App Count High to Low",
+                                contentDescription = stringResource(R.string.tag_sort_count_high_low),
                                 tint = accentColor.color,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -1581,7 +1583,7 @@ fun TagSortPopup(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.KeyboardArrowUp,
-                                contentDescription = "App Count Low to High",
+                                contentDescription = stringResource(R.string.tag_sort_count_low_high),
                                 tint = accentColor.color,
                                 modifier = Modifier.size(20.dp)
                             )

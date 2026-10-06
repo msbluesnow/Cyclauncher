@@ -1,0 +1,385 @@
+<resources>
+    <string name="app_name">Cyclauncher</string>
+    <!-- Common UI Actions -->
+    <string name="common_cancel">Отмена</string>
+    <string name="common_save">Сохранить</string>
+    <string name="common_create">Создать</string>
+    <string name="common_done">Готово</string>
+    <string name="common_edit">Редактировать</string>
+    <string name="common_delete">Удалить</string>
+    <string name="common_close">Закрыть</string>
+    <string name="common_clear">Очистить</string>
+    <string name="common_search">Поиск</string>
+    <string name="common_restore">Сбросить</string>
+    <string name="common_all">Все</string>
+    <string name="common_export">Экспорт</string>
+    <string name="common_import">Импорт</string>
+    <string name="common_reset">Сбросить</string>
+    <string name="common_apply">Применить</string>
+    <string name="common_back">Назад</string>
+
+    <!-- Application Action Context Menu -->
+    <string name="action_menu_add_favorite">В избранное</string>
+    <string name="action_menu_remove_favorite">Удалить из избранного</string>
+    <string name="action_menu_manage_tags">Управление тегами</string>
+    <string name="action_menu_rename">Переименовать</string>
+    <string name="action_menu_info">О приложении</string>
+    <string name="action_menu_uninstall">Удалить</string>
+
+    <!-- History Context Menu -->
+    <string name="history_menu_title">История</string>
+    <string name="history_menu_paused">(Приостановлена)</string>
+    <string name="history_menu_edit">Редактировать историю</string>
+    <string name="history_menu_pause">Приостановить запись</string>
+    <string name="history_menu_resume">Возобновить запись</string>
+    <string name="history_menu_clear">Очистить историю</string>
+
+    <!-- Tag Selection & Edit Dialogs -->
+    <string name="tag_dialog_title">Теги: %1$s</string>
+    <string name="tag_dialog_empty">Теги пока не созданы.</string>
+    <string name="tag_dialog_new_tag">Новый тег</string>
+    <string name="tag_dialog_create_title">Создать новый тег</string>
+    <string name="tag_dialog_edit_tag">Изменить тег</string>
+    <string name="tag_dialog_preview">Предпросмотр тега</string>
+    <string name="tag_dialog_name_label">Название тега</string>
+    <string name="tag_dialog_name_placeholder">например, Игры, Работа</string>
+    <string name="tag_dialog_folder_icon">Иконка папки</string>
+    <string name="tag_dialog_choose_icon">Выбрать иконку</string>
+    <string name="tag_dialog_tab_vector">Векторные иконки</string>
+    <string name="tag_dialog_tab_emoji">Эмодзи</string>
+    <string name="tag_dialog_tab_presets">Пресеты</string>
+    <string name="tag_dialog_tab_custom">Свой цвет</string>
+    <string name="tag_dialog_hold_to_delete">Удерживайте 2.3с для удаления</string>
+    <string name="tag_dialog_hex_code">HEX-код</string>
+    <string name="tag_dialog_search_icons">Поиск иконок…</string>
+    <string name="tag_dialog_no_icons">Иконки не найдены</string>
+
+    <!-- Rename Dialog -->
+    <string name="rename_dialog_title">Переименовать приложение</string>
+    <string name="rename_dialog_button">Переименовать</string>
+
+    <!-- Main Menu & Tag Components -->
+    <string name="main_exit_tag_reorder">Выйти из режима перемещения тегов</string>
+    <string name="main_tag_folders">Папки тегов</string>
+    <string name="main_remove_from_history">Удалить из истории</string>
+    <string name="main_exit_history_edit">Выйти из режима редактирования истории</string>
+    <string name="main_exit_edit_mode">Выйти из режима редактирования</string>
+    <string name="main_remove">Удалить</string>
+    <string name="tag_empty_folder">В этом теге нет приложений</string>
+    <string name="tag_remove_from_tag">Удалить из тега</string>
+    <string name="tag_menu_edit">Изменить тег</string>
+    <string name="tag_menu_reorder">Переместить</string>
+    <string name="tag_menu_delete">Удалить тег</string>
+    <string name="tag_menu_hold_to_delete">Удерживайте для удаления тега</string>
+    <string name="tag_folders_title">Папки тегов</string>
+    <string name="tag_folders_reorder">Порядок папок</string>
+    <string name="tag_sort_title">Сортировка папок</string>
+    <string name="tag_sort_by_ellipsis">Сортировка…</string>
+    <string name="tag_sort_by_name">По названию</string>
+    <string name="tag_sort_name_az">Название А — Я</string>
+    <string name="tag_sort_name_za">Название Я — А</string>
+    <string name="tag_sort_by_count">По числу приложений</string>
+    <string name="tag_sort_count_high_low">Число приложений: убывание</string>
+    <string name="tag_sort_count_low_high">Число приложений: возрастание</string>
+
+    <!-- Search Screen & Components -->
+    <string name="search_apps_placeholder">Поиск приложений…</string>
+    <string name="search_close_content_description">Закрыть поиск</string>
+    <string name="palette_done_editing">Завершить редактирование</string>
+
+    <!-- Swipe Down Quick Actions Overlay -->
+    <string name="quick_action_notifications_title">Уведомления</string>
+    <string name="quick_action_notifications_subtitle">Шторка уведомлений</string>
+    <string name="quick_action_quick_settings_title">Быстрые настройки</string>
+    <string name="quick_action_quick_settings_subtitle">Wi-Fi, Bluetooth</string>
+
+    <!-- Widgets -->
+    <string name="widget_title">Виджет</string>
+    <string name="widget_left_title">Левый виджет</string>
+    <string name="widget_right_title">Правый виджет</string>
+    <string name="widget_action_add">Добавить виджет</string>
+    <string name="widget_action_change">Изменить виджет</string>
+    <string name="widget_action_reset_split">Сбросить пропорции (50/50)</string>
+    <string name="widget_action_remove">Удалить виджет</string>
+    <string name="widget_action_options">Параметры виджета</string>
+    <string name="widget_picker_title">ВИДЖЕТЫ</string>
+    <string name="widget_picker_search_placeholder">Поиск приложений или виджетов…</string>
+    <string name="widget_picker_no_widgets">Виджеты не найдены</string>
+    <string name="widget_picker_no_matching_apps">Приложения не найдены</string>
+    <string name="widget_picker_collapse">Свернуть</string>
+    <string name="widget_picker_expand">Развернуть</string>
+    <string name="widget_picker_close">Закрыть выбор виджетов</string>
+    <string name="widget_picker_clear_search">Очистить поиск</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">НАСТРОЙКИ</string>
+    <string name="settings_hand_left">Для левой руки</string>
+    <string name="settings_hand_right">Для правой руки</string>
+    <string name="settings_toggle_search_widgets">Переключить видимость виджетов поиска</string>
+    <string name="settings_side_slot">Боковой слот</string>
+    <string name="settings_select_side_slot_mode">Выбрать режим бокового слота</string>
+    <string name="settings_side_slot_history">История</string>
+    <string name="settings_side_slot_widget">Виджет</string>
+    <string name="settings_side_slot_disabled">Отключен</string>
+
+    <string name="settings_status_bar">Строка состояния</string>
+    <string name="settings_toggle_status_bar">Переключить строку состояния</string>
+    <string name="settings_animations">Анимации</string>
+    <string name="settings_haptics">Вибрация</string>
+    <string name="settings_monochrome">Монохром</string>
+    <string name="settings_monochrome_disabled">Монохром выключен</string>
+    <string name="settings_monochrome_history_desc">Монохромная история</string>
+    <string name="settings_monochrome_tags_desc">Монохромные теги</string>
+    <string name="settings_monochrome_options">Выбрать параметры монохрома</string>
+    <string name="settings_monochrome_history">История</string>
+    <string name="settings_monochrome_tags">Теги</string>
+
+    <string name="settings_language">Язык</string>
+    <string name="settings_select_language">Выбрать язык</string>
+    <string name="settings_language_system">Системный</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_ru">Русский</string>
+
+    <string name="settings_mapping">Раскладка</string>
+    <string name="settings_mapping_configure">Настроить соответствия символов</string>
+    <string name="settings_icon_pack">Иконки</string>
+    <string name="settings_icon_pack_select">Выбрать набор иконок</string>
+
+    <string name="settings_accent">Акцент</string>
+    <string name="settings_adaptive_shadows">Адаптивный</string>
+    <string name="settings_main_color">Основной цвет</string>
+    <string name="settings_button_text">Текст кнопок</string>
+    <string name="settings_popup_theme">Тема меню</string>
+    <string name="settings_auto_colors">Автоподбор</string>
+
+    <string name="settings_backup">Бэкап</string>
+    <string name="settings_export_backup">Экспорт бэкапа</string>
+    <string name="settings_import_backup">Импорт бэкапа</string>
+    <string name="settings_ai_tags">ИИ Теги</string>
+
+    <string name="settings_default_launcher">Главный лаунчер</string>
+    <string name="settings_default_launcher_set_status">По умолчанию</string>
+    <string name="settings_default_launcher_not_set">Не назначен</string>
+    <string name="settings_default_launcher_change">Изменить</string>
+    <string name="settings_default_launcher_set">Назначить</string>
+    <string name="settings_relaunch_app">Перезапуск</string>
+    <string name="settings_relaunch_subtitle">Может исправить неполадки</string>
+    <string name="settings_relaunch_action">Перезапустить</string>
+
+    <string name="settings_tutorial">Обучение</string>
+
+    <string name="settings_support_and_community">Поддержка и сообщество</string>
+    <string name="settings_github">GitHub</string>
+    <string name="settings_github_subtitle">⭐ Проект</string>
+    <string name="settings_discord">Discord</string>
+    <string name="settings_discord_subtitle">Наш чат</string>
+    <string name="settings_tribute">Донат</string>
+    <string name="settings_tribute_subtitle">Поддержать</string>
+
+    <string name="settings_version">Версия %1$s</string>
+
+    <!-- Settings Dialogs -->
+    <string name="settings_default_launcher_title">Главный экран</string>
+    <string name="settings_default_launcher_success">Cyclauncher теперь ваш лаунчер по умолчанию!</string>
+    <string name="settings_default_launcher_failed">Cyclauncher не назначен по умолчанию. Попробовать снова?</string>
+    <string name="settings_default_launcher_great">Отлично!</string>
+
+    <string name="settings_theme_accent_title">Акцентный цвет</string>
+    <string name="settings_tab_presets_wallpaper">Пресеты и обои</string>
+    <string name="settings_tab_custom_color">Свой цвет</string>
+    <string name="settings_adaptive_wallpaper_accent">Адаптивный акцент обоев</string>
+    <string name="settings_hue_angle_shift">Смещение цветового тона</string>
+    <string name="settings_luminous_highlight">Светлый акцент для темных обоев</string>
+    <string name="settings_deep_dark_shade">Глубокий оттенок для светлых обоев</string>
+    <string name="settings_echo_presets">Пресеты темы Echo</string>
+    <string name="settings_interactive_picker">Выбор цвета</string>
+    <string name="settings_quick_swatches">Быстрые цвета</string>
+    <string name="settings_hue_format">Тон (%1$d°)</string>
+    <string name="settings_saturation_format">Насыщенность (%1$d%%)</string>
+    <string name="settings_brightness_format">Яркость (%1$d%%)</string>
+    <string name="settings_hex_code">HEX код</string>
+    <string name="settings_apply_custom_color">Применить свой цвет</string>
+
+    <string name="settings_icon_pack_title">Набор иконок</string>
+    <string name="settings_icon_pack_system_default">Системные</string>
+    <string name="settings_icon_pack_system_auto">Авто: %1$s (тема прошивки)</string>
+    <string name="settings_icon_pack_system_original">Оригинальные значки приложений</string>
+    <string name="settings_icon_pack_none_installed">Сторонние наборы иконок не найдены на устройстве.</string>
+
+    <string name="settings_char_mapping_default">По умолчанию</string>
+    <string name="settings_char_mapping_active">%1$d активных</string>
+
+    <!-- Keep Android Open Banner & Dialog -->
+    <string name="kao_title">Keep Android Open</string>
+    <string name="kao_subtitle">Ваш телефон скоро перестанет быть вашим</string>
+    <string name="kao_subtitle_dot">Ваш телефон скоро перестанет быть вашим.</string>
+    <string name="kao_hide_days">Скрыть оставшиеся дни</string>
+    <string name="kao_show_days">Показать оставшиеся дни</string>
+    <string name="kao_days_left">ДНЕЙ ОСТАЛОСЬ</string>
+    <string name="kao_days_until_lockdown">ДНЕЙ ДО БЛОКИРОВКИ</string>
+    <string name="kao_banner_summary">С 2027 года Google заблокирует установку приложений разработчиков, не предоставивших паспортные данные и не прошедших верификацию.</string>
+    <string name="kao_learn_more">Подробнее</string>
+    <string name="kao_petition">Петиция ↗</string>
+    <string name="kao_what_is_happening">Что происходит?</string>
+    <string name="kao_dialog_explanation">С 2027 года тихое обновление от Google заблокирует любое Android-приложение, чей разработчик не зарегистрировался в Google, не оплатил сбор и не предоставил паспортные данные.\n\nДля всех приложений и устройств по всему миру, без возможности отказа.</string>
+    <string name="kao_feat_privacy_title">Конфиденциальность разработчиков</string>
+    <string name="kao_feat_privacy_desc">Независимые разработчики не должны принудительно раскрывать паспортные данные коммерческой корпорации.</string>
+    <string name="kao_feat_sideload_title">Право на сайдлоад</string>
+    <string name="kao_feat_sideload_desc">Вы купили телефон. Вы имеете право свободно запускать любые программы и пользоваться F-Droid.</string>
+    <string name="kao_feat_foss_title">FOSS и форки</string>
+    <string name="kao_feat_foss_desc">Волонтёрские проекты и форки погибнут, если любая модификация потребует верификации в корпорации.</string>
+    <string name="kao_alternatives">Свободные альтернативы без сервисов Google: LineageOS, GrapheneOS, /e/OS, CalyxOS.</string>
+    <string name="kao_take_action">Действовать ↗</string>
+
+    <!-- Auto Tags Screen -->
+    <string name="auto_tags_title">ТЕГИ</string>
+    <string name="auto_tags_subtitle">Используйте ИИ для автоматической сортировки приложений по тегам</string>
+    <string name="auto_tags_step1_title">Экспорт списка приложений</string>
+    <string name="auto_tags_step1_desc">Экспортируйте список установленных приложений (названия, пакеты, избранное и теги). Выберите JSON (для ИИ) или TXT (для чтения человеком).</string>
+    <string name="auto_tags_step1_button">Экспортировать список приложений</string>
+    <string name="auto_tags_step2_title">Отправка в ИИ</string>
+    <string name="auto_tags_step2_desc">Скопируйте промпт ниже и отправьте его в языковую модель (ChatGPT, Claude, Gemini и т.д.) вместе с файлом экспорта.</string>
+    <string name="auto_tags_copy_prompt">Скопировать промпт</string>
+    <string name="auto_tags_copied">Скопировано!</string>
+    <string name="auto_tags_prompt_copied_toast">Промпт скопирован!</string>
+    <string name="auto_tags_step3_title">Импорт тегов приложений</string>
+    <string name="auto_tags_step3_desc">После генерации сохраните результат как .json файл и загрузите сюда. Все теги, цвета и привязки будут показаны в окне предпросмотра перед применением.</string>
+    <string name="auto_tags_step3_button">Загрузить результат тегирования</string>
+    <string name="auto_tags_export_dialog_title">Формат экспорта</string>
+    <string name="auto_tags_export_dialog_message">Выберите формат для экспортируемого списка:</string>
+    <string name="auto_tags_export_dialog_hint">JSON — содержит названия, избранное и теги. TXT — простой текстовый список.</string>
+
+    <!-- Character Mapping Screen -->
+    <string name="char_map_title">СОПОСТАВЛЕНИЕ СИМВОЛОВ</string>
+    <string name="char_map_customize_title">Настройка поискового индекса</string>
+    <string name="char_map_customize_desc">Привязывайте произвольные символы, эмодзи, буквы других алфавитов (кириллица, арабский, иероглифы и т.д.) к нужной букве (\'A\'–\'Z\' или \'#\') для поиска.</string>
+    <string name="char_map_add_title">Добавить сопоставление</string>
+    <string name="char_map_placeholder">например, 🤗, ب, Ö</string>
+    <string name="char_map_select_target">Выбрать целевую букву</string>
+    <string name="char_map_mapped_success">Сопоставлено: \'%1$s\' ➔ \'%2$s\'</string>
+    <string name="char_map_invalid_input">Введите корректный символ или эмодзи</string>
+    <string name="char_map_add_button">Добавить сопоставление</string>
+    <string name="char_map_backup_title">Резервное копирование</string>
+    <string name="char_map_backup_desc">Экспорт правил в JSON или импорт из файла</string>
+    <string name="char_map_import_success">Импортировано правил: %1$d</string>
+    <string name="char_map_import_failed">Ошибка импорта: %1$s</string>
+    <string name="char_map_quick_presets">Быстрые пресеты</string>
+    <string name="char_map_added_cyrillic">Добавлены кириллические сопоставления</string>
+    <string name="char_map_added_emoji">Добавлены популярные эмодзи</string>
+    <string name="char_map_added_german">Добавлены немецкие/скандинавские буквы</string>
+    <string name="char_map_added_arabic">Добавлены арабские буквы</string>
+    <string name="char_map_added_romance">Добавлены романские буквы</string>
+    <string name="char_map_letter_rows">Буквенные строки</string>
+    <string name="char_map_rules_count">(%1$d букв, %2$d правил)</string>
+    <string name="char_map_reset_all">Сбросить все сопоставления</string>
+    <string name="char_map_empty_desc">Нет пользовательских сопоставлений.\nПриложения будут индексироваться по умолчанию.</string>
+    <string name="char_map_removed_symbol">Удалено: \'%1$s\'</string>
+    <string name="char_map_remove_symbol_desc">Удалить %1$s</string>
+    <string name="char_map_add_to_target_desc">Добавить символ к \'%1$s\'</string>
+    <string name="char_map_detail_title">Сопоставленные символы (%1$d)</string>
+    <string name="char_map_no_symbols_mapped">Нет символов для \'%1$s\'</string>
+    <string name="char_map_reset_title">Сброс сопоставлений</string>
+    <string name="char_map_reset_message">Вы действительно хотите сбросить все сопоставления символов?</string>
+    <string name="char_map_reset_toast">Сопоставления сброшены</string>
+
+    <!-- Highlight Screen -->
+    <string name="highlight_title">ХАЙЛАЙТЫ</string>
+    <string name="highlight_section_overview">ОБЗОР</string>
+    <string name="highlight_section_untagged">БЕЗ ТЕГОВ</string>
+    <string name="highlight_section_updates">ОБНОВЛЕНИЯ ЗА ДЕНЬ</string>
+    <string name="highlight_section_installs">УСТАНОВКИ ЗА ДЕНЬ</string>
+    <string name="highlight_section_work_profile">РАБОЧИЙ ПРОФИЛЬ</string>
+    <string name="highlight_section_private_space">ЛИЧНОЕ ПРОСТРАНСТВО</string>
+    <string name="highlight_empty_untagged">Нет приложений без тегов</string>
+    <string name="highlight_empty_updates">Сегодня приложений не обновлялось</string>
+    <string name="highlight_empty_installs">Сегодня новые приложения не устанавливались</string>
+    <string name="highlight_empty_work_profile">Нет рабочих приложений</string>
+    <string name="highlight_metric_installed_apps">Установлено</string>
+    <string name="highlight_metric_created_tags">Создано тегов</string>
+    <string name="highlight_metric_favorites">Избранное</string>
+    <string name="highlight_metric_recent_launches">Недавние запуски</string>
+    <string name="highlight_widgets_title">ВИДЖЕТЫ</string>
+    <string name="highlight_widgets_add">Добавить виджет</string>
+    <string name="highlight_widgets_empty_title">Виджеты ещё не добавлены</string>
+    <string name="highlight_widgets_empty_desc">Нажмите «Добавить виджет», чтобы выбрать виджеты с предпросмотром и поиском.</string>
+    <string name="highlight_resize_title">РАЗМЕР ВИДЖЕТА</string>
+    <string name="highlight_resize_height">Высота: %1$d dp</string>
+    <string name="highlight_preset_compact">Компактный</string>
+    <string name="highlight_preset_medium">Средний</string>
+    <string name="highlight_preset_large">Большой</string>
+    <string name="highlight_preset_tall">Высокий</string>
+    <string name="highlight_resize_width">Ширина</string>
+    <string name="highlight_width_full">Полная (100%)</string>
+    <string name="highlight_width_75">75%</string>
+    <string name="highlight_width_half">Половина (50%)</string>
+    <string name="highlight_private_space_locked">Личное пространство заблокировано</string>
+    <string name="highlight_private_space_unlock">Разблокировать</string>
+    <string name="highlight_private_space_empty">Личные приложения не установлены</string>
+    <string name="highlight_private_space_install">Установить приложения</string>
+    <string name="highlight_collapse_section">Свернуть секцию</string>
+    <string name="highlight_collapse_named">Свернуть %1$s</string>
+    <string name="highlight_expand_named">Развернуть %1$s</string>
+    <string name="highlight_set_position">Позиция карточки</string>
+    <string name="highlight_lock_private_space">Заблокировать личное пространство</string>
+    <string name="highlight_unlock_private_space">Разблокировать личное пространство</string>
+    <string name="highlight_install_private_apps">Установить приложения в личное пространство</string>
+    <string name="highlight_widget_move_up">Переместить виджет выше</string>
+    <string name="highlight_widget_move_down">Переместить виджет ниже</string>
+    <string name="highlight_widget_configure">Настроить виджет</string>
+    <string name="highlight_widget_resize">Изменить размер виджета</string>
+    <string name="highlight_widget_delete_hold">Удерживайте для удаления виджета</string>
+
+    <!-- Tutorial Overlay -->
+    <string name="tutorial_tested_feedback">Проверено: %1$s!</string>
+    <string name="tutorial_skip">Пропустить</string>
+    <string name="tutorial_next">Далее</string>
+    <string name="tutorial_finish">Завершить</string>
+    <string name="tutorial_favorites">Избранное</string>
+    <string name="tutorial_tags">Теги</string>
+    <string name="tutorial_step1_title">Свайп вверх — Поиск приложений</string>
+    <string name="tutorial_step1_desc">Смахните вверх по области иконок «Избранного» на главном экране, чтобы открыть поиск приложений.</string>
+    <string name="tutorial_step1_hint">Смахните вверх по области «Избранного»!</string>
+    <string name="tutorial_step2_title">Назад — Возврат на главный экран</string>
+    <string name="tutorial_step2_desc">Используйте жест «Назад» от края экрана или системную кнопку «Назад», чтобы вернуться из поиска или настроек.</string>
+    <string name="tutorial_step2_hint">Используйте жест или кнопку «Назад»!</string>
+    <string name="tutorial_step3_title">Свайп вниз — Быстрые действия</string>
+    <string name="tutorial_step3_desc">Смахните вниз по области «Избранного» для вызова карточек действий. Отпустите палец для вызова уведомлений или сдвиньте вбок для быстрых настроек.</string>
+    <string name="tutorial_step3_hint">Попробуйте: смахните вниз, переведите палец и отпустите!</string>
+    <string name="tutorial_step4_title">Свайп вбок — Highlights</string>
+    <string name="tutorial_step4_desc">Смахните горизонтально от центра экрана, чтобы открыть экран Highlights со статистикой лаунчера и настраиваемыми виджетами.</string>
+    <string name="tutorial_step4_hint">Смахните горизонтально из центра экрана!</string>
+    <string name="tutorial_step5_title">Долгое нажатие — Меню и Настройки</string>
+    <string name="tutorial_step5_desc">Удерживайте палец на пустом месте экрана для перехода в настройки, или удерживайте значок приложения для контекстного меню.</string>
+    <string name="tutorial_step5_hint">Зажмите и удерживайте экран!</string>
+    <string name="tutorial_step6_title">Избранное, история и теги</string>
+    <string name="tutorial_step6_desc">Удерживайте иконку в избранном для перемещения или удаления. Нажмите на значок истории для меню (пауза, очистка). Нажмите на тег для открытия папки или удерживайте для настройки.</string>
+    <string name="tutorial_step6_hint">Удерживайте избранное, нажмите на историю или зажмите тег!</string>
+    <string name="tutorial_step7_title">Перемещение истории</string>
+    <string name="tutorial_step7_desc">Смахните ВВЕРХ по списку истории внизу экрана, чтобы перенести его наверх. Смахните ВНИЗ по области тегов вверху, чтобы поменять их местами.</string>
+    <string name="tutorial_step7_hint">Смахните ВВЕРХ по истории или ВНИЗ по тегам!</string>
+
+    <!-- Toast & Feedback Messages -->
+    <string name="toast_removed_from_favorites">«%1$s» удалено из избранного</string>
+    <string name="toast_favorites_limit">Достигнут лимит избранного (максимум 13)</string>
+    <string name="toast_added_to_favorites">«%1$s» добавлено в избранное</string>
+    <string name="toast_history_recording_paused">Запись истории приостановлена</string>
+    <string name="toast_history_recording_resumed">Запись истории возобновлена</string>
+    <string name="toast_search_history_cleared">История поиска очищена</string>
+    <string name="toast_removed_from_history">«%1$s» удалено из истории</string>
+    <string name="toast_history_cleared">История очищена</string>
+    <string name="toast_backup_imported_success">Резервная копия успешно импортирована</string>
+    <string name="toast_backup_import_assignments">Импортировано назначений: %1$d</string>
+    <string name="toast_backup_import_new_tags">(новых тегов: %1$d)</string>
+    <string name="toast_backup_import_labels">ярлыков: %1$d</string>
+    <string name="toast_backup_import_favorites">избранных: %1$d</string>
+    <string name="toast_backup_import_settings">Настройки восстановлены</string>
+    <string name="toast_applied_tags">Применено %1$d тегов к %2$d приложениям</string>
+    <string name="toast_uninstaller_failed">Не удалось открыть удаление приложения</string>
+    <string name="toast_exported_apps">Экспортировано %1$d приложений</string>
+    <string name="toast_export_failed">Ошибка экспорта: %1$s</string>
+    <string name="toast_import_failed">Ошибка импорта: %1$s</string>
+    <string name="toast_parse_tags_failed">Не удалось разобрать теги: %1$s</string>
+    <string name="toast_parse_tags_file_failed">Не удалось разобрать файл тегов: %1$s</string>
+    <string name="toast_backup_exported">Резервная копия экспортирована (%1$d тегов, %2$d прилож.)</string>
+    <string name="toast_exported_mappings">Экспортировано сопоставлений: %1$d</string>
+</resources>

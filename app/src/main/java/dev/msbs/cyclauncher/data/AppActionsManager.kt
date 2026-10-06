@@ -1,5 +1,6 @@
 package dev.msbs.cyclauncher.data
 
+import dev.msbs.cyclauncher.R
 import dev.msbs.cyclauncher.model.Tag
 
 import android.content.Context
@@ -75,7 +76,7 @@ class AppActionsManager(context: Context) {
         
         if (current.contains(componentKey)) {
             current.remove(componentKey)
-            showToast("Removed \"$label\" from Favorites")
+            showToast(context.getString(R.string.toast_removed_from_favorites, label))
         } else {
             val existingTagIds = _tags.value.map { it.id }.toSet()
             current = current.filter { key ->
@@ -85,11 +86,11 @@ class AppActionsManager(context: Context) {
             }.toMutableList()
 
             if (current.size >= 13) {
-                showToast("Favorites limit reached (max 13 items)")
+                showToast(context.getString(R.string.toast_favorites_limit))
                 return
             }
             current.add(componentKey)
-            showToast("Added \"$label\" to Favorites")
+            showToast(context.getString(R.string.toast_added_to_favorites, label))
         }
         val capped = current.take(13)
         _favorites.value = capped
@@ -129,7 +130,7 @@ class AppActionsManager(context: Context) {
         val newVal = !_isHistoryPaused.value
         _isHistoryPaused.value = newVal
         prefs.edit().putBoolean("is_history_paused", newVal).apply()
-        showToast(if (newVal) "History recording paused" else "History recording resumed")
+        showToast(context.getString(if (newVal) R.string.toast_history_recording_paused else R.string.toast_history_recording_resumed))
         return newVal
     }
 
@@ -200,7 +201,7 @@ class AppActionsManager(context: Context) {
         _history.value = preservedMainHistory
         saveList("history", preservedMainHistory)
 
-        showToast("Search history cleared")
+        showToast(context.getString(R.string.toast_search_history_cleared))
     }
 
     fun logAppLaunch(componentKey: String) {
@@ -311,7 +312,7 @@ class AppActionsManager(context: Context) {
             saveRecentlyUpdated(updatedSet)
         }
         val label = componentKey.substringBefore('/').substringAfterLast('.').replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-        showToast("Removed \"$label\" from History")
+        showToast(context.getString(R.string.toast_removed_from_history, label))
     }
 
     fun clearHistory() {
@@ -321,7 +322,7 @@ class AppActionsManager(context: Context) {
         saveList("history", emptyList())
         _recentlyUpdated.value = emptySet()
         saveRecentlyUpdated(emptySet())
-        showToast("History cleared")
+        showToast(context.getString(R.string.toast_history_cleared))
     }
 
     fun renameApp(componentKey: String, newLabel: String) {
@@ -1449,18 +1450,20 @@ class AppActionsManager(context: Context) {
         val created = preview.newTags.size
         val parts = mutableListOf<String>()
         if (preview.parsedAssignments.isNotEmpty()) {
-            parts.add("Imported ${preview.parsedAssignments.size} assignments" + if (created > 0) " ($created new tags)" else "")
+            val assignmentsStr = context.getString(R.string.toast_backup_import_assignments, preview.parsedAssignments.size)
+            val newTagsStr = if (created > 0) " " + context.getString(R.string.toast_backup_import_new_tags, created) else ""
+            parts.add(assignmentsStr + newTagsStr)
         }
         if (preview.customLabels.isNotEmpty()) {
-            parts.add("${preview.customLabels.size} labels")
+            parts.add(context.getString(R.string.toast_backup_import_labels, preview.customLabels.size))
         }
         if (preview.favorites.isNotEmpty()) {
-            parts.add("${preview.favorites.size} favorites")
+            parts.add(context.getString(R.string.toast_backup_import_favorites, preview.favorites.size))
         }
         if (preview.settings.isNotEmpty()) {
-            parts.add("Settings restored")
+            parts.add(context.getString(R.string.toast_backup_import_settings))
         }
-        val msg = if (parts.isNotEmpty()) parts.joinToString(", ") else "Backup imported successfully"
+        val msg = if (parts.isNotEmpty()) parts.joinToString(", ") else context.getString(R.string.toast_backup_imported_success)
         showToast(msg)
     }
 
@@ -1688,7 +1691,7 @@ class AppActionsManager(context: Context) {
         _appTags.value = currentAppTags
         saveAppTags(currentAppTags)
 
-        showToast("Applied ${preview.tags.size} tags to ${preview.matchedAppsCount} apps")
+        showToast(context.getString(R.string.toast_applied_tags, preview.tags.size, preview.matchedAppsCount))
     }
 
     private fun generateTagColor(name: String): Color {

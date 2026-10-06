@@ -38,6 +38,8 @@ import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
+import androidx.compose.ui.res.stringResource
+import dev.msbs.cyclauncher.R
 import kotlin.math.roundToInt
 
 /**
@@ -179,10 +181,10 @@ fun SwipeDownQuickActionsOverlay(
         previousTarget = currentTarget
     }
 
-    val notifTitle = "Notifications"
-    val notifSubtitle = "Notification Shade"
-    val qsTitle = "Quick Settings"
-    val qsSubtitle = "Wi-Fi, Bluetooth"
+    val notifTitle = stringResource(R.string.quick_action_notifications_title)
+    val notifSubtitle = stringResource(R.string.quick_action_notifications_subtitle)
+    val qsTitle = stringResource(R.string.quick_action_quick_settings_title)
+    val qsSubtitle = stringResource(R.string.quick_action_quick_settings_subtitle)
 
     val dismissModifier = remember(onDismiss) {
         if (onDismiss != null) {

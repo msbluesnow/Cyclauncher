@@ -13,7 +13,11 @@ import dev.msbs.cyclauncher.ui.components.KeepAndroidOpenBanner
 import dev.msbs.cyclauncher.ui.components.KeepAndroidOpenDialog
 import dev.msbs.cyclauncher.ui.components.ScreenTopBar
 import dev.msbs.cyclauncher.ui.components.ShadowedIcon
+import dev.msbs.cyclauncher.utils.LocaleUtils
+import dev.msbs.cyclauncher.R
+import androidx.compose.ui.res.stringResource
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -158,7 +162,7 @@ fun SettingsScreen(
             .navigationBarsPadding()
     ) {
         ScreenTopBar(
-            title = "SETTINGS",
+            title = stringResource(R.string.settings_title),
             handSide = handSide,
             accentColor = accentColor,
             primaryTextColor = primaryTextColor,
@@ -336,7 +340,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Tutorial",
+                                text = stringResource(R.string.settings_tutorial),
                                 color = buttonTextColor.color,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
@@ -408,10 +412,10 @@ fun SettingsScreen(
     if (showDefaultLauncherDialog) {
         AlertDialog(
             onDismissRequest = { showDefaultLauncherDialog = false },
-            title = { Text("Default Launcher", color = accentColor.color) },
+            title = { Text(stringResource(R.string.settings_default_launcher_title), color = accentColor.color) },
             text = {
                 Text(
-                    if (currentIsDefault) "Cyclauncher is now your default launcher!" else "Cyclauncher is not set as default. Try again?",
+                    if (currentIsDefault) stringResource(R.string.settings_default_launcher_success) else stringResource(R.string.settings_default_launcher_failed),
                     color = popupTheme.contentColor
                 )
             },
@@ -420,13 +424,13 @@ fun SettingsScreen(
                     if (!currentIsDefault) viewModel.openDefaultLauncherSettings(context) else showDefaultLauncherDialog =
                         false
                 }) {
-                    Text(if (currentIsDefault) "Great!" else "Set Default", color = accentColor.color)
+                    Text(if (currentIsDefault) stringResource(R.string.settings_default_launcher_great) else stringResource(R.string.settings_default_launcher_set), color = accentColor.color)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDefaultLauncherDialog = false }) {
                     Text(
-                        "Cancel",
+                        stringResource(R.string.common_cancel),
                         color = popupTheme.secondaryContentColor
                     )
                 }
@@ -563,7 +567,7 @@ private fun InteractionSection(
                 HandArrowButton(
                     icon = Icons.AutoMirrored.Outlined.ArrowBack,
                     isSelected = handSide == HandSide.LEFT,
-                    contentDescription = "Left hand",
+                    contentDescription = stringResource(R.string.settings_hand_left),
                     accentColor = accentColor,
                     primaryTextColor = primaryTextColor,
                     buttonTextColor = buttonTextColor,
@@ -578,7 +582,7 @@ private fun InteractionSection(
                 HandArrowButton(
                     icon = Icons.AutoMirrored.Outlined.ArrowForward,
                     isSelected = handSide == HandSide.RIGHT,
-                    contentDescription = "Right hand",
+                    contentDescription = stringResource(R.string.settings_hand_right),
                     accentColor = accentColor,
                     primaryTextColor = primaryTextColor,
                     buttonTextColor = buttonTextColor,
@@ -655,7 +659,7 @@ private fun InteractionSection(
                     shadowColorOverride = shadowColorOverride
                 )
                 Text(
-                    text = "Widget",
+                    text = stringResource(R.string.widget_title),
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                     maxLines = 1,
@@ -669,7 +673,7 @@ private fun InteractionSection(
             ) {
                 ShadowedIcon(
                     imageVector = widgetIcon,
-                    contentDescription = "Toggle search widgets visibility",
+                    contentDescription = stringResource(R.string.settings_toggle_search_widgets),
                     tint = accentColor.color,
                     size = 22.dp,
                     showShadows = showShadows,
@@ -685,17 +689,17 @@ private fun InteractionSection(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "Side Slot",
+                text = stringResource(R.string.settings_side_slot),
                 color = primaryTextColor.color,
                 style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                 maxLines = 1,
                 modifier = Modifier.weight(1f, fill = false).basicMarquee()
             )
             var expanded by remember { mutableStateOf(false) }
-            val (currentIcon, currentLabel) = when (sideAlphabetSlotMode) {
-                SideAlphabetSlotMode.HISTORY -> Pair(Icons.Outlined.History, "History")
-                SideAlphabetSlotMode.WIDGET -> Pair(Icons.Outlined.Widgets, "Widget")
-                SideAlphabetSlotMode.DISABLED -> Pair(Icons.Outlined.VisibilityOff, "Disabled")
+            val (currentIcon, currentLabelRes) = when (sideAlphabetSlotMode) {
+                SideAlphabetSlotMode.HISTORY -> Pair(Icons.Outlined.History, R.string.settings_side_slot_history)
+                SideAlphabetSlotMode.WIDGET -> Pair(Icons.Outlined.Widgets, R.string.settings_side_slot_widget)
+                SideAlphabetSlotMode.DISABLED -> Pair(Icons.Outlined.VisibilityOff, R.string.settings_side_slot_disabled)
             }
             Box {
                 Row(
@@ -715,7 +719,7 @@ private fun InteractionSection(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = currentLabel,
+                        text = stringResource(currentLabelRes),
                         color = accentColor.color,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
@@ -725,7 +729,7 @@ private fun InteractionSection(
                     )
                     Icon(
                         imageVector = Icons.Outlined.ArrowDropDown,
-                        contentDescription = "Select side slot mode",
+                        contentDescription = stringResource(R.string.settings_select_side_slot_mode),
                         tint = primaryTextColor.color.copy(alpha = 0.7f),
                         modifier = Modifier.size(18.dp)
                     )
@@ -745,15 +749,15 @@ private fun InteractionSection(
                         SideAlphabetSlotMode.DISABLED
                     ).forEach { mode ->
                         val isSelected = sideAlphabetSlotMode == mode
-                        val (modeIcon, modeLabel) = when (mode) {
-                            SideAlphabetSlotMode.HISTORY -> Pair(Icons.Outlined.History, "History")
-                            SideAlphabetSlotMode.WIDGET -> Pair(Icons.Outlined.Widgets, "Widget")
-                            SideAlphabetSlotMode.DISABLED -> Pair(Icons.Outlined.VisibilityOff, "Disabled")
+                        val (modeIcon, modeLabelRes) = when (mode) {
+                            SideAlphabetSlotMode.HISTORY -> Pair(Icons.Outlined.History, R.string.settings_side_slot_history)
+                            SideAlphabetSlotMode.WIDGET -> Pair(Icons.Outlined.Widgets, R.string.settings_side_slot_widget)
+                            SideAlphabetSlotMode.DISABLED -> Pair(Icons.Outlined.VisibilityOff, R.string.settings_side_slot_disabled)
                         }
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    text = modeLabel,
+                                    text = stringResource(modeLabelRes),
                                     color = if (isSelected) accentColor.color else popupTheme.contentColor,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                     fontSize = 14.sp,
@@ -828,7 +832,7 @@ private fun StatusBarAndAnimationsSection(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Status Bar",
+                    text = stringResource(R.string.settings_status_bar),
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                     maxLines = 1,
@@ -842,7 +846,7 @@ private fun StatusBarAndAnimationsSection(
                 ) {
                     ShadowedIcon(
                         imageVector = visibilityIcon,
-                        contentDescription = "Toggle status bar visibility",
+                        contentDescription = stringResource(R.string.settings_toggle_status_bar),
                         tint = accentColor.color,
                         size = 20.dp,
                         showShadows = showShadows,
@@ -858,7 +862,7 @@ private fun StatusBarAndAnimationsSection(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Animations",
+                    text = stringResource(R.string.settings_animations),
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                     maxLines = 1,
@@ -890,7 +894,7 @@ private fun StatusBarAndAnimationsSection(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Haptics",
+                    text = stringResource(R.string.settings_haptics),
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                     maxLines = 1,
@@ -916,7 +920,7 @@ private fun StatusBarAndAnimationsSection(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Monochrome",
+                    text = stringResource(R.string.settings_monochrome),
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                     maxLines = 1,
@@ -939,7 +943,7 @@ private fun StatusBarAndAnimationsSection(
                         if (!monochromeHistory && !monochromeTags) {
                             Icon(
                                 imageVector = Icons.Outlined.VisibilityOff,
-                                contentDescription = "Monochrome disabled",
+                                contentDescription = stringResource(R.string.settings_monochrome_disabled),
                                 tint = primaryTextColor.color.copy(alpha = 0.5f),
                                 modifier = Modifier.size(16.dp)
                             )
@@ -947,7 +951,7 @@ private fun StatusBarAndAnimationsSection(
                             if (monochromeHistory) {
                                 Icon(
                                     imageVector = Icons.Outlined.History,
-                                    contentDescription = "History Monochrome",
+                                    contentDescription = stringResource(R.string.settings_monochrome_history_desc),
                                     tint = accentColor.color,
                                     modifier = Modifier.size(16.dp)
                                 )
@@ -955,7 +959,7 @@ private fun StatusBarAndAnimationsSection(
                             if (monochromeTags) {
                                 Icon(
                                     imageVector = Icons.Outlined.Folder,
-                                    contentDescription = "Tags Monochrome",
+                                    contentDescription = stringResource(R.string.settings_monochrome_tags_desc),
                                     tint = accentColor.color,
                                     modifier = Modifier.size(16.dp)
                                 )
@@ -963,7 +967,7 @@ private fun StatusBarAndAnimationsSection(
                         }
                         Icon(
                             imageVector = Icons.Outlined.ArrowDropDown,
-                            contentDescription = "Select Monochrome Options",
+                            contentDescription = stringResource(R.string.settings_monochrome_options),
                             tint = primaryTextColor.color.copy(alpha = 0.7f),
                             modifier = Modifier.size(18.dp)
                         )
@@ -980,7 +984,7 @@ private fun StatusBarAndAnimationsSection(
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    text = "History",
+                                    text = stringResource(R.string.settings_monochrome_history),
                                     color = if (monochromeHistory) accentColor.color else popupTheme.contentColor,
                                     fontWeight = if (monochromeHistory) FontWeight.Bold else FontWeight.Normal,
                                     fontSize = 14.sp,
@@ -1014,7 +1018,7 @@ private fun StatusBarAndAnimationsSection(
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    text = "Tags",
+                                    text = stringResource(R.string.settings_monochrome_tags),
                                     color = if (monochromeTags) accentColor.color else popupTheme.contentColor,
                                     fontWeight = if (monochromeTags) FontWeight.Bold else FontWeight.Normal,
                                     fontSize = 14.sp,
@@ -1048,6 +1052,120 @@ private fun StatusBarAndAnimationsSection(
                 }
             }
         }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                ShadowedIcon(
+                    imageVector = Icons.Outlined.Translate,
+                    tint = primaryTextColor.color,
+                    size = 16.dp,
+                    showShadows = showShadows,
+                    primaryTextColor = primaryTextColor,
+                    shadowColorOverride = shadowColorOverride
+                )
+                Text(
+                    text = stringResource(R.string.settings_language),
+                    color = primaryTextColor.color,
+                    style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                    maxLines = 1,
+                    modifier = Modifier.basicMarquee()
+                )
+            }
+
+            val context = LocalContext.current
+            var languageExpanded by remember { mutableStateOf(false) }
+            var currentLangCode by remember { mutableStateOf(LocaleUtils.getCurrentLanguageCode(context)) }
+            val currentLang = remember(currentLangCode) {
+                LocaleUtils.SUPPORTED_LANGUAGES.find { it.code == currentLangCode }
+                    ?: LocaleUtils.SUPPORTED_LANGUAGES.first()
+            }
+
+            Box {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(primaryTextColor.color.copy(alpha = 0.08f))
+                        .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
+                        .clickable { languageExpanded = true }
+                        .padding(horizontal = 7.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = stringResource(currentLang.labelRes),
+                        color = accentColor.color,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        style = TextStyle(shadow = shadow),
+                        modifier = Modifier.basicMarquee()
+                    )
+                    Icon(
+                        imageVector = Icons.Outlined.ArrowDropDown,
+                        contentDescription = stringResource(R.string.settings_select_language),
+                        tint = primaryTextColor.color.copy(alpha = 0.7f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = languageExpanded,
+                    onDismissRequest = { languageExpanded = false },
+                    shape = RoundedCornerShape(14.dp),
+                    containerColor = popupTheme.solidBackgroundColor,
+                    border = BorderStroke(1.dp, popupTheme.borderColor),
+                    shadowElevation = 8.dp
+                ) {
+                    LocaleUtils.SUPPORTED_LANGUAGES.forEach { lang ->
+                        val isSelected = lang.code == currentLangCode
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(
+                                        text = stringResource(lang.labelRes),
+                                        color = if (isSelected) accentColor.color else popupTheme.contentColor,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 14.sp,
+                                        maxLines = 1,
+                                        modifier = Modifier.basicMarquee()
+                                    )
+                                    if (lang.nativeName.isNotBlank() && lang.code.isNotBlank()) {
+                                        Text(
+                                            text = lang.nativeName,
+                                            color = popupTheme.secondaryContentColor,
+                                            fontSize = 11.sp,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+                            },
+                            trailingIcon = if (isSelected) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Check,
+                                        contentDescription = null,
+                                        tint = accentColor.color,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            } else null,
+                            onClick = {
+                                currentLangCode = lang.code
+                                LocaleUtils.setAppLanguage(context, lang.code)
+                                languageExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1074,8 +1192,9 @@ private fun MappingAndIconPackSection(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val charMappingSummary = remember(customCharMappings) {
-            getCharMappingSummary(customCharMappings)
+        val context = LocalContext.current
+        val charMappingSummary = remember(customCharMappings, context) {
+            getCharMappingSummary(context, customCharMappings)
         }
 
         Column(
@@ -1095,7 +1214,7 @@ private fun MappingAndIconPackSection(
                     shadowColorOverride = shadowColorOverride
                 )
                 Text(
-                    text = "Mapping",
+                    text = stringResource(R.string.settings_mapping),
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                     maxLines = 1,
@@ -1124,7 +1243,7 @@ private fun MappingAndIconPackSection(
                 )
                 ShadowedIcon(
                     imageVector = Icons.Outlined.Tune,
-                    contentDescription = "Configure character mappings",
+                    contentDescription = stringResource(R.string.settings_mapping_configure),
                     tint = accentColor.color,
                     size = 16.dp,
                     showShadows = showShadows,
@@ -1134,7 +1253,6 @@ private fun MappingAndIconPackSection(
             }
         }
 
-        val context = LocalContext.current
         val activePack = remember(selectedIconPack, installedIconPacks) {
             if (selectedIconPack != null) {
                 installedIconPacks.find { it.packageName == selectedIconPack }
@@ -1149,7 +1267,7 @@ private fun MappingAndIconPackSection(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = "Icon Pack",
+                text = stringResource(R.string.settings_icon_pack),
                 color = primaryTextColor.color,
                 style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
                 maxLines = 1,
@@ -1174,7 +1292,7 @@ private fun MappingAndIconPackSection(
                 } else {
                     ShadowedIcon(
                         imageVector = Icons.Outlined.Apps,
-                        contentDescription = "Select Icon Pack",
+                        contentDescription = stringResource(R.string.settings_icon_pack_select),
                         tint = accentColor.color,
                         size = 20.dp,
                         showShadows = showShadows,
@@ -1228,7 +1346,7 @@ private fun ThemeAndColorsSection(
                     shadowColorOverride = shadowColorOverride
                 )
                 Text(
-                    text = "Accent",
+                    text = stringResource(R.string.settings_accent),
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 15.sp),
                     maxLines = 1,
@@ -1245,7 +1363,7 @@ private fun ThemeAndColorsSection(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = "Adaptive",
+                    text = stringResource(R.string.settings_adaptive_shadows),
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 15.sp),
                     maxLines = 1,
@@ -1300,7 +1418,7 @@ private fun ThemeAndColorsSection(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Main Color",
+                text = stringResource(R.string.settings_main_color),
                 color = primaryTextColor.color,
                 style = TextStyle(shadow = shadow, fontSize = 13.sp),
                 maxLines = 1,
@@ -1312,7 +1430,7 @@ private fun ThemeAndColorsSection(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Button Text",
+                text = stringResource(R.string.settings_button_text),
                 color = primaryTextColor.color,
                 style = TextStyle(shadow = shadow, fontSize = 13.sp),
                 maxLines = 1,
@@ -1324,7 +1442,7 @@ private fun ThemeAndColorsSection(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Popup Theme",
+                text = stringResource(R.string.settings_popup_theme),
                 color = primaryTextColor.color,
                 style = TextStyle(shadow = shadow, fontSize = 13.sp),
                 maxLines = 1,
@@ -1358,7 +1476,7 @@ private fun ThemeAndColorsSection(
             CircleActionButton(
                 icon = if (isAutoMatched) Icons.Filled.AutoFixHigh else Icons.Outlined.AutoFixHigh,
                 isSelected = isAutoMatched,
-                contentDescription = "Auto Action",
+                contentDescription = stringResource(R.string.settings_auto_colors),
                 accentColor = accentColor,
                 selectedIconTint = if (isLightAccent) Color.Black else Color.White,
                 showShadows = showShadows,
@@ -1410,7 +1528,7 @@ private fun BackupAndTagsSection(
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Backup",
+                    text = stringResource(R.string.settings_backup),
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium),
                     maxLines = 1,
@@ -1423,7 +1541,7 @@ private fun BackupAndTagsSection(
                 ) {
                     ShadowedIcon(
                         imageVector = Icons.Outlined.Upload,
-                        contentDescription = "Export Backup",
+                        contentDescription = stringResource(R.string.settings_export_backup),
                         tint = accentColor.color,
                         size = 22.dp,
                         showShadows = showShadows,
@@ -1437,7 +1555,7 @@ private fun BackupAndTagsSection(
                 ) {
                     ShadowedIcon(
                         imageVector = Icons.Outlined.Download,
-                        contentDescription = "Import Backup",
+                        contentDescription = stringResource(R.string.settings_import_backup),
                         tint = accentColor.color,
                         size = 22.dp,
                         showShadows = showShadows,
@@ -1474,7 +1592,7 @@ private fun BackupAndTagsSection(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "AI Tags",
+                    text = stringResource(R.string.settings_ai_tags),
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium),
                     maxLines = 1,
@@ -1517,7 +1635,7 @@ private fun SupportAndCommunitySection(
                 shadowColorOverride = shadowColorOverride
             )
             Text(
-                text = "Support & Community",
+                text = stringResource(R.string.settings_support_and_community),
                 color = primaryTextColor.color,
                 style = TextStyle(
                     shadow = shadow,
@@ -1536,8 +1654,8 @@ private fun SupportAndCommunitySection(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             CommunityButton(
-                title = "GitHub",
-                subtitle = "⭐ Project",
+                title = stringResource(R.string.settings_github),
+                subtitle = stringResource(R.string.settings_github_subtitle),
                 icon = Icons.Outlined.Code,
                 accentColor = accentColor,
                 primaryTextColor = primaryTextColor,
@@ -1550,8 +1668,8 @@ private fun SupportAndCommunitySection(
             )
 
             CommunityButton(
-                title = "Discord",
-                subtitle = "Join chat",
+                title = stringResource(R.string.settings_discord),
+                subtitle = stringResource(R.string.settings_discord_subtitle),
                 icon = Icons.AutoMirrored.Outlined.Chat,
                 accentColor = accentColor,
                 primaryTextColor = primaryTextColor,
@@ -1564,8 +1682,8 @@ private fun SupportAndCommunitySection(
             )
 
             CommunityButton(
-                title = "Tribute",
-                subtitle = "Sponsor",
+                title = stringResource(R.string.settings_tribute),
+                subtitle = stringResource(R.string.settings_tribute_subtitle),
                 icon = Icons.Outlined.VolunteerActivism,
                 accentColor = accentColor,
                 primaryTextColor = primaryTextColor,
@@ -1605,7 +1723,7 @@ private fun SettingsVersionText(
         }
     }
     Text(
-        text = "Version $versionName",
+        text = stringResource(R.string.settings_version, versionName),
         color = primaryTextColor.color.copy(alpha = 0.4f),
         style = TextStyle(shadow = shadow, fontSize = 14.sp),
         maxLines = 1,
@@ -1822,7 +1940,7 @@ private fun AccentColorDialog(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Theme Accent",
+                    text = stringResource(R.string.settings_theme_accent_title),
                     color = popupTheme.contentColor,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
@@ -1832,7 +1950,7 @@ private fun AccentColorDialog(
                 IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
-                        contentDescription = "Close",
+                        contentDescription = stringResource(R.string.common_close),
                         tint = popupTheme.secondaryContentColor,
                         modifier = Modifier.size(20.dp)
                     )
@@ -1863,7 +1981,7 @@ private fun AccentColorDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Presets & Wallpaper",
+                            text = stringResource(R.string.settings_tab_presets_wallpaper),
                             fontSize = 12.sp,
                             fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
                             color = if (selectedTab == 0) popupTheme.contentColor else popupTheme.secondaryContentColor,
@@ -1881,7 +1999,7 @@ private fun AccentColorDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Custom Color",
+                            text = stringResource(R.string.settings_tab_custom_color),
                             fontSize = 12.sp,
                             fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
                             color = if (selectedTab == 1) popupTheme.contentColor else popupTheme.secondaryContentColor,
@@ -1893,7 +2011,7 @@ private fun AccentColorDialog(
 
                 if (selectedTab == 0) {
                     Text(
-                        text = "Adaptive Wallpaper Accent",
+                        text = stringResource(R.string.settings_adaptive_wallpaper_accent),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = popupTheme.secondaryContentColor,
@@ -1944,7 +2062,7 @@ private fun AccentColorDialog(
                             }
                             Column {
                                 Text(
-                                    text = "Hue Angle Shift",
+                                    text = stringResource(R.string.settings_hue_angle_shift),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = popupTheme.contentColor,
@@ -1952,8 +2070,8 @@ private fun AccentColorDialog(
                                     modifier = Modifier.basicMarquee()
                                 )
                                 Text(
-                                    text = if (isWpDark) "Luminous highlight for dark wallpaper"
-                                    else "Deep dark shade for light wallpaper",
+                                    text = if (isWpDark) stringResource(R.string.settings_luminous_highlight)
+                                    else stringResource(R.string.settings_deep_dark_shade),
                                     fontSize = 11.sp,
                                     color = popupTheme.secondaryContentColor,
                                     maxLines = 1,
@@ -1966,7 +2084,7 @@ private fun AccentColorDialog(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = "Echo Icon Theme Presets",
+                        text = stringResource(R.string.settings_echo_presets),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = popupTheme.secondaryContentColor,
@@ -2001,7 +2119,7 @@ private fun AccentColorDialog(
                     }
                 } else {
                     Text(
-                        text = "Interactive Color Picker",
+                        text = stringResource(R.string.settings_interactive_picker),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = popupTheme.secondaryContentColor,
@@ -2020,7 +2138,7 @@ private fun AccentColorDialog(
 
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = "Quick Swatches",
+                            text = stringResource(R.string.settings_quick_swatches),
                             fontSize = 11.sp,
                             color = popupTheme.secondaryContentColor,
                             maxLines = 1,
@@ -2064,7 +2182,7 @@ private fun AccentColorDialog(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                "Hue (${currentHue.toInt()}°)",
+                                stringResource(R.string.settings_hue_format, currentHue.toInt()),
                                 fontSize = 11.sp,
                                 color = popupTheme.secondaryContentColor
                             )
@@ -2082,7 +2200,7 @@ private fun AccentColorDialog(
 
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            "Saturation (${(currentSat * 100).toInt()}%)",
+                            stringResource(R.string.settings_saturation_format, (currentSat * 100).toInt()),
                             fontSize = 11.sp,
                             color = popupTheme.secondaryContentColor
                         )
@@ -2105,7 +2223,7 @@ private fun AccentColorDialog(
 
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            "Brightness (${(currentVal * 100).toInt()}%)",
+                            stringResource(R.string.settings_brightness_format, (currentVal * 100).toInt()),
                             fontSize = 11.sp,
                             color = popupTheme.secondaryContentColor
                         )
@@ -2159,7 +2277,7 @@ private fun AccentColorDialog(
                             },
                             prefix = { Text("#", color = popupTheme.contentColor, fontWeight = FontWeight.Bold) },
                             singleLine = true,
-                            label = { Text("HEX Code", color = popupTheme.secondaryContentColor) },
+                            label = { Text(stringResource(R.string.settings_hex_code), color = popupTheme.secondaryContentColor) },
                             textStyle = TextStyle(color = popupTheme.contentColor, fontSize = 15.sp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = customPickedColor,
@@ -2181,7 +2299,7 @@ private fun AccentColorDialog(
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Text(
-                            text = "Apply Custom Color",
+                            text = stringResource(R.string.settings_apply_custom_color),
                             fontWeight = FontWeight.Bold,
                             color = if (customPickedColor.luminance() > 0.5f) Color.Black else Color.White,
                             maxLines = 1,
@@ -2291,7 +2409,7 @@ private fun DefaultLauncherAndRelaunchRow(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Default Launcher",
+                text = stringResource(R.string.settings_default_launcher),
                 color = primaryTextColor.color,
                 style = TextStyle(shadow = shadow, fontWeight = FontWeight.Medium, fontSize = 15.sp),
                 maxLines = 1,
@@ -2299,7 +2417,7 @@ private fun DefaultLauncherAndRelaunchRow(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = if (isDefault) "Set as default" else "Not set",
+                text = if (isDefault) stringResource(R.string.settings_default_launcher_set_status) else stringResource(R.string.settings_default_launcher_not_set),
                 color = if (isDefault) Color.Green else accentColor.color.copy(alpha = 0.69f),
                 fontSize = 12.sp,
                 style = TextStyle(shadow = shadow),
@@ -2318,7 +2436,7 @@ private fun DefaultLauncherAndRelaunchRow(
                 contentPadding = PaddingValues(horizontal = 8.dp)
             ) {
                 Text(
-                    text = if (isDefault) "Change" else "Set",
+                    text = if (isDefault) stringResource(R.string.settings_default_launcher_change) else stringResource(R.string.settings_default_launcher_set),
                     color = if (isDefault) Color.Green else primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontWeight = FontWeight.Bold),
                     maxLines = 1,
@@ -2329,7 +2447,7 @@ private fun DefaultLauncherAndRelaunchRow(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Relaunch App",
+                text = stringResource(R.string.settings_relaunch_app),
                 color = primaryTextColor.color,
                 style = TextStyle(shadow = shadow, fontWeight = FontWeight.Medium, fontSize = 15.sp),
                 maxLines = 1,
@@ -2337,7 +2455,7 @@ private fun DefaultLauncherAndRelaunchRow(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "May fix some issues",
+                text = stringResource(R.string.settings_relaunch_subtitle),
                 color = accentColor.color.copy(alpha = 0.69f),
                 fontSize = 12.sp,
                 style = TextStyle(shadow = shadow),
@@ -2354,7 +2472,7 @@ private fun DefaultLauncherAndRelaunchRow(
                 contentPadding = PaddingValues(horizontal = 8.dp)
             ) {
                 Text(
-                    text = "Relaunch",
+                    text = stringResource(R.string.settings_relaunch_action),
                     color = accentColor.color,
                     style = TextStyle(shadow = shadow, fontWeight = FontWeight.Bold),
                     maxLines = 1,
@@ -2575,7 +2693,7 @@ private fun IconPackSelectionDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Icon Pack",
+                text = stringResource(R.string.settings_icon_pack_title),
                 color = accentColor.color,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
@@ -2633,7 +2751,7 @@ private fun IconPackSelectionDialog(
                         }
                         Column {
                             Text(
-                                text = "System Default",
+                                text = stringResource(R.string.settings_icon_pack_system_default),
                                 color = popupTheme.contentColor,
                                 fontWeight = if (isDefaultSelected) FontWeight.Bold else FontWeight.Medium,
                                 fontSize = 15.sp,
@@ -2641,7 +2759,7 @@ private fun IconPackSelectionDialog(
                                 modifier = Modifier.basicMarquee()
                             )
                             Text(
-                                text = if (systemPackName != null) "Auto: $systemPackName (ROM theme)" else "Original application icons",
+                                text = if (systemPackName != null) stringResource(R.string.settings_icon_pack_system_auto, systemPackName) else stringResource(R.string.settings_icon_pack_system_original),
                                 color = popupTheme.secondaryContentColor,
                                 fontSize = 12.sp,
                                 maxLines = 1,
@@ -2667,7 +2785,7 @@ private fun IconPackSelectionDialog(
                 } else {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "No third-party icon packs found installed on your device.",
+                        stringResource(R.string.settings_icon_pack_none_installed),
                         color = popupTheme.secondaryContentColor,
                         fontSize = 12.sp,
                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
@@ -2740,7 +2858,7 @@ private fun IconPackSelectionDialog(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
-                    text = "Close",
+                    text = stringResource(R.string.common_close),
                     color = popupTheme.secondaryContentColor,
                     maxLines = 1,
                     modifier = Modifier.basicMarquee()
@@ -2775,8 +2893,8 @@ private fun DrawableIcon(drawable: android.graphics.drawable.Drawable?, modifier
 /**
  * Computes a human-readable summary of the currently active custom character mappings.
  */
-private fun getCharMappingSummary(mappings: Map<String, Char>): String {
-    if (mappings.isEmpty()) return "Default"
+private fun getCharMappingSummary(context: Context, mappings: Map<String, Char>): String {
+    if (mappings.isEmpty()) return context.getString(R.string.settings_char_mapping_default)
 
     val activeCategories = mutableListOf<String>()
     val keys = mappings.keys
@@ -2797,7 +2915,7 @@ private fun getCharMappingSummary(mappings: Map<String, Char>): String {
         activeCategories.size == 1 -> activeCategories[0]
         activeCategories.size == 2 -> "${activeCategories[0]}, ${activeCategories[1]}"
         activeCategories.size > 2 -> "${activeCategories[0]} +${activeCategories.size - 1}"
-        else -> "${mappings.size} active"
+        else -> context.getString(R.string.settings_char_mapping_active, mappings.size)
     }
 }
 

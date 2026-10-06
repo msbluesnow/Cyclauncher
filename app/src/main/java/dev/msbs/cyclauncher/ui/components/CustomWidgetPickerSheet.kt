@@ -60,6 +60,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import dev.msbs.cyclauncher.R
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.Dispatchers
@@ -361,7 +363,7 @@ fun CustomWidgetPickerSheet(
                                 shadowSettings = shadowSettings
                             )
                             Text(
-                                text = "WIDGETS",
+                                text = stringResource(R.string.widget_picker_title),
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp,
@@ -376,7 +378,7 @@ fun CustomWidgetPickerSheet(
                         ) {
                             ShadowedIcon(
                                 imageVector = Icons.Outlined.Close,
-                                contentDescription = "Close picker",
+                                contentDescription = stringResource(R.string.widget_picker_close),
                                 tint = primaryTextColor.color.copy(alpha = 0.7f),
                                 modifier = Modifier.size(20.dp),
                                 showShadows = showShadows,
@@ -423,7 +425,7 @@ fun CustomWidgetPickerSheet(
                             decorationBox = { innerTextField ->
                                 if (searchQuery.isEmpty()) {
                                     Text(
-                                        text = "Search apps or widgets...",
+                                        text = stringResource(R.string.widget_picker_search_placeholder),
                                         color = primaryTextColor.color.copy(alpha = 0.45f),
                                         fontSize = 14.sp
                                     )
@@ -435,7 +437,7 @@ fun CustomWidgetPickerSheet(
                         if (searchQuery.isNotEmpty()) {
                             Icon(
                                 imageVector = Icons.Outlined.Close,
-                                contentDescription = "Clear search",
+                                contentDescription = stringResource(R.string.widget_picker_clear_search),
                                 tint = primaryTextColor.color.copy(alpha = 0.6f),
                                 modifier = Modifier
                                     .size(18.dp)
@@ -468,7 +470,7 @@ fun CustomWidgetPickerSheet(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = if (searchQuery.isEmpty()) "No widgets found" else "No matching apps found",
+                                text = if (searchQuery.isEmpty()) stringResource(R.string.widget_picker_no_widgets) else stringResource(R.string.widget_picker_no_matching_apps),
                                 color = primaryTextColor.color.copy(alpha = 0.6f),
                                 fontSize = 13.5.sp,
                                 style = TextStyle(shadow = shadow)
@@ -599,7 +601,7 @@ private fun AppWidgetAccordionCard(
 
                 ShadowedIcon(
                     imageVector = if (isExpanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
-                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    contentDescription = if (isExpanded) stringResource(R.string.widget_picker_collapse) else stringResource(R.string.widget_picker_expand),
                     tint = primaryTextColor.color.copy(alpha = 0.7f),
                     modifier = Modifier.size(20.dp),
                     showShadows = showShadows,

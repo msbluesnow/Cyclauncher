@@ -1,3 +1,387 @@
 <resources>
-    <string name="app_name">Cyclauncher</string>
+    <!-- Non-translatable brand and technical constants -->
+    <string name="app_name" translatable="false">Cyclauncher</string>
+
+    <!-- Common UI Actions -->
+    <string name="common_cancel">Cancel</string>
+    <string name="common_save">Save</string>
+    <string name="common_create">Create</string>
+    <string name="common_done">Done</string>
+    <string name="common_edit">Edit</string>
+    <string name="common_delete">Delete</string>
+    <string name="common_close">Close</string>
+    <string name="common_clear">Clear</string>
+    <string name="common_search">Search</string>
+    <string name="common_restore">Restore</string>
+    <string name="common_all">All</string>
+    <string name="common_export">Export</string>
+    <string name="common_import">Import</string>
+    <string name="common_reset">Reset</string>
+    <string name="common_apply">Apply</string>
+    <string name="common_back">Back</string>
+
+    <!-- Application Action Context Menu -->
+    <string name="action_menu_add_favorite">Add to Favorites</string>
+    <string name="action_menu_remove_favorite">Remove from Favorites</string>
+    <string name="action_menu_manage_tags">Manage Tags</string>
+    <string name="action_menu_rename">Rename</string>
+    <string name="action_menu_info">Info</string>
+    <string name="action_menu_uninstall">Uninstall</string>
+
+    <!-- History Context Menu -->
+    <string name="history_menu_title">History</string>
+    <string name="history_menu_paused">(Paused)</string>
+    <string name="history_menu_edit">Edit History</string>
+    <string name="history_menu_pause">Pause Recording</string>
+    <string name="history_menu_resume">Resume Recording</string>
+    <string name="history_menu_clear">Clear History</string>
+
+    <!-- Tag Selection & Edit Dialogs -->
+    <string name="tag_dialog_title">App Tags: %1$s</string>
+    <string name="tag_dialog_empty">No tags created yet.</string>
+    <string name="tag_dialog_new_tag">New Tag</string>
+    <string name="tag_dialog_create_title">Create New Tag</string>
+    <string name="tag_dialog_edit_tag">Edit Tag</string>
+    <string name="tag_dialog_preview">Tag Preview</string>
+    <string name="tag_dialog_name_label">Tag Name</string>
+    <string name="tag_dialog_name_placeholder">e.g. Games, Work</string>
+    <string name="tag_dialog_folder_icon">Folder Icon</string>
+    <string name="tag_dialog_choose_icon">Choose Icon</string>
+    <string name="tag_dialog_tab_vector">Vector Icons</string>
+    <string name="tag_dialog_tab_emoji">Emoji</string>
+    <string name="tag_dialog_tab_presets">Presets</string>
+    <string name="tag_dialog_tab_custom">Custom Color</string>
+    <string name="tag_dialog_hold_to_delete">Hold 2.3s to delete</string>
+    <string name="tag_dialog_hex_code">HEX Code</string>
+    <string name="tag_dialog_search_icons">Search icons…</string>
+    <string name="tag_dialog_no_icons">No icons found</string>
+
+    <!-- Rename Dialog -->
+    <string name="rename_dialog_title">Rename Application</string>
+    <string name="rename_dialog_button">Rename</string>
+
+    <!-- Main Menu & Tag Components -->
+    <string name="main_exit_tag_reorder">Exit Tag Reorder Mode</string>
+    <string name="main_tag_folders">Tag Folders</string>
+    <string name="main_remove_from_history">Remove from History</string>
+    <string name="main_exit_history_edit">Exit History Edit Mode</string>
+    <string name="main_exit_edit_mode">Exit Edit Mode</string>
+    <string name="main_remove">Remove</string>
+    <string name="tag_empty_folder">No apps in this tag</string>
+    <string name="tag_remove_from_tag">Remove from tag</string>
+    <string name="tag_menu_edit">Edit Tag</string>
+    <string name="tag_menu_reorder">Reorder</string>
+    <string name="tag_menu_delete">Delete Tag</string>
+    <string name="tag_menu_hold_to_delete">Hold to delete tag</string>
+    <string name="tag_folders_title">Tag Folders</string>
+    <string name="tag_folders_reorder">Reorder Folders</string>
+    <string name="tag_sort_title">Sort Folders</string>
+    <string name="tag_sort_by_ellipsis">Sort by…</string>
+    <string name="tag_sort_by_name">By Name</string>
+    <string name="tag_sort_name_az">Name A to Z</string>
+    <string name="tag_sort_name_za">Name Z to A</string>
+    <string name="tag_sort_by_count">By App Count</string>
+    <string name="tag_sort_count_high_low">App Count High to Low</string>
+    <string name="tag_sort_count_low_high">App Count Low to High</string>
+
+    <!-- Search Screen & Components -->
+    <string name="search_apps_placeholder">Search apps…</string>
+    <string name="search_close_content_description">Close search</string>
+    <string name="palette_done_editing">Done Editing</string>
+
+    <!-- Swipe Down Quick Actions Overlay -->
+    <string name="quick_action_notifications_title">Notifications</string>
+    <string name="quick_action_notifications_subtitle">Notification Shade</string>
+    <string name="quick_action_quick_settings_title">Quick Settings</string>
+    <string name="quick_action_quick_settings_subtitle">Wi-Fi, Bluetooth</string>
+
+    <!-- Widgets -->
+    <string name="widget_title">Widget</string>
+    <string name="widget_left_title">Left Widget</string>
+    <string name="widget_right_title">Right Widget</string>
+    <string name="widget_action_add">Add Widget</string>
+    <string name="widget_action_change">Change Widget</string>
+    <string name="widget_action_reset_split">Reset Split (50/50)</string>
+    <string name="widget_action_remove">Remove Widget</string>
+    <string name="widget_action_options">Widget Options</string>
+    <string name="widget_picker_title">WIDGETS</string>
+    <string name="widget_picker_search_placeholder">Search apps or widgets…</string>
+    <string name="widget_picker_no_widgets">No widgets found</string>
+    <string name="widget_picker_no_matching_apps">No matching apps found</string>
+    <string name="widget_picker_collapse">Collapse</string>
+    <string name="widget_picker_expand">Expand</string>
+    <string name="widget_picker_close">Close picker</string>
+    <string name="widget_picker_clear_search">Clear search</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">SETTINGS</string>
+    <string name="settings_hand_left">Left hand</string>
+    <string name="settings_hand_right">Right hand</string>
+    <string name="settings_toggle_search_widgets">Toggle search widgets visibility</string>
+    <string name="settings_side_slot">Side Slot</string>
+    <string name="settings_select_side_slot_mode">Select side slot mode</string>
+    <string name="settings_side_slot_history">History</string>
+    <string name="settings_side_slot_widget">Widget</string>
+    <string name="settings_side_slot_disabled">Disabled</string>
+
+    <string name="settings_status_bar">Status Bar</string>
+    <string name="settings_toggle_status_bar">Toggle status bar visibility</string>
+    <string name="settings_animations">Animations</string>
+    <string name="settings_haptics">Haptics</string>
+    <string name="settings_monochrome">Monochrome</string>
+    <string name="settings_monochrome_disabled">Monochrome disabled</string>
+    <string name="settings_monochrome_history_desc">History Monochrome</string>
+    <string name="settings_monochrome_tags_desc">Tags Monochrome</string>
+    <string name="settings_monochrome_options">Select Monochrome Options</string>
+    <string name="settings_monochrome_history">History</string>
+    <string name="settings_monochrome_tags">Tags</string>
+
+    <string name="settings_language">Language</string>
+    <string name="settings_select_language">Select language</string>
+    <string name="settings_language_system">System default</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_ru">Русский</string>
+
+    <string name="settings_mapping">Mapping</string>
+    <string name="settings_mapping_configure">Configure character mappings</string>
+    <string name="settings_icon_pack">Icon Pack</string>
+    <string name="settings_icon_pack_select">Select Icon Pack</string>
+
+    <string name="settings_accent">Accent</string>
+    <string name="settings_adaptive_shadows">Adaptive</string>
+    <string name="settings_main_color">Main Color</string>
+    <string name="settings_button_text">Button Text</string>
+    <string name="settings_popup_theme">Popup Theme</string>
+    <string name="settings_auto_colors">Auto Action</string>
+
+    <string name="settings_backup">Backup</string>
+    <string name="settings_export_backup">Export Backup</string>
+    <string name="settings_import_backup">Import Backup</string>
+    <string name="settings_ai_tags">AI Tags</string>
+
+    <string name="settings_default_launcher">Default Launcher</string>
+    <string name="settings_default_launcher_set_status">Set as default</string>
+    <string name="settings_default_launcher_not_set">Not set</string>
+    <string name="settings_default_launcher_change">Change</string>
+    <string name="settings_default_launcher_set">Set</string>
+    <string name="settings_relaunch_app">Relaunch App</string>
+    <string name="settings_relaunch_subtitle">May fix some issues</string>
+    <string name="settings_relaunch_action">Relaunch</string>
+
+    <string name="settings_tutorial">Tutorial</string>
+
+    <string name="settings_support_and_community">Support &amp; Community</string>
+    <string name="settings_github">GitHub</string>
+    <string name="settings_github_subtitle">⭐ Project</string>
+    <string name="settings_discord">Discord</string>
+    <string name="settings_discord_subtitle">Join chat</string>
+    <string name="settings_tribute">Tribute</string>
+    <string name="settings_tribute_subtitle">Sponsor</string>
+
+    <string name="settings_version">Version %1$s</string>
+
+    <!-- Settings Dialogs -->
+    <string name="settings_default_launcher_title">Default Launcher</string>
+    <string name="settings_default_launcher_success">Cyclauncher is now your default launcher!</string>
+    <string name="settings_default_launcher_failed">Cyclauncher is not set as default. Try again?</string>
+    <string name="settings_default_launcher_great">Great!</string>
+
+    <string name="settings_theme_accent_title">Theme Accent</string>
+    <string name="settings_tab_presets_wallpaper">Presets &amp; Wallpaper</string>
+    <string name="settings_tab_custom_color">Custom Color</string>
+    <string name="settings_adaptive_wallpaper_accent">Adaptive Wallpaper Accent</string>
+    <string name="settings_hue_angle_shift">Hue Angle Shift</string>
+    <string name="settings_luminous_highlight">Luminous highlight for dark wallpaper</string>
+    <string name="settings_deep_dark_shade">Deep dark shade for light wallpaper</string>
+    <string name="settings_echo_presets">Echo Icon Theme Presets</string>
+    <string name="settings_interactive_picker">Interactive Color Picker</string>
+    <string name="settings_quick_swatches">Quick Swatches</string>
+    <string name="settings_hue_format">Hue (%1$d°)</string>
+    <string name="settings_saturation_format">Saturation (%1$d%%)</string>
+    <string name="settings_brightness_format">Brightness (%1$d%%)</string>
+    <string name="settings_hex_code">HEX Code</string>
+    <string name="settings_apply_custom_color">Apply Custom Color</string>
+
+    <string name="settings_icon_pack_title">Icon Pack</string>
+    <string name="settings_icon_pack_system_default">System Default</string>
+    <string name="settings_icon_pack_system_auto">Auto: %1$s (ROM theme)</string>
+    <string name="settings_icon_pack_system_original">Original application icons</string>
+    <string name="settings_icon_pack_none_installed">No third-party icon packs found installed on your device.</string>
+
+    <string name="settings_char_mapping_default">Default</string>
+    <string name="settings_char_mapping_active">%1$d active</string>
+
+    <!-- Keep Android Open Banner & Dialog -->
+    <string name="kao_title">Keep Android Open</string>
+    <string name="kao_subtitle">Your phone is about to stop being yours</string>
+    <string name="kao_subtitle_dot">Your phone is about to stop being yours.</string>
+    <string name="kao_hide_days">Hide days remaining</string>
+    <string name="kao_show_days">Show days remaining</string>
+    <string name="kao_days_left">DAYS LEFT</string>
+    <string name="kao_days_until_lockdown">DAYS UNTIL LOCKDOWN</string>
+    <string name="kao_banner_summary">Starting in 2027, Google will block every Android app whose developer hasn\'t registered with Google and submitted government ID.</string>
+    <string name="kao_learn_more">Learn More</string>
+    <string name="kao_petition">Petition ↗</string>
+    <string name="kao_what_is_happening">What is happening?</string>
+    <string name="kao_dialog_explanation">Starting in 2027, a silent update pushed by Google will block every Android app whose developer hasn\'t registered with Google, paid their fee, and handed over government ID.\n\nEvery app and every device, worldwide, with no opt-out.</string>
+    <string name="kao_feat_privacy_title">Developer Privacy</string>
+    <string name="kao_feat_privacy_desc">Individual developers and volunteers should not be forced to hand over government IDs to a single corporation.</string>
+    <string name="kao_feat_sideload_title">Right to Sideload</string>
+    <string name="kao_feat_sideload_desc">You bought your phone. You should have the freedom to run the software of your choice and use F-Droid freely.</string>
+    <string name="kao_feat_foss_title">FOSS &amp; Forks</string>
+    <string name="kao_feat_foss_desc">Volunteers and forks will be crippled if every customized version requires corporate registration and ID verification.</string>
+    <string name="kao_alternatives">Free &amp; de-Googled alternatives: LineageOS, GrapheneOS, /e/OS, CalyxOS.</string>
+    <string name="kao_take_action">Take Action ↗</string>
+
+    <!-- Auto Tags Screen -->
+    <string name="auto_tags_title">TAGS</string>
+    <string name="auto_tags_subtitle">Use AI to automatically categorize your apps into tags</string>
+    <string name="auto_tags_step1_title">Export App List</string>
+    <string name="auto_tags_step1_desc">Export your installed app list (labels, package names, favorites &amp; tags). Choose JSON (for AI categorization) or TXT (human-readable).</string>
+    <string name="auto_tags_step1_button">Export App List</string>
+    <string name="auto_tags_step2_title">Send to AI</string>
+    <string name="auto_tags_step2_desc">Copy the prompt below and send it to an AI model (ChatGPT, Claude, Gemini, etc.) along with the exported app list file.</string>
+    <string name="auto_tags_copy_prompt">Copy Prompt</string>
+    <string name="auto_tags_copied">Copied!</string>
+    <string name="auto_tags_prompt_copied_toast">Prompt copied!</string>
+    <string name="auto_tags_step3_title">Import Tagged Apps</string>
+    <string name="auto_tags_step3_desc">After the AI generates the tagged JSON result, save it as a .json file and import it here. All tags, colors, and assignments will be previewed before applying.</string>
+    <string name="auto_tags_step3_button">Upload Tagged Result</string>
+    <string name="auto_tags_export_dialog_title">Export Format</string>
+    <string name="auto_tags_export_dialog_message">Choose a format for the exported app list:</string>
+    <string name="auto_tags_export_dialog_hint">JSON — includes labels, favorites &amp; tags.   TXT — human-readable list.</string>
+
+    <!-- Character Mapping Screen -->
+    <string name="char_map_title">CHARACTER MAPPING</string>
+    <string name="char_map_customize_title">Customize Search Index</string>
+    <string name="char_map_customize_desc">Map custom characters, emojis, foreign letters (Arabic, Cyrillic, CJK, etc.) or symbols to a specific letter (\'A\'–\'Z\' or \'#\') for all search modes.</string>
+    <string name="char_map_add_title">Add Custom Mapping</string>
+    <string name="char_map_placeholder">e.g. 🤗, ب, Ö</string>
+    <string name="char_map_select_target">Select target letter</string>
+    <string name="char_map_mapped_success">Mapped \'%1$s\' ➔ \'%2$s\'</string>
+    <string name="char_map_invalid_input">Please enter a valid character or emoji</string>
+    <string name="char_map_add_button">Add Mapping</string>
+    <string name="char_map_backup_title">Backup &amp; Restore</string>
+    <string name="char_map_backup_desc">Export rules to JSON or import from file</string>
+    <string name="char_map_import_success">Imported %1$d character mappings</string>
+    <string name="char_map_import_failed">Import failed: %1$s</string>
+    <string name="char_map_quick_presets">Quick Presets</string>
+    <string name="char_map_added_cyrillic">Added Cyrillic mappings</string>
+    <string name="char_map_added_emoji">Added popular emoji mappings</string>
+    <string name="char_map_added_german">Added German/Nordic mappings</string>
+    <string name="char_map_added_arabic">Added Arabic mappings</string>
+    <string name="char_map_added_romance">Added French/Spanish mappings</string>
+    <string name="char_map_letter_rows">Letter Rows</string>
+    <string name="char_map_rules_count">(%1$d letters, %2$d rules)</string>
+    <string name="char_map_reset_all">Reset All Mappings</string>
+    <string name="char_map_empty_desc">No custom mappings added.\nApps will use default character indexing.</string>
+    <string name="char_map_removed_symbol">Removed \'%1$s\'</string>
+    <string name="char_map_remove_symbol_desc">Remove %1$s</string>
+    <string name="char_map_add_to_target_desc">Add symbol to \'%1$s\'</string>
+    <string name="char_map_detail_title">Mapped Symbols (%1$d)</string>
+    <string name="char_map_no_symbols_mapped">No symbols mapped to \'%1$s\'</string>
+    <string name="char_map_reset_title">Reset Mappings</string>
+    <string name="char_map_reset_message">Are you sure you want to remove all custom character mappings?</string>
+    <string name="char_map_reset_toast">Mappings reset to default</string>
+
+    <!-- Highlight Screen -->
+    <string name="highlight_title">HIGHLIGHTS</string>
+    <string name="highlight_section_overview">OVERVIEW</string>
+    <string name="highlight_section_untagged">UNTAGGED APPS</string>
+    <string name="highlight_section_updates">TODAY\'S UPDATES</string>
+    <string name="highlight_section_installs">TODAY\'S INSTALLS</string>
+    <string name="highlight_section_work_profile">WORK PROFILE</string>
+    <string name="highlight_section_private_space">PRIVATE SPACE</string>
+    <string name="highlight_empty_untagged">No untagged apps</string>
+    <string name="highlight_empty_updates">No apps updated today</string>
+    <string name="highlight_empty_installs">No new apps installed today</string>
+    <string name="highlight_empty_work_profile">No work profile apps</string>
+    <string name="highlight_metric_installed_apps">Installed Apps</string>
+    <string name="highlight_metric_created_tags">Created Tags</string>
+    <string name="highlight_metric_favorites">Favorites</string>
+    <string name="highlight_metric_recent_launches">Recent Launches</string>
+    <string name="highlight_widgets_title">WIDGETS</string>
+    <string name="highlight_widgets_add">Add Widget</string>
+    <string name="highlight_widgets_empty_title">No widgets added yet</string>
+    <string name="highlight_widgets_empty_desc">Tap Add Widget to browse widgets with previews and app search.</string>
+    <string name="highlight_resize_title">RESIZE WIDGET</string>
+    <string name="highlight_resize_height">Height: %1$d dp</string>
+    <string name="highlight_preset_compact">Compact</string>
+    <string name="highlight_preset_medium">Medium</string>
+    <string name="highlight_preset_large">Large</string>
+    <string name="highlight_preset_tall">Tall</string>
+    <string name="highlight_resize_width">Width</string>
+    <string name="highlight_width_full">Full (100%)</string>
+    <string name="highlight_width_75">75%</string>
+    <string name="highlight_width_half">Half (50%)</string>
+    <string name="highlight_private_space_locked">Private Space is locked</string>
+    <string name="highlight_private_space_unlock">Unlock</string>
+    <string name="highlight_private_space_empty">No private apps installed</string>
+    <string name="highlight_private_space_install">Install Apps</string>
+    <string name="highlight_collapse_section">Collapse section</string>
+    <string name="highlight_collapse_named">Collapse %1$s</string>
+    <string name="highlight_expand_named">Expand %1$s</string>
+    <string name="highlight_set_position">Set card position</string>
+    <string name="highlight_lock_private_space">Lock Private Space</string>
+    <string name="highlight_unlock_private_space">Unlock Private Space</string>
+    <string name="highlight_install_private_apps">Install Apps in Private Space</string>
+    <string name="highlight_widget_move_up">Move widget up</string>
+    <string name="highlight_widget_move_down">Move widget down</string>
+    <string name="highlight_widget_configure">Configure widget</string>
+    <string name="highlight_widget_resize">Resize widget</string>
+    <string name="highlight_widget_delete_hold">Hold to delete widget</string>
+
+    <!-- Tutorial Overlay -->
+    <string name="tutorial_tested_feedback">Tested: %1$s!</string>
+    <string name="tutorial_skip">Skip</string>
+    <string name="tutorial_next">Next</string>
+    <string name="tutorial_finish">Finish</string>
+    <string name="tutorial_favorites">Favorites</string>
+    <string name="tutorial_tags">Tags</string>
+    <string name="tutorial_step1_title">Swipe Up — App Search</string>
+    <string name="tutorial_step1_desc">Swipe upwards over the Favorites icons area on the Home Screen to open application search.</string>
+    <string name="tutorial_step1_hint">Swipe up over the Favorites icons area!</string>
+    <string name="tutorial_step2_title">System Back — Return to Home</string>
+    <string name="tutorial_step2_desc">Use your device\'s native Back gesture (swipe from edge) or press the system Back button to return to the Home Screen from Search or Settings.</string>
+    <string name="tutorial_step2_hint">Use the native Back gesture or Back button!</string>
+    <string name="tutorial_step3_title">Swipe Down — Quick Actions</string>
+    <string name="tutorial_step3_desc">Swipe downwards over the Favorites area to activate quick action cards. Release directly under your finger to open Notifications, or slide to the adjacent card to open Quick Settings.</string>
+    <string name="tutorial_step3_hint">Try it below: swipe down, slide between cards, and release!</string>
+    <string name="tutorial_step4_title">Swipe Sideways — Highlights</string>
+    <string name="tutorial_step4_desc">Swipe horizontally from the center area (left-to-right or right-to-left based on your hand preference) to open the Highlights workspace. Access launcher overview metrics and customizable Android widgets.</string>
+    <string name="tutorial_step4_hint">Swipe horizontally from the center area!</string>
+    <string name="tutorial_step5_title">Long Press — Menu &amp; Settings</string>
+    <string name="tutorial_step5_desc">Press and hold any empty area of the screen to open Launcher Settings, or long-press an app item for quick actions.</string>
+    <string name="tutorial_step5_hint">Press and hold on the screen!</string>
+    <string name="tutorial_step6_title">Favorites, History &amp; Tags</string>
+    <string name="tutorial_step6_desc">Press and hold a Favorite item to reorder or remove it. Tap the History icon to open the menu (edit list, pause/resume recording, or clear history). Tap a Tag folder to open apps, or long-press it to edit the group or add/remove from Favorites.</string>
+    <string name="tutorial_step6_hint">Hold Favorite, tap History icon, or tap/hold Tag folder!</string>
+    <string name="tutorial_step7_title">History Position Shift</string>
+    <string name="tutorial_step7_desc">Swipe UP on the History list when it is at the bottom to shift it to the top section of the screen. Swipe DOWN on the Tags area when history is at the top to swap their positions.</string>
+    <string name="tutorial_step7_hint">Swipe UP on History or DOWN on Tags area!</string>
+
+    <!-- Toast & Feedback Messages -->
+    <string name="toast_removed_from_favorites">Removed \"%1$s\" from Favorites</string>
+    <string name="toast_favorites_limit">Favorites limit reached (max 13 items)</string>
+    <string name="toast_added_to_favorites">Added \"%1$s\" to Favorites</string>
+    <string name="toast_history_recording_paused">History recording paused</string>
+    <string name="toast_history_recording_resumed">History recording resumed</string>
+    <string name="toast_search_history_cleared">Search history cleared</string>
+    <string name="toast_removed_from_history">Removed \"%1$s\" from History</string>
+    <string name="toast_history_cleared">History cleared</string>
+    <string name="toast_backup_imported_success">Backup imported successfully</string>
+    <string name="toast_backup_import_assignments">Imported %1$d assignments</string>
+    <string name="toast_backup_import_new_tags">(%1$d new tags)</string>
+    <string name="toast_backup_import_labels">%1$d labels</string>
+    <string name="toast_backup_import_favorites">%1$d favorites</string>
+    <string name="toast_backup_import_settings">Settings restored</string>
+    <string name="toast_applied_tags">Applied %1$d tags to %2$d apps</string>
+    <string name="toast_uninstaller_failed">Could not open uninstaller</string>
+    <string name="toast_exported_apps">Exported %1$d apps</string>
+    <string name="toast_export_failed">Export failed: %1$s</string>
+    <string name="toast_import_failed">Import failed: %1$s</string>
+    <string name="toast_parse_tags_failed">Failed to parse tags: %1$s</string>
+    <string name="toast_parse_tags_file_failed">Failed to parse tags file: %1$s</string>
+    <string name="toast_backup_exported">Backup exported (%1$d tags, %2$d apps)</string>
+    <string name="toast_exported_mappings">Exported %1$d mappings</string>
 </resources>

@@ -1119,7 +1119,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             }
             getApplication<Application>().startActivity(intent)
         } catch (e: Exception) {
-            Toast.makeText(getApplication(), "Could not open uninstaller", Toast.LENGTH_SHORT).show()
+            Toast.makeText(getApplication(), getApplication<Application>().getString(R.string.toast_uninstaller_failed), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -1274,14 +1274,22 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    private fun showToastRes(resId: Int, vararg formatArgs: Any) {
+        viewModelScope.launch(Dispatchers.Main) {
+            val app = getApplication<Application>()
+            val msg = app.getString(resId, *formatArgs)
+            Toast.makeText(app, msg, Toast.LENGTH_SHORT).show()
+        }
+    }
+
     fun exportAppNamesJson(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val list = apps.value
                 actionsManager.exportAppNamesToUri(uri, list)
-                showToast("Exported ${list.size} apps")
+                showToastRes(R.string.toast_exported_apps, list.size)
             } catch (e: Exception) {
-                showToast("Export failed: ${e.message}")
+                showToastRes(R.string.toast_export_failed, e.message ?: "")
             }
         }
     }
@@ -1291,9 +1299,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             try {
                 val list = apps.value
                 actionsManager.exportAppNamesToUriAsText(uri, list)
-                showToast("Exported ${list.size} apps")
+                showToastRes(R.string.toast_exported_apps, list.size)
             } catch (e: Exception) {
-                showToast("Export failed: ${e.message}")
+                showToastRes(R.string.toast_export_failed, e.message ?: "")
             }
         }
     }
@@ -1312,7 +1320,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     onResult(result.labels.size, result.favorites.size)
                 }
             } catch (e: Exception) {
-                showToast("Import failed: ${e.message}")
+                showToastRes(R.string.toast_import_failed, e.message ?: "")
             }
         }
     }
@@ -1325,7 +1333,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     _autoTagsPreview.value = preview
                 }
             } catch (e: Exception) {
-                showToast("Failed to parse tags: ${e.message}")
+                showToastRes(R.string.toast_parse_tags_failed, e.message ?: "")
             }
         }
     }
@@ -1349,9 +1357,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             try {
                 val list = apps.value
                 actionsManager.exportTagsBackupToUri(uri, list)
-                showToast("Backup exported (${tags.value.size} tags, ${list.size} apps)")
+                showToastRes(R.string.toast_backup_exported, tags.value.size, list.size)
             } catch (e: Exception) {
-                showToast("Export failed: ${e.message}")
+                showToastRes(R.string.toast_export_failed, e.message ?: "")
             }
         }
     }
@@ -1364,7 +1372,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     _tagsBackupPreview.value = preview
                 }
             } catch (e: Exception) {
-                showToast("Failed to parse tags file: ${e.message}")
+                showToastRes(R.string.toast_parse_tags_file_failed, e.message ?: "")
             }
         }
     }
@@ -1409,9 +1417,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             try {
                 val count = customCharMappings.value.size
                 actionsManager.exportCharMappingsToUri(uri)
-                showToast("Exported $count mappings")
+                showToastRes(R.string.toast_exported_mappings, count)
             } catch (e: Exception) {
-                showToast("Export failed: ${e.message}")
+                showToastRes(R.string.toast_export_failed, e.message ?: "")
             }
         }
     }

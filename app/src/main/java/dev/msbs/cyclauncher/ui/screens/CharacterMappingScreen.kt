@@ -7,9 +7,11 @@ import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
+import dev.msbs.cyclauncher.R
 import dev.msbs.cyclauncher.ui.components.ScreenTopBar
 
 import android.widget.Toast
+import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -90,9 +92,9 @@ fun CharacterMappingScreen(
         uri?.let {
             viewModel.importCharMappingsJson(it, merge = true) { result ->
                 result.onSuccess { count ->
-                    Toast.makeText(context, "Imported $count character mappings", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.char_map_import_success, count), Toast.LENGTH_SHORT).show()
                 }.onFailure { error ->
-                    Toast.makeText(context, "Import failed: ${error.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, context.getString(R.string.char_map_import_failed, error.message ?: ""), Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -114,7 +116,7 @@ fun CharacterMappingScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         ScreenTopBar(
-            title = "CHARACTER MAPPING",
+            title = stringResource(R.string.char_map_title),
             handSide = handSide,
             accentColor = accentColor,
             primaryTextColor = primaryTextColor,
@@ -138,13 +140,13 @@ fun CharacterMappingScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Customize Search Index",
+                        text = stringResource(R.string.char_map_customize_title),
                         color = accentColor.color,
                         style = TextStyle(shadow = shadow, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Map custom characters, emojis, foreign letters (Arabic, Cyrillic, CJK, etc.) or symbols to a specific letter ('A'–'Z' or '#') for all search modes.",
+                        text = stringResource(R.string.char_map_customize_desc),
                         color = primaryTextColor.color.copy(alpha = 0.75f),
                         style = TextStyle(shadow = shadow, fontSize = 13.sp, lineHeight = 18.sp)
                     )
@@ -161,7 +163,7 @@ fun CharacterMappingScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Add Custom Mapping",
+                        text = stringResource(R.string.char_map_add_title),
                         color = primaryTextColor.color,
                         style = TextStyle(shadow = shadow, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                     )
@@ -178,7 +180,7 @@ fun CharacterMappingScreen(
                             onValueChange = { inputSymbol = it },
                             placeholder = {
                                 Text(
-                                    text = "e.g. 🤗, ب, Ö",
+                                    text = stringResource(R.string.char_map_placeholder),
                                     color = accentColor.color.copy(alpha = 0.69f),
                                     fontSize = 14.sp,
                                     style = TextStyle(shadow = shadow)
@@ -242,7 +244,7 @@ fun CharacterMappingScreen(
                                     }
                                     Icon(
                                         imageVector = Icons.Outlined.ArrowDropDown,
-                                        contentDescription = "Select target letter",
+                                        contentDescription = stringResource(R.string.char_map_select_target),
                                         tint = primaryTextColor.color.copy(alpha = 0.6f),
                                         modifier = Modifier.size(24.dp)
                                     )
@@ -280,11 +282,11 @@ fun CharacterMappingScreen(
                             val symbol = viewModel.extractFirstSymbol(inputSymbol)
                             if (symbol.isNotEmpty()) {
                                 viewModel.addOrUpdateCharMapping(symbol, selectedTargetChar)
-                                Toast.makeText(context, "Mapped '$symbol' ➔ '$selectedTargetChar'", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.char_map_mapped_success, symbol, selectedTargetChar), Toast.LENGTH_SHORT).show()
                                 inputSymbol = ""
                                 keyboardController?.hide()
                             } else {
-                                Toast.makeText(context, "Please enter a valid character or emoji", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.char_map_invalid_input), Toast.LENGTH_SHORT).show()
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = accentColor.color.copy(alpha = 0.2f)),
@@ -310,7 +312,7 @@ fun CharacterMappingScreen(
                         }
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Add Mapping",
+                            text = stringResource(R.string.char_map_add_button),
                             color = accentColor.color,
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
@@ -337,13 +339,13 @@ fun CharacterMappingScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                         Text(
-                            text = "Backup & Restore",
+                            text = stringResource(R.string.char_map_backup_title),
                             color = primaryTextColor.color,
                             style = TextStyle(shadow = shadow, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Export rules to JSON or import from file",
+                            text = stringResource(R.string.char_map_backup_desc),
                             color = primaryTextColor.color.copy(alpha = 0.6f),
                             style = TextStyle(shadow = shadow, fontSize = 12.sp)
                         )
@@ -374,7 +376,7 @@ fun CharacterMappingScreen(
                             }
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "Export",
+                                text = stringResource(R.string.common_export),
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 style = TextStyle(shadow = shadow)
@@ -405,7 +407,7 @@ fun CharacterMappingScreen(
                             }
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "Import",
+                                text = stringResource(R.string.common_import),
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 style = TextStyle(shadow = shadow)
@@ -418,7 +420,7 @@ fun CharacterMappingScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Quick Presets",
+                text = stringResource(R.string.char_map_quick_presets),
                 color = primaryTextColor.color,
                 style = TextStyle(shadow = shadow, fontWeight = FontWeight.SemiBold, fontSize = 15.sp),
                 modifier = Modifier.fillMaxWidth()
@@ -453,7 +455,7 @@ fun CharacterMappingScreen(
                             "Я" to 'Y', "я" to 'Y'
                         )
                         viewModel.addCharMappings(cyrillicPreset)
-                        Toast.makeText(context, "Added Cyrillic mappings", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.char_map_added_cyrillic), Toast.LENGTH_SHORT).show()
                     }
                 )
 
@@ -469,7 +471,7 @@ fun CharacterMappingScreen(
                             "📅" to 'C', "📁" to 'F', "❤️" to 'H', "⭐" to 'S'
                         )
                         viewModel.addCharMappings(emojiPreset)
-                        Toast.makeText(context, "Added popular emoji mappings", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.char_map_added_emoji), Toast.LENGTH_SHORT).show()
                     }
                 )
 
@@ -485,7 +487,7 @@ fun CharacterMappingScreen(
                             "å" to 'A', "Æ" to 'A', "æ" to 'A', "Ø" to 'O', "ø" to 'O'
                         )
                         viewModel.addCharMappings(umlautPreset)
-                        Toast.makeText(context, "Added German/Nordic mappings", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.char_map_added_german), Toast.LENGTH_SHORT).show()
                     }
                 )
 
@@ -499,14 +501,14 @@ fun CharacterMappingScreen(
                             "ا" to 'A', "أ" to 'A', "إ" to 'A', "آ" to 'A',
                             "ب" to 'B', "ت" to 'T', "ث" to 'T', "ج" to 'J',
                             "ح" to 'H', "х" to 'K', "د" to 'D', "ذ" to 'D',
-                            "р" to 'R', "ز" to 'Z', "س" to 'S', "ш" to 'S',
+                            "р" to 'R', "ز" to 'Z', "с" to 'S', "ш" to 'S',
                             "ص" to 'S', "ض" to 'D', "ط" to 'T', "ظ" to 'Z',
                             "ع" to 'A', "غ" to 'G', "ف" to 'F', "ق" to 'Q',
-                            "ك" to 'K', "ل" to 'L', "м" to 'M', "ن" to 'N',
+                            "ك" to 'K', "л" to 'L', "м" to 'M', "н" to 'N',
                             "ه" to 'H', "و" to 'W', "ي" to 'Y', "ى" to 'Y'
                         )
                         viewModel.addCharMappings(arabicPreset)
-                        Toast.makeText(context, "Added Arabic mappings", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.char_map_added_arabic), Toast.LENGTH_SHORT).show()
                     }
                 )
 
@@ -525,7 +527,7 @@ fun CharacterMappingScreen(
                             "Ñ" to 'N', "ñ" to 'N', "Ù" to 'U', "ù" to 'U'
                         )
                         viewModel.addCharMappings(romancePreset)
-                        Toast.makeText(context, "Added French/Spanish mappings", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.char_map_added_romance), Toast.LENGTH_SHORT).show()
                     }
                 )
             }
@@ -552,13 +554,13 @@ fun CharacterMappingScreen(
                         }
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.List,
-                            contentDescription = "Letter Rows",
+                            contentDescription = stringResource(R.string.char_map_letter_rows),
                             tint = primaryTextColor.color,
                             modifier = Modifier.size(20.dp)
                         )
                     }
                     Text(
-                        text = "(${groupedMappings.size} letters, ${customMappings.size} rules)",
+                        text = stringResource(R.string.char_map_rules_count, groupedMappings.size, customMappings.size),
                         color = primaryTextColor.color.copy(alpha = 0.75f),
                         style = TextStyle(shadow = shadow, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                     )
@@ -580,7 +582,7 @@ fun CharacterMappingScreen(
                             }
                             Icon(
                                 imageVector = Icons.Outlined.RestartAlt,
-                                contentDescription = "Reset All Mappings",
+                                contentDescription = stringResource(R.string.char_map_reset_all),
                                 tint = Color.Red.copy(alpha = 0.85f),
                                 modifier = Modifier.size(20.dp)
                             )
@@ -599,7 +601,7 @@ fun CharacterMappingScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No custom mappings added.\nApps will use default character indexing.",
+                        text = stringResource(R.string.char_map_empty_desc),
                         color = primaryTextColor.color.copy(alpha = 0.4f),
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center,
@@ -623,7 +625,7 @@ fun CharacterMappingScreen(
                             shadowColorOverride = shadowSettings.shadowColorOverride,
                             onRemoveSymbol = { symbol ->
                                 viewModel.removeCharMapping(symbol)
-                                Toast.makeText(context, "Removed '$symbol'", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.char_map_removed_symbol, symbol), Toast.LENGTH_SHORT).show()
                             },
                             onAddSymbolClick = {
                                 selectedTargetChar = targetChar
@@ -663,7 +665,7 @@ fun CharacterMappingScreen(
                         )
                     }
                     Text(
-                        text = "Mapped Symbols (${symbols.size})",
+                        text = stringResource(R.string.char_map_detail_title, symbols.size),
                         color = popupTheme.contentColor,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
@@ -673,7 +675,7 @@ fun CharacterMappingScreen(
             text = {
                 Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                     if (symbols.isEmpty()) {
-                        Text("No symbols mapped to '$targetChar'", color = popupTheme.secondaryContentColor)
+                        Text(stringResource(R.string.char_map_no_symbols_mapped, targetChar), color = popupTheme.secondaryContentColor)
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             symbols.chunked(3).forEach { chunk ->
@@ -700,7 +702,7 @@ fun CharacterMappingScreen(
                                             IconButton(
                                                 onClick = {
                                                     viewModel.removeCharMapping(symbol)
-                                                    Toast.makeText(context, "Removed '$symbol'", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(context, context.getString(R.string.char_map_removed_symbol, symbol), Toast.LENGTH_SHORT).show()
                                                 },
                                                 modifier = Modifier.size(24.dp)
                                             ) {
@@ -715,7 +717,7 @@ fun CharacterMappingScreen(
                                                     }
                                                     Icon(
                                                         imageVector = Icons.Outlined.Close,
-                                                        contentDescription = "Delete",
+                                                        contentDescription = stringResource(R.string.common_delete),
                                                         tint = Color.Red.copy(alpha = 0.8f),
                                                         modifier = Modifier.size(14.dp)
                                                     )
@@ -735,7 +737,7 @@ fun CharacterMappingScreen(
             confirmButton = {
                 TextButton(onClick = { viewingLetterDetail = null }) {
                     Text(
-                        text = "Done",
+                        text = stringResource(R.string.common_done),
                         color = accentColor.color
                     )
                 }
@@ -750,13 +752,13 @@ fun CharacterMappingScreen(
             onDismissRequest = { showResetConfirmDialog = false },
             title = {
                 Text(
-                    text = "Reset Mappings",
+                    text = stringResource(R.string.char_map_reset_title),
                     color = accentColor.color
                 )
             },
             text = {
                 Text(
-                    text = "Are you sure you want to remove all custom character mappings?",
+                    text = stringResource(R.string.char_map_reset_message),
                     color = popupTheme.contentColor
                 )
             },
@@ -765,11 +767,11 @@ fun CharacterMappingScreen(
                     onClick = {
                         viewModel.resetCharMappings()
                         showResetConfirmDialog = false
-                        Toast.makeText(context, "Mappings reset to default", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.char_map_reset_toast), Toast.LENGTH_SHORT).show()
                     }
                 ) {
                     Text(
-                        text = "Reset",
+                        text = stringResource(R.string.common_reset),
                         color = Color.Red
                     )
                 }
@@ -777,7 +779,7 @@ fun CharacterMappingScreen(
             dismissButton = {
                 TextButton(onClick = { showResetConfirmDialog = false }) {
                     Text(
-                        text = "Cancel",
+                        text = stringResource(R.string.common_cancel),
                         color = popupTheme.secondaryContentColor
                     )
                 }
@@ -878,7 +880,7 @@ private fun LetterMappingRow(
                         }
                         Icon(
                             imageVector = Icons.Outlined.Close,
-                            contentDescription = "Remove $symbol",
+                            contentDescription = stringResource(R.string.char_map_remove_symbol_desc, symbol),
                             tint = primaryTextColor.color.copy(alpha = 0.45f),
                             modifier = Modifier.size(11.dp)
                         )
@@ -922,7 +924,7 @@ private fun LetterMappingRow(
                 }
                 Icon(
                     imageVector = Icons.Outlined.Add,
-                    contentDescription = "Add symbol to '$targetChar'",
+                    contentDescription = stringResource(R.string.char_map_add_to_target_desc, targetChar),
                     tint = accentColor.color.copy(alpha = 0.8f),
                     modifier = Modifier.size(16.dp)
                 )

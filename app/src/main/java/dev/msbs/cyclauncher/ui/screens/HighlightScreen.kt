@@ -15,10 +15,12 @@ import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.ShadowSettings
+import dev.msbs.cyclauncher.R
 import dev.msbs.cyclauncher.widget.LauncherAppWidgetHost
 import dev.msbs.cyclauncher.widget.LauncherAppWidgetHostView
 
 import android.app.Activity
+import androidx.compose.ui.res.stringResource
 import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
@@ -382,7 +384,7 @@ fun HighlightScreen(
         ) {
             // Top Bar matching Settings layout
             HighlightTopBar(
-                title = "HIGHLIGHTS",
+                title = stringResource(R.string.highlight_title),
                 handSide = handSide,
                 accentColor = accentColor,
                 primaryTextColor = primaryTextColor,
@@ -416,7 +418,7 @@ fun HighlightScreen(
                             HighlightSection.OVERVIEW,
                             HighlightSectionData(
                                 section = HighlightSection.OVERVIEW,
-                                title = "OVERVIEW",
+                                title = context.getString(R.string.highlight_section_overview),
                                 icon = Icons.Outlined.AutoAwesome,
                                 count = apps.size
                             )
@@ -425,7 +427,7 @@ fun HighlightScreen(
                             HighlightSection.UNTAGGED,
                             HighlightSectionData(
                                 section = HighlightSection.UNTAGGED,
-                                title = "UNTAGGED APPS",
+                                title = context.getString(R.string.highlight_section_untagged),
                                 icon = Icons.AutoMirrored.Outlined.LabelOff,
                                 count = untaggedApps.size
                             )
@@ -434,7 +436,7 @@ fun HighlightScreen(
                             HighlightSection.UPDATES,
                             HighlightSectionData(
                                 section = HighlightSection.UPDATES,
-                                title = "TODAY'S UPDATES",
+                                title = context.getString(R.string.highlight_section_updates),
                                 icon = Icons.Outlined.Update,
                                 count = todayUpdates.size
                             )
@@ -443,7 +445,7 @@ fun HighlightScreen(
                             HighlightSection.INSTALLS,
                             HighlightSectionData(
                                 section = HighlightSection.INSTALLS,
-                                title = "TODAY'S INSTALLS",
+                                title = context.getString(R.string.highlight_section_installs),
                                 icon = Icons.Outlined.Download,
                                 count = todayInstalls.size
                             )
@@ -453,7 +455,7 @@ fun HighlightScreen(
                                 HighlightSection.WORK_PROFILE,
                                 HighlightSectionData(
                                     section = HighlightSection.WORK_PROFILE,
-                                    title = "WORK PROFILE",
+                                    title = context.getString(R.string.highlight_section_work_profile),
                                     icon = Icons.Outlined.WorkOutline,
                                     count = workProfileApps.size
                                 )
@@ -464,7 +466,7 @@ fun HighlightScreen(
                                 HighlightSection.PRIVATE_SPACE,
                                 HighlightSectionData(
                                     section = HighlightSection.PRIVATE_SPACE,
-                                    title = "PRIVATE SPACE",
+                                    title = context.getString(R.string.highlight_section_private_space),
                                     icon = if (isPrivateSpaceLocked) Icons.Outlined.Lock else Icons.Outlined.LockOpen,
                                     count = privateSpaceApps.size
                                 )
@@ -565,7 +567,7 @@ fun HighlightScreen(
                                     when (currentSection) {
                                         HighlightSection.OVERVIEW -> {
                                             HighlightSectionHeader(
-                                                title = "OVERVIEW",
+                                                title = stringResource(R.string.highlight_section_overview),
                                                 icon = Icons.Outlined.AutoAwesome,
                                                 count = apps.size,
                                                 showCount = false,
@@ -595,28 +597,28 @@ fun HighlightScreen(
                                             )
                                         }
                                         HighlightSection.UNTAGGED -> renderAppSection(
-                                            "UNTAGGED APPS",
+                                            stringResource(R.string.highlight_section_untagged),
                                             Icons.AutoMirrored.Outlined.LabelOff,
                                             untaggedApps,
-                                            "No untagged apps"
+                                            stringResource(R.string.highlight_empty_untagged)
                                         )
                                         HighlightSection.UPDATES -> renderAppSection(
-                                            "TODAY'S UPDATES",
+                                            stringResource(R.string.highlight_section_updates),
                                             Icons.Outlined.Update,
                                             todayUpdates,
-                                            "No apps updated today"
+                                            stringResource(R.string.highlight_empty_updates)
                                         )
                                         HighlightSection.INSTALLS -> renderAppSection(
-                                            "TODAY'S INSTALLS",
+                                            stringResource(R.string.highlight_section_installs),
                                             Icons.Outlined.Download,
                                             todayInstalls,
-                                            "No new apps installed today"
+                                            stringResource(R.string.highlight_empty_installs)
                                         )
                                         HighlightSection.WORK_PROFILE -> renderAppSection(
-                                            "WORK PROFILE",
+                                            stringResource(R.string.highlight_section_work_profile),
                                             Icons.Outlined.WorkOutline,
                                             workProfileApps,
-                                            "No work profile apps"
+                                            stringResource(R.string.highlight_empty_work_profile)
                                         )
                                         HighlightSection.PRIVATE_SPACE -> {
                                             HighlightPrivateSpaceContent(
@@ -825,7 +827,7 @@ private fun HighlightSectionSquare(
             // Bottom: Chevron Arrow (points down, flips up when expanded)
             ShadowedIcon(
                 imageVector = Icons.Outlined.KeyboardArrowDown,
-                contentDescription = if (isSelected) "Collapse ${data.title}" else "Expand ${data.title}",
+                contentDescription = if (isSelected) stringResource(R.string.highlight_collapse_named, data.title) else stringResource(R.string.highlight_expand_named, data.title),
                 tint = if (isSelected) accentColor.color else primaryTextColor.color.copy(alpha = 0.55f),
                 size = 14.dp,
                 modifier = Modifier
@@ -881,7 +883,7 @@ private fun HighlightSectionOrderMenu(
             )
             Icon(
                 imageVector = Icons.Outlined.ArrowDropDown,
-                contentDescription = "Set card position",
+                contentDescription = stringResource(R.string.highlight_set_position),
                 tint = primaryTextColor.color.copy(alpha = 0.65f),
                 modifier = Modifier.size(15.dp)
             )
@@ -1080,7 +1082,7 @@ private fun HighlightSectionHeader(
             ) {
                 ShadowedIcon(
                     imageVector = Icons.Outlined.Close,
-                    contentDescription = "Collapse section",
+                    contentDescription = stringResource(R.string.highlight_collapse_section),
                     tint = primaryTextColor.color.copy(alpha = 0.6f),
                     modifier = Modifier.size(16.dp),
                     showShadows = showShadows,
@@ -1162,7 +1164,7 @@ private fun OverviewMetricsContent(
         ) {
             CompactMetricItem(
                 modifier = Modifier.weight(1f),
-                label = "Installed Apps",
+                label = stringResource(R.string.highlight_metric_installed_apps),
                 value = totalApps.toString(),
                 icon = Icons.Outlined.Apps,
                 accentColor = accentColor,
@@ -1172,7 +1174,7 @@ private fun OverviewMetricsContent(
             )
             CompactMetricItem(
                 modifier = Modifier.weight(1f),
-                label = "Created Tags",
+                label = stringResource(R.string.highlight_metric_created_tags),
                 value = tagsCount.toString(),
                 icon = Icons.AutoMirrored.Outlined.Label,
                 accentColor = accentColor,
@@ -1191,7 +1193,7 @@ private fun OverviewMetricsContent(
         ) {
             CompactMetricItem(
                 modifier = Modifier.weight(1f),
-                label = "Favorites",
+                label = stringResource(R.string.highlight_metric_favorites),
                 value = favoritesCount.toString(),
                 icon = Icons.Outlined.Favorite,
                 accentColor = accentColor,
@@ -1201,7 +1203,7 @@ private fun OverviewMetricsContent(
             )
             CompactMetricItem(
                 modifier = Modifier.weight(1f),
-                label = "Recent Launches",
+                label = stringResource(R.string.highlight_metric_recent_launches),
                 value = historyCount.toString(),
                 icon = Icons.Outlined.History,
                 accentColor = accentColor,
@@ -1378,7 +1380,7 @@ private fun WidgetsSection(
                     shadowSettings = shadowSettings
                 )
                 Text(
-                    text = "WIDGETS",
+                    text = stringResource(R.string.highlight_widgets_title),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp,
@@ -1400,13 +1402,13 @@ private fun WidgetsSection(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Add,
-                    contentDescription = "Add Widget",
+                    contentDescription = stringResource(R.string.highlight_widgets_add),
                     tint = buttonTextColor.color,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "Add Widget",
+                    text = stringResource(R.string.highlight_widgets_add),
                     color = buttonTextColor.color,
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp
@@ -1443,14 +1445,14 @@ private fun WidgetsSection(
                                 shadowSettings = shadowSettings
                             )
                             Text(
-                                text = "No widgets added yet",
+                                text = stringResource(R.string.highlight_widgets_empty_title),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = primaryTextColor.color,
                                 style = TextStyle(shadow = shadow)
                             )
                             Text(
-                                text = "Tap Add Widget to browse widgets with previews and app search.",
+                                text = stringResource(R.string.highlight_widgets_empty_desc),
                                 fontSize = 12.sp,
                                 color = primaryTextColor.color.copy(alpha = 0.7f),
                                 lineHeight = 16.sp,
@@ -1674,7 +1676,7 @@ private fun WidgetCard(
                                 ) {
                                     ShadowedIcon(
                                         imageVector = Icons.Outlined.KeyboardArrowUp,
-                                        contentDescription = "Move widget up",
+                                        contentDescription = stringResource(R.string.highlight_widget_move_up),
                                         tint = if (canMoveUp) primaryTextColor.color.copy(alpha = 0.75f) else primaryTextColor.color.copy(alpha = 0.20f),
                                         modifier = Modifier.size(18.dp),
                                         showShadows = showShadows && canMoveUp,
@@ -1692,7 +1694,7 @@ private fun WidgetCard(
                                 ) {
                                     ShadowedIcon(
                                         imageVector = Icons.Outlined.KeyboardArrowDown,
-                                        contentDescription = "Move widget down",
+                                        contentDescription = stringResource(R.string.highlight_widget_move_down),
                                         tint = if (canMoveDown) primaryTextColor.color.copy(alpha = 0.75f) else primaryTextColor.color.copy(alpha = 0.20f),
                                         modifier = Modifier.size(18.dp),
                                         showShadows = showShadows && canMoveDown,
@@ -1713,7 +1715,7 @@ private fun WidgetCard(
                                 ) {
                                     ShadowedIcon(
                                         imageVector = Icons.Outlined.Edit,
-                                        contentDescription = "Configure widget",
+                                        contentDescription = stringResource(R.string.highlight_widget_configure),
                                         tint = primaryTextColor.color.copy(alpha = 0.7f),
                                         modifier = Modifier.size(16.dp),
                                         showShadows = showShadows,
@@ -1731,7 +1733,7 @@ private fun WidgetCard(
                             ) {
                                 ShadowedIcon(
                                     imageVector = Icons.Outlined.AspectRatio,
-                                    contentDescription = "Resize widget",
+                                    contentDescription = stringResource(R.string.highlight_widget_resize),
                                     tint = primaryTextColor.color.copy(alpha = 0.7f),
                                     modifier = Modifier.size(17.dp),
                                     showShadows = showShadows,
@@ -1760,7 +1762,7 @@ private fun WidgetCard(
                             ) {
                                 ShadowedIcon(
                                     imageVector = Icons.Outlined.Delete,
-                                    contentDescription = "Hold to delete widget",
+                                    contentDescription = stringResource(R.string.highlight_widget_delete_hold),
                                     tint = if (deleteProgress.value > 0f) deleteColor else deleteColor.copy(alpha = 0.85f),
                                     modifier = Modifier.size(17.dp),
                                     showShadows = showShadows,
@@ -1861,7 +1863,7 @@ private fun WidgetResizeDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "RESIZE WIDGET",
+                        text = stringResource(R.string.highlight_resize_title),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = accentColor.color,
@@ -1881,7 +1883,7 @@ private fun WidgetResizeDialog(
                 // Height Slider
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "Height: $heightDp dp",
+                        text = stringResource(R.string.highlight_resize_height, heightDp),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = primaryTextColor.color,
@@ -1904,7 +1906,12 @@ private fun WidgetResizeDialog(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        val presets = listOf("Compact" to 80, "Medium" to 150, "Large" to 220, "Tall" to 320)
+                        val presets = listOf(
+                            stringResource(R.string.highlight_preset_compact) to 80,
+                            stringResource(R.string.highlight_preset_medium) to 150,
+                            stringResource(R.string.highlight_preset_large) to 220,
+                            stringResource(R.string.highlight_preset_tall) to 320
+                        )
                         for ((name, valDp) in presets) {
                             val isSelected = heightDp == valDp
                             Box(
@@ -1934,7 +1941,7 @@ private fun WidgetResizeDialog(
                 // Width Options
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Width",
+                        text = stringResource(R.string.highlight_resize_width),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = primaryTextColor.color,
@@ -1944,7 +1951,11 @@ private fun WidgetResizeDialog(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        val widthOptions = listOf("Full (100%)" to 1.0f, "75%" to 0.75f, "Half (50%)" to 0.5f)
+                        val widthOptions = listOf(
+                            stringResource(R.string.highlight_width_full) to 1.0f,
+                            stringResource(R.string.highlight_width_75) to 0.75f,
+                            stringResource(R.string.highlight_width_half) to 0.5f
+                        )
                         for ((wLabel, wFraction) in widthOptions) {
                             val isSelected = kotlin.math.abs(widthFraction - wFraction) < 0.05f
                             Box(
@@ -1979,7 +1990,7 @@ private fun WidgetResizeDialog(
                 ) {
                     TextButton(onClick = onDismiss) {
                         Text(
-                            text = "Cancel",
+                            text = stringResource(R.string.common_cancel),
                             color = primaryTextColor.color.copy(alpha = 0.8f),
                             fontWeight = FontWeight.Medium
                         )
@@ -1997,7 +2008,7 @@ private fun WidgetResizeDialog(
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Text(
-                            text = "Apply",
+                            text = stringResource(R.string.common_apply),
                             color = buttonTextColor.color,
                             fontWeight = FontWeight.Bold
                         )
@@ -2051,7 +2062,7 @@ private fun HighlightPrivateSpaceContent(
                 shadowSettings = shadowSettings
             )
             Text(
-                text = "PRIVATE SPACE",
+                text = stringResource(R.string.highlight_section_private_space),
                 color = primaryTextColor.color,
                 fontSize = 12.5.sp,
                 fontWeight = FontWeight.Bold,
@@ -2083,7 +2094,7 @@ private fun HighlightPrivateSpaceContent(
                 ) {
                     ShadowedIcon(
                         imageVector = Icons.Outlined.AddCircleOutline,
-                        contentDescription = "Install Apps in Private Space",
+                        contentDescription = stringResource(R.string.highlight_install_private_apps),
                         tint = accentColor.color,
                         modifier = Modifier.size(16.dp),
                         showShadows = showShadows,
@@ -2098,7 +2109,7 @@ private fun HighlightPrivateSpaceContent(
             ) {
                 ShadowedIcon(
                     imageVector = if (isLocked) Icons.Outlined.LockOpen else Icons.Outlined.Lock,
-                    contentDescription = if (isLocked) "Unlock Private Space" else "Lock Private Space",
+                    contentDescription = if (isLocked) stringResource(R.string.highlight_unlock_private_space) else stringResource(R.string.highlight_lock_private_space),
                     tint = accentColor.color,
                     modifier = Modifier.size(16.dp),
                     showShadows = showShadows,
@@ -2112,7 +2123,7 @@ private fun HighlightPrivateSpaceContent(
             ) {
                 ShadowedIcon(
                     imageVector = Icons.Outlined.Close,
-                    contentDescription = "Collapse section",
+                    contentDescription = stringResource(R.string.highlight_collapse_section),
                     tint = primaryTextColor.color.copy(alpha = 0.6f),
                     modifier = Modifier.size(16.dp),
                     showShadows = showShadows,
@@ -2137,7 +2148,7 @@ private fun HighlightPrivateSpaceContent(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "Private Space is locked",
+                text = stringResource(R.string.highlight_private_space_locked),
                 color = primaryTextColor.color.copy(alpha = 0.7f),
                 fontSize = 13.sp,
                 style = TextStyle(shadow = shadow)
@@ -2149,7 +2160,7 @@ private fun HighlightPrivateSpaceContent(
                     contentColor = buttonTextColor.color
                 )
             ) {
-                Text("Unlock", color = buttonTextColor.color, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.highlight_private_space_unlock), color = buttonTextColor.color, fontWeight = FontWeight.Bold)
             }
         }
     } else if (apps.isEmpty()) {
@@ -2161,7 +2172,7 @@ private fun HighlightPrivateSpaceContent(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "No private apps installed",
+                text = stringResource(R.string.highlight_private_space_empty),
                 color = primaryTextColor.color.copy(alpha = 0.5f),
                 fontSize = 13.sp,
                 style = TextStyle(shadow = shadow)
@@ -2178,7 +2189,7 @@ private fun HighlightPrivateSpaceContent(
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Install Apps", color = primaryTextColor.color, fontSize = 12.sp)
+                Text(stringResource(R.string.highlight_private_space_install), color = primaryTextColor.color, fontSize = 12.sp)
             }
         }
     } else {

@@ -45,6 +45,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import dev.msbs.cyclauncher.model.AppColorBucket
+import androidx.compose.ui.res.stringResource
+import dev.msbs.cyclauncher.R
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.ShadowSettings
@@ -280,9 +282,9 @@ fun SideAlphabetColorHeader(
                             else -> accentColor.color
                         }
                         val contentDesc = when {
-                            isHistoryEditMode -> "Done Editing"
-                            isHistoryPaused -> "History (Paused)"
-                            else -> "History"
+                            isHistoryEditMode -> stringResource(R.string.palette_done_editing)
+                            isHistoryPaused -> stringResource(R.string.history_menu_paused)
+                            else -> stringResource(R.string.history_menu_title)
                         }
 
                         if (showShadows) {

@@ -45,8 +45,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import dev.msbs.cyclauncher.R
 import kotlin.math.roundToInt
 
 /**
@@ -130,7 +132,7 @@ fun AppActionMenu(
                 )
 
                 MenuItem(
-                    text = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
+                    text = if (isFavorite) stringResource(R.string.action_menu_remove_favorite) else stringResource(R.string.action_menu_add_favorite),
                     icon = if (isFavorite) Icons.Outlined.Star else Icons.Outlined.StarOutline,
                     accentColor = accentColor,
                     popupTheme = popupTheme,
@@ -141,7 +143,7 @@ fun AppActionMenu(
                 )
 
                 MenuItem(
-                    text = "Manage Tags",
+                    text = stringResource(R.string.action_menu_manage_tags),
                     icon = Icons.AutoMirrored.Outlined.Label,
                     accentColor = accentColor,
                     popupTheme = popupTheme,
@@ -152,7 +154,7 @@ fun AppActionMenu(
                 )
 
                 MenuItem(
-                    text = "Rename",
+                    text = stringResource(R.string.action_menu_rename),
                     icon = Icons.Outlined.Edit,
                     accentColor = accentColor,
                     popupTheme = popupTheme,
@@ -163,7 +165,7 @@ fun AppActionMenu(
                 )
 
                 MenuItem(
-                    text = "Info",
+                    text = stringResource(R.string.action_menu_info),
                     icon = Icons.Outlined.Info,
                     accentColor = accentColor,
                     popupTheme = popupTheme,
@@ -174,7 +176,7 @@ fun AppActionMenu(
                 )
 
                 MenuItem(
-                    text = "Uninstall",
+                    text = stringResource(R.string.action_menu_uninstall),
                     icon = Icons.Outlined.Delete,
                     accentColor = accentColor,
                     popupTheme = popupTheme,
@@ -251,7 +253,7 @@ fun HistoryActionMenu(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "History",
+                        text = stringResource(R.string.history_menu_title),
                         style = MaterialTheme.typography.titleSmall,
                         color = popupTheme.contentColor,
                         fontWeight = FontWeight.Bold
@@ -259,7 +261,7 @@ fun HistoryActionMenu(
                     if (isHistoryPaused) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "(Paused)",
+                            text = stringResource(R.string.history_menu_paused),
                             style = MaterialTheme.typography.labelSmall,
                             color = popupTheme.secondaryContentColor
                         )
@@ -270,7 +272,7 @@ fun HistoryActionMenu(
 
                 if (hasHistoryItems) {
                     MenuItem(
-                        text = "Edit History",
+                        text = stringResource(R.string.history_menu_edit),
                         icon = Icons.Outlined.Edit,
                         accentColor = accentColor,
                         popupTheme = popupTheme,
@@ -282,7 +284,7 @@ fun HistoryActionMenu(
                 }
 
                 MenuItem(
-                    text = if (isHistoryPaused) "Resume Recording" else "Pause Recording",
+                    text = if (isHistoryPaused) stringResource(R.string.history_menu_resume) else stringResource(R.string.history_menu_pause),
                     icon = if (isHistoryPaused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
                     accentColor = accentColor,
                     popupTheme = popupTheme,
@@ -294,7 +296,7 @@ fun HistoryActionMenu(
 
                 if (hasHistoryItems && onClearHistory != null) {
                     MenuItem(
-                        text = "Clear History",
+                        text = stringResource(R.string.history_menu_clear),
                         icon = Icons.Outlined.Delete,
                         accentColor = accentColor,
                         popupTheme = popupTheme,
@@ -363,7 +365,7 @@ fun TagSelectionDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("App Tags: ${app.label}", color = popupTheme.contentColor) },
+        title = { Text(stringResource(R.string.tag_dialog_title, app.label), color = popupTheme.contentColor) },
         text = {
             Column(
                 modifier = Modifier
@@ -372,7 +374,7 @@ fun TagSelectionDialog(
                     .verticalScroll(scrollState)
             ) {
                 if (allTags.isEmpty()) {
-                    Text("No tags created yet.", color = popupTheme.secondaryContentColor, fontSize = 14.sp)
+                    Text(stringResource(R.string.tag_dialog_empty), color = popupTheme.secondaryContentColor, fontSize = 14.sp)
                 } else {
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
@@ -451,7 +453,7 @@ fun TagSelectionDialog(
                         tint = buttonTextColor.color
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("New Tag", fontWeight = FontWeight.Bold, color = buttonTextColor.color, fontSize = 14.sp)
+                    Text(stringResource(R.string.tag_dialog_new_tag), fontWeight = FontWeight.Bold, color = buttonTextColor.color, fontSize = 14.sp)
                 }
                 Button(
                     onClick = onDismiss,
@@ -461,7 +463,7 @@ fun TagSelectionDialog(
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Done", fontWeight = FontWeight.Bold, color = buttonTextColor.color, fontSize = 14.sp)
+                    Text(stringResource(R.string.common_done), fontWeight = FontWeight.Bold, color = buttonTextColor.color, fontSize = 14.sp)
                 }
             }
         },
@@ -593,7 +595,7 @@ private fun TagEditHeader(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Delete,
-                    contentDescription = "Hold 2.3s to delete",
+                    contentDescription = stringResource(R.string.tag_dialog_hold_to_delete),
                     tint = if (progress.value > 0f) deleteColor else deleteColor.copy(alpha = 0.85f),
                     modifier = Modifier.size(22.dp)
                 )
@@ -666,7 +668,7 @@ fun TagEditDialog(
         onDismissRequest = onDismiss,
         title = {
             TagEditHeader(
-                title = if (tag == null) "Create New Tag" else "Edit Tag",
+                title = if (tag == null) stringResource(R.string.tag_dialog_create_title) else stringResource(R.string.tag_dialog_edit_tag),
                 titleColor = popupTheme.contentColor,
                 onDelete = onDelete
             )
@@ -717,7 +719,7 @@ fun TagEditDialog(
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                         Text(
-                            text = if (name.isBlank()) "Tag Preview" else name,
+                            text = if (name.isBlank()) stringResource(R.string.tag_dialog_preview) else name,
                             color = popupTheme.contentColor,
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
@@ -788,7 +790,7 @@ fun TagEditDialog(
                         if (previewVectorIcon != null) {
                             Icon(
                                 imageVector = previewVectorIcon,
-                                contentDescription = "Vector Icon",
+                                contentDescription = stringResource(R.string.tag_dialog_tab_vector),
                                 tint = selectedColor,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -800,7 +802,7 @@ fun TagEditDialog(
                         } else {
                             Icon(
                                 imageVector = Icons.Outlined.Folder,
-                                contentDescription = "Choose Icon",
+                                contentDescription = stringResource(R.string.tag_dialog_choose_icon),
                                 tint = popupTheme.secondaryContentColor,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -811,10 +813,10 @@ fun TagEditDialog(
                     AppOutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("Tag Name", color = popupTheme.secondaryContentColor) },
+                        label = { Text(stringResource(R.string.tag_dialog_name_label), color = popupTheme.secondaryContentColor) },
                         placeholder = {
                             Text(
-                                "e.g. Games, Work",
+                                stringResource(R.string.tag_dialog_name_placeholder),
                                 color = popupTheme.secondaryContentColor.copy(alpha = 0.6f)
                             )
                         },
@@ -851,7 +853,7 @@ fun TagEditDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Folder Icon",
+                                text = stringResource(R.string.tag_dialog_folder_icon),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = popupTheme.secondaryContentColor
@@ -864,7 +866,7 @@ fun TagEditDialog(
                                     modifier = Modifier.clickable { emojiText = "" }
                                 ) {
                                     Text(
-                                        text = "Restore",
+                                        text = stringResource(R.string.common_restore),
                                         fontSize = 11.sp,
                                         color = Color(0xFFEF4444),
                                         fontWeight = FontWeight.Bold,
@@ -892,7 +894,7 @@ fun TagEditDialog(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "Vector Icons",
+                                    text = stringResource(R.string.tag_dialog_tab_vector),
                                     fontSize = 11.sp,
                                     fontWeight = if (iconTab == 0) FontWeight.Bold else FontWeight.Normal,
                                     color = if (iconTab == 0) accentColor.color else popupTheme.secondaryContentColor
@@ -908,7 +910,7 @@ fun TagEditDialog(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "Emoji",
+                                    text = stringResource(R.string.tag_dialog_tab_emoji),
                                     fontSize = 11.sp,
                                     fontWeight = if (iconTab == 1) FontWeight.Bold else FontWeight.Normal,
                                     color = if (iconTab == 1) accentColor.color else popupTheme.secondaryContentColor
@@ -1066,7 +1068,7 @@ fun TagEditDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Presets",
+                            text = stringResource(R.string.tag_dialog_tab_presets),
                             fontSize = 12.sp,
                             fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
                             color = if (selectedTab == 0) popupTheme.contentColor else popupTheme.secondaryContentColor
@@ -1082,7 +1084,7 @@ fun TagEditDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Custom Color",
+                            text = stringResource(R.string.tag_dialog_tab_custom),
                             fontSize = 12.sp,
                             fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
                             color = if (selectedTab == 1) popupTheme.contentColor else popupTheme.secondaryContentColor
@@ -1259,7 +1261,7 @@ fun TagEditDialog(
                             },
                             prefix = { Text("#", color = popupTheme.contentColor, fontWeight = FontWeight.Bold) },
                             singleLine = true,
-                            label = { Text("HEX Code", color = popupTheme.secondaryContentColor) },
+                            label = { Text(stringResource(R.string.tag_dialog_hex_code), color = popupTheme.secondaryContentColor) },
                             textStyle = TextStyle(color = popupTheme.contentColor, fontSize = 15.sp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = selectedColor,
@@ -1293,7 +1295,7 @@ fun TagEditDialog(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
-                    text = if (tag == null) "Create" else "Save",
+                    text = if (tag == null) stringResource(R.string.common_create) else stringResource(R.string.common_save),
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 )
@@ -1304,7 +1306,7 @@ fun TagEditDialog(
                 onClick = onDismiss,
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Cancel", color = popupTheme.secondaryContentColor)
+                Text(stringResource(R.string.common_cancel), color = popupTheme.secondaryContentColor)
             }
         },
         containerColor = popupTheme.solidBackgroundColor,
@@ -1367,7 +1369,7 @@ fun AllTagVectorIconsDialog(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Vector Icons",
+                    text = stringResource(R.string.tag_dialog_tab_vector),
                     color = popupTheme.contentColor,
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp
@@ -1375,7 +1377,7 @@ fun AllTagVectorIconsDialog(
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
-                        contentDescription = "Close",
+                        contentDescription = stringResource(R.string.common_close),
                         tint = popupTheme.secondaryContentColor
                     )
                 }
@@ -1394,7 +1396,7 @@ fun AllTagVectorIconsDialog(
                     onValueChange = { searchQuery = it },
                     placeholder = {
                         Text(
-                            "Search icons...",
+                            stringResource(R.string.tag_dialog_search_icons),
                             fontSize = 13.sp,
                             color = popupTheme.secondaryContentColor.copy(alpha = 0.6f)
                         )
@@ -1412,7 +1414,7 @@ fun AllTagVectorIconsDialog(
                             IconButton(onClick = { searchQuery = "" }) {
                                 Icon(
                                     imageVector = Icons.Outlined.Close,
-                                    contentDescription = "Clear",
+                                    contentDescription = stringResource(R.string.common_clear),
                                     tint = popupTheme.secondaryContentColor,
                                     modifier = Modifier.size(16.dp)
                                 )
@@ -1440,7 +1442,8 @@ fun AllTagVectorIconsDialog(
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        val categoryTitles = remember { listOf("All") + TagIconRegistry.CATEGORIES.map { it.title } }
+                        val allLabel = stringResource(R.string.common_all)
+                        val categoryTitles = remember(allLabel) { listOf(allLabel) + TagIconRegistry.CATEGORIES.map { it.title } }
                         categoryTitles.forEachIndexed { index, title ->
                             val isSelected = selectedCategoryIndex == index
                             Surface(
@@ -1475,7 +1478,7 @@ fun AllTagVectorIconsDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No icons found",
+                            text = stringResource(R.string.tag_dialog_no_icons),
                             color = popupTheme.secondaryContentColor,
                             fontSize = 13.sp
                         )
@@ -1531,7 +1534,7 @@ fun AllTagVectorIconsDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Text("Close", color = buttonTextColor.color, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text(stringResource(R.string.common_close), color = buttonTextColor.color, fontWeight = FontWeight.Bold, fontSize = 13.sp)
             }
         },
         containerColor = popupTheme.solidBackgroundColor,
@@ -1589,7 +1592,7 @@ fun RenameDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rename Application", color = accentColor.color) },
+        title = { Text(stringResource(R.string.rename_dialog_title), color = accentColor.color) },
         text = {
             AppTextField(
                 value = text,
@@ -1619,7 +1622,7 @@ fun RenameDialog(
                 ),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Rename", color = buttonTextColor.color, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(stringResource(R.string.rename_dialog_button), color = buttonTextColor.color, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
         },
         dismissButton = {
@@ -1627,7 +1630,7 @@ fun RenameDialog(
                 onClick = onDismiss,
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Cancel", color = popupTheme.secondaryContentColor)
+                Text(stringResource(R.string.common_cancel), color = popupTheme.secondaryContentColor)
             }
         },
         containerColor = popupTheme.solidBackgroundColor,

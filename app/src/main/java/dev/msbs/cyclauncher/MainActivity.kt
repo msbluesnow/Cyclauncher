@@ -16,6 +16,7 @@ import dev.msbs.cyclauncher.ui.screens.HighlightScreen
 import dev.msbs.cyclauncher.ui.screens.MainMenuScreen
 import dev.msbs.cyclauncher.ui.screens.SearchScreen
 import dev.msbs.cyclauncher.ui.screens.SettingsScreen
+import dev.msbs.cyclauncher.utils.LocaleUtils
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -129,6 +130,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleUtils.wrapContext(newBase))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
