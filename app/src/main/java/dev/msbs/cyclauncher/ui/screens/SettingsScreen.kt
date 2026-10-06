@@ -13,6 +13,8 @@ import dev.msbs.cyclauncher.ui.components.KeepAndroidOpenBanner
 import dev.msbs.cyclauncher.ui.components.KeepAndroidOpenDialog
 import dev.msbs.cyclauncher.ui.components.ScreenTopBar
 import dev.msbs.cyclauncher.ui.components.ShadowedIcon
+import dev.msbs.cyclauncher.ui.components.TouchMarqueeText
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import dev.msbs.cyclauncher.utils.LocaleUtils
 import dev.msbs.cyclauncher.R
 import androidx.compose.ui.res.stringResource
@@ -26,7 +28,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -70,6 +71,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -98,6 +100,7 @@ fun SettingsScreen(
     val showSearchWidgets by viewModel.showSearchWidgets.collectAsState()
     val sideAlphabetSlotMode by viewModel.sideAlphabetSlotMode.collectAsState()
     val animationsEnabled by viewModel.animationsEnabled.collectAsState()
+    val marqueeEnabled by viewModel.marqueeEnabled.collectAsState()
     val hapticFeedbackEnabled by viewModel.hapticFeedbackEnabled.collectAsState()
     val monochromeHistory by viewModel.monochromeHistory.collectAsState()
     val monochromeTags by viewModel.monochromeTags.collectAsState()
@@ -212,6 +215,7 @@ fun SettingsScreen(
                         StatusBarAndAnimationsSection(
                             hideStatusBar = hideStatusBar,
                             animationsEnabled = animationsEnabled,
+                            marqueeEnabled = marqueeEnabled,
                             hapticFeedbackEnabled = hapticFeedbackEnabled,
                             monochromeHistory = monochromeHistory,
                             monochromeTags = monochromeTags,
@@ -223,6 +227,7 @@ fun SettingsScreen(
                             shadow = shadow,
                             onToggleStatusBar = { viewModel.setHideStatusBar(!hideStatusBar) },
                             onAnimationsChange = { viewModel.setAnimationsEnabled(it) },
+                            onMarqueeChange = { viewModel.setMarqueeEnabled(it) },
                             onHapticFeedbackChange = { viewModel.setHapticFeedbackEnabled(it) },
                             onMonochromeHistoryChange = { viewModel.setMonochromeHistory(it) },
                             onMonochromeTagsChange = { viewModel.setMonochromeTags(it) }
@@ -321,16 +326,18 @@ fun SettingsScreen(
 
                         SettingsDivider(primaryTextColor)
 
+                        val tutorialBtnSource = remember { MutableInteractionSource() }
                         Button(
                             onClick = {
                                 viewModel.startTutorial()
                                 onBack()
                             },
+                            interactionSource = tutorialBtnSource,
                             colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(46.dp)
+                                .heightIn(min = 46.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.School,
@@ -339,13 +346,12 @@ fun SettingsScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(
+                            TouchMarqueeText(
                                 text = stringResource(R.string.settings_tutorial),
                                 color = buttonTextColor.color,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
-                                maxLines = 1,
-                                modifier = Modifier.basicMarquee()
+                                interactionSource = tutorialBtnSource
                             )
                         }
 
@@ -658,12 +664,11 @@ private fun InteractionSection(
                     primaryTextColor = primaryTextColor,
                     shadowColorOverride = shadowColorOverride
                 )
-                Text(
+                TouchMarqueeText(
                     text = stringResource(R.string.widget_title),
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                    maxLines = 1,
-                    modifier = Modifier.weight(1f, fill = false).basicMarquee()
+                    modifier = Modifier.weight(1f, fill = false)
                 )
             }
             val widgetIcon = if (showSearchWidgets) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff
@@ -688,12 +693,11 @@ private fun InteractionSection(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
+            TouchMarqueeText(
                 text = stringResource(R.string.settings_side_slot),
                 color = primaryTextColor.color,
                 style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                maxLines = 1,
-                modifier = Modifier.weight(1f, fill = false).basicMarquee()
+                modifier = Modifier.weight(1f, fill = false)
             )
             var expanded by remember { mutableStateOf(false) }
             val (currentIcon, currentLabelRes) = when (sideAlphabetSlotMode) {
@@ -718,14 +722,12 @@ private fun InteractionSection(
                         tint = accentColor.color,
                         modifier = Modifier.size(16.dp)
                     )
-                    Text(
+                    TouchMarqueeText(
                         text = stringResource(currentLabelRes),
                         color = accentColor.color,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        style = TextStyle(shadow = shadow),
-                        modifier = Modifier.basicMarquee()
+                        style = TextStyle(shadow = shadow)
                     )
                     Icon(
                         imageVector = Icons.Outlined.ArrowDropDown,
@@ -756,13 +758,11 @@ private fun InteractionSection(
                         }
                         DropdownMenuItem(
                             text = {
-                                Text(
+                                TouchMarqueeText(
                                     text = stringResource(modeLabelRes),
                                     color = if (isSelected) accentColor.color else popupTheme.contentColor,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 14.sp,
-                                    maxLines = 1,
-                                    modifier = Modifier.basicMarquee()
+                                    fontSize = 14.sp
                                 )
                             },
                             leadingIcon = {
@@ -802,6 +802,7 @@ private fun InteractionSection(
 private fun StatusBarAndAnimationsSection(
     hideStatusBar: Boolean,
     animationsEnabled: Boolean,
+    marqueeEnabled: Boolean,
     hapticFeedbackEnabled: Boolean,
     monochromeHistory: Boolean,
     monochromeTags: Boolean,
@@ -813,6 +814,7 @@ private fun StatusBarAndAnimationsSection(
     shadow: Shadow?,
     onToggleStatusBar: () -> Unit,
     onAnimationsChange: (Boolean) -> Unit,
+    onMarqueeChange: (Boolean) -> Unit,
     onHapticFeedbackChange: (Boolean) -> Unit,
     onMonochromeHistoryChange: (Boolean) -> Unit,
     onMonochromeTagsChange: (Boolean) -> Unit
@@ -831,12 +833,11 @@ private fun StatusBarAndAnimationsSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
+                TouchMarqueeText(
                     text = stringResource(R.string.settings_status_bar),
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                    maxLines = 1,
-                    modifier = Modifier.weight(1f, fill = false).basicMarquee()
+                    modifier = Modifier.weight(1f, fill = false)
                 )
                 val visibilityIcon =
                     if (hideStatusBar) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility
@@ -861,12 +862,11 @@ private fun StatusBarAndAnimationsSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
+                TouchMarqueeText(
                     text = stringResource(R.string.settings_animations),
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                    maxLines = 1,
-                    modifier = Modifier.weight(1f, fill = false).basicMarquee()
+                    modifier = Modifier.weight(1f, fill = false)
                 )
                 Switch(
                     checked = animationsEnabled,
@@ -893,12 +893,11 @@ private fun StatusBarAndAnimationsSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
+                TouchMarqueeText(
                     text = stringResource(R.string.settings_haptics),
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                    maxLines = 1,
-                    modifier = Modifier.weight(1f, fill = false).basicMarquee()
+                    modifier = Modifier.weight(1f, fill = false)
                 )
                 Switch(
                     checked = hapticFeedbackEnabled,
@@ -919,12 +918,11 @@ private fun StatusBarAndAnimationsSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
+                TouchMarqueeText(
                     text = stringResource(R.string.settings_monochrome),
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                    maxLines = 1,
-                    modifier = Modifier.weight(1f, fill = false).basicMarquee()
+                    modifier = Modifier.weight(1f, fill = false)
                 )
 
                 var monochromeExpanded by remember { mutableStateOf(false) }
@@ -983,13 +981,11 @@ private fun StatusBarAndAnimationsSection(
                     ) {
                         DropdownMenuItem(
                             text = {
-                                Text(
+                                TouchMarqueeText(
                                     text = stringResource(R.string.settings_monochrome_history),
                                     color = if (monochromeHistory) accentColor.color else popupTheme.contentColor,
                                     fontWeight = if (monochromeHistory) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 14.sp,
-                                    maxLines = 1,
-                                    modifier = Modifier.basicMarquee()
+                                    fontSize = 14.sp
                                 )
                             },
                             leadingIcon = {
@@ -1017,13 +1013,11 @@ private fun StatusBarAndAnimationsSection(
 
                         DropdownMenuItem(
                             text = {
-                                Text(
+                                TouchMarqueeText(
                                     text = stringResource(R.string.settings_monochrome_tags),
                                     color = if (monochromeTags) accentColor.color else popupTheme.contentColor,
                                     fontWeight = if (monochromeTags) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 14.sp,
-                                    maxLines = 1,
-                                    modifier = Modifier.basicMarquee()
+                                    fontSize = 14.sp
                                 )
                             },
                             leadingIcon = {
@@ -1055,113 +1049,139 @@ private fun StatusBarAndAnimationsSection(
 
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
+                modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                ShadowedIcon(
-                    imageVector = Icons.Outlined.Translate,
-                    tint = primaryTextColor.color,
-                    size = 16.dp,
-                    showShadows = showShadows,
-                    primaryTextColor = primaryTextColor,
-                    shadowColorOverride = shadowColorOverride
-                )
-                Text(
-                    text = stringResource(R.string.settings_language),
+                TouchMarqueeText(
+                    text = stringResource(R.string.settings_marquee),
                     color = primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                    maxLines = 1,
-                    modifier = Modifier.basicMarquee()
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                Switch(
+                    checked = marqueeEnabled,
+                    onCheckedChange = onMarqueeChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = accentColor.color,
+                        checkedTrackColor = accentColor.color.copy(alpha = 0.45f),
+                        checkedBorderColor = accentColor.color.copy(alpha = 0.80f),
+                        uncheckedThumbColor = accentColor.color.copy(alpha = 0.65f),
+                        uncheckedTrackColor = accentColor.color.copy(alpha = 0.12f),
+                        uncheckedBorderColor = accentColor.color.copy(alpha = 0.35f)
+                    )
                 )
             }
 
-            val context = LocalContext.current
-            var languageExpanded by remember { mutableStateOf(false) }
-            var currentLangCode by remember { mutableStateOf(LocaleUtils.getCurrentLanguageCode(context)) }
-            val currentLang = remember(currentLangCode) {
-                LocaleUtils.SUPPORTED_LANGUAGES.find { it.code == currentLangCode }
-                    ?: LocaleUtils.SUPPORTED_LANGUAGES.first()
-            }
-
-            Box {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(primaryTextColor.color.copy(alpha = 0.08f))
-                        .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
-                        .clickable { languageExpanded = true }
-                        .padding(horizontal = 7.dp, vertical = 5.dp),
+                    modifier = Modifier.weight(1f, fill = false),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Text(
-                        text = stringResource(currentLang.labelRes),
-                        color = accentColor.color,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        style = TextStyle(shadow = shadow),
-                        modifier = Modifier.basicMarquee()
+                    ShadowedIcon(
+                        imageVector = Icons.Outlined.Translate,
+                        tint = primaryTextColor.color,
+                        size = 16.dp,
+                        showShadows = showShadows,
+                        primaryTextColor = primaryTextColor,
+                        shadowColorOverride = shadowColorOverride
                     )
-                    Icon(
-                        imageVector = Icons.Outlined.ArrowDropDown,
-                        contentDescription = stringResource(R.string.settings_select_language),
-                        tint = primaryTextColor.color.copy(alpha = 0.7f),
-                        modifier = Modifier.size(18.dp)
+                    TouchMarqueeText(
+                        text = stringResource(R.string.settings_language),
+                        color = primaryTextColor.color,
+                        style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                 }
 
-                DropdownMenu(
-                    expanded = languageExpanded,
-                    onDismissRequest = { languageExpanded = false },
-                    shape = RoundedCornerShape(14.dp),
-                    containerColor = popupTheme.solidBackgroundColor,
-                    border = BorderStroke(1.dp, popupTheme.borderColor),
-                    shadowElevation = 8.dp
-                ) {
-                    LocaleUtils.SUPPORTED_LANGUAGES.forEach { lang ->
-                        val isSelected = lang.code == currentLangCode
-                        DropdownMenuItem(
-                            text = {
-                                Column {
-                                    Text(
-                                        text = stringResource(lang.labelRes),
-                                        color = if (isSelected) accentColor.color else popupTheme.contentColor,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        fontSize = 14.sp,
-                                        maxLines = 1,
-                                        modifier = Modifier.basicMarquee()
-                                    )
-                                    if (lang.nativeName.isNotBlank() && lang.code.isNotBlank()) {
-                                        Text(
-                                            text = lang.nativeName,
-                                            color = popupTheme.secondaryContentColor,
-                                            fontSize = 11.sp,
-                                            maxLines = 1
+                val context = LocalContext.current
+                var languageExpanded by remember { mutableStateOf(false) }
+                var currentLangCode by remember { mutableStateOf(LocaleUtils.getCurrentLanguageCode(context)) }
+                val currentLang = remember(currentLangCode) {
+                    LocaleUtils.SUPPORTED_LANGUAGES.find { it.code == currentLangCode }
+                        ?: LocaleUtils.SUPPORTED_LANGUAGES.first()
+                }
+
+                Box {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(primaryTextColor.color.copy(alpha = 0.08f))
+                            .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
+                            .clickable { languageExpanded = true }
+                            .padding(horizontal = 7.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        TouchMarqueeText(
+                            text = stringResource(currentLang.labelRes),
+                            color = accentColor.color,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            style = TextStyle(shadow = shadow)
+                        )
+                        Icon(
+                            imageVector = Icons.Outlined.ArrowDropDown,
+                            contentDescription = stringResource(R.string.settings_select_language),
+                            tint = primaryTextColor.color.copy(alpha = 0.7f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = languageExpanded,
+                        onDismissRequest = { languageExpanded = false },
+                        shape = RoundedCornerShape(14.dp),
+                        containerColor = popupTheme.solidBackgroundColor,
+                        border = BorderStroke(1.dp, popupTheme.borderColor),
+                        shadowElevation = 8.dp
+                    ) {
+                        LocaleUtils.SUPPORTED_LANGUAGES.forEach { lang ->
+                            val isSelected = lang.code == currentLangCode
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        TouchMarqueeText(
+                                            text = stringResource(lang.labelRes),
+                                            color = if (isSelected) accentColor.color else popupTheme.contentColor,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            fontSize = 14.sp
+                                        )
+                                        if (lang.nativeName.isNotBlank() && lang.code.isNotBlank()) {
+                                            TouchMarqueeText(
+                                                text = lang.nativeName,
+                                                color = popupTheme.secondaryContentColor,
+                                                fontSize = 11.sp
+                                            )
+                                        }
+                                    }
+                                },
+                                trailingIcon = if (isSelected) {
+                                    {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Check,
+                                            contentDescription = null,
+                                            tint = accentColor.color,
+                                            modifier = Modifier.size(18.dp)
                                         )
                                     }
+                                } else null,
+                                onClick = {
+                                    currentLangCode = lang.code
+                                    LocaleUtils.setAppLanguage(context, lang.code)
+                                    languageExpanded = false
                                 }
-                            },
-                            trailingIcon = if (isSelected) {
-                                {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Check,
-                                        contentDescription = null,
-                                        tint = accentColor.color,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            } else null,
-                            onClick = {
-                                currentLangCode = lang.code
-                                LocaleUtils.setAppLanguage(context, lang.code)
-                                languageExpanded = false
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
@@ -1213,12 +1233,10 @@ private fun MappingAndIconPackSection(
                     primaryTextColor = primaryTextColor,
                     shadowColorOverride = shadowColorOverride
                 )
-                Text(
+                TouchMarqueeText(
                     text = stringResource(R.string.settings_mapping),
                     color = primaryTextColor.color,
-                    style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                    maxLines = 1,
-                    modifier = Modifier.basicMarquee()
+                    style = TextStyle(shadow = shadow, fontSize = 13.5.sp)
                 )
             }
             Row(
@@ -1232,14 +1250,13 @@ private fun MappingAndIconPackSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
+                TouchMarqueeText(
                     text = charMappingSummary,
                     color = accentColor.color,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
                     style = TextStyle(shadow = shadow),
-                    modifier = Modifier.weight(1f, fill = false).basicMarquee()
+                    modifier = Modifier.weight(1f, fill = false)
                 )
                 ShadowedIcon(
                     imageVector = Icons.Outlined.Tune,
@@ -1266,12 +1283,10 @@ private fun MappingAndIconPackSection(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(
+            TouchMarqueeText(
                 text = stringResource(R.string.settings_icon_pack),
                 color = primaryTextColor.color,
-                style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
-                maxLines = 1,
-                modifier = Modifier.basicMarquee()
+                style = TextStyle(shadow = shadow, fontSize = 13.5.sp)
             )
             Row(
                 modifier = Modifier
@@ -1345,12 +1360,10 @@ private fun ThemeAndColorsSection(
                     primaryTextColor = primaryTextColor,
                     shadowColorOverride = shadowColorOverride
                 )
-                Text(
+                TouchMarqueeText(
                     text = stringResource(R.string.settings_accent),
                     color = primaryTextColor.color,
-                    style = TextStyle(shadow = shadow, fontSize = 15.sp),
-                    maxLines = 1,
-                    modifier = Modifier.basicMarquee()
+                    style = TextStyle(shadow = shadow, fontSize = 15.sp)
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -1362,12 +1375,10 @@ private fun ThemeAndColorsSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
+                TouchMarqueeText(
                     text = stringResource(R.string.settings_adaptive_shadows),
                     color = primaryTextColor.color,
-                    style = TextStyle(shadow = shadow, fontSize = 15.sp),
-                    maxLines = 1,
-                    modifier = Modifier.basicMarquee()
+                    style = TextStyle(shadow = shadow, fontSize = 15.sp)
                 )
                 ShadowedIcon(
                     imageVector = Icons.Outlined.Tonality,
@@ -1417,36 +1428,30 @@ private fun ThemeAndColorsSection(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            TouchMarqueeText(
                 text = stringResource(R.string.settings_main_color),
                 color = primaryTextColor.color,
-                style = TextStyle(shadow = shadow, fontSize = 13.sp),
-                maxLines = 1,
-                modifier = Modifier.basicMarquee()
+                style = TextStyle(shadow = shadow, fontSize = 13.sp)
             )
             Spacer(modifier = Modifier.height(8.dp))
             MainColorSelector(primaryTextColor, primaryTextColor, onPrimaryTextColorChange)
         }
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            TouchMarqueeText(
                 text = stringResource(R.string.settings_button_text),
                 color = primaryTextColor.color,
-                style = TextStyle(shadow = shadow, fontSize = 13.sp),
-                maxLines = 1,
-                modifier = Modifier.basicMarquee()
+                style = TextStyle(shadow = shadow, fontSize = 13.sp)
             )
             Spacer(modifier = Modifier.height(8.dp))
             MainColorSelector(buttonTextColor, primaryTextColor, onButtonTextColorChange)
         }
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            TouchMarqueeText(
                 text = stringResource(R.string.settings_popup_theme),
                 color = primaryTextColor.color,
-                style = TextStyle(shadow = shadow, fontSize = 13.sp),
-                maxLines = 1,
-                modifier = Modifier.basicMarquee()
+                style = TextStyle(shadow = shadow, fontSize = 13.sp)
             )
             Spacer(modifier = Modifier.height(8.dp))
             PopupThemeSelector(popupTheme, primaryTextColor, onPopupThemeChange)
@@ -1527,12 +1532,10 @@ private fun BackupAndTagsSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
-                Text(
+                TouchMarqueeText(
                     text = stringResource(R.string.settings_backup),
                     color = primaryTextColor.color,
-                    style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium),
-                    maxLines = 1,
-                    modifier = Modifier.basicMarquee()
+                    style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 IconButton(
@@ -1591,12 +1594,10 @@ private fun BackupAndTagsSection(
                     shadowColorOverride = shadowColorOverride
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
+                TouchMarqueeText(
                     text = stringResource(R.string.settings_ai_tags),
                     color = primaryTextColor.color,
-                    style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium),
-                    maxLines = 1,
-                    modifier = Modifier.basicMarquee()
+                    style = TextStyle(shadow = shadow, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 )
             }
         }
@@ -1634,16 +1635,14 @@ private fun SupportAndCommunitySection(
                 primaryTextColor = primaryTextColor,
                 shadowColorOverride = shadowColorOverride
             )
-            Text(
+            TouchMarqueeText(
                 text = stringResource(R.string.settings_support_and_community),
                 color = primaryTextColor.color,
                 style = TextStyle(
                     shadow = shadow,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
-                ),
-                maxLines = 1,
-                modifier = Modifier.basicMarquee()
+                )
             )
         }
 
@@ -1722,12 +1721,11 @@ private fun SettingsVersionText(
             "1.0"
         }
     }
-    Text(
+    TouchMarqueeText(
         text = stringResource(R.string.settings_version, versionName),
         color = primaryTextColor.color.copy(alpha = 0.4f),
         style = TextStyle(shadow = shadow, fontSize = 14.sp),
-        maxLines = 1,
-        modifier = modifier.basicMarquee()
+        modifier = modifier
     )
 }
 
@@ -1763,12 +1761,17 @@ private fun CommunityButton(
     val iconTint = if (isHighlight) accentColor.color else primaryTextColor.color.copy(alpha = 0.85f)
     val titleColor = if (isHighlight) accentColor.color else primaryTextColor.color
 
+    val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(14.dp))
             .background(containerBg)
             .border(1.dp, borderColor, RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            )
             .padding(vertical = 12.dp, horizontal = 8.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -1800,25 +1803,25 @@ private fun CommunityButton(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
+            TouchMarqueeText(
                 text = title,
                 color = titleColor,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
                 style = TextStyle(shadow = shadow),
-                maxLines = 1,
-                modifier = Modifier.basicMarquee()
+                textAlign = TextAlign.Center,
+                interactionSource = interactionSource
             )
 
             Spacer(modifier = Modifier.height(2.dp))
 
-            Text(
+            TouchMarqueeText(
                 text = subtitle,
                 color = primaryTextColor.color.copy(alpha = if (isHighlight) 0.85f else 0.55f),
                 fontSize = 11.sp,
                 style = TextStyle(shadow = shadow),
-                maxLines = 1,
-                modifier = Modifier.basicMarquee()
+                textAlign = TextAlign.Center,
+                interactionSource = interactionSource
             )
         }
     }
@@ -1939,13 +1942,12 @@ private fun AccentColorDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
+                TouchMarqueeText(
                     text = stringResource(R.string.settings_theme_accent_title),
                     color = popupTheme.contentColor,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
-                    maxLines = 1,
-                    modifier = Modifier.basicMarquee()
+                    modifier = Modifier.weight(1f, fill = false)
                 )
                 IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
                     Icon(
@@ -1980,13 +1982,11 @@ private fun AccentColorDialog(
                             .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
+                        TouchMarqueeText(
                             text = stringResource(R.string.settings_tab_presets_wallpaper),
                             fontSize = 12.sp,
                             fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
-                            color = if (selectedTab == 0) popupTheme.contentColor else popupTheme.secondaryContentColor,
-                            maxLines = 1,
-                            modifier = Modifier.basicMarquee()
+                            color = if (selectedTab == 0) popupTheme.contentColor else popupTheme.secondaryContentColor
                         )
                     }
                     Box(
@@ -1998,25 +1998,21 @@ private fun AccentColorDialog(
                             .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
+                        TouchMarqueeText(
                             text = stringResource(R.string.settings_tab_custom_color),
                             fontSize = 12.sp,
                             fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
-                            color = if (selectedTab == 1) popupTheme.contentColor else popupTheme.secondaryContentColor,
-                            maxLines = 1,
-                            modifier = Modifier.basicMarquee()
+                            color = if (selectedTab == 1) popupTheme.contentColor else popupTheme.secondaryContentColor
                         )
                     }
                 }
 
                 if (selectedTab == 0) {
-                    Text(
+                    TouchMarqueeText(
                         text = stringResource(R.string.settings_adaptive_wallpaper_accent),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = popupTheme.secondaryContentColor,
-                        maxLines = 1,
-                        modifier = Modifier.basicMarquee()
+                        color = popupTheme.secondaryContentColor
                     )
 
                     Row(
@@ -2061,21 +2057,17 @@ private fun AccentColorDialog(
                                 )
                             }
                             Column {
-                                Text(
+                                TouchMarqueeText(
                                     text = stringResource(R.string.settings_hue_angle_shift),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium,
-                                    color = popupTheme.contentColor,
-                                    maxLines = 1,
-                                    modifier = Modifier.basicMarquee()
+                                    color = popupTheme.contentColor
                                 )
-                                Text(
+                                TouchMarqueeText(
                                     text = if (isWpDark) stringResource(R.string.settings_luminous_highlight)
                                     else stringResource(R.string.settings_deep_dark_shade),
                                     fontSize = 11.sp,
-                                    color = popupTheme.secondaryContentColor,
-                                    maxLines = 1,
-                                    modifier = Modifier.basicMarquee()
+                                    color = popupTheme.secondaryContentColor
                                 )
                             }
                         }
@@ -2083,13 +2075,11 @@ private fun AccentColorDialog(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    Text(
+                    TouchMarqueeText(
                         text = stringResource(R.string.settings_echo_presets),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = popupTheme.secondaryContentColor,
-                        maxLines = 1,
-                        modifier = Modifier.basicMarquee()
+                        color = popupTheme.secondaryContentColor
                     )
 
                     Column(
@@ -2118,13 +2108,11 @@ private fun AccentColorDialog(
                         }
                     }
                 } else {
-                    Text(
+                    TouchMarqueeText(
                         text = stringResource(R.string.settings_interactive_picker),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = popupTheme.secondaryContentColor,
-                        maxLines = 1,
-                        modifier = Modifier.basicMarquee()
+                        color = popupTheme.secondaryContentColor
                     )
 
                     val quickSwatches = remember {
@@ -2137,12 +2125,10 @@ private fun AccentColorDialog(
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
+                        TouchMarqueeText(
                             text = stringResource(R.string.settings_quick_swatches),
                             fontSize = 11.sp,
-                            color = popupTheme.secondaryContentColor,
-                            maxLines = 1,
-                            modifier = Modifier.basicMarquee()
+                            color = popupTheme.secondaryContentColor
                         )
                         FlowRow(
                             modifier = Modifier.fillMaxWidth(),
@@ -2290,20 +2276,21 @@ private fun AccentColorDialog(
                         )
                     }
 
+                    val applyColorSource = remember { MutableInteractionSource() }
                     Button(
                         onClick = {
                             onSelect(AccentColor.custom(customPickedColor))
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        interactionSource = applyColorSource,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = customPickedColor),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text(
+                        TouchMarqueeText(
                             text = stringResource(R.string.settings_apply_custom_color),
                             fontWeight = FontWeight.Bold,
                             color = if (customPickedColor.luminance() > 0.5f) Color.Black else Color.White,
-                            maxLines = 1,
-                            modifier = Modifier.basicMarquee()
+                            interactionSource = applyColorSource
                         )
                     }
                 }
@@ -2377,13 +2364,11 @@ private fun PresetColorChip(
                 .background(accent.color)
                 .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape)
         )
-        Text(
+        TouchMarqueeText(
             text = accent.displayName,
             fontSize = 12.sp,
             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            color = popupTheme.contentColor,
-            maxLines = 1,
-            modifier = Modifier.basicMarquee()
+            color = popupTheme.contentColor
         )
     }
 }
@@ -2408,75 +2393,69 @@ private fun DefaultLauncherAndRelaunchRow(
         verticalAlignment = Alignment.Top
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            TouchMarqueeText(
                 text = stringResource(R.string.settings_default_launcher),
                 color = primaryTextColor.color,
-                style = TextStyle(shadow = shadow, fontWeight = FontWeight.Medium, fontSize = 15.sp),
-                maxLines = 1,
-                modifier = Modifier.basicMarquee()
+                style = TextStyle(shadow = shadow, fontWeight = FontWeight.Medium, fontSize = 15.sp)
             )
             Spacer(modifier = Modifier.height(2.dp))
-            Text(
+            TouchMarqueeText(
                 text = if (isDefault) stringResource(R.string.settings_default_launcher_set_status) else stringResource(R.string.settings_default_launcher_not_set),
                 color = if (isDefault) Color.Green else accentColor.color.copy(alpha = 0.69f),
                 fontSize = 12.sp,
-                style = TextStyle(shadow = shadow),
-                maxLines = 1,
-                modifier = Modifier.basicMarquee()
+                style = TextStyle(shadow = shadow)
             )
             Spacer(modifier = Modifier.height(8.dp))
+            val defaultBtnSource = remember { MutableInteractionSource() }
             Button(
                 onClick = onDefaultClick,
+                interactionSource = defaultBtnSource,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isDefault) Color.Transparent else primaryTextColor.color.copy(alpha = 0.1f)
                 ),
                 border = if (isDefault) BorderStroke(1.dp, Color.Green.copy(alpha = 0.5f)) else null,
-                modifier = Modifier.fillMaxWidth().height(42.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 42.dp),
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 8.dp)
             ) {
-                Text(
+                TouchMarqueeText(
                     text = if (isDefault) stringResource(R.string.settings_default_launcher_change) else stringResource(R.string.settings_default_launcher_set),
                     color = if (isDefault) Color.Green else primaryTextColor.color,
                     style = TextStyle(shadow = shadow, fontWeight = FontWeight.Bold),
-                    maxLines = 1,
-                    modifier = Modifier.basicMarquee()
+                    interactionSource = defaultBtnSource
                 )
             }
         }
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            TouchMarqueeText(
                 text = stringResource(R.string.settings_relaunch_app),
                 color = primaryTextColor.color,
-                style = TextStyle(shadow = shadow, fontWeight = FontWeight.Medium, fontSize = 15.sp),
-                maxLines = 1,
-                modifier = Modifier.basicMarquee()
+                style = TextStyle(shadow = shadow, fontWeight = FontWeight.Medium, fontSize = 15.sp)
             )
             Spacer(modifier = Modifier.height(2.dp))
-            Text(
+            TouchMarqueeText(
                 text = stringResource(R.string.settings_relaunch_subtitle),
                 color = accentColor.color.copy(alpha = 0.69f),
                 fontSize = 12.sp,
-                style = TextStyle(shadow = shadow),
-                maxLines = 1,
-                modifier = Modifier.basicMarquee()
+                style = TextStyle(shadow = shadow)
             )
             Spacer(modifier = Modifier.height(8.dp))
+            val relaunchBtnSource = remember { MutableInteractionSource() }
             Button(
                 onClick = onRelaunchClick,
+                interactionSource = relaunchBtnSource,
                 colors = ButtonDefaults.buttonColors(containerColor = primaryTextColor.color.copy(alpha = 0.07f)),
                 border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.35f)),
-                modifier = Modifier.fillMaxWidth().height(42.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 42.dp),
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 8.dp)
             ) {
-                Text(
+                TouchMarqueeText(
                     text = stringResource(R.string.settings_relaunch_action),
                     color = accentColor.color,
                     style = TextStyle(shadow = shadow, fontWeight = FontWeight.Bold),
-                    maxLines = 1,
-                    modifier = Modifier.basicMarquee()
+                    interactionSource = relaunchBtnSource
                 )
             }
         }
@@ -2692,12 +2671,10 @@ private fun IconPackSelectionDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
+            TouchMarqueeText(
                 text = stringResource(R.string.settings_icon_pack_title),
                 color = accentColor.color,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                modifier = Modifier.basicMarquee()
+                fontWeight = FontWeight.Bold
             )
         },
         text = {
@@ -2750,20 +2727,16 @@ private fun IconPackSelectionDialog(
                             )
                         }
                         Column {
-                            Text(
+                            TouchMarqueeText(
                                 text = stringResource(R.string.settings_icon_pack_system_default),
                                 color = popupTheme.contentColor,
                                 fontWeight = if (isDefaultSelected) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 15.sp,
-                                maxLines = 1,
-                                modifier = Modifier.basicMarquee()
+                                fontSize = 15.sp
                             )
-                            Text(
+                            TouchMarqueeText(
                                 text = if (systemPackName != null) stringResource(R.string.settings_icon_pack_system_auto, systemPackName) else stringResource(R.string.settings_icon_pack_system_original),
                                 color = popupTheme.secondaryContentColor,
-                                fontSize = 12.sp,
-                                maxLines = 1,
-                                modifier = Modifier.basicMarquee()
+                                fontSize = 12.sp
                             )
                         }
                     }
@@ -2822,20 +2795,16 @@ private fun IconPackSelectionDialog(
                                 DrawableIcon(drawable = pack.icon, modifier = Modifier.size(36.dp))
                             }
                             Column {
-                                Text(
+                                TouchMarqueeText(
                                     text = pack.name,
                                     color = popupTheme.contentColor,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    fontSize = 15.sp,
-                                    maxLines = 1,
-                                    modifier = Modifier.basicMarquee()
+                                    fontSize = 15.sp
                                 )
-                                Text(
+                                TouchMarqueeText(
                                     text = pack.packageName,
                                     color = popupTheme.secondaryContentColor,
-                                    fontSize = 11.sp,
-                                    maxLines = 1,
-                                    modifier = Modifier.basicMarquee()
+                                    fontSize = 11.sp
                                 )
                             }
                         }
@@ -2853,15 +2822,16 @@ private fun IconPackSelectionDialog(
         },
         confirmButton = {},
         dismissButton = {
+            val closeSource = remember { MutableInteractionSource() }
             TextButton(
                 onClick = onDismiss,
+                interactionSource = closeSource,
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text(
+                TouchMarqueeText(
                     text = stringResource(R.string.common_close),
                     color = popupTheme.secondaryContentColor,
-                    maxLines = 1,
-                    modifier = Modifier.basicMarquee()
+                    interactionSource = closeSource
                 )
             }
         },

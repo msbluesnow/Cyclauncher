@@ -7,12 +7,17 @@ import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.ui.theme.ShadowSettings
 import dev.msbs.cyclauncher.ui.theme.LocalIconPackVersion
+import dev.msbs.cyclauncher.ui.theme.LocalMarqueeEnabled
 
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.vector.ImageVector
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.MarqueeAnimationMode
+import androidx.compose.foundation.MarqueeSpacing
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.interaction.InteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -22,6 +27,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -33,6 +39,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -43,12 +51,108 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.rememberAsyncImagePainter
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+
+/**
+ * Single-line text component with marquee animation that automatically restarts upon touch begin (ACTION_DOWN).
+ * When text fits within its available width, it renders statically without animation.
+ * When touched (even before a tap or click is completed), the marquee animation immediately starts/restarts.
+ * Can also observe an optional parent [interactionSource] (e.g. from a Button or Card) so touching anywhere
+ * on the parent element triggers the marquee.
+ */
+@Composable
+fun TouchMarqueeText(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    fontSize: TextUnit = TextUnit.Unspecified,
+    fontWeight: FontWeight? = null,
+    textAlign: TextAlign? = null,
+    letterSpacing: TextUnit = TextUnit.Unspecified,
+    lineHeight: TextUnit = TextUnit.Unspecified,
+    style: TextStyle = LocalTextStyle.current,
+    iterations: Int = 3,
+    initialDelayMillis: Int = 1200,
+    repeatDelayMillis: Int = 1200,
+    velocity: Dp = 35.dp,
+    spacing: MarqueeSpacing = MarqueeSpacing(24.dp),
+    interactionSource: InteractionSource? = null,
+    enabled: Boolean = LocalMarqueeEnabled.current
+) {
+    if (!enabled) {
+        Text(
+            text = text,
+            color = color,
+            fontSize = fontSize,
+            fontWeight = fontWeight,
+            textAlign = textAlign,
+            letterSpacing = letterSpacing,
+            lineHeight = lineHeight,
+            style = style,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            softWrap = false,
+            modifier = modifier
+        )
+        return
+    }
+
+    var restartTrigger by remember { mutableIntStateOf(0) }
+
+    interactionSource?.let { source ->
+        LaunchedEffect(source) {
+            source.interactions.collect { interaction ->
+                if (interaction is PressInteraction.Press) {
+                    restartTrigger++
+                }
+            }
+        }
+    }
+
+    val touchModifier = if (interactionSource == null) {
+        Modifier.pointerInput(restartTrigger) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    if (event.changes.any { it.changedToDown() }) {
+                        restartTrigger++
+                    }
+                }
+            }
+        }
+    } else Modifier
+
+    key(restartTrigger) {
+        Text(
+            text = text,
+            color = color,
+            fontSize = fontSize,
+            fontWeight = fontWeight,
+            textAlign = textAlign,
+            letterSpacing = letterSpacing,
+            lineHeight = lineHeight,
+            style = style,
+            maxLines = 1,
+            softWrap = false,
+            modifier = modifier
+                .basicMarquee(
+                    iterations = iterations,
+                    animationMode = MarqueeAnimationMode.Immediately,
+                    repeatDelayMillis = repeatDelayMillis,
+                    initialDelayMillis = if (restartTrigger == 0) initialDelayMillis else 0,
+                    spacing = spacing,
+                    velocity = velocity
+                )
+                .then(touchModifier)
+        )
+    }
+}
 
 /**
  * Text component that automatically scales down font size to prevent horizontal visual overflow.
@@ -153,14 +257,11 @@ fun AdaptiveHeaderTitle(
             }
         }
 
-        Text(
+        TouchMarqueeText(
             text = text,
             color = color,
             style = style.copy(fontSize = optimalFontSize),
-            textAlign = textAlign,
-            maxLines = 1,
-            softWrap = false,
-            modifier = Modifier.basicMarquee()
+            textAlign = textAlign
         )
     }
 }

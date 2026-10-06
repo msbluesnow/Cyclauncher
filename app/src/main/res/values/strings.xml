@@ -127,6 +127,7 @@
     <string name="settings_status_bar">Status Bar</string>
     <string name="settings_toggle_status_bar">Toggle status bar visibility</string>
     <string name="settings_animations">Animations</string>
+    <string name="settings_marquee">Marquee text</string>
     <string name="settings_haptics">Haptics</string>
     <string name="settings_monochrome">Monochrome</string>
     <string name="settings_monochrome_disabled">Monochrome disabled</string>

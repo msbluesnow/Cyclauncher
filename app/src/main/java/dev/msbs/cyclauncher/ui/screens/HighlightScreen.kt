@@ -9,6 +9,8 @@ import dev.msbs.cyclauncher.ui.components.CustomWidgetPickerSheet
 import dev.msbs.cyclauncher.ui.components.rememberAppIconPainter
 import dev.msbs.cyclauncher.ui.components.ScreenTopBar
 import dev.msbs.cyclauncher.ui.components.ShadowedIcon
+import dev.msbs.cyclauncher.ui.components.TouchMarqueeText
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
@@ -1389,16 +1391,18 @@ private fun WidgetsSection(
                 )
             }
 
+            val addWidgetInteractionSource = remember { MutableInteractionSource() }
             // Launcher-styled Add Widget Button (Buttons do NOT inherit text/icon shadow)
             Button(
                 onClick = onAddWidget,
+                interactionSource = addWidgetInteractionSource,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = accentColor.color,
                     contentColor = buttonTextColor.color
                 ),
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                modifier = Modifier.height(36.dp)
+                modifier = Modifier.heightIn(min = 36.dp)
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Add,
@@ -1407,11 +1411,12 @@ private fun WidgetsSection(
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(
+                TouchMarqueeText(
                     text = stringResource(R.string.highlight_widgets_add),
                     color = buttonTextColor.color,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
+                    fontSize = 13.sp,
+                    interactionSource = addWidgetInteractionSource
                 )
             }
         }
@@ -1988,29 +1993,37 @@ private fun WidgetResizeDialog(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text(
+                    val cancelInteractionSource = remember { MutableInteractionSource() }
+                    TextButton(
+                        onClick = onDismiss,
+                        interactionSource = cancelInteractionSource
+                    ) {
+                        TouchMarqueeText(
                             text = stringResource(R.string.common_cancel),
                             color = primaryTextColor.color.copy(alpha = 0.8f),
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            interactionSource = cancelInteractionSource
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
+                    val applyInteractionSource = remember { MutableInteractionSource() }
                     Button(
                         onClick = {
                             onApply(heightDp, widthFraction)
                             onDismiss()
                         },
+                        interactionSource = applyInteractionSource,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = accentColor.color,
                             contentColor = buttonTextColor.color
                         ),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text(
+                        TouchMarqueeText(
                             text = stringResource(R.string.common_apply),
                             color = buttonTextColor.color,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            interactionSource = applyInteractionSource
                         )
                     }
                 }
@@ -2153,14 +2166,22 @@ private fun HighlightPrivateSpaceContent(
                 fontSize = 13.sp,
                 style = TextStyle(shadow = shadow)
             )
+            val unlockInteractionSource = remember { MutableInteractionSource() }
             Button(
                 onClick = onUnlockClick,
+                interactionSource = unlockInteractionSource,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = accentColor.color,
                     contentColor = buttonTextColor.color
-                )
+                ),
+                modifier = Modifier.heightIn(min = 40.dp)
             ) {
-                Text(stringResource(R.string.highlight_private_space_unlock), color = buttonTextColor.color, fontWeight = FontWeight.Bold)
+                TouchMarqueeText(
+                    text = stringResource(R.string.highlight_private_space_unlock),
+                    color = buttonTextColor.color,
+                    fontWeight = FontWeight.Bold,
+                    interactionSource = unlockInteractionSource
+                )
             }
         }
     } else if (apps.isEmpty()) {
@@ -2177,10 +2198,13 @@ private fun HighlightPrivateSpaceContent(
                 fontSize = 13.sp,
                 style = TextStyle(shadow = shadow)
             )
+            val installInteractionSource = remember { MutableInteractionSource() }
             OutlinedButton(
                 onClick = onInstallAppsClick,
+                interactionSource = installInteractionSource,
                 border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.5f)),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.heightIn(min = 40.dp)
             ) {
                 Icon(
                     imageVector = Icons.Outlined.AddCircleOutline,
@@ -2189,7 +2213,12 @@ private fun HighlightPrivateSpaceContent(
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(stringResource(R.string.highlight_private_space_install), color = primaryTextColor.color, fontSize = 12.sp)
+                TouchMarqueeText(
+                    text = stringResource(R.string.highlight_private_space_install),
+                    color = primaryTextColor.color,
+                    fontSize = 12.sp,
+                    interactionSource = installInteractionSource
+                )
             }
         }
     } else {

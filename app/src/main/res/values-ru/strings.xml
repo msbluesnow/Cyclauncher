@@ -125,6 +125,7 @@
     <string name="settings_status_bar">Строка состояния</string>
     <string name="settings_toggle_status_bar">Переключить строку состояния</string>
     <string name="settings_animations">Анимации</string>
+    <string name="settings_marquee">Бегущая строка</string>
     <string name="settings_haptics">Вибрация</string>
     <string name="settings_monochrome">Монохром</string>
     <string name="settings_monochrome_disabled">Монохром выключен</string>

@@ -243,6 +243,7 @@ class MainActivity : ComponentActivity() {
             CyclauncherTheme {
                 val hideStatusBar by viewModel.hideStatusBar.collectAsState()
                 val animationsEnabled by viewModel.animationsEnabled.collectAsState()
+                val marqueeEnabled by viewModel.marqueeEnabled.collectAsState()
                 val hapticFeedbackEnabled by viewModel.hapticFeedbackEnabled.collectAsState()
                 val showShadows by viewModel.showShadows.collectAsState()
                 val shadowColorOverride by viewModel.shadowColor.collectAsState()
@@ -263,6 +264,7 @@ class MainActivity : ComponentActivity() {
                     LocalHapticFeedback provides customHaptic,
                     dev.msbs.cyclauncher.ui.theme.LocalShadowSettings provides dev.msbs.cyclauncher.ui.theme.ShadowSettings(showShadows, shadowColorOverride),
                     dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled provides animationsEnabled,
+                    dev.msbs.cyclauncher.ui.theme.LocalMarqueeEnabled provides marqueeEnabled,
                     dev.msbs.cyclauncher.ui.theme.LocalIconPackVersion provides iconPackVersion
                 ) {
                     LaunchedEffect(hideStatusBar) {

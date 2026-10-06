@@ -327,23 +327,21 @@ private fun ActionTargetCard(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            Text(
+            TouchMarqueeText(
                 text = title,
                 color = textColor,
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.5.sp,
-                maxLines = 1,
                 textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(2.dp))
 
-            Text(
+            TouchMarqueeText(
                 text = subtitle,
                 color = textColor.copy(alpha = 0.8f),
                 fontSize = 11.5.sp,
                 fontWeight = FontWeight.Medium,
-                maxLines = 1,
                 textAlign = TextAlign.Center
             )
         }

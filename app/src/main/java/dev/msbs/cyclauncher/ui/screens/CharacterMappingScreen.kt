@@ -9,6 +9,8 @@ import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import dev.msbs.cyclauncher.R
 import dev.msbs.cyclauncher.ui.components.ScreenTopBar
+import dev.msbs.cyclauncher.ui.components.TouchMarqueeText
+import androidx.compose.foundation.interaction.MutableInteractionSource
 
 import android.widget.Toast
 import androidx.compose.ui.res.stringResource
@@ -277,6 +279,7 @@ fun CharacterMappingScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
+                    val addInteractionSource = remember { MutableInteractionSource() }
                     Button(
                         onClick = {
                             val symbol = viewModel.extractFirstSymbol(inputSymbol)
@@ -289,10 +292,11 @@ fun CharacterMappingScreen(
                                 Toast.makeText(context, context.getString(R.string.char_map_invalid_input), Toast.LENGTH_SHORT).show()
                             }
                         },
+                        interactionSource = addInteractionSource,
                         colors = ButtonDefaults.buttonColors(containerColor = accentColor.color.copy(alpha = 0.2f)),
                         border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.6f)),
                         shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth().height(44.dp)
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             if (showShadows) {
@@ -311,12 +315,13 @@ fun CharacterMappingScreen(
                             )
                         }
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(
+                        TouchMarqueeText(
                             text = stringResource(R.string.char_map_add_button),
                             color = accentColor.color,
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
-                            style = TextStyle(shadow = shadow)
+                            style = TextStyle(shadow = shadow),
+                            interactionSource = addInteractionSource
                         )
                     }
                 }
@@ -375,8 +380,9 @@ fun CharacterMappingScreen(
                                 )
                             }
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(
+                            TouchMarqueeText(
                                 text = stringResource(R.string.common_export),
+                                color = accentColor.color,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 style = TextStyle(shadow = shadow)
@@ -406,8 +412,9 @@ fun CharacterMappingScreen(
                                 )
                             }
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(
+                            TouchMarqueeText(
                                 text = stringResource(R.string.common_import),
+                                color = accentColor.color,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 style = TextStyle(shadow = shadow)

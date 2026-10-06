@@ -10,7 +10,6 @@ import androidx.compose.ui.res.stringResource
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -149,23 +148,19 @@ fun KeepAndroidOpenBanner(
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
-                        Text(
+                        TouchMarqueeText(
                             text = stringResource(R.string.kao_title),
                             color = primaryTextColor.color,
                             style = TextStyle(
                                 shadow = shadow,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
-                            ),
-                            maxLines = 1,
-                            modifier = Modifier.basicMarquee()
+                            )
                         )
-                        Text(
+                        TouchMarqueeText(
                             text = stringResource(R.string.kao_subtitle),
                             color = primaryTextColor.color.copy(alpha = 0.65f),
-                            style = TextStyle(shadow = shadow, fontSize = 11.sp, lineHeight = 14.sp),
-                            maxLines = 1,
-                            modifier = Modifier.basicMarquee()
+                            style = TextStyle(shadow = shadow, fontSize = 11.sp, lineHeight = 14.sp)
                         )
                     }
                 }
@@ -243,11 +238,13 @@ fun KeepAndroidOpenBanner(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val learnMoreSource = remember { MutableInteractionSource() }
                 Button(
                     onClick = onLearnMoreClick,
+                    interactionSource = learnMoreSource,
                     modifier = Modifier
                         .weight(1f)
-                        .height(38.dp),
+                        .heightIn(min = 38.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = accentColor.color.copy(alpha = 0.20f),
                         contentColor = accentColor.color
@@ -261,20 +258,21 @@ fun KeepAndroidOpenBanner(
                         modifier = Modifier.size(15.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(
+                    TouchMarqueeText(
                         text = stringResource(R.string.kao_learn_more),
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 12.5.sp,
-                        maxLines = 1,
-                        modifier = Modifier.basicMarquee()
+                        interactionSource = learnMoreSource
                     )
                 }
 
+                val websiteSource = remember { MutableInteractionSource() }
                 Button(
                     onClick = onWebsiteClick,
+                    interactionSource = websiteSource,
                     modifier = Modifier
                         .weight(1f)
-                        .height(38.dp),
+                        .heightIn(min = 38.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = WarningRed,
                         contentColor = Color.White
@@ -288,12 +286,11 @@ fun KeepAndroidOpenBanner(
                         modifier = Modifier.size(15.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(
+                    TouchMarqueeText(
                         text = stringResource(R.string.kao_petition),
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.5.sp,
-                        maxLines = 1,
-                        modifier = Modifier.basicMarquee()
+                        interactionSource = websiteSource
                     )
                 }
             }
@@ -466,26 +463,34 @@ fun KeepAndroidOpenDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    val closeSource = remember { MutableInteractionSource() }
                     OutlinedButton(
                         onClick = onDismiss,
+                        interactionSource = closeSource,
                         modifier = Modifier
                             .weight(1f)
-                            .height(42.dp),
+                            .heightIn(min = 42.dp),
                         shape = RoundedCornerShape(12.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, popupTheme.borderColor),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = popupTheme.contentColor)
                     ) {
-                        Text(stringResource(R.string.common_close), fontSize = 13.sp)
+                        TouchMarqueeText(
+                            text = stringResource(R.string.common_close),
+                            fontSize = 13.sp,
+                            interactionSource = closeSource
+                        )
                     }
 
+                    val actionSource = remember { MutableInteractionSource() }
                     Button(
                         onClick = {
                             onOpenWebsite()
                             onDismiss()
                         },
+                        interactionSource = actionSource,
                         modifier = Modifier
                             .weight(1.3f)
-                            .height(42.dp),
+                            .heightIn(min = 42.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = WarningRed,
@@ -494,7 +499,12 @@ fun KeepAndroidOpenDialog(
                     ) {
                         Icon(Icons.Outlined.Public, null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(stringResource(R.string.kao_take_action), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        TouchMarqueeText(
+                            text = stringResource(R.string.kao_take_action),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            interactionSource = actionSource
+                        )
                     }
                 }
             }

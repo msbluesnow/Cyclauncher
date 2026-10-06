@@ -146,6 +146,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _animationsEnabled = MutableStateFlow(true)
     val animationsEnabled: StateFlow<Boolean> = _animationsEnabled
 
+    private val _marqueeEnabled = MutableStateFlow(true)
+    val marqueeEnabled: StateFlow<Boolean> = _marqueeEnabled
+
     private val _hapticFeedbackEnabled = MutableStateFlow(true)
     val hapticFeedbackEnabled: StateFlow<Boolean> = _hapticFeedbackEnabled
 
@@ -810,6 +813,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _showSearchWidgets.value = prefs.getBoolean("show_search_widgets", true)
         _showSearchHistory.value = prefs.getBoolean("show_search_history", true)
         _animationsEnabled.value = prefs.getBoolean("animations_enabled", true)
+        _marqueeEnabled.value = prefs.getBoolean("marquee_enabled", true)
         _hapticFeedbackEnabled.value = prefs.getBoolean("haptic_feedback_enabled", true)
         _monochromeHistory.value = prefs.getBoolean("monochrome_history", false)
         _monochromeTags.value = prefs.getBoolean("monochrome_tags", false)
@@ -926,6 +930,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun setAnimationsEnabled(enabled: Boolean) {
         _animationsEnabled.value = enabled
         editPrefs { putBoolean("animations_enabled", enabled) }
+    }
+
+    fun setMarqueeEnabled(enabled: Boolean) {
+        _marqueeEnabled.value = enabled
+        editPrefs { putBoolean("marquee_enabled", enabled) }
     }
 
     fun setHapticFeedbackEnabled(enabled: Boolean) {

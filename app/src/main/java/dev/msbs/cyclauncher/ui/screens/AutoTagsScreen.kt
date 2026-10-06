@@ -7,8 +7,10 @@ import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.ui.components.ScreenTopBar
+import dev.msbs.cyclauncher.ui.components.TouchMarqueeText
 import dev.msbs.cyclauncher.R
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.interaction.MutableInteractionSource
 
 import android.content.ClipData
 import android.content.Context
@@ -138,18 +140,21 @@ fun AutoTagsScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    val step1InteractionSource = remember { MutableInteractionSource() }
                     Button(
                         onClick = { showExportFormatDialog = true },
+                        interactionSource = step1InteractionSource,
                         colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
                         shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
                     ) {
                         Icon(Icons.Outlined.Upload, contentDescription = null, tint = buttonTextColor.color)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            stringResource(R.string.auto_tags_step1_button),
+                        TouchMarqueeText(
+                            text = stringResource(R.string.auto_tags_step1_button),
                             color = buttonTextColor.color,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            interactionSource = step1InteractionSource
                         )
                     }
 
@@ -243,18 +248,21 @@ fun AutoTagsScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    val step3InteractionSource = remember { MutableInteractionSource() }
                     Button(
                         onClick = { importTaggedLauncher.launch("*/*") },
+                        interactionSource = step3InteractionSource,
                         colors = ButtonDefaults.buttonColors(containerColor = accentColor.color),
                         shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
                     ) {
                         Icon(Icons.Outlined.Download, contentDescription = null, tint = buttonTextColor.color)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            stringResource(R.string.auto_tags_step3_button),
+                        TouchMarqueeText(
+                            text = stringResource(R.string.auto_tags_step3_button),
                             color = buttonTextColor.color,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            interactionSource = step3InteractionSource
                         )
                     }
                 }

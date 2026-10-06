@@ -21,6 +21,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -383,14 +385,21 @@ fun TutorialOverlay(
                     }
                 }
 
+                val skipInteractionSource = remember { MutableInteractionSource() }
                 TextButton(
                     onClick = {
                         viewModel.completeTutorial()
                         onNavigateToMain()
                     },
+                    interactionSource = skipInteractionSource,
                     colors = ButtonDefaults.textButtonColors(contentColor = Color.White.copy(alpha = 0.8f))
                 ) {
-                    Text(text = stringResource(R.string.tutorial_skip), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    TouchMarqueeText(
+                        text = stringResource(R.string.tutorial_skip),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        interactionSource = skipInteractionSource
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                         imageVector = Icons.Default.Close,
@@ -470,6 +479,7 @@ fun TutorialOverlay(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (stepIndex > 0) {
+                            val backInteractionSource = remember { MutableInteractionSource() }
                             TextButton(
                                 onClick = {
                                     val prevStep = stepIndex - 1
@@ -480,6 +490,7 @@ fun TutorialOverlay(
                                         onNavigateToSearch()
                                     }
                                 },
+                                interactionSource = backInteractionSource,
                                 colors = ButtonDefaults.textButtonColors(contentColor = popupTheme.secondaryContentColor)
                             ) {
                                 Icon(
@@ -488,22 +499,29 @@ fun TutorialOverlay(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text(stringResource(R.string.common_back))
+                                TouchMarqueeText(
+                                    text = stringResource(R.string.common_back),
+                                    interactionSource = backInteractionSource
+                                )
                             }
                         } else {
                             Spacer(modifier = Modifier.width(1.dp))
                         }
 
+                        val nextInteractionSource = remember { MutableInteractionSource() }
                         Button(
                             onClick = { triggerSuccessAndNext() },
+                            interactionSource = nextInteractionSource,
                             colors = ButtonDefaults.buttonColors(containerColor = accentColor),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.heightIn(min = 40.dp)
                         ) {
                             val buttonText = stringResource(if (stepIndex == steps.lastIndex) R.string.tutorial_finish else R.string.tutorial_next)
-                            Text(
+                            TouchMarqueeText(
                                 text = buttonText,
                                 color = buttonTextColor.color,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                interactionSource = nextInteractionSource
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(
@@ -1001,9 +1019,10 @@ private fun TutorialPreviewCard(
     textColor: Color,
     modifier: Modifier = Modifier
 ) {
+    val cardInteractionSource = remember { MutableInteractionSource() }
     Box(
         modifier = modifier
-            .width(135.dp)
+            .width(140.dp)
             .height(84.dp)
             .clip(shape)
             .background(
@@ -1015,10 +1034,18 @@ private fun TutorialPreviewCard(
                 color = if (isActive) accentColor else popupTheme.borderColor,
                 shape = shape
             )
-            .padding(8.dp),
+            .clickable(
+                interactionSource = cardInteractionSource,
+                indication = null,
+                onClick = {}
+            )
+            .padding(horizontal = 8.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
@@ -1026,16 +1053,20 @@ private fun TutorialPreviewCard(
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
+            TouchMarqueeText(
                 text = title,
                 color = textColor,
                 fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                interactionSource = cardInteractionSource
             )
-            Text(
+            TouchMarqueeText(
                 text = subtitle,
                 color = textColor.copy(alpha = 0.8f),
-                fontSize = 9.5.sp
+                fontSize = 9.5.sp,
+                textAlign = TextAlign.Center,
+                interactionSource = cardInteractionSource
             )
         }
     }
