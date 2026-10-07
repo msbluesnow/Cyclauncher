@@ -25,6 +25,7 @@ class CyclauncherApp : Application(), SingletonImageLoader.Factory {
     override fun newImageLoader(context: Context): ImageLoader {
         val loader = ImageLoader.Builder(context)
             .components {
+                add(dev.msbs.cyclauncher.coil.AppIconKeyer())
                 add(AppIconFetcher.Factory(context))
             }
             .memoryCache {

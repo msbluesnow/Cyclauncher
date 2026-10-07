@@ -13,6 +13,7 @@ import coil3.decode.DataSource
 import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
+import coil3.key.Keyer
 import coil3.request.Options
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -21,6 +22,13 @@ import dev.msbs.cyclauncher.icons.IconPackManager
 
 /** Key representing an application icon in "packageName/activityName" format. */
 data class AppIconKey(val componentKey: String)
+
+/** Coil 3 Keyer for computing stable memory cache keys for [AppIconKey]. */
+class AppIconKeyer : Keyer<AppIconKey> {
+    override fun key(data: AppIconKey, options: Options): String {
+        return data.componentKey
+    }
+}
 
 /** Coil 3 Fetcher for loading installed application icons via PackageManager. */
 internal class AppIconFetcher private constructor(
@@ -83,7 +91,7 @@ internal class AppIconFetcher private constructor(
         ImageFetchResult(
             image = bitmap.asImage(),
             isSampled = isFallback,
-            dataSource = if (isFallback) DataSource.NETWORK else DataSource.MEMORY,
+            dataSource = if (isFallback) DataSource.NETWORK else DataSource.DISK,
         )
     }
 
@@ -101,10 +109,7 @@ internal class AppIconFetcher private constructor(
         val bitmap = Bitmap.createBitmap(safeSize, safeSize, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
-        val shapePath = dev.msbs.cyclauncher.icons.IconShapeHelper.getSystemPath(context)
-        val scale = safeSize / 100f
-        val matrix = android.graphics.Matrix().apply { setScale(scale, scale) }
-        val scaledPath = android.graphics.Path(shapePath).apply { transform(matrix) }
+        val scaledPath = dev.msbs.cyclauncher.icons.IconShapeHelper.getScaledPath(context, safeSize)
 
         canvas.save()
         canvas.clipPath(scaledPath)
@@ -124,12 +129,10 @@ internal class AppIconFetcher private constructor(
 
     private fun resolveIcon(context: Context, pm: PackageManager, pkg: String, activityWithUser: String): Drawable {
         val density = context.resources.displayMetrics.densityDpi
-        val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
-        val userManager = context.getSystemService(Context.USER_SERVICE) as? android.os.UserManager
-
         val activity = activityWithUser.substringBefore('#')
         val userHashCodeStr = activityWithUser.substringAfter('#', "")
 
+        val myUser = android.os.Process.myUserHandle()
         val targetUser = if (userHashCodeStr.isNotEmpty()) {
             userProfilesCache[userHashCodeStr] ?: run {
                 val userManager = context.getSystemService(Context.USER_SERVICE) as? android.os.UserManager
@@ -138,23 +141,39 @@ internal class AppIconFetcher private constructor(
                     userProfilesCache[userHashCodeStr] = found
                     found
                 } else {
-                    android.os.Process.myUserHandle()
+                    myUser
                 }
             }
         } else {
-            android.os.Process.myUserHandle()
+            myUser
         }
 
+        // Fast path for primary personal profile: load directly via PackageManager
+        if (targetUser == myUser) {
+            val component = android.content.ComponentName(pkg, activity)
+            try {
+                return pm.getActivityIcon(component)
+            } catch (_: Exception) {
+                try {
+                    val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        pm.getActivityInfo(component, PackageManager.ComponentInfoFlags.of(0L))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        pm.getActivityInfo(component, 0)
+                    }
+                    return info.loadIcon(pm)
+                } catch (_: Exception) {}
+            }
+        }
+
+        // Secondary profiles (Work Profile / Private Space): resolve badged icon via LauncherApps
+        val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
         if (launcherApps != null) {
             try {
                 val list = launcherApps.getActivityList(pkg, targetUser)
                 val activityInfo = list.firstOrNull { it.componentName.className == activity } ?: list.firstOrNull()
                 if (activityInfo != null) {
-                    return if (targetUser != android.os.Process.myUserHandle()) {
-                        activityInfo.getBadgedIcon(density)
-                    } else {
-                        activityInfo.getIcon(density)
-                    }
+                    return activityInfo.getBadgedIcon(density)
                 }
             } catch (_: Exception) {}
         }
@@ -172,11 +191,7 @@ internal class AppIconFetcher private constructor(
             info.loadIcon(pm)
         }
 
-        return if (targetUser != android.os.Process.myUserHandle()) {
-            pm.getUserBadgedIcon(drawable, targetUser)
-        } else {
-            drawable
-        }
+        return pm.getUserBadgedIcon(drawable, targetUser)
     }
 
     class Factory(private val context: Context) : Fetcher.Factory<Any> {

@@ -13,6 +13,7 @@ object IconShapeHelper {
 
     @Volatile
     private var cachedSystemPath: Path? = null
+    private val scaledPathCache = java.util.concurrent.ConcurrentHashMap<Int, Path>()
 
     /**
      * Resolves the Path for a normalized 100x100 box corresponding to the system icon shape overlay.
@@ -67,16 +68,30 @@ object IconShapeHelper {
     }
 
     /**
+     * Returns a cached scaled Path for the given pixel [size], avoiding redundant allocations
+     * and matrix transformations during icon rasterization.
+     */
+    fun getScaledPath(context: Context, size: Int): Path {
+        val safeSize = size.coerceAtLeast(1)
+        return scaledPathCache.getOrPut(safeSize) {
+            val basePath = getSystemPath(context)
+            val scale = safeSize / 100f
+            val matrix = android.graphics.Matrix().apply { setScale(scale, scale) }
+            Path(basePath).apply { transform(matrix) }
+        }
+    }
+
+    /**
      * Clears the cached system path so it can be re-queried upon system theme changes.
      */
     fun invalidateCache() {
         cachedSystemPath = null
+        scaledPathCache.clear()
     }
 
     private fun parseOrFallback(pathData: String, cornerRadius: Float): Path {
         return try {
             PathParser.createPathFromPathData(pathData)
-                ?: Path().apply { addRoundRect(RectF(0f, 0f, 100f, 100f), cornerRadius, cornerRadius, Path.Direction.CW) }
         } catch (_: Exception) {
             Path().apply { addRoundRect(RectF(0f, 0f, 100f, 100f), cornerRadius, cornerRadius, Path.Direction.CW) }
         }

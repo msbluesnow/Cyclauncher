@@ -746,7 +746,8 @@ class MainActivity : ComponentActivity() {
         }
         if (viewModel.apps.value.isEmpty()) {
             viewModel.refreshApps()
-        } else if (!viewModel.hasProfileStateChanged()) {
+        } else {
+            viewModel.checkProfileStateAsync()
             viewModel.prewarmActiveIcons()
         }
     }
@@ -793,9 +794,6 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         clearPendingProfileLaunch()
         setIntent(intent)
-        viewModel.updateDefaultLauncherStatus { isDefault ->
-            isDefaultLauncherCached = isDefault
-        }
         viewModel.requestReset()
     }
 

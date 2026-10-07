@@ -261,24 +261,27 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun hasProfileStateChanged(): Boolean {
-        return try {
-            val userManager = safeContext.getSystemService(Context.USER_SERVICE) as? UserManager ?: return false
-            val privateUser = _privateSpaceUser.value
-            if (privateUser != null) {
-                val isQuiet = userManager.isQuietModeEnabled(privateUser)
-                if (isQuiet != _isPrivateSpaceLocked.value) {
-                    onProfileAvailabilityChanged(privateUser, isAvailable = !isQuiet)
-                    return true
+    fun checkProfileStateAsync(onStateChanged: (() -> Unit)? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val userManager = safeContext.getSystemService(Context.USER_SERVICE) as? UserManager ?: return@launch
+                val privateUser = _privateSpaceUser.value
+                if (privateUser != null) {
+                    val isQuiet = userManager.isQuietModeEnabled(privateUser)
+                    if (isQuiet != _isPrivateSpaceLocked.value) {
+                        onProfileAvailabilityChanged(privateUser, isAvailable = !isQuiet)
+                        onStateChanged?.invoke()
+                    }
+                } else if (Build.VERSION.SDK_INT >= 35) {
+                    val profiles = userManager.userProfiles
+                    val privateHandle = profiles.firstOrNull { ProfileType.fromUserHandle(safeContext, it) == ProfileType.PRIVATE }
+                    if (privateHandle != null) {
+                        val isQuiet = userManager.isQuietModeEnabled(privateHandle)
+                        onProfileAvailabilityChanged(privateHandle, isAvailable = !isQuiet)
+                        onStateChanged?.invoke()
+                    }
                 }
-            } else if (Build.VERSION.SDK_INT >= 35) {
-                val profiles = userManager.userProfiles
-                val hasPrivate = profiles.any { ProfileType.fromUserHandle(safeContext, it) == ProfileType.PRIVATE }
-                if (hasPrivate) return true
-            }
-            false
-        } catch (_: Throwable) {
-            false
+            } catch (_: Throwable) {}
         }
     }
 
