@@ -1,0 +1,6 @@
+Release Candidate 2 focusing on icon caching performance and localization.
+- Enabled Coil 3 memory caching for app icons via AppIconKeyer and disk data source.
+- Eliminated launcher resume freezes with fast-path icon resolving and async checks.
+- Cached scaled icon shape masks to eliminate redundant allocations and transforms.
+- Added full bilingual localization support with in-app language switching (EN/RU).
+- Added marquee text scrolling toggle with touch-to-restart interaction.
