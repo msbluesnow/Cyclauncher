@@ -202,6 +202,7 @@ fun HistoryActionMenu(
     onEditHistory: () -> Unit,
     onTogglePause: () -> Unit,
     onClearHistory: (() -> Unit)? = null,
+    isEditMode: Boolean = false,
     accentColor: AccentColor = AccentColor.SKY,
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     popupTheme: PopupTheme = PopupTheme.DARK
@@ -272,8 +273,8 @@ fun HistoryActionMenu(
 
                 if (hasHistoryItems) {
                     MenuItem(
-                        text = stringResource(R.string.history_menu_edit),
-                        icon = Icons.Outlined.Edit,
+                        text = if (isEditMode) stringResource(R.string.history_menu_done_edit) else stringResource(R.string.history_menu_edit),
+                        icon = if (isEditMode) Icons.Outlined.Check else Icons.Outlined.Edit,
                         accentColor = accentColor,
                         popupTheme = popupTheme,
                         onClick = {

@@ -30,6 +30,7 @@
     <string name="history_menu_title">История</string>
     <string name="history_menu_paused">(Приостановлена)</string>
     <string name="history_menu_edit">Редактировать историю</string>
+    <string name="history_menu_done_edit">Завершить редактирование</string>
     <string name="history_menu_pause">Приостановить запись</string>
     <string name="history_menu_resume">Возобновить запись</string>
     <string name="history_menu_clear">Очистить историю</string>
@@ -86,6 +87,10 @@
     <string name="search_apps_placeholder">Поиск приложений…</string>
     <string name="search_close_content_description">Закрыть поиск</string>
     <string name="palette_done_editing">Завершить редактирование</string>
+    <string name="side_overlay_colors_title">Цвета</string>
+    <string name="side_overlay_reset">Сбросить</string>
+    <string name="side_overlay_history_empty">История поиска пуста</string>
+    <string name="side_overlay_history_desc">Действия истории (очистка, пауза)</string>
 
     <!-- Swipe Down Quick Actions Overlay -->
     <string name="quick_action_notifications_title">Уведомления</string>
@@ -358,6 +363,9 @@
     <string name="tutorial_step7_title">Перемещение истории</string>
     <string name="tutorial_step7_desc">Смахните ВВЕРХ по списку истории внизу экрана, чтобы перенести его наверх. Смахните ВНИЗ по области тегов вверху, чтобы поменять их местами.</string>
     <string name="tutorial_step7_hint">Смахните ВВЕРХ по истории или ВНИЗ по тегам!</string>
+    <string name="tutorial_step8_title">Быстрая палитра — Цвета и история</string>
+    <string name="tutorial_step8_desc">Нажмите на панель над алфавитной сеткой в поиске, чтобы открыть палитру. Нажмите на нужный цвет для фильтрации или на значок истории для управления ею.</string>
+    <string name="tutorial_step8_hint">Нажмите на панель над сеткой, затем выберите действие!</string>
 
     <!-- Toast & Feedback Messages -->
     <string name="toast_removed_from_favorites">«%1$s» удалено из избранного</string>

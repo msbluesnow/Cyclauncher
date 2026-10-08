@@ -22,6 +22,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -35,12 +37,16 @@ import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Widgets
+import dev.msbs.cyclauncher.SideAlphabetSlotMode
+import dev.msbs.cyclauncher.model.AppColorBucket
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
@@ -81,7 +87,8 @@ enum class GestureType {
     SWIPE_HIGHLIGHTS,
     LONG_PRESS,
     FAVORITES_HISTORY,
-    HISTORY_POSITION_TOGGLE
+    HISTORY_POSITION_TOGGLE,
+    QUICK_PALETTE
 }
 
 /**
@@ -108,10 +115,13 @@ fun TutorialOverlay(
     var isSuccessFlash by remember { mutableStateOf(false) }
 
     var tutorialOverlayState by remember { mutableStateOf<SwipeDownOverlayState?>(null) }
+    var tutorialPaletteOverlayState by remember { mutableStateOf<QuickPaletteOverlayState?>(null) }
+    var tutorialPaletteColor by remember { mutableStateOf<AppColorBucket?>(null) }
     var tutorialSelectedFeedback by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(stepIndex) {
         tutorialOverlayState = null
+        tutorialPaletteOverlayState = null
         tutorialSelectedFeedback = null
     }
 
@@ -165,6 +175,12 @@ fun TutorialOverlay(
                 description = context.getString(R.string.tutorial_step7_desc),
                 gestureType = GestureType.HISTORY_POSITION_TOGGLE,
                 hintText = context.getString(R.string.tutorial_step7_hint)
+            ),
+            TutorialStepInfo(
+                title = context.getString(R.string.tutorial_step8_title),
+                description = context.getString(R.string.tutorial_step8_desc),
+                gestureType = GestureType.QUICK_PALETTE,
+                hintText = context.getString(R.string.tutorial_step8_hint)
             )
         )
     }
@@ -190,6 +206,12 @@ fun TutorialOverlay(
     if (showTutorial && currentStep.gestureType == GestureType.SIDE_BACK) {
         BackHandler {
             triggerSuccessAndNext()
+        }
+    }
+
+    if (showTutorial && tutorialPaletteOverlayState != null) {
+        BackHandler {
+            tutorialPaletteOverlayState = null
         }
     }
 
@@ -303,16 +325,284 @@ fun TutorialOverlay(
                                 triggerSuccessAndNext()
                             }
                         )
+                    } else if (currentStep.gestureType == GestureType.QUICK_PALETTE) {
+                        detectTapGestures(
+                            onTap = { offset ->
+                                if (tutorialPaletteOverlayState == null) {
+                                    tutorialPaletteOverlayState = QuickPaletteOverlayState(
+                                        anchorPosition = offset,
+                                        handSide = handSide
+                                    )
+                                }
+                            }
+                        )
                     }
                 }
         ) {
-            GestureAnimationCanvas(
-                gestureType = currentStep.gestureType,
-                handSide = handSide,
-                accentColor = accentColor,
-                popupTheme = popupTheme,
-                modifier = Modifier.fillMaxSize()
-            )
+            val isCompactHeight = configuration.screenHeightDp < 720
+            val isVeryCompactHeight = configuration.screenHeightDp < 600
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .navigationBarsPadding(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // 1. Top status bar with progress dots and skip button
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = if (configuration.screenWidthDp > 600) 32.dp else 20.dp,
+                            vertical = if (isCompactHeight) 8.dp else 14.dp
+                        ),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        steps.indices.forEach { index ->
+                            val active = index == stepIndex
+                            Box(
+                                modifier = Modifier
+                                    .size(if (active) 12.dp else 8.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (active) accentColor else Color.White.copy(alpha = 0.4f)
+                                    )
+                            )
+                        }
+                    }
+
+                    val skipInteractionSource = remember { MutableInteractionSource() }
+                    TextButton(
+                        onClick = {
+                            viewModel.completeTutorial()
+                            onNavigateToMain()
+                        },
+                        interactionSource = skipInteractionSource,
+                        colors = ButtonDefaults.textButtonColors(contentColor = Color.White.copy(alpha = 0.8f))
+                    ) {
+                        TouchMarqueeText(
+                            text = stringResource(R.string.tutorial_skip),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            interactionSource = skipInteractionSource
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(R.string.common_close),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                // 2. Interactive Stage: takes all available vertical space between top bar and bottom card
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    GestureAnimationCanvas(
+                        gestureType = currentStep.gestureType,
+                        handSide = handSide,
+                        accentColor = accentColor,
+                        popupTheme = popupTheme,
+                        modifier = Modifier.fillMaxSize()
+                    )
+
+                    // Success feedback pill showing which action was triggered in the trial
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = tutorialSelectedFeedback != null,
+                        enter = if (animationsEnabled) fadeIn() + scaleIn() else EnterTransition.None,
+                        exit = if (animationsEnabled) fadeOut() else ExitTransition.None,
+                        modifier = Modifier.align(Alignment.Center)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = accentColor,
+                            shadowElevation = 10.dp
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = buttonTextColor.color,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = stringResource(R.string.tutorial_tested_feedback, tutorialSelectedFeedback ?: ""),
+                                    color = buttonTextColor.color,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 3. Adaptive Bottom Description & Controls Card
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            start = if (configuration.screenWidthDp > 600) 32.dp else 16.dp,
+                            end = if (configuration.screenWidthDp > 600) 32.dp else 16.dp,
+                            bottom = if (isCompactHeight) 8.dp else 16.dp,
+                            top = 4.dp
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val cardShape = remember(isCompactHeight) {
+                        RoundedCornerShape(if (isCompactHeight) 18.dp else 22.dp)
+                    }
+                    val maxCardHeight = (configuration.screenHeightDp * 0.44f).dp
+
+                    Card(
+                        modifier = Modifier
+                            .widthIn(max = 480.dp)
+                            .fillMaxWidth()
+                            .shadow(if (isCompactHeight) 10.dp else 16.dp, cardShape),
+                        shape = cardShape,
+                        border = BorderStroke(1.dp, popupTheme.borderColor),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (popupTheme == PopupTheme.LIGHT) Color(0xFFF6F6F6).copy(alpha = 0.96f) else Color(0xFF1C1C1E).copy(alpha = 0.94f)
+                        )
+                    ) {
+                        val scrollState = rememberScrollState()
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = maxCardHeight)
+                                .verticalScroll(scrollState)
+                                .padding(
+                                    horizontal = if (isCompactHeight) 16.dp else 22.dp,
+                                    vertical = if (isCompactHeight) 12.dp else 18.dp
+                                ),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = currentStep.title,
+                                color = popupTheme.contentColor,
+                                fontSize = if (isVeryCompactHeight) 16.sp else if (isCompactHeight) 17.5.sp else 19.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center
+                            )
+
+                            Spacer(modifier = Modifier.height(if (isCompactHeight) 6.dp else 8.dp))
+
+                            Text(
+                                text = currentStep.description,
+                                color = popupTheme.secondaryContentColor,
+                                fontSize = if (isVeryCompactHeight) 12.sp else if (isCompactHeight) 13.sp else 13.5.sp,
+                                lineHeight = if (isVeryCompactHeight) 16.sp else if (isCompactHeight) 18.sp else 19.5.sp,
+                                textAlign = TextAlign.Center
+                            )
+
+                            Spacer(modifier = Modifier.height(if (isCompactHeight) 8.dp else 12.dp))
+
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = accentColor.copy(alpha = if (popupTheme == PopupTheme.LIGHT) 0.12f else 0.2f),
+                                border = BorderStroke(1.dp, accentColor.copy(alpha = if (popupTheme == PopupTheme.LIGHT) 0.35f else 0.5f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(
+                                        horizontal = if (isCompactHeight) 12.dp else 14.dp,
+                                        vertical = if (isCompactHeight) 5.dp else 7.dp
+                                    ),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = accentColor,
+                                        modifier = Modifier.size(if (isCompactHeight) 14.dp else 16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = currentStep.hintText,
+                                        color = accentColor,
+                                        fontSize = if (isVeryCompactHeight) 11.5.sp else 12.5.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(if (isCompactHeight) 10.dp else 14.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (stepIndex > 0) {
+                                    val backInteractionSource = remember { MutableInteractionSource() }
+                                    TextButton(
+                                        onClick = {
+                                            val prevStep = stepIndex - 1
+                                            viewModel.setTutorialStep(prevStep)
+                                            if (prevStep == 0) {
+                                                onNavigateToMain()
+                                            } else if (prevStep == 1) {
+                                                onNavigateToSearch()
+                                            }
+                                        },
+                                        interactionSource = backInteractionSource,
+                                        colors = ButtonDefaults.textButtonColors(contentColor = popupTheme.secondaryContentColor)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                            contentDescription = stringResource(R.string.common_back),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        TouchMarqueeText(
+                                            text = stringResource(R.string.common_back),
+                                            interactionSource = backInteractionSource
+                                        )
+                                    }
+                                } else {
+                                    Spacer(modifier = Modifier.width(1.dp))
+                                }
+
+                                val nextInteractionSource = remember { MutableInteractionSource() }
+                                Button(
+                                    onClick = { triggerSuccessAndNext() },
+                                    interactionSource = nextInteractionSource,
+                                    colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.heightIn(min = if (isCompactHeight) 36.dp else 40.dp)
+                                ) {
+                                    val buttonText = stringResource(if (stepIndex == steps.lastIndex) R.string.tutorial_finish else R.string.tutorial_next)
+                                    TouchMarqueeText(
+                                        text = buttonText,
+                                        color = buttonTextColor.color,
+                                        fontWeight = FontWeight.Bold,
+                                        interactionSource = nextInteractionSource
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = buttonText,
+                                        tint = buttonTextColor.color,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             // Live interactive trial overlay when swiping down in the tutorial
             tutorialOverlayState?.let { overlayState ->
@@ -325,214 +615,39 @@ fun TutorialOverlay(
                 )
             }
 
-            // Success feedback pill showing which action was triggered in the trial
-            AnimatedVisibility(
-                visible = tutorialSelectedFeedback != null,
-                enter = if (animationsEnabled) fadeIn() + scaleIn() else EnterTransition.None,
-                exit = if (animationsEnabled) fadeOut() else ExitTransition.None,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(y = 80.dp)
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = accentColor,
-                    shadowElevation = 10.dp
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = buttonTextColor.color,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.tutorial_tested_feedback, tutorialSelectedFeedback ?: ""),
-                            color = buttonTextColor.color,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    steps.indices.forEach { index ->
-                        val active = index == stepIndex
-                        Box(
-                            modifier = Modifier
-                                .size(if (active) 12.dp else 8.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (active) accentColor else Color.White.copy(alpha = 0.4f)
-                                )
-                        )
-                    }
-                }
-
-                val skipInteractionSource = remember { MutableInteractionSource() }
-                TextButton(
-                    onClick = {
-                        viewModel.completeTutorial()
-                        onNavigateToMain()
+            // Live interactive quick palette overlay when testing step 8
+            tutorialPaletteOverlayState?.let { overlayState ->
+                QuickPaletteOverlay(
+                    state = overlayState,
+                    selectedColor = tutorialPaletteColor,
+                    isHistoryPaused = false,
+                    slotMode = SideAlphabetSlotMode.HISTORY,
+                    accentColor = accentColorEnum,
+                    primaryTextColor = primaryTextColor,
+                    popupTheme = popupTheme,
+                    onSelectColor = { bucket ->
+                        tutorialPaletteOverlayState = null
+                        tutorialPaletteColor = bucket
+                        tutorialSelectedFeedback = context.getString(R.string.side_overlay_colors_title)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        coroutineScope.launch {
+                            delay(850)
+                            triggerSuccessAndNext()
+                        }
                     },
-                    interactionSource = skipInteractionSource,
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color.White.copy(alpha = 0.8f))
-                ) {
-                    TouchMarqueeText(
-                        text = stringResource(R.string.tutorial_skip),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        interactionSource = skipInteractionSource
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.common_close),
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-
-            Card(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-                    .padding(24.dp)
-                    .fillMaxWidth()
-                    .shadow(16.dp, RoundedCornerShape(24.dp)),
-                shape = RoundedCornerShape(24.dp),
-                border = BorderStroke(1.dp, popupTheme.borderColor),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (popupTheme == PopupTheme.LIGHT) Color(0xFFF6F6F6).copy(alpha = 0.96f) else Color(0xFF1C1C1E).copy(alpha = 0.94f)
+                    onOpenHistoryMenu = {
+                        tutorialPaletteOverlayState = null
+                        tutorialSelectedFeedback = context.getString(R.string.history_menu_title)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        coroutineScope.launch {
+                            delay(850)
+                            triggerSuccessAndNext()
+                        }
+                    },
+                    onDismiss = {
+                        tutorialPaletteOverlayState = null
+                    }
                 )
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = currentStep.title,
-                        color = popupTheme.contentColor,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text(
-                        text = currentStep.description,
-                        color = popupTheme.secondaryContentColor,
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Surface(
-                        shape = RoundedCornerShape(50),
-                        color = accentColor.copy(alpha = if (popupTheme == PopupTheme.LIGHT) 0.12f else 0.2f),
-                        border = BorderStroke(1.dp, accentColor.copy(alpha = if (popupTheme == PopupTheme.LIGHT) 0.35f else 0.5f))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = accentColor,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = currentStep.hintText,
-                                color = accentColor,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (stepIndex > 0) {
-                            val backInteractionSource = remember { MutableInteractionSource() }
-                            TextButton(
-                                onClick = {
-                                    val prevStep = stepIndex - 1
-                                    viewModel.setTutorialStep(prevStep)
-                                    if (prevStep == 0) {
-                                        onNavigateToMain()
-                                    } else if (prevStep == 1) {
-                                        onNavigateToSearch()
-                                    }
-                                },
-                                interactionSource = backInteractionSource,
-                                colors = ButtonDefaults.textButtonColors(contentColor = popupTheme.secondaryContentColor)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = stringResource(R.string.common_back),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                TouchMarqueeText(
-                                    text = stringResource(R.string.common_back),
-                                    interactionSource = backInteractionSource
-                                )
-                            }
-                        } else {
-                            Spacer(modifier = Modifier.width(1.dp))
-                        }
-
-                        val nextInteractionSource = remember { MutableInteractionSource() }
-                        Button(
-                            onClick = { triggerSuccessAndNext() },
-                            interactionSource = nextInteractionSource,
-                            colors = ButtonDefaults.buttonColors(containerColor = accentColor),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.heightIn(min = 40.dp)
-                        ) {
-                            val buttonText = stringResource(if (stepIndex == steps.lastIndex) R.string.tutorial_finish else R.string.tutorial_next)
-                            TouchMarqueeText(
-                                text = buttonText,
-                                color = buttonTextColor.color,
-                                fontWeight = FontWeight.Bold,
-                                interactionSource = nextInteractionSource
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = buttonText,
-                                tint = buttonTextColor.color,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                }
             }
         }
     }
@@ -630,11 +745,11 @@ private fun GestureAnimationCanvas(
                 }
 
                 GestureType.SWIPE_DOWN -> {
-                    val cardCenterY = centerY - 50.dp.toPx()
+                    val cardCenterY = centerY - 25.dp.toPx()
                     val leftIsNotifications = handSide == HandSide.LEFT
                     val notifX = if (leftIsNotifications) centerX - 67.5.dp.toPx() else centerX + 67.5.dp.toPx()
                     val qsX = if (leftIsNotifications) centerX + 67.5.dp.toPx() else centerX - 67.5.dp.toPx()
-                    val startY = cardCenterY - 130.dp.toPx()
+                    val startY = cardCenterY - 100.dp.toPx()
 
                     val currentX: Float
                     val currentY: Float
@@ -786,11 +901,11 @@ private fun GestureAnimationCanvas(
 
                 GestureType.HISTORY_POSITION_TOGGLE -> {
                     val boxWidth = 180.dp.toPx()
-                    val boxHeight = 60.dp.toPx()
+                    val boxHeight = 56.dp.toPx()
                     val boxLeft = centerX - boxWidth / 2f
 
-                    val startBoxY = height * 0.62f
-                    val endBoxY = height * 0.28f
+                    val startBoxY = centerY + 40.dp.toPx()
+                    val endBoxY = centerY - 65.dp.toPx()
                     val currentBoxY = startBoxY + (endBoxY - startBoxY) * progress
 
                     drawRoundRect(
@@ -823,6 +938,62 @@ private fun GestureAnimationCanvas(
                         color = accentColor.copy(alpha = alpha),
                         radius = 12.dp.toPx(),
                         center = Offset(centerX, currentBoxY + boxHeight / 2f)
+                    )
+                }
+
+                GestureType.QUICK_PALETTE -> {
+                    val triggerX = centerX
+                    val triggerY = centerY + 3.dp.toPx()
+                    val targetX = centerX
+                    val targetY = centerY - 55.dp.toPx()
+
+                    val currentX: Float
+                    val currentY: Float
+
+                    if (progress < 0.40f) {
+                        currentX = triggerX
+                        currentY = triggerY
+
+                        // Tap 1 pulse on Trigger Bar
+                        if (progress in 0.18f..0.38f) {
+                            val p1 = (progress - 0.18f) / 0.20f
+                            drawCircle(
+                                color = accentColor.copy(alpha = alpha * (1f - p1) * 0.8f),
+                                radius = 12.dp.toPx() + (22.dp.toPx() * p1),
+                                center = Offset(triggerX, triggerY),
+                                style = Stroke(width = 2.5.dp.toPx())
+                            )
+                        }
+                    } else if (progress < 0.55f) {
+                        // Smooth movement between tap 1 and tap 2
+                        val pMove = (progress - 0.40f) / 0.15f
+                        currentX = triggerX + (targetX - triggerX) * pMove
+                        currentY = triggerY + (targetY - triggerY) * pMove
+                    } else {
+                        currentX = targetX
+                        currentY = targetY
+
+                        // Tap 2 pulse on Color target
+                        if (progress in 0.62f..0.85f) {
+                            val p2 = (progress - 0.62f) / 0.23f
+                            drawCircle(
+                                color = accentColor.copy(alpha = alpha * (1f - p2) * 0.8f),
+                                radius = 12.dp.toPx() + (22.dp.toPx() * p2),
+                                center = Offset(targetX, targetY),
+                                style = Stroke(width = 2.5.dp.toPx())
+                            )
+                        }
+                    }
+
+                    drawCircle(
+                        color = accentColor.copy(alpha = alpha * 0.28f),
+                        radius = 24.dp.toPx(),
+                        center = Offset(currentX, currentY)
+                    )
+                    drawCircle(
+                        color = accentColor.copy(alpha = alpha),
+                        radius = 12.dp.toPx(),
+                        center = Offset(currentX, currentY)
                     )
                 }
             }
@@ -955,7 +1126,7 @@ private fun GestureAnimationCanvas(
             }
 
             Row(
-                modifier = Modifier.offset(y = (-50).dp),
+                modifier = Modifier.offset(y = (-25).dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1001,6 +1172,194 @@ private fun GestureAnimationCanvas(
                         popupTheme = popupTheme,
                         textColor = previewTextColor
                     )
+                }
+            }
+        }
+
+        if (gestureType == GestureType.QUICK_PALETTE) {
+            val previewCardShape = remember { RoundedCornerShape(18.dp) }
+            val paletteAlpha = when {
+                progress < 0.32f -> 0f
+                progress < 0.42f -> (progress - 0.32f) / 0.10f
+                progress > 0.90f -> (1f - progress) / 0.10f
+                else -> 1f
+            }
+            val isColorSelected = progress > 0.70f
+
+            Column(
+                modifier = Modifier
+                    .offset(y = (-20).dp)
+                    .width(236.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Floating Quick Palette card preview (animates open on tap)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(72.dp)
+                        .alpha(paletteAlpha)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(popupTheme.solidBackgroundColor.copy(alpha = 0.96f))
+                        .border(1.dp, popupTheme.borderColor, RoundedCornerShape(14.dp))
+                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Palette,
+                                contentDescription = null,
+                                tint = accentColor,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = stringResource(R.string.side_overlay_colors_title),
+                                color = if (popupTheme == PopupTheme.LIGHT) Color.Black else Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                        }
+
+                        // Mini color dots row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val demoColors = remember {
+                                listOf(
+                                    Color(0xFFFF3B30), // Red
+                                    Color(0xFFFF9500), // Orange
+                                    Color(0xFFFFCC00), // Yellow
+                                    Color(0xFF34C759), // Green (target)
+                                    Color(0xFF30B0C7), // Cyan
+                                    Color(0xFF007AFF), // Blue
+                                    Color(0xFFAF52DE)  // Purple
+                                )
+                            }
+                            demoColors.forEachIndexed { idx, col ->
+                                val isTarget = idx == 3 // Green
+                                Box(
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .clip(CircleShape)
+                                        .background(col)
+                                        .border(
+                                            width = if (isTarget && isColorSelected) 2.dp else 1.dp,
+                                            color = if (isTarget && isColorSelected) Color.White else Color.White.copy(alpha = 0.3f),
+                                            shape = CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (isTarget && isColorSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Outer alphabet column container
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(previewCardShape)
+                        .background(popupTheme.solidBackgroundColor.copy(alpha = 0.95f))
+                        .border(1.5.dp, popupTheme.borderColor, previewCardShape)
+                        .padding(10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Trigger Bar Preview
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                if (isColorSelected) accentColor.copy(alpha = 0.22f)
+                                else accentColor.copy(alpha = 0.12f)
+                            )
+                            .border(
+                                width = if (progress in 0.18f..0.38f) 2.dp else 1.dp,
+                                color = if (progress in 0.18f..0.38f) accentColor else accentColor.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .padding(horizontal = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (isColorSelected) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .clip(RoundedCornerShape(5.dp))
+                                        .background(Color(0xFF34C759))
+                                        .border(1.dp, Color.White, RoundedCornerShape(5.dp))
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Outlined.Palette,
+                                    contentDescription = stringResource(R.string.side_overlay_colors_title),
+                                    tint = accentColor,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .width(1.dp)
+                                    .height(16.dp)
+                                    .background(Color.White.copy(alpha = 0.22f))
+                            )
+                            Icon(
+                                imageVector = Icons.Outlined.History,
+                                contentDescription = stringResource(R.string.history_menu_title),
+                                tint = accentColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Mini Alphabet Grid representation
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        listOf("#", "A", "B", "C", "D", "E").forEach { letter ->
+                            Box(
+                                modifier = Modifier
+                                    .size(26.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color.White.copy(alpha = 0.08f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = letter,
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
