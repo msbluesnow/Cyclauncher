@@ -9,7 +9,6 @@ import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import dev.msbs.cyclauncher.ui.components.AppListItem
 import dev.msbs.cyclauncher.ui.components.RectangularAlphabetWheel
-import androidx.compose.foundation.background
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -293,12 +292,10 @@ fun WheelSearchLayout(
     val showShadows by viewModel.showShadows.collectAsState()
     val showSearchWidgets by viewModel.showSearchWidgets.collectAsState()
     val scrollOffset = remember { Animatable(0f) }
-    val popupTheme by viewModel.popupTheme.collectAsState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(popupTheme.screenScrimColor)
             .statusBarsPadding()
             .navigationBarsPadding(),
         verticalArrangement = Arrangement.Bottom,

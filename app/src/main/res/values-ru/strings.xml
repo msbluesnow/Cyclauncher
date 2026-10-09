@@ -198,6 +198,7 @@
     <string name="settings_hue_format">Тон (%1$d°)</string>
     <string name="settings_saturation_format">Насыщенность (%1$d%%)</string>
     <string name="settings_brightness_format">Яркость (%1$d%%)</string>
+    <string name="settings_background_dim_format">Затемнение фона (%1$d%%)</string>
     <string name="settings_hex_code">HEX код</string>
     <string name="settings_apply_custom_color">Применить свой цвет</string>
 

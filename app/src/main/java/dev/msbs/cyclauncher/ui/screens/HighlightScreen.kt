@@ -324,9 +324,7 @@ fun HighlightScreen(
 
     BackHandler(onBack = onClose)
 
-    val popupTheme by viewModel.popupTheme.collectAsState()
-
-    // Faint scrim so text is readable while wallpaper stays faintly visible.
+    // Transparent Surface so system wallpaper is directly visible underneath.
     // Edge-only swipe detection to ensure NO touch conflict with scrollable or interactive widgets!
     Surface(
         modifier = Modifier
@@ -378,7 +376,7 @@ fun HighlightScreen(
                     }
                 }
             },
-        color = popupTheme.screenScrimColor
+        color = Color.Transparent
     ) {
         Column(
             modifier = Modifier

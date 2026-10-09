@@ -108,6 +108,7 @@ fun SettingsScreen(
     val isWpDark by viewModel.isWallpaperDark.collectAsState()
     val customCharMappings by viewModel.customCharMappings.collectAsState()
     val currentIsDefault by viewModel.isDefaultLauncherState.collectAsState()
+    val screenScrimAlpha by viewModel.screenScrimAlpha.collectAsState()
     val selectedIconPack by viewModel.selectedIconPack.collectAsState()
     val installedIconPacks by viewModel.installedIconPacks.collectAsState()
 
@@ -161,7 +162,6 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(popupTheme.screenScrimColor)
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
@@ -264,6 +264,8 @@ fun SettingsScreen(
                             isWpDark = isWpDark,
                             animationsEnabled = animationsEnabled,
                             shadow = shadow,
+                            screenScrimAlpha = screenScrimAlpha,
+                            onScrimAlphaChange = { viewModel.setScreenScrimAlpha(it) },
                             onAccentColorChange = { viewModel.setAccentColor(it) },
                             onShadowsChange = { viewModel.setShowShadows(it) },
                             onShadowColorChange = { viewModel.setShadowColor(it) },
@@ -1335,6 +1337,8 @@ private fun ThemeAndColorsSection(
     isWpDark: Boolean,
     animationsEnabled: Boolean,
     shadow: Shadow?,
+    screenScrimAlpha: Float,
+    onScrimAlphaChange: (Float) -> Unit,
     onAccentColorChange: (AccentColor) -> Unit,
     onShadowsChange: (Boolean) -> Unit,
     onShadowColorChange: (PrimaryTextColor) -> Unit,
@@ -1419,6 +1423,27 @@ private fun ThemeAndColorsSection(
                 }
             }
         }
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            stringResource(R.string.settings_background_dim_format, (screenScrimAlpha * 100).toInt()),
+            fontSize = 11.sp,
+            color = primaryTextColor.color
+        )
+        Slider(
+            value = screenScrimAlpha,
+            onValueChange = onScrimAlphaChange,
+            valueRange = 0f..1f,
+            colors = SliderDefaults.colors(
+                thumbColor = accentColor.color,
+                activeTrackColor = accentColor.color,
+                inactiveTrackColor = popupTheme.contentColor.copy(alpha = 0.15f)
+            )
+        )
     }
 
     Spacer(modifier = Modifier.height(8.dp))
