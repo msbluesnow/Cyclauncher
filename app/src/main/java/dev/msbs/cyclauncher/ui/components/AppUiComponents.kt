@@ -351,7 +351,8 @@ fun rememberAppIconPainter(iconKey: String, sizeDp: Int = 48): Painter {
                 .diskCachePolicy(CachePolicy.DISABLED)
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .build()
-        }
+        },
+        filterQuality = androidx.compose.ui.graphics.FilterQuality.Medium
     )
 }
 

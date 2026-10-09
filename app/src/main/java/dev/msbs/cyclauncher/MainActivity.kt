@@ -639,6 +639,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        clearPendingProfileLaunch()
+    }
+
     override fun onStop() {
         super.onStop()
         clearPendingProfileLaunch()

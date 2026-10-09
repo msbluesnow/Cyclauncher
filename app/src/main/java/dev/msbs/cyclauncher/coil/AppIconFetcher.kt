@@ -1,5 +1,6 @@
 package dev.msbs.cyclauncher.coil
 
+import android.app.ActivityManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -96,18 +97,30 @@ internal class AppIconFetcher private constructor(
     }
 
     private fun resolveTargetSize(drawable: Drawable, options: Options): Int {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        val standardSize = am?.launcherLargeIconSize?.takeIf { it > 0 }
+            ?: (context.resources.displayMetrics.density * 48).toInt()
+
         val reqPx = (options.size.width as? coil3.size.Dimension.Pixels)?.px
         if (reqPx != null && reqPx > 0) {
-            return reqPx.coerceIn(32, 288)
+            // Never render below standard launcher icon size so small preview icons (e.g. 16dp tags, 20dp menus)
+            // don't pollute the Coil MemoryCache with low-resolution bitmaps for the main UI.
+            return maxOf(reqPx, standardSize).coerceIn(48, 288)
         }
         val intrinsic = drawable.intrinsicWidth
-        return if (intrinsic > 0) intrinsic.coerceIn(48, 192) else 144
+        return if (intrinsic > 0) maxOf(intrinsic, standardSize).coerceIn(48, 288) else standardSize
     }
 
     private fun drawableToBitmap(drawable: Drawable, size: Int): Bitmap {
         val safeSize = size.coerceAtLeast(1)
         val bitmap = Bitmap.createBitmap(safeSize, safeSize, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
+
+        // Apply bilinear filtering and dithering to eliminate pixelation and banding (matching AOSP Launcher3 BaseIconFactory)
+        canvas.drawFilter = android.graphics.PaintFlagsDrawFilter(
+            android.graphics.Paint.DITHER_FLAG,
+            android.graphics.Paint.FILTER_BITMAP_FLAG
+        )
 
         val scaledPath = dev.msbs.cyclauncher.icons.IconShapeHelper.getScaledPath(context, safeSize)
 
@@ -118,6 +131,10 @@ internal class AppIconFetcher private constructor(
             drawable.setBounds(0, 0, safeSize, safeSize)
             drawable.draw(canvas)
         } else {
+            if (drawable is BitmapDrawable) {
+                drawable.isFilterBitmap = true
+                drawable.setDither(true)
+            }
             val inset = (safeSize * 0.10f).toInt()
             drawable.setBounds(inset, inset, safeSize - inset, safeSize - inset)
             drawable.draw(canvas)
@@ -128,7 +145,8 @@ internal class AppIconFetcher private constructor(
     }
 
     private fun resolveIcon(context: Context, pm: PackageManager, pkg: String, activityWithUser: String): Drawable {
-        val density = context.resources.displayMetrics.densityDpi
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        val iconDpi = am?.launcherLargeIconDensity?.takeIf { it > 0 } ?: context.resources.displayMetrics.densityDpi
         val activity = activityWithUser.substringBefore('#')
         val userHashCodeStr = activityWithUser.substringAfter('#', "")
 
@@ -148,47 +166,70 @@ internal class AppIconFetcher private constructor(
             myUser
         }
 
-        // Fast path for primary personal profile: load directly via PackageManager
+        // Fast path for primary personal profile: load high-density launcher asset via PackageManager
         if (targetUser == myUser) {
             val component = android.content.ComponentName(pkg, activity)
             try {
-                return pm.getActivityIcon(component)
+                val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    pm.getActivityInfo(component, PackageManager.ComponentInfoFlags.of(0L))
+                } else {
+                    @Suppress("DEPRECATION")
+                    pm.getActivityInfo(component, 0)
+                }
+                val iconRes = info.iconResource.takeIf { it != 0 } ?: info.applicationInfo.icon
+                if (iconRes != 0) {
+                    try {
+                        val res = pm.getResourcesForApplication(info.applicationInfo)
+                        val dr = res.getDrawableForDensity(iconRes, iconDpi, null)
+                        if (dr != null) return dr
+                    } catch (_: Exception) {}
+                }
+                return info.loadIcon(pm)
             } catch (_: Exception) {
                 try {
-                    val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        pm.getActivityInfo(component, PackageManager.ComponentInfoFlags.of(0L))
-                    } else {
-                        @Suppress("DEPRECATION")
-                        pm.getActivityInfo(component, 0)
-                    }
-                    return info.loadIcon(pm)
+                    return pm.getActivityIcon(component)
                 } catch (_: Exception) {}
             }
         }
 
-        // Secondary profiles (Work Profile / Private Space): resolve badged icon via LauncherApps
+        // Secondary profiles (Work Profile / Private Space): resolve badged icon via LauncherApps using preferred density
         val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
         if (launcherApps != null) {
             try {
                 val list = launcherApps.getActivityList(pkg, targetUser)
                 val activityInfo = list.firstOrNull { it.componentName.className == activity } ?: list.firstOrNull()
                 if (activityInfo != null) {
-                    return activityInfo.getBadgedIcon(density)
+                    return activityInfo.getBadgedIcon(iconDpi)
                 }
             } catch (_: Exception) {}
         }
 
         val component = android.content.ComponentName(pkg, activity)
         val drawable = try {
-            pm.getActivityIcon(component)
-        } catch (_: Exception) {
             val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 pm.getActivityInfo(component, PackageManager.ComponentInfoFlags.of(0L))
             } else {
                 @Suppress("DEPRECATION")
                 pm.getActivityInfo(component, 0)
             }
-            info.loadIcon(pm)
+            val iconRes = info.iconResource.takeIf { it != 0 } ?: info.applicationInfo.icon
+            if (iconRes != 0) {
+                try {
+                    val res = pm.getResourcesForApplication(info.applicationInfo)
+                    val dr = res.getDrawableForDensity(iconRes, iconDpi, null)
+                    dr ?: info.loadIcon(pm)
+                } catch (_: Exception) {
+                    info.loadIcon(pm)
+                }
+            } else {
+                info.loadIcon(pm)
+            }
+        } catch (_: Exception) {
+            try {
+                pm.getActivityIcon(component)
+            } catch (_: Exception) {
+                pm.defaultActivityIcon
+            }
         }
 
         return pm.getUserBadgedIcon(drawable, targetUser)
