@@ -161,6 +161,7 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(popupTheme.screenScrimColor)
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {

@@ -19,6 +19,16 @@ enum class PopupTheme(val displayName: String) {
         }
 
     /**
+     * Faint full-screen scrim behind Search, Settings and Highlights.
+     * Keeps wallpaper faintly visible while making text readable.
+     */
+    val screenScrimColor: Color
+        get() = when (this) {
+            DARK -> Color.Black.copy(alpha = 0.72f)
+            LIGHT -> Color(0xFFF6F6F6).copy(alpha = 0.75f)
+        }
+
+    /**
      * Solid background color for dialogs and nested cards.
      */
     val solidBackgroundColor: Color
