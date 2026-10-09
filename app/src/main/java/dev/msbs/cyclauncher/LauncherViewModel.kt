@@ -149,6 +149,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _screenScrimAlpha = MutableStateFlow(0f)
     val screenScrimAlpha: StateFlow<Float> = _screenScrimAlpha
 
+    private val _capsuleAlpha = MutableStateFlow(0f)
+    val capsuleAlpha: StateFlow<Float> = _capsuleAlpha
+
     private val _marqueeEnabled = MutableStateFlow(true)
     val marqueeEnabled: StateFlow<Boolean> = _marqueeEnabled
 
@@ -821,6 +824,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _animationsEnabled.value = prefs.getBoolean("animations_enabled", true)
         _marqueeEnabled.value = prefs.getBoolean("marquee_enabled", true)
         _screenScrimAlpha.value = prefs.getFloat("screen_scrim_alpha", 0f).coerceIn(0f, 1f)
+        _capsuleAlpha.value = prefs.getFloat("capsule_alpha", 0f).coerceIn(0f, 1f)
         _hapticFeedbackEnabled.value = prefs.getBoolean("haptic_feedback_enabled", true)
         _monochromeHistory.value = prefs.getBoolean("monochrome_history", false)
         _monochromeTags.value = prefs.getBoolean("monochrome_tags", false)
@@ -937,6 +941,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun setAnimationsEnabled(enabled: Boolean) {
         _animationsEnabled.value = enabled
         editPrefs { putBoolean("animations_enabled", enabled) }
+    }
+
+    fun setCapsuleAlpha(alpha: Float) {
+        val clamped = alpha.coerceIn(0f, 1f)
+        _capsuleAlpha.value = clamped
+        editPrefs { putFloat("capsule_alpha", clamped) }
     }
 
     fun setScreenScrimAlpha(alpha: Float) {

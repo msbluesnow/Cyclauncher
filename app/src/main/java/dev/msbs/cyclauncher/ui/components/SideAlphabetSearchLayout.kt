@@ -1,5 +1,6 @@
 package dev.msbs.cyclauncher.ui.components
 
+import dev.msbs.cyclauncher.ui.theme.capsuleColor
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.SideAlphabetSlotMode
@@ -686,7 +687,7 @@ private fun LetterTile(
     modifier: Modifier = Modifier
 ) {
     val shadow = primaryTextColor.getShadow(showShadows, LocalShadowSettings.current.shadowColorOverride)
-    val tileBackground = if (isSelected) accentColor.color.copy(alpha = 0.30f) else primaryTextColor.color.copy(alpha = 0.05f)
+    val tileBackground = if (isSelected) accentColor.color.copy(alpha = 0.30f) else primaryTextColor.capsuleColor(0.05f)
     val tileBorderColor = if (isSelected) accentColor.color else primaryTextColor.color.copy(alpha = 0.12f)
     val textColor = if (isSelected) accentColor.color else primaryTextColor.color
 

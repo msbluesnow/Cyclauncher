@@ -65,7 +65,7 @@ Cyclauncher is **not just yet another bicycle**. Built entirely with **Jetpack C
 - **Interactive Gesture Tutorial**: Guided onboarding overlay teaching launcher gestures (search, notifications, favorites & history management, Highlights navigation) with animated visualizers — 7 steps.
 - **Dynamic Favorites & History Badges**: Organize top apps with intuitive drag-and-drop reordering, and track newly installed or updated apps via subtle visual update badges in history.
 - **AI-Assisted App Tagging**: Fast batch categorization of applications with an external AI tagging workflow (Export → Process via External Prompt → Import) and full JSON backup options.
-- **Deep Theme Customization & Accessibility**: Adaptive **Hue Angle Shift** dynamic wallpaper theming, Echo Icon Theme accent palettes, interactive custom Color Picker, primary text color modes (Black/White) with adaptive wallpaper drop-shadows, customizable shadow colors, an opt-in background dim slider (black behind white text, white behind black text) for Search, Highlights and Settings, and an accessibility toggle to disable all animations including cursor blinking.
+- **Deep Theme Customization & Accessibility**: Adaptive **Hue Angle Shift** dynamic wallpaper theming, Echo Icon Theme accent palettes, interactive custom Color Picker, primary text color modes (Black/White) with adaptive wallpaper drop-shadows, customizable shadow colors, opt-in adaptive background dim and capsule contrast sliders (black behind white text, white behind black text) for Search, Highlights and Settings, and an accessibility toggle to disable all animations including cursor blinking.
 
 ## 🤝 Contributing & Help Wanted
 

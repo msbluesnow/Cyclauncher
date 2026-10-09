@@ -1,5 +1,6 @@
 package dev.msbs.cyclauncher.ui.screens
 
+import dev.msbs.cyclauncher.ui.theme.capsuleColor
 import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.HighlightWidgetConfig
 import dev.msbs.cyclauncher.LauncherViewModel
@@ -520,7 +521,7 @@ fun HighlightScreen(
                                 .fillMaxWidth()
                                 .then(if (animationsEnabled) Modifier.animateContentSize(animationSpec = tween(180)) else Modifier),
                             shape = RoundedCornerShape(18.dp),
-                            colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.05f)),
+                            colors = CardDefaults.cardColors(containerColor = primaryTextColor.capsuleColor(0.05f)),
                             border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = if (showShadows) 0.22f else 0.12f))
                         ) {
                             AnimatedContent(
@@ -763,7 +764,7 @@ private fun HighlightSectionSquare(
         shape = RoundedCornerShape(cardCornerRadius),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) accentColor.color.copy(alpha = 0.12f)
-            else primaryTextColor.color.copy(alpha = 0.05f)
+            else primaryTextColor.capsuleColor(0.05f)
         ),
         border = BorderStroke(
             width = if (isSelected) 1.5.dp else 1.dp,
@@ -789,7 +790,7 @@ private fun HighlightSectionSquare(
                     .background(
                         if (isSelected) accentColor.color.copy(alpha = 0.25f)
                         else if (data.count > 0) accentColor.color.copy(alpha = 0.16f)
-                        else primaryTextColor.color.copy(alpha = 0.08f)
+                        else primaryTextColor.capsuleColor(0.08f)
                     )
                     .border(
                         width = 1.dp,
@@ -869,7 +870,7 @@ private fun HighlightSectionOrderMenu(
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
-                .background(primaryTextColor.color.copy(alpha = 0.08f))
+                .background(primaryTextColor.capsuleColor(0.08f))
                 .border(1.dp, primaryTextColor.color.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
                 .clickable { expanded = !expanded }
                 .padding(horizontal = 6.dp, vertical = 3.dp),
@@ -1046,7 +1047,7 @@ private fun HighlightSectionHeader(
                         .clip(RoundedCornerShape(6.dp))
                         .background(
                             if (count > 0) accentColor.color.copy(alpha = 0.18f)
-                            else primaryTextColor.color.copy(alpha = 0.08f)
+                            else primaryTextColor.capsuleColor(0.08f)
                         )
                         .padding(horizontal = 7.dp, vertical = 2.dp)
                 ) {
@@ -1233,7 +1234,7 @@ private fun CompactMetricItem(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(primaryTextColor.color.copy(alpha = 0.06f))
+            .background(primaryTextColor.capsuleColor(0.06f))
             .border(1.dp, primaryTextColor.color.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
@@ -1288,7 +1289,7 @@ private fun RecentAppChip(
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(primaryTextColor.color.copy(alpha = 0.08f))
+            .background(primaryTextColor.capsuleColor(0.08f))
             .border(1.dp, primaryTextColor.color.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
             .onGloballyPositioned { touchPosition = it.positionInRoot() }
             .pointerInput(app.componentKey) {
@@ -1427,7 +1428,7 @@ private fun WidgetsSection(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.05f)),
+                    colors = CardDefaults.cardColors(containerColor = primaryTextColor.capsuleColor(0.05f)),
                     border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = if (showShadows) 0.22f else 0.12f))
                 ) {
                     Box(
@@ -1605,7 +1606,7 @@ private fun WidgetCard(
         Card(
             modifier = Modifier.fillMaxWidth(config.widthFraction),
             shape = cardShape,
-            colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.04f)),
+            colors = CardDefaults.cardColors(containerColor = primaryTextColor.capsuleColor(0.04f)),
             border = BorderStroke(0.8.dp, primaryTextColor.color.copy(alpha = if (showShadows) 0.20f else 0.10f))
         ) {
             Column(
@@ -1923,7 +1924,7 @@ private fun WidgetResizeDialog(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isSelected) accentColor.color.copy(alpha = 0.25f) else primaryTextColor.color.copy(alpha = 0.08f))
+                                    .background(if (isSelected) accentColor.color.copy(alpha = 0.25f) else primaryTextColor.capsuleColor(0.08f))
                                     .border(1.dp, if (isSelected) accentColor.color else primaryTextColor.color.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
                                     .clickable { heightDp = valDp }
                                     .padding(vertical = 6.dp),
@@ -1967,7 +1968,7 @@ private fun WidgetResizeDialog(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isSelected) accentColor.color.copy(alpha = 0.25f) else primaryTextColor.color.copy(alpha = 0.08f))
+                                    .background(if (isSelected) accentColor.color.copy(alpha = 0.25f) else primaryTextColor.capsuleColor(0.08f))
                                     .border(1.dp, if (isSelected) accentColor.color else primaryTextColor.color.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
                                     .clickable { widthFraction = wFraction }
                                     .padding(vertical = 8.dp),

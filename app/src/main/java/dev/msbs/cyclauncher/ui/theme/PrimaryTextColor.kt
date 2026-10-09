@@ -3,6 +3,8 @@ package dev.msbs.cyclauncher.ui.theme
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 
 /** Primary text color options (White/Black) with adaptive drop shadows. */
@@ -67,6 +69,24 @@ val LocalAnimationsEnabled = compositionLocalOf { true }
 
 /** Global setting for text marquee scrolling (enabled/disabled), provided via CompositionLocal. */
 val LocalMarqueeEnabled = compositionLocalOf { true }
+
+/** Opt-in capsule contrast strength (0 = legacy text-color tint), provided via CompositionLocal. */
+val LocalCapsuleAlpha = compositionLocalOf { 0f }
+
+/**
+ * Fill color for existing capsules/cards. At capsule alpha 0 keeps the legacy text-color tint [baseAlpha];
+ * otherwise uses the contrast color (black behind white text, white behind black text) at the user alpha.
+ */
+@Composable
+fun capsuleFill(textColor: Color, baseAlpha: Float): Color {
+    val userAlpha = LocalCapsuleAlpha.current
+    if (userAlpha <= 0f) return textColor.copy(alpha = baseAlpha)
+    val base = if (textColor.luminance() > 0.5f) Color.Black else Color.White
+    return base.copy(alpha = userAlpha)
+}
+
+@Composable
+fun PrimaryTextColor.capsuleColor(baseAlpha: Float): Color = capsuleFill(color, baseAlpha)
 
 /** Global version tracker for active icon pack changes, provided via CompositionLocal. */
 val LocalIconPackVersion = compositionLocalOf { 0L }

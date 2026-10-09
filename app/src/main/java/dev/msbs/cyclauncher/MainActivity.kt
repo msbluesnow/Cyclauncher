@@ -245,6 +245,7 @@ class MainActivity : ComponentActivity() {
                 val animationsEnabled by viewModel.animationsEnabled.collectAsState()
                 val marqueeEnabled by viewModel.marqueeEnabled.collectAsState()
                 val screenScrimAlpha by viewModel.screenScrimAlpha.collectAsState()
+                val capsuleAlpha by viewModel.capsuleAlpha.collectAsState()
                 val primaryTextColor by viewModel.primaryTextColor.collectAsState()
                 val hapticFeedbackEnabled by viewModel.hapticFeedbackEnabled.collectAsState()
                 val showShadows by viewModel.showShadows.collectAsState()
@@ -267,6 +268,7 @@ class MainActivity : ComponentActivity() {
                     dev.msbs.cyclauncher.ui.theme.LocalShadowSettings provides dev.msbs.cyclauncher.ui.theme.ShadowSettings(showShadows, shadowColorOverride),
                     dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled provides animationsEnabled,
                     dev.msbs.cyclauncher.ui.theme.LocalMarqueeEnabled provides marqueeEnabled,
+                    dev.msbs.cyclauncher.ui.theme.LocalCapsuleAlpha provides capsuleAlpha,
                     dev.msbs.cyclauncher.ui.theme.LocalIconPackVersion provides iconPackVersion
                 ) {
                     LaunchedEffect(hideStatusBar) {
