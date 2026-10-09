@@ -111,11 +111,13 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -483,28 +485,38 @@ fun HighlightScreen(
 
                 val isScrollable = sections.size > 4
                 val sectionsScrollState = rememberScrollState()
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .then(if (isScrollable) Modifier.horizontalScroll(sectionsScrollState) else Modifier)
-                        .padding(horizontal = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    sections.forEach { sectionData ->
-                        val itemModifier = if (isScrollable) Modifier.width(74.dp) else Modifier.weight(1f)
-                        HighlightSectionSquare(
-                            data = sectionData,
-                            isSelected = expandedSection == sectionData.section,
-                            accentColor = accentColor,
-                            primaryTextColor = primaryTextColor,
-                            showShadows = showShadows,
-                            shadowSettings = shadowSettings,
-                            animationsEnabled = animationsEnabled,
-                            onClick = {
-                                expandedSection = if (expandedSection == sectionData.section) null else sectionData.section
-                            },
-                            modifier = itemModifier.height(56.dp)
-                        )
+                val layoutDirection = if (handSide == HandSide.RIGHT) LayoutDirection.Rtl else LayoutDirection.Ltr
+
+                LaunchedEffect(handSide) {
+                    sectionsScrollState.scrollTo(0)
+                }
+
+                CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(if (isScrollable) Modifier.horizontalScroll(sectionsScrollState) else Modifier)
+                            .padding(horizontal = 24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        sections.forEach { sectionData ->
+                            val itemModifier = if (isScrollable) Modifier.width(74.dp) else Modifier.weight(1f)
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                                HighlightSectionSquare(
+                                    data = sectionData,
+                                    isSelected = expandedSection == sectionData.section,
+                                    accentColor = accentColor,
+                                    primaryTextColor = primaryTextColor,
+                                    showShadows = showShadows,
+                                    shadowSettings = shadowSettings,
+                                    animationsEnabled = animationsEnabled,
+                                    onClick = {
+                                        expandedSection = if (expandedSection == sectionData.section) null else sectionData.section
+                                    },
+                                    modifier = itemModifier.height(56.dp)
+                                )
+                            }
+                        }
                     }
                 }
 
