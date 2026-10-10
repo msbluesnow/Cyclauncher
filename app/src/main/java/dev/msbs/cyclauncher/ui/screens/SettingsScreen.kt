@@ -1,5 +1,6 @@
 package dev.msbs.cyclauncher.ui.screens
 
+import dev.msbs.cyclauncher.ui.theme.capsuleColor
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.SearchMethod
@@ -108,6 +109,8 @@ fun SettingsScreen(
     val isWpDark by viewModel.isWallpaperDark.collectAsState()
     val customCharMappings by viewModel.customCharMappings.collectAsState()
     val currentIsDefault by viewModel.isDefaultLauncherState.collectAsState()
+    val screenScrimAlpha by viewModel.screenScrimAlpha.collectAsState()
+    val capsuleAlpha by viewModel.capsuleAlpha.collectAsState()
     val selectedIconPack by viewModel.selectedIconPack.collectAsState()
     val installedIconPacks by viewModel.installedIconPacks.collectAsState()
 
@@ -185,7 +188,7 @@ fun SettingsScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.05f)),
+                colors = CardDefaults.cardColors(containerColor = primaryTextColor.capsuleColor(0.05f)),
                 border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = 0.12f))
             ) {
                 CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
@@ -263,6 +266,10 @@ fun SettingsScreen(
                             isWpDark = isWpDark,
                             animationsEnabled = animationsEnabled,
                             shadow = shadow,
+                            screenScrimAlpha = screenScrimAlpha,
+                            capsuleAlpha = capsuleAlpha,
+                            onScrimAlphaChange = { viewModel.setScreenScrimAlpha(it) },
+                            onCapsuleAlphaChange = { viewModel.setCapsuleAlpha(it) },
                             onAccentColorChange = { viewModel.setAccentColor(it) },
                             onShadowsChange = { viewModel.setShowShadows(it) },
                             onShadowColorChange = { viewModel.setShadowColor(it) },
@@ -709,7 +716,7 @@ private fun InteractionSection(
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(primaryTextColor.color.copy(alpha = 0.08f))
+                        .background(primaryTextColor.capsuleColor(0.08f))
                         .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
                         .clickable { expanded = true }
                         .padding(horizontal = 7.dp, vertical = 5.dp),
@@ -931,7 +938,7 @@ private fun StatusBarAndAnimationsSection(
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(primaryTextColor.color.copy(alpha = 0.08f))
+                            .background(primaryTextColor.capsuleColor(0.08f))
                             .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
                             .clickable { monochromeExpanded = true }
                             .padding(horizontal = 7.dp, vertical = 5.dp),
@@ -1115,7 +1122,7 @@ private fun StatusBarAndAnimationsSection(
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(primaryTextColor.color.copy(alpha = 0.08f))
+                            .background(primaryTextColor.capsuleColor(0.08f))
                             .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
                             .clickable { languageExpanded = true }
                             .padding(horizontal = 7.dp, vertical = 5.dp),
@@ -1243,7 +1250,7 @@ private fun MappingAndIconPackSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(primaryTextColor.color.copy(alpha = 0.08f))
+                    .background(primaryTextColor.capsuleColor(0.08f))
                     .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
                     .clickable(onClick = onOpenCharacterMapping)
                     .padding(horizontal = 10.dp, vertical = 6.dp),
@@ -1292,7 +1299,7 @@ private fun MappingAndIconPackSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(primaryTextColor.color.copy(alpha = 0.08f))
+                    .background(primaryTextColor.capsuleColor(0.08f))
                     .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
                     .clickable(onClick = onOpenIconPackDialog)
                     .padding(horizontal = 10.dp, vertical = 5.dp),
@@ -1334,6 +1341,10 @@ private fun ThemeAndColorsSection(
     isWpDark: Boolean,
     animationsEnabled: Boolean,
     shadow: Shadow?,
+    screenScrimAlpha: Float,
+    capsuleAlpha: Float,
+    onScrimAlphaChange: (Float) -> Unit,
+    onCapsuleAlphaChange: (Float) -> Unit,
     onAccentColorChange: (AccentColor) -> Unit,
     onShadowsChange: (Boolean) -> Unit,
     onShadowColorChange: (PrimaryTextColor) -> Unit,
@@ -1418,6 +1429,62 @@ private fun ThemeAndColorsSection(
                 }
             }
         }
+    }
+
+    var selectedLayer by remember { mutableIntStateOf(0) }
+    val isBackgroundLayer = selectedLayer == 0
+    val layerAlpha = if (isBackgroundLayer) screenScrimAlpha else capsuleAlpha
+
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(primaryTextColor.capsuleColor(0.08f))
+                .padding(2.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            listOf(R.string.settings_layer_background, R.string.settings_layer_capsules).forEachIndexed { index, labelRes ->
+                val isSelected = selectedLayer == index
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (isSelected) accentColor.color.copy(alpha = 0.25f) else Color.Transparent)
+                        .clickable { selectedLayer = index }
+                        .padding(vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(labelRes),
+                        fontSize = 12.sp,
+                        color = if (isSelected) accentColor.color else primaryTextColor.color,
+                        style = TextStyle(shadow = shadow)
+                    )
+                }
+            }
+        }
+        Text(
+            stringResource(
+                if (isBackgroundLayer) R.string.settings_background_dim_format else R.string.settings_capsule_contrast_format,
+                (layerAlpha * 100).toInt()
+            ),
+            fontSize = 11.sp,
+            color = primaryTextColor.color
+        )
+        Slider(
+            value = layerAlpha,
+            onValueChange = { if (isBackgroundLayer) onScrimAlphaChange(it) else onCapsuleAlphaChange(it) },
+            valueRange = 0f..1f,
+            colors = SliderDefaults.colors(
+                thumbColor = accentColor.color,
+                activeTrackColor = accentColor.color,
+                inactiveTrackColor = popupTheme.contentColor.copy(alpha = 0.15f)
+            )
+        )
     }
 
     Spacer(modifier = Modifier.height(8.dp))
@@ -1522,7 +1589,7 @@ private fun BackupAndTagsSection(
                 .weight(1f)
                 .height(46.dp),
             shape = RoundedCornerShape(12.dp),
-            color = primaryTextColor.color.copy(alpha = 0.07f),
+            color = primaryTextColor.capsuleColor(0.07f),
             border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.35f))
         ) {
             Row(
@@ -1575,7 +1642,7 @@ private fun BackupAndTagsSection(
                 .weight(1f)
                 .height(46.dp),
             shape = RoundedCornerShape(12.dp),
-            color = primaryTextColor.color.copy(alpha = 0.07f),
+            color = primaryTextColor.capsuleColor(0.07f),
             border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.35f))
         ) {
             Row(
@@ -1749,7 +1816,7 @@ private fun CommunityButton(
     val containerBg = if (isHighlight) {
         accentColor.color.copy(alpha = 0.16f)
     } else {
-        primaryTextColor.color.copy(alpha = 0.05f)
+        primaryTextColor.capsuleColor(0.05f)
     }
 
     val borderColor = if (isHighlight) {
@@ -1846,7 +1913,7 @@ private fun AccentColorDropdown(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
-                .background(primaryTextColor.color.copy(alpha = 0.08f))
+                .background(primaryTextColor.capsuleColor(0.08f))
                 .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
                 .clickable { showDialog = true }
                 .padding(horizontal = 12.dp, vertical = 7.dp),
@@ -2411,7 +2478,7 @@ private fun DefaultLauncherAndRelaunchRow(
                 onClick = onDefaultClick,
                 interactionSource = defaultBtnSource,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isDefault) Color.Transparent else primaryTextColor.color.copy(alpha = 0.1f)
+                    containerColor = if (isDefault) Color.Transparent else primaryTextColor.capsuleColor(0.1f)
                 ),
                 border = if (isDefault) BorderStroke(1.dp, Color.Green.copy(alpha = 0.5f)) else null,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 42.dp),
@@ -2445,7 +2512,7 @@ private fun DefaultLauncherAndRelaunchRow(
             Button(
                 onClick = onRelaunchClick,
                 interactionSource = relaunchBtnSource,
-                colors = ButtonDefaults.buttonColors(containerColor = primaryTextColor.color.copy(alpha = 0.07f)),
+                colors = ButtonDefaults.buttonColors(containerColor = primaryTextColor.capsuleColor(0.07f)),
                 border = BorderStroke(1.dp, accentColor.color.copy(alpha = 0.35f)),
                 modifier = Modifier.fillMaxWidth().heightIn(min = 42.dp),
                 shape = RoundedCornerShape(12.dp),
@@ -2500,7 +2567,7 @@ private fun SearchMethodIconOption(
     val boxWidth = if (isHorizontal) 36.dp else 22.dp
     val boxHeight = if (isHorizontal) 22.dp else 36.dp
 
-    val bgColor = if (isSelected) accentColor.color.copy(alpha = 0.25f) else primaryTextColor.color.copy(alpha = 0.05f)
+    val bgColor = if (isSelected) accentColor.color.copy(alpha = 0.25f) else primaryTextColor.capsuleColor(0.05f)
     val borderColor = if (isSelected) accentColor.color else primaryTextColor.color.copy(alpha = 0.20f)
 
     Box(
@@ -2563,7 +2630,7 @@ private fun BlackWhiteCapsuleToggle(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(primaryTextColor.color.copy(alpha = 0.1f))
+            .background(primaryTextColor.capsuleColor(0.1f))
             .clickable(onClick = onToggle)
             .padding(horizontal = 4.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,

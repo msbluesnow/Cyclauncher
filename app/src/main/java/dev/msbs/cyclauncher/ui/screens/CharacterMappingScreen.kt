@@ -1,5 +1,6 @@
 package dev.msbs.cyclauncher.ui.screens
 
+import dev.msbs.cyclauncher.ui.theme.capsuleColor
 import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.ui.theme.AccentColor
@@ -136,7 +137,7 @@ fun CharacterMappingScreen(
         ) {
             Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.05f)),
+                colors = CardDefaults.cardColors(containerColor = primaryTextColor.capsuleColor(0.05f)),
                 border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = 0.1f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -159,7 +160,7 @@ fun CharacterMappingScreen(
 
             Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.05f)),
+                colors = CardDefaults.cardColors(containerColor = primaryTextColor.capsuleColor(0.05f)),
                 border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = 0.12f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -221,7 +222,7 @@ fun CharacterMappingScreen(
                                     .fillMaxWidth()
                                     .height(54.dp)
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(primaryTextColor.color.copy(alpha = 0.08f))
+                                    .background(primaryTextColor.capsuleColor(0.08f))
                                     .border(1.dp, primaryTextColor.color.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
                                     .clickable { showTargetDropdown = true }
                                     .padding(horizontal = 12.dp),
@@ -331,7 +332,7 @@ fun CharacterMappingScreen(
 
             Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.05f)),
+                colors = CardDefaults.cardColors(containerColor = primaryTextColor.capsuleColor(0.05f)),
                 border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = 0.12f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -821,7 +822,7 @@ private fun LetterMappingRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(primaryTextColor.color.copy(alpha = 0.05f))
+            .background(primaryTextColor.capsuleColor(0.05f))
             .border(1.dp, primaryTextColor.color.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
             .clickable { if (overflowCount > 0) onOpenDetails() }
             .padding(horizontal = 10.dp, vertical = 8.dp),
@@ -862,7 +863,7 @@ private fun LetterMappingRow(
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
-                        .background(primaryTextColor.color.copy(alpha = 0.08f))
+                        .background(primaryTextColor.capsuleColor(0.08f))
                         .border(0.8.dp, primaryTextColor.color.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
                         .clickable { onRemoveSymbol(symbol) }
                         .padding(horizontal = 6.dp, vertical = 3.dp),
@@ -954,7 +955,7 @@ private fun PresetChip(
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(primaryTextColor.color.copy(alpha = 0.08f))
+            .background(primaryTextColor.capsuleColor(0.08f))
             .border(1.dp, primaryTextColor.color.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
             .clickable { onClick() }
             .padding(horizontal = 12.dp, vertical = 8.dp)

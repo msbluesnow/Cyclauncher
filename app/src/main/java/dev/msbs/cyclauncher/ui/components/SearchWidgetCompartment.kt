@@ -1,5 +1,6 @@
 package dev.msbs.cyclauncher.ui.components
 
+import dev.msbs.cyclauncher.ui.theme.capsuleColor
 import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
 import android.content.Context
@@ -329,7 +330,7 @@ private fun SingleWidgetSlot(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(12.dp))
-                .background(primaryTextColor.copy(alpha = 0.05f))
+                .background(dev.msbs.cyclauncher.ui.theme.capsuleFill(primaryTextColor, 0.05f))
                 .border(1.dp, primaryTextColor.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
                 .clickable(onClick = onPick),
             contentAlignment = Alignment.Center
@@ -463,7 +464,7 @@ fun SideSearchWidgetSlot(
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(primaryTextColor.color.copy(alpha = 0.05f))
+                    .background(primaryTextColor.capsuleColor(0.05f))
                     .border(1.dp, primaryTextColor.color.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
                     .clickable(onClick = onPickWidget),
                 contentAlignment = Alignment.Center
@@ -677,7 +678,7 @@ fun SideAlphabetWidgetSlot(
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(primaryTextColor.color.copy(alpha = 0.05f))
+                    .background(primaryTextColor.capsuleColor(0.05f))
                     .border(1.dp, primaryTextColor.color.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
                     .clickable(onClick = onPickWidget),
                 contentAlignment = Alignment.Center

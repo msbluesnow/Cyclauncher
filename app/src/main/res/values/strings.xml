@@ -205,6 +205,10 @@
     <string name="settings_hue_format">Hue (%1$d°)</string>
     <string name="settings_saturation_format">Saturation (%1$d%%)</string>
     <string name="settings_brightness_format">Brightness (%1$d%%)</string>
+    <string name="settings_background_dim_format">Background dim (%1$d%%)</string>
+    <string name="settings_layer_background">Background</string>
+    <string name="settings_layer_capsules">Capsules</string>
+    <string name="settings_capsule_contrast_format">Capsule contrast (%1$d%%)</string>
     <string name="settings_hex_code">HEX Code</string>
     <string name="settings_apply_custom_color">Apply Custom Color</string>
 

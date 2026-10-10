@@ -244,6 +244,9 @@ class MainActivity : ComponentActivity() {
                 val hideStatusBar by viewModel.hideStatusBar.collectAsState()
                 val animationsEnabled by viewModel.animationsEnabled.collectAsState()
                 val marqueeEnabled by viewModel.marqueeEnabled.collectAsState()
+                val screenScrimAlpha by viewModel.screenScrimAlpha.collectAsState()
+                val capsuleAlpha by viewModel.capsuleAlpha.collectAsState()
+                val primaryTextColor by viewModel.primaryTextColor.collectAsState()
                 val hapticFeedbackEnabled by viewModel.hapticFeedbackEnabled.collectAsState()
                 val showShadows by viewModel.showShadows.collectAsState()
                 val shadowColorOverride by viewModel.shadowColor.collectAsState()
@@ -265,6 +268,7 @@ class MainActivity : ComponentActivity() {
                     dev.msbs.cyclauncher.ui.theme.LocalShadowSettings provides dev.msbs.cyclauncher.ui.theme.ShadowSettings(showShadows, shadowColorOverride),
                     dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled provides animationsEnabled,
                     dev.msbs.cyclauncher.ui.theme.LocalMarqueeEnabled provides marqueeEnabled,
+                    dev.msbs.cyclauncher.ui.theme.LocalCapsuleAlpha provides capsuleAlpha,
                     dev.msbs.cyclauncher.ui.theme.LocalIconPackVersion provides iconPackVersion
                 ) {
                     LaunchedEffect(hideStatusBar) {
@@ -423,19 +427,21 @@ class MainActivity : ComponentActivity() {
                                                 label = "MainHighlightScreenTransition"
                                             ) { showHighlight ->
                                                 if (showHighlight) {
-                                                    HighlightScreen(
-                                                        viewModel = viewModel,
-                                                        appWidgetHost = appWidgetHost,
-                                                        appWidgetManager = appWidgetManager,
-                                                        onClose = { isHighlightScreenVisible = false },
-                                                        onAppClick = ::openApp,
-                                                        onConfigureWidget = ::startWidgetConfiguration,
-                                                        onAppLongClick = { app, offset ->
-                                                            showActionMenuFor = app
-                                                            menuOffset = offset
-                                                            menuSource = "highlight"
-                                                        }
-                                                    )
+                                                    dev.msbs.cyclauncher.ui.components.ScreenScrim(screenScrimAlpha, primaryTextColor) {
+                                                        HighlightScreen(
+                                                            viewModel = viewModel,
+                                                            appWidgetHost = appWidgetHost,
+                                                            appWidgetManager = appWidgetManager,
+                                                            onClose = { isHighlightScreenVisible = false },
+                                                            onAppClick = ::openApp,
+                                                            onConfigureWidget = ::startWidgetConfiguration,
+                                                            onAppLongClick = { app, offset ->
+                                                                showActionMenuFor = app
+                                                                menuOffset = offset
+                                                                menuSource = "highlight"
+                                                            }
+                                                        )
+                                                    }
                                                 } else {
                                                     MainMenuScreen(
                                                         viewModel = viewModel,
@@ -463,35 +469,39 @@ class MainActivity : ComponentActivity() {
                                                 }
                                             }
                                         } else {
-                                            SearchScreen(
-                                                viewModel = viewModel,
-                                                enabled = isSearchActive,
-                                                appWidgetHost = appWidgetHost,
-                                                appWidgetManager = appWidgetManager,
-                                                onConfigureWidget = ::startWidgetConfiguration,
-                                                onBackToMain = {
-                                                    scope.launch { verticalPagerState.scrollToPageCompat(0, animationsEnabled, fastAnimSpec) }
-                                                },
-                                                onAppClick = { appKey ->
-                                                    viewModel.setSelectedLetter(null)
-                                                    openApp(appKey)
-                                                },
-                                                onAppLongClick = { app, offset -> 
-                                                    showActionMenuFor = app
-                                                    menuOffset = offset
-                                                    menuSource = "search"
-                                                }
-                                            )
+                                            dev.msbs.cyclauncher.ui.components.ScreenScrim(screenScrimAlpha, primaryTextColor) {
+                                                SearchScreen(
+                                                    viewModel = viewModel,
+                                                    enabled = isSearchActive,
+                                                    appWidgetHost = appWidgetHost,
+                                                    appWidgetManager = appWidgetManager,
+                                                    onConfigureWidget = ::startWidgetConfiguration,
+                                                    onBackToMain = {
+                                                        scope.launch { verticalPagerState.scrollToPageCompat(0, animationsEnabled, fastAnimSpec) }
+                                                    },
+                                                    onAppClick = { appKey ->
+                                                        viewModel.setSelectedLetter(null)
+                                                        openApp(appKey)
+                                                    },
+                                                    onAppLongClick = { app, offset -> 
+                                                        showActionMenuFor = app
+                                                        menuOffset = offset
+                                                        menuSource = "search"
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
                                 } else {
-                                    SettingsScreen(
-                                        viewModel = viewModel,
-                                        enabled = isSettingsActive,
-                                        onBack = {
-                                            scope.launch { horizontalPagerState.scrollToPageCompat(0, animationsEnabled, fastAnimSpec) }
-                                        }
-                                    )
+                                    dev.msbs.cyclauncher.ui.components.ScreenScrim(screenScrimAlpha, primaryTextColor) {
+                                        SettingsScreen(
+                                            viewModel = viewModel,
+                                            enabled = isSettingsActive,
+                                            onBack = {
+                                                scope.launch { horizontalPagerState.scrollToPageCompat(0, animationsEnabled, fastAnimSpec) }
+                                            }
+                                        )
+                                    }
                                 }
                             }
 

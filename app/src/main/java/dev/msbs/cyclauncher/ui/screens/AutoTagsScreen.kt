@@ -1,5 +1,6 @@
 package dev.msbs.cyclauncher.ui.screens
 
+import dev.msbs.cyclauncher.ui.theme.capsuleColor
 import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.ui.theme.AccentColor
@@ -123,7 +124,7 @@ fun AutoTagsScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.05f)),
+                colors = CardDefaults.cardColors(containerColor = primaryTextColor.capsuleColor(0.05f)),
                 border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = 0.12f))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -179,7 +180,7 @@ fun AutoTagsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(primaryTextColor.color.copy(alpha = 0.08f))
+                            .background(primaryTextColor.capsuleColor(0.08f))
                             .border(
                                 1.dp,
                                 primaryTextColor.color.copy(alpha = 0.15f),
