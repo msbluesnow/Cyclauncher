@@ -32,6 +32,7 @@
     <string name="history_menu_title">History</string>
     <string name="history_menu_paused">(Paused)</string>
     <string name="history_menu_edit">Edit History</string>
+    <string name="history_menu_done_edit">Done Editing</string>
     <string name="history_menu_pause">Pause Recording</string>
     <string name="history_menu_resume">Resume Recording</string>
     <string name="history_menu_clear">Clear History</string>
@@ -88,6 +89,10 @@
     <string name="search_apps_placeholder">Search apps…</string>
     <string name="search_close_content_description">Close search</string>
     <string name="palette_done_editing">Done Editing</string>
+    <string name="side_overlay_colors_title">Colors</string>
+    <string name="side_overlay_reset">Reset</string>
+    <string name="side_overlay_history_empty">Search history is empty</string>
+    <string name="side_overlay_history_desc">Manage history (clear, pause)</string>
 
     <!-- Swipe Down Quick Actions Overlay -->
     <string name="quick_action_notifications_title">Notifications</string>
@@ -364,6 +369,9 @@
     <string name="tutorial_step7_title">History Position Shift</string>
     <string name="tutorial_step7_desc">Swipe UP on the History list when it is at the bottom to shift it to the top section of the screen. Swipe DOWN on the Tags area when history is at the top to swap their positions.</string>
     <string name="tutorial_step7_hint">Swipe UP on History or DOWN on Tags area!</string>
+    <string name="tutorial_step8_title">Quick Palette — Colors &amp; History</string>
+    <string name="tutorial_step8_desc">Tap the bar above the Alphabet Grid in search to open the quick palette. Tap any color to filter apps or tap the history card to manage history.</string>
+    <string name="tutorial_step8_hint">Tap the bar above the grid, then choose an action!</string>
 
     <!-- Toast & Feedback Messages -->
     <string name="toast_removed_from_favorites">Removed \"%1$s\" from Favorites</string>

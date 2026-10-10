@@ -32,8 +32,6 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.HistoryToggleOff
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.HistoryToggleOff
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.graphicsLayer
@@ -90,6 +88,7 @@ fun SideAlphabetSearchLayout(
     val historyApps by viewModel.searchHistoryApps.collectAsState()
     val showSearchHistory by viewModel.showSearchHistory.collectAsState()
     val sideAlphabetSlotMode by viewModel.sideAlphabetSlotMode.collectAsState()
+    val sideAlphabetWidgetId by viewModel.sideAlphabetWidgetId.collectAsState()
     val showSearchWidgets by viewModel.showSearchWidgets.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
@@ -129,9 +128,17 @@ fun SideAlphabetSearchLayout(
 
     var selectedHistoryMenuOffset by remember { mutableStateOf<Offset?>(null) }
     var isHistoryEditMode by remember { mutableStateOf(false) }
+    var quickPaletteOverlayState by remember { mutableStateOf<QuickPaletteOverlayState?>(null) }
 
     LaunchedEffect(historyApps.isEmpty()) {
         if (historyApps.isEmpty()) {
+            isHistoryEditMode = false
+            selectedHistoryMenuOffset = null
+        }
+    }
+
+    LaunchedEffect(sideAlphabetSlotMode) {
+        if (sideAlphabetSlotMode != SideAlphabetSlotMode.HISTORY) {
             isHistoryEditMode = false
             selectedHistoryMenuOffset = null
         }
@@ -141,11 +148,14 @@ fun SideAlphabetSearchLayout(
         if (selectedLetter != null || selectedColor != null) {
             isHistoryEditMode = false
             selectedHistoryMenuOffset = null
+            quickPaletteOverlayState = null
         }
     }
 
-    BackHandler(enabled = isHistoryEditMode || selectedHistoryMenuOffset != null) {
-        if (selectedHistoryMenuOffset != null) {
+    BackHandler(enabled = quickPaletteOverlayState != null || isHistoryEditMode || selectedHistoryMenuOffset != null) {
+        if (quickPaletteOverlayState != null) {
+            quickPaletteOverlayState = null
+        } else if (selectedHistoryMenuOffset != null) {
             selectedHistoryMenuOffset = null
         } else {
             isHistoryEditMode = false
@@ -161,6 +171,10 @@ fun SideAlphabetSearchLayout(
         ) {
         val totalWidth = maxWidth
         val totalHeight = maxHeight
+
+        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+        val fullScreenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+        val fullScreenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
 
         val swapIconWidth = 36.dp
         val fixedAlphabetWidth = totalWidth * 0.4045f
@@ -190,7 +204,7 @@ fun SideAlphabetSearchLayout(
                         ) {
                             when (sideAlphabetSlotMode) {
                                 SideAlphabetSlotMode.HISTORY -> {
-                                    if (historyApps.isNotEmpty()) {
+                                    if (historyApps.isNotEmpty() || isHistoryEditMode) {
                                         SideSearchHistoryBlock(
                                             history = historyApps,
                                             accentColor = accentColor,
@@ -228,27 +242,25 @@ fun SideAlphabetSearchLayout(
                                 }
                             }
 
-                            SideAlphabetColorHeader(
+                            SideAlphabetColorTriggerBar(
                                 selectedColor = selectedColor,
-                                onColorSelected = { color ->
-                                    viewModel.setSelectedColor(color)
-                                },
-                                showHistoryIcon = sideAlphabetSlotMode == SideAlphabetSlotMode.HISTORY && (historyApps.isNotEmpty() || isHistoryEditMode),
-                                isHistoryEditMode = isHistoryEditMode,
+                                slotMode = sideAlphabetSlotMode,
                                 isHistoryPaused = isHistoryPaused,
+                                isHistoryEditMode = isHistoryEditMode,
                                 accentColor = accentColor,
                                 primaryTextColor = primaryTextColor,
                                 showShadows = showShadows,
                                 shadowSettings = shadowSettings,
-                                onHistoryIconLongPress = { offset ->
-                                    selectedHistoryMenuOffset = offset
-                                },
-                                onExitEditMode = {
-                                    isHistoryEditMode = false
+                                onClick = { anchor ->
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    quickPaletteOverlayState = QuickPaletteOverlayState(
+                                        anchorPosition = anchor,
+                                        handSide = handSide
+                                    )
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(start = 4.dp, end = 4.dp, bottom = 6.dp)
+                                    .padding(start = 4.dp, end = 4.dp, bottom = 4.dp)
                             )
 
                             SideAlphabetGrid(
@@ -331,7 +343,7 @@ fun SideAlphabetSearchLayout(
                         ) {
                             when (sideAlphabetSlotMode) {
                                 SideAlphabetSlotMode.HISTORY -> {
-                                    if (historyApps.isNotEmpty()) {
+                                    if (historyApps.isNotEmpty() || isHistoryEditMode) {
                                         SideSearchHistoryBlock(
                                             history = historyApps,
                                             accentColor = accentColor,
@@ -369,27 +381,25 @@ fun SideAlphabetSearchLayout(
                                 }
                             }
 
-                            SideAlphabetColorHeader(
+                            SideAlphabetColorTriggerBar(
                                 selectedColor = selectedColor,
-                                onColorSelected = { color ->
-                                    viewModel.setSelectedColor(color)
-                                },
-                                showHistoryIcon = sideAlphabetSlotMode == SideAlphabetSlotMode.HISTORY && (historyApps.isNotEmpty() || isHistoryEditMode),
-                                isHistoryEditMode = isHistoryEditMode,
+                                slotMode = sideAlphabetSlotMode,
                                 isHistoryPaused = isHistoryPaused,
+                                isHistoryEditMode = isHistoryEditMode,
                                 accentColor = accentColor,
                                 primaryTextColor = primaryTextColor,
                                 showShadows = showShadows,
                                 shadowSettings = shadowSettings,
-                                onHistoryIconLongPress = { offset ->
-                                    selectedHistoryMenuOffset = offset
-                                },
-                                onExitEditMode = {
-                                    isHistoryEditMode = false
+                                onClick = { anchor ->
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    quickPaletteOverlayState = QuickPaletteOverlayState(
+                                        anchorPosition = anchor,
+                                        handSide = handSide
+                                    )
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(start = 4.dp, end = 4.dp, bottom = 6.dp)
+                                    .padding(start = 4.dp, end = 4.dp, bottom = 4.dp)
                             )
 
                             SideAlphabetGrid(
@@ -457,12 +467,13 @@ fun SideAlphabetSearchLayout(
     selectedHistoryMenuOffset?.let { offset ->
         HistoryActionMenu(
             isHistoryPaused = isHistoryPaused,
+            isEditMode = isHistoryEditMode,
             hasHistoryItems = historyApps.isNotEmpty(),
             offset = offset,
             onDismiss = { selectedHistoryMenuOffset = null },
             onEditHistory = {
                 selectedHistoryMenuOffset = null
-                isHistoryEditMode = true
+                isHistoryEditMode = !isHistoryEditMode
             },
             onTogglePause = {
                 selectedHistoryMenuOffset = null
@@ -475,6 +486,40 @@ fun SideAlphabetSearchLayout(
             accentColor = accentColor,
             primaryTextColor = primaryTextColor,
             popupTheme = popupTheme
+        )
+    }
+
+    quickPaletteOverlayState?.let { overlayState ->
+        QuickPaletteOverlay(
+            state = overlayState,
+            selectedColor = selectedColor,
+            isHistoryPaused = isHistoryPaused,
+            slotMode = sideAlphabetSlotMode,
+            isHistoryEditMode = isHistoryEditMode,
+            hasWidget = sideAlphabetWidgetId != null,
+            accentColor = accentColor,
+            primaryTextColor = primaryTextColor,
+            popupTheme = popupTheme,
+            onSelectColor = { color ->
+                val newColor = if (selectedColor == color) null else color
+                viewModel.setSelectedColor(newColor)
+                quickPaletteOverlayState = null
+            },
+            onOpenHistoryMenu = { offset ->
+                quickPaletteOverlayState = null
+                if (isHistoryEditMode) {
+                    isHistoryEditMode = false
+                } else {
+                    selectedHistoryMenuOffset = offset
+                }
+            },
+            onOpenWidgetAction = {
+                quickPaletteOverlayState = null
+                onPickSideAlphabetWidget()
+            },
+            onDismiss = {
+                quickPaletteOverlayState = null
+            }
         )
     }
 }
