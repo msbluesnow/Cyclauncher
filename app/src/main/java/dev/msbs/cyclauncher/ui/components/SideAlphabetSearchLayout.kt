@@ -1,6 +1,7 @@
 package dev.msbs.cyclauncher.ui.components
 
 import dev.msbs.cyclauncher.ui.theme.capsuleColor
+import dev.msbs.cyclauncher.ui.theme.capsuleBorderColor
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.SideAlphabetSlotMode
@@ -560,7 +561,7 @@ private fun SwapSemiCircleButton(
                 if (isBeingDragged) {
                     accentColor.color.copy(alpha = 0.28f)
                 } else {
-                    primaryTextColor.color.copy(alpha = 0.14f)
+                    primaryTextColor.capsuleColor(0.08f)
                 }
             )
             .border(
@@ -568,7 +569,7 @@ private fun SwapSemiCircleButton(
                 if (isBeingDragged) {
                     accentColor.color.copy(alpha = 0.6f)
                 } else {
-                    primaryTextColor.color.copy(alpha = 0.22f)
+                    primaryTextColor.capsuleBorderColor(0.20f)
                 },
                 shape
             )
@@ -732,8 +733,8 @@ private fun LetterTile(
     modifier: Modifier = Modifier
 ) {
     val shadow = primaryTextColor.getShadow(showShadows, LocalShadowSettings.current.shadowColorOverride)
-    val tileBackground = if (isSelected) accentColor.color.copy(alpha = 0.30f) else primaryTextColor.capsuleColor(0.05f)
-    val tileBorderColor = if (isSelected) accentColor.color else primaryTextColor.color.copy(alpha = 0.12f)
+    val tileBackground = if (isSelected) accentColor.color.copy(alpha = 0.30f) else primaryTextColor.capsuleColor(0.08f)
+    val tileBorderColor = if (isSelected) accentColor.color else primaryTextColor.capsuleBorderColor(0.12f)
     val textColor = if (isSelected) accentColor.color else primaryTextColor.color
 
     Box(

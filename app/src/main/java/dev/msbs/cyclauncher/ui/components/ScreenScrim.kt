@@ -10,16 +10,16 @@ import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
 /**
  * Optional background dim behind a screen. Opt-in via settings (alpha 0 = fully transparent).
- * Scrim is the contrast color for the text: black behind white text, white behind black text.
+ * Scrim is black or white based on [isDark].
  */
 @Composable
 fun ScreenScrim(
     alpha: Float,
-    textColor: PrimaryTextColor,
+    isDark: Boolean,
     content: @Composable () -> Unit
 ) {
     val modifier = if (alpha > 0f) {
-        val scrimBase = if (textColor == PrimaryTextColor.WHITE) Color.Black else Color.White
+        val scrimBase = if (isDark) Color.Black else Color.White
         Modifier.fillMaxSize().background(scrimBase.copy(alpha = alpha))
     } else {
         Modifier.fillMaxSize()
@@ -28,3 +28,10 @@ fun ScreenScrim(
         content()
     }
 }
+
+@Composable
+fun ScreenScrim(
+    alpha: Float,
+    textColor: PrimaryTextColor,
+    content: @Composable () -> Unit
+) = ScreenScrim(alpha, isDark = textColor != PrimaryTextColor.BLACK, content = content)

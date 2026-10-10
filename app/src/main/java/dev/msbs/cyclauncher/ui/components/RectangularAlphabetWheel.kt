@@ -3,6 +3,7 @@ package dev.msbs.cyclauncher.ui.components
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
+import dev.msbs.cyclauncher.ui.theme.capsuleBorderColor
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 
 import android.graphics.Paint
@@ -313,7 +314,8 @@ fun RectangularAlphabetWheel(
                     stepSize = stepSize,
                     onAppClick = onAppClick,
                     onAppLongClick = onAppLongClick,
-                    scaleFactor = scaleFactor
+                    scaleFactor = scaleFactor,
+                    primaryTextColor = primaryTextColor
                 )
             }
         }
@@ -332,7 +334,8 @@ fun AppsGrid(
     stepSize: Dp,
     onAppClick: (String) -> Unit,
     onAppLongClick: (String, Offset) -> Unit,
-    scaleFactor: Float
+    scaleFactor: Float,
+    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE
 ) {
     val displayApps = apps.take(20)
     if (displayApps.isEmpty()) return
@@ -386,7 +389,7 @@ fun AppsGrid(
                 .clip(CircleShape)
                 .border(
                     width = 1.dp,
-                    color = Color.White.copy(alpha = 0.15f),
+                    color = primaryTextColor.capsuleBorderColor(0.15f),
                     shape = CircleShape
                 )
                 .pointerInput(app.componentKey) {

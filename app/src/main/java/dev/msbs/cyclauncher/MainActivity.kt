@@ -245,7 +245,10 @@ class MainActivity : ComponentActivity() {
                 val animationsEnabled by viewModel.animationsEnabled.collectAsState()
                 val marqueeEnabled by viewModel.marqueeEnabled.collectAsState()
                 val screenScrimAlpha by viewModel.screenScrimAlpha.collectAsState()
+                val screenScrimIsDark by viewModel.screenScrimIsDark.collectAsState()
                 val capsuleAlpha by viewModel.capsuleAlpha.collectAsState()
+                val capsuleIsDark by viewModel.capsuleIsDark.collectAsState()
+                val popupAlpha by viewModel.popupAlpha.collectAsState()
                 val primaryTextColor by viewModel.primaryTextColor.collectAsState()
                 val hapticFeedbackEnabled by viewModel.hapticFeedbackEnabled.collectAsState()
                 val showShadows by viewModel.showShadows.collectAsState()
@@ -269,6 +272,8 @@ class MainActivity : ComponentActivity() {
                     dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled provides animationsEnabled,
                     dev.msbs.cyclauncher.ui.theme.LocalMarqueeEnabled provides marqueeEnabled,
                     dev.msbs.cyclauncher.ui.theme.LocalCapsuleAlpha provides capsuleAlpha,
+                    dev.msbs.cyclauncher.ui.theme.LocalCapsuleIsDark provides capsuleIsDark,
+                    dev.msbs.cyclauncher.ui.theme.LocalPopupAlpha provides popupAlpha,
                     dev.msbs.cyclauncher.ui.theme.LocalIconPackVersion provides iconPackVersion
                 ) {
                     LaunchedEffect(hideStatusBar) {
@@ -427,7 +432,7 @@ class MainActivity : ComponentActivity() {
                                                 label = "MainHighlightScreenTransition"
                                             ) { showHighlight ->
                                                 if (showHighlight) {
-                                                    dev.msbs.cyclauncher.ui.components.ScreenScrim(screenScrimAlpha, primaryTextColor) {
+                                                    dev.msbs.cyclauncher.ui.components.ScreenScrim(screenScrimAlpha, isDark = screenScrimIsDark) {
                                                         HighlightScreen(
                                                             viewModel = viewModel,
                                                             appWidgetHost = appWidgetHost,
@@ -469,7 +474,7 @@ class MainActivity : ComponentActivity() {
                                                 }
                                             }
                                         } else {
-                                            dev.msbs.cyclauncher.ui.components.ScreenScrim(screenScrimAlpha, primaryTextColor) {
+                                            dev.msbs.cyclauncher.ui.components.ScreenScrim(screenScrimAlpha, isDark = screenScrimIsDark) {
                                                 SearchScreen(
                                                     viewModel = viewModel,
                                                     enabled = isSearchActive,
@@ -493,7 +498,7 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 } else {
-                                    dev.msbs.cyclauncher.ui.components.ScreenScrim(screenScrimAlpha, primaryTextColor) {
+                                    dev.msbs.cyclauncher.ui.components.ScreenScrim(screenScrimAlpha, isDark = screenScrimIsDark) {
                                         SettingsScreen(
                                             viewModel = viewModel,
                                             enabled = isSettingsActive,

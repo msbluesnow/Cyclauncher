@@ -206,7 +206,10 @@
     <string name="settings_background_dim_format">Затемнение фона (%1$d%%)</string>
     <string name="settings_layer_background">Фон</string>
     <string name="settings_layer_capsules">Капсулы</string>
+    <string name="settings_layer_popup">Поп-ап</string>
     <string name="settings_capsule_contrast_format">Контраст капсул (%1$d%%)</string>
+    <string name="settings_contrast_and_scrim_title">Фон и капсулы</string>
+    <string name="settings_contrast_summary_format">Фон: %1$d%% • Капсулы: %2$d%% • Поп-ап: %3$d%%</string>
     <string name="settings_hex_code">HEX код</string>
     <string name="settings_apply_custom_color">Применить свой цвет</string>
 

@@ -149,8 +149,17 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _screenScrimAlpha = MutableStateFlow(0f)
     val screenScrimAlpha: StateFlow<Float> = _screenScrimAlpha
 
+    private val _screenScrimIsDark = MutableStateFlow(true)
+    val screenScrimIsDark: StateFlow<Boolean> = _screenScrimIsDark
+
     private val _capsuleAlpha = MutableStateFlow(0f)
     val capsuleAlpha: StateFlow<Float> = _capsuleAlpha
+
+    private val _capsuleIsDark = MutableStateFlow(true)
+    val capsuleIsDark: StateFlow<Boolean> = _capsuleIsDark
+
+    private val _popupAlpha = MutableStateFlow(0.81f)
+    val popupAlpha: StateFlow<Float> = _popupAlpha
 
     private val _marqueeEnabled = MutableStateFlow(true)
     val marqueeEnabled: StateFlow<Boolean> = _marqueeEnabled
@@ -825,6 +834,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _marqueeEnabled.value = prefs.getBoolean("marquee_enabled", true)
         _screenScrimAlpha.value = prefs.getFloat("screen_scrim_alpha", 0f).coerceIn(0f, 1f)
         _capsuleAlpha.value = prefs.getFloat("capsule_alpha", 0f).coerceIn(0f, 1f)
+        val defaultDark = _primaryTextColor.value != PrimaryTextColor.BLACK
+        _screenScrimIsDark.value = prefs.getBoolean("screen_scrim_is_dark", defaultDark)
+        _capsuleIsDark.value = prefs.getBoolean("capsule_is_dark", defaultDark)
+        _popupAlpha.value = prefs.getFloat("popup_alpha", 0.81f).coerceIn(0f, 1f)
         _hapticFeedbackEnabled.value = prefs.getBoolean("haptic_feedback_enabled", true)
         _monochromeHistory.value = prefs.getBoolean("monochrome_history", false)
         _monochromeTags.value = prefs.getBoolean("monochrome_tags", false)
@@ -839,6 +852,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val initialLastAlphabet = try { SearchMethod.valueOf(savedLastAlphabet) } catch (e: Exception) { SearchMethod.SIDE_ALPHABET }
         lastAlphabetSearchMethod = if (initialLastAlphabet == SearchMethod.TEXT) SearchMethod.SIDE_ALPHABET else initialLastAlphabet
 
+        _sideAlphabetSlotMode.value = loadSideAlphabetSlotMode()
         _sideAlphabetButtonYRatio.value = prefs.getFloat("side_alphabet_button_y_ratio", 0.23f).coerceIn(0.05f, 0.85f)
         _highlightSectionOrder.value = loadHighlightSectionOrder()
     }
@@ -955,6 +969,22 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         editPrefs { putFloat("screen_scrim_alpha", clamped) }
     }
 
+    fun setScreenScrimIsDark(isDark: Boolean) {
+        _screenScrimIsDark.value = isDark
+        editPrefs { putBoolean("screen_scrim_is_dark", isDark) }
+    }
+
+    fun setCapsuleIsDark(isDark: Boolean) {
+        _capsuleIsDark.value = isDark
+        editPrefs { putBoolean("capsule_is_dark", isDark) }
+    }
+
+    fun setPopupAlpha(alpha: Float) {
+        val clamped = alpha.coerceIn(0f, 1f)
+        _popupAlpha.value = clamped
+        editPrefs { putFloat("popup_alpha", clamped) }
+    }
+
     fun setMarqueeEnabled(enabled: Boolean) {
         _marqueeEnabled.value = enabled
         editPrefs { putBoolean("marquee_enabled", enabled) }
@@ -1009,6 +1039,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun setPrimaryTextColor(color: PrimaryTextColor) {
         _primaryTextColor.value = color
         editPrefs { putString("primary_text_color", color.name) }
+        val isDarkDefault = color != PrimaryTextColor.BLACK
+        if (!prefs.contains("screen_scrim_is_dark")) {
+            _screenScrimIsDark.value = isDarkDefault
+        }
+        if (!prefs.contains("capsule_is_dark")) {
+            _capsuleIsDark.value = isDarkDefault
+        }
     }
 
     fun setButtonTextColor(color: PrimaryTextColor) {

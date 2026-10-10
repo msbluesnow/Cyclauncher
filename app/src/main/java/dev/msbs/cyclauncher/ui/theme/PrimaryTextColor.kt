@@ -73,20 +73,50 @@ val LocalMarqueeEnabled = compositionLocalOf { true }
 /** Opt-in capsule contrast strength (0 = legacy text-color tint), provided via CompositionLocal. */
 val LocalCapsuleAlpha = compositionLocalOf { 0f }
 
+/** Capsule base color toggle: true for Black capsules, false for White capsules. */
+val LocalCapsuleIsDark = compositionLocalOf { true }
+
+/** Opt-in popup opacity strength (default 0.81f = 81% opaque, 19% transparent), provided via CompositionLocal. */
+val LocalPopupAlpha = compositionLocalOf { 0.81f }
+
 /**
- * Fill color for existing capsules/cards. At capsule alpha 0 keeps the legacy text-color tint [baseAlpha];
- * otherwise uses the contrast color (black behind white text, white behind black text) at the user alpha.
+ * Fill color for existing capsules, cards, and interactive chips.
+ *
+ * Design principles:
+ * 1. Base color is configured via [LocalCapsuleIsDark] (defaults to opposite of text luminance),
+ *    guaranteeing immediate readability over wallpaper by default.
+ * 2. Visual hierarchy between 1st-order containers (outer cards) and 2nd-order nested elements (buttons/chips)
+ *    is strictly preserved:
+ *    - 2nd-order / nested elements ([isNested] = true) can scale up to 100% opacity (1.0f, solid) at max slider.
+ *    - 1st-order / bottom containers ([isNested] = false) cap at 81% opacity (0.81f, exactly 19% lower),
+ *      guaranteeing that nested items NEVER blend into the parent background even at maximum opacity.
  */
 @Composable
-fun capsuleFill(textColor: Color, baseAlpha: Float): Color {
-    val userAlpha = LocalCapsuleAlpha.current
-    if (userAlpha <= 0f) return textColor.copy(alpha = baseAlpha)
-    val base = if (textColor.luminance() > 0.5f) Color.Black else Color.White
-    return base.copy(alpha = userAlpha)
+fun capsuleFill(textColor: Color, baseAlpha: Float, isNested: Boolean = false): Color {
+    val isDark = LocalCapsuleIsDark.current
+    val contrastColor = if (isDark) Color.Black else Color.White
+    val userBoost = LocalCapsuleAlpha.current.coerceIn(0f, 1f)
+    val maxAlpha = if (isNested) 1.0f else 0.81f
+    val effectiveAlpha = (baseAlpha + (maxAlpha - baseAlpha) * userBoost).coerceIn(0f, 1f)
+    return contrastColor.copy(alpha = effectiveAlpha)
 }
 
 @Composable
-fun PrimaryTextColor.capsuleColor(baseAlpha: Float): Color = capsuleFill(color, baseAlpha)
+fun PrimaryTextColor.capsuleColor(baseAlpha: Float, isNested: Boolean = false): Color =
+    capsuleFill(color, baseAlpha, isNested)
+
+/**
+ * Proportional border color for capsules, ensuring crisp outline definition
+ * even when strong background dimming is active.
+ */
+@Composable
+fun PrimaryTextColor.capsuleBorderColor(baseAlpha: Float = 0.15f): Color {
+    val isDark = LocalCapsuleIsDark.current
+    val baseBorder = if (isDark) Color.White else Color.Black
+    val userBoost = LocalCapsuleAlpha.current.coerceIn(0f, 1f)
+    val effectiveAlpha = (baseAlpha * (1f + userBoost * 1.5f)).coerceIn(0f, 0.50f)
+    return baseBorder.copy(alpha = effectiveAlpha)
+}
 
 /** Global version tracker for active icon pack changes, provided via CompositionLocal. */
 val LocalIconPackVersion = compositionLocalOf { 0L }

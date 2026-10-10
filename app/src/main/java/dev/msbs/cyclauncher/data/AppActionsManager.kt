@@ -1036,7 +1036,9 @@ class AppActionsManager(context: Context) {
             "show_search_widgets", "show_search_history", "animations_enabled",
             "marquee_enabled", "haptic_feedback_enabled", "monochrome_history", "monochrome_favorites",
             "monochrome_tags", "search_method", "side_alphabet_button_y_ratio",
-            "icon_pack_package", "show_keep_android_open_days"
+            "side_alphabet_slot_mode",
+            "icon_pack_package", "show_keep_android_open_days",
+            "screen_scrim_alpha", "screen_scrim_is_dark", "capsule_alpha", "capsule_is_dark", "popup_alpha"
         )
         settingsKeys.forEach { key ->
             if (prefs.contains(key)) {
@@ -1436,7 +1438,8 @@ class AppActionsManager(context: Context) {
                     "false" -> editor.putBoolean(key, false)
                     else -> {
                         val floatVal = value.toFloatOrNull()
-                        if (floatVal != null && key.contains("ratio")) {
+                        val isFloatKey = key.endsWith("_alpha") || key.contains("ratio")
+                        if (floatVal != null && isFloatKey) {
                             editor.putFloat(key, floatVal)
                         } else {
                             editor.putString(key, value)

@@ -12,20 +12,24 @@ enum class PopupTheme(val displayName: String) {
     /**
      * Translucent background color for floating popups and menus.
      */
+    fun backgroundColor(alpha: Float = 0.81f): Color = when (this) {
+        DARK -> Color.Black.copy(alpha = alpha)
+        LIGHT -> Color(0xFFF6F6F6).copy(alpha = alpha)
+    }
+
     val backgroundColor: Color
-        get() = when (this) {
-            DARK -> Color.Black.copy(alpha = 0.88f)
-            LIGHT -> Color(0xFFF6F6F6).copy(alpha = 0.95f)
-        }
+        get() = backgroundColor(0.81f)
 
     /**
      * Solid background color for dialogs and nested cards.
      */
+    fun solidBackgroundColor(alpha: Float = 0.81f): Color = when (this) {
+        DARK -> Color(0xFF1E1E1E).copy(alpha = alpha)
+        LIGHT -> Color(0xFFF2F2F2).copy(alpha = alpha)
+    }
+
     val solidBackgroundColor: Color
-        get() = when (this) {
-            DARK -> Color(0xFF1E1E1E)
-            LIGHT -> Color(0xFFF2F2F2)
-        }
+        get() = solidBackgroundColor(0.81f)
 
     /**
      * Primary text and icon color inside the popup.

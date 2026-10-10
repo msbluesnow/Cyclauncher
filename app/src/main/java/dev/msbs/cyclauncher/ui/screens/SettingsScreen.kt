@@ -1,6 +1,7 @@
 package dev.msbs.cyclauncher.ui.screens
 
 import dev.msbs.cyclauncher.ui.theme.capsuleColor
+import dev.msbs.cyclauncher.ui.theme.capsuleBorderColor
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.SearchMethod
@@ -50,12 +51,19 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.snap
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -110,7 +118,10 @@ fun SettingsScreen(
     val customCharMappings by viewModel.customCharMappings.collectAsState()
     val currentIsDefault by viewModel.isDefaultLauncherState.collectAsState()
     val screenScrimAlpha by viewModel.screenScrimAlpha.collectAsState()
+    val screenScrimIsDark by viewModel.screenScrimIsDark.collectAsState()
     val capsuleAlpha by viewModel.capsuleAlpha.collectAsState()
+    val capsuleIsDark by viewModel.capsuleIsDark.collectAsState()
+    val popupAlpha by viewModel.popupAlpha.collectAsState()
     val selectedIconPack by viewModel.selectedIconPack.collectAsState()
     val installedIconPacks by viewModel.installedIconPacks.collectAsState()
 
@@ -189,7 +200,7 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = primaryTextColor.capsuleColor(0.05f)),
-                border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = 0.12f))
+                border = BorderStroke(1.dp, primaryTextColor.capsuleBorderColor(0.12f))
             ) {
                 CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -267,9 +278,15 @@ fun SettingsScreen(
                             animationsEnabled = animationsEnabled,
                             shadow = shadow,
                             screenScrimAlpha = screenScrimAlpha,
+                            screenScrimIsDark = screenScrimIsDark,
                             capsuleAlpha = capsuleAlpha,
+                            capsuleIsDark = capsuleIsDark,
+                            popupAlpha = popupAlpha,
                             onScrimAlphaChange = { viewModel.setScreenScrimAlpha(it) },
+                            onScrimIsDarkChange = { viewModel.setScreenScrimIsDark(it) },
                             onCapsuleAlphaChange = { viewModel.setCapsuleAlpha(it) },
+                            onCapsuleIsDarkChange = { viewModel.setCapsuleIsDark(it) },
+                            onPopupAlphaChange = { viewModel.setPopupAlpha(it) },
                             onAccentColorChange = { viewModel.setAccentColor(it) },
                             onShadowsChange = { viewModel.setShowShadows(it) },
                             onShadowColorChange = { viewModel.setShadowColor(it) },
@@ -292,6 +309,9 @@ fun SettingsScreen(
                                 viewModel.setShadowColor(targetShadowColor)
                                 viewModel.setButtonTextColor(targetBtnText)
                                 viewModel.setPopupTheme(targetPopupTheme)
+                                val targetDark = targetMainColor != PrimaryTextColor.BLACK
+                                viewModel.setScreenScrimIsDark(targetDark)
+                                viewModel.setCapsuleIsDark(targetDark)
                             }
                         )
 
@@ -478,27 +498,28 @@ private fun CircleActionButton(
     isSelected: Boolean,
     contentDescription: String?,
     accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
     selectedIconTint: Color,
     showShadows: Boolean,
-    isWpDark: Boolean,
     animationsEnabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val inactiveBaseColor = if (isWpDark) Color.White else Color.Black
+    val unselectedBg = primaryTextColor.capsuleColor(0.08f, isNested = true)
+    val unselectedBorder = primaryTextColor.capsuleBorderColor(0.15f)
 
     val buttonBg by animateColorAsState(
-        targetValue = if (isSelected) accentColor.color else inactiveBaseColor.copy(alpha = 0.08f),
+        targetValue = if (isSelected) accentColor.color else unselectedBg,
         animationSpec = if (animationsEnabled) spring() else snap(),
         label = "circleBtnBg"
     )
     val buttonBorderColor by animateColorAsState(
-        targetValue = if (isSelected) accentColor.color else inactiveBaseColor.copy(alpha = 0.25f),
+        targetValue = if (isSelected) accentColor.color else unselectedBorder,
         animationSpec = if (animationsEnabled) spring() else snap(),
         label = "circleBtnBorderColor"
     )
     val iconTint by animateColorAsState(
-        targetValue = if (isSelected) selectedIconTint else inactiveBaseColor,
+        targetValue = if (isSelected) selectedIconTint else primaryTextColor.color,
         animationSpec = if (animationsEnabled) spring() else snap(),
         label = "circleBtnIconTint"
     )
@@ -513,11 +534,11 @@ private fun CircleActionButton(
         contentAlignment = Alignment.Center
     ) {
         if (!isSelected && showShadows) {
-            val shadowTint = if (isWpDark) Color.Black.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.35f)
+            val shadowTint = primaryTextColor.getShadowColor()
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = shadowTint,
+                tint = shadowTint.copy(alpha = 0.35f),
                 modifier = Modifier.size(16.dp).offset(1.dp, 1.dp)
             )
         }
@@ -585,7 +606,6 @@ private fun InteractionSection(
                     primaryTextColor = primaryTextColor,
                     buttonTextColor = buttonTextColor,
                     showShadows = showShadows,
-                    isWpDark = isWpDark,
                     animationsEnabled = animationsEnabled,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -600,7 +620,6 @@ private fun InteractionSection(
                     primaryTextColor = primaryTextColor,
                     buttonTextColor = buttonTextColor,
                     showShadows = showShadows,
-                    isWpDark = isWpDark,
                     animationsEnabled = animationsEnabled,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -716,25 +735,18 @@ private fun InteractionSection(
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(primaryTextColor.capsuleColor(0.08f))
-                        .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
+                        .background(primaryTextColor.capsuleColor(0.08f, isNested = true))
+                        .border(1.dp, primaryTextColor.capsuleBorderColor(0.18f), RoundedCornerShape(8.dp))
                         .clickable { expanded = true }
-                        .padding(horizontal = 7.dp, vertical = 5.dp),
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Icon(
                         imageVector = currentIcon,
-                        contentDescription = null,
+                        contentDescription = stringResource(currentLabelRes),
                         tint = accentColor.color,
                         modifier = Modifier.size(16.dp)
-                    )
-                    TouchMarqueeText(
-                        text = stringResource(currentLabelRes),
-                        color = accentColor.color,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        style = TextStyle(shadow = shadow)
                     )
                     Icon(
                         imageVector = Icons.Outlined.ArrowDropDown,
@@ -938,8 +950,8 @@ private fun StatusBarAndAnimationsSection(
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(primaryTextColor.capsuleColor(0.08f))
-                            .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
+                            .background(primaryTextColor.capsuleColor(0.08f, isNested = true))
+                            .border(1.dp, primaryTextColor.capsuleBorderColor(0.18f), RoundedCornerShape(8.dp))
                             .clickable { monochromeExpanded = true }
                             .padding(horizontal = 7.dp, vertical = 5.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1122,8 +1134,8 @@ private fun StatusBarAndAnimationsSection(
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(primaryTextColor.capsuleColor(0.08f))
-                            .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
+                            .background(primaryTextColor.capsuleColor(0.08f, isNested = true))
+                            .border(1.dp, primaryTextColor.capsuleBorderColor(0.18f), RoundedCornerShape(8.dp))
                             .clickable { languageExpanded = true }
                             .padding(horizontal = 7.dp, vertical = 5.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1250,8 +1262,8 @@ private fun MappingAndIconPackSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(primaryTextColor.capsuleColor(0.08f))
-                    .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
+                    .background(primaryTextColor.capsuleColor(0.08f, isNested = true))
+                    .border(1.dp, primaryTextColor.capsuleBorderColor(0.18f), RoundedCornerShape(8.dp))
                     .clickable(onClick = onOpenCharacterMapping)
                     .padding(horizontal = 10.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1299,8 +1311,8 @@ private fun MappingAndIconPackSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(primaryTextColor.capsuleColor(0.08f))
-                    .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
+                    .background(primaryTextColor.capsuleColor(0.08f, isNested = true))
+                    .border(1.dp, primaryTextColor.capsuleBorderColor(0.18f), RoundedCornerShape(8.dp))
                     .clickable(onClick = onOpenIconPackDialog)
                     .padding(horizontal = 10.dp, vertical = 5.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1342,9 +1354,15 @@ private fun ThemeAndColorsSection(
     animationsEnabled: Boolean,
     shadow: Shadow?,
     screenScrimAlpha: Float,
+    screenScrimIsDark: Boolean,
     capsuleAlpha: Float,
+    capsuleIsDark: Boolean,
+    popupAlpha: Float,
     onScrimAlphaChange: (Float) -> Unit,
+    onScrimIsDarkChange: (Boolean) -> Unit,
     onCapsuleAlphaChange: (Float) -> Unit,
+    onCapsuleIsDarkChange: (Boolean) -> Unit,
+    onPopupAlphaChange: (Float) -> Unit,
     onAccentColorChange: (AccentColor) -> Unit,
     onShadowsChange: (Boolean) -> Unit,
     onShadowColorChange: (PrimaryTextColor) -> Unit,
@@ -1423,7 +1441,7 @@ private fun ThemeAndColorsSection(
                 Box(modifier = Modifier.weight(1f)) {
                     MainColorSelector(
                         selectedColor = shadowColorOverride,
-                        primaryTextColor = primaryTextColor,
+                        accentColor = accentColor,
                         onSelect = onShadowColorChange
                     )
                 }
@@ -1431,67 +1449,212 @@ private fun ThemeAndColorsSection(
         }
     }
 
+    var isContrastExpanded by remember { mutableStateOf(false) }
     var selectedLayer by remember { mutableIntStateOf(0) }
-    val isBackgroundLayer = selectedLayer == 0
-    val layerAlpha = if (isBackgroundLayer) screenScrimAlpha else capsuleAlpha
+
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (isContrastExpanded) 180f else 0f,
+        animationSpec = if (animationsEnabled) spring(stiffness = Spring.StiffnessMediumLow) else snap(),
+        label = "ContrastArrowRotation"
+    )
 
     Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(primaryTextColor.capsuleColor(0.06f, isNested = true))
+            .border(1.dp, primaryTextColor.capsuleBorderColor(0.18f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
-                .background(primaryTextColor.capsuleColor(0.08f))
-                .padding(2.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                .clickable { isContrastExpanded = !isContrastExpanded }
+                .padding(vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            listOf(R.string.settings_layer_background, R.string.settings_layer_capsules).forEachIndexed { index, labelRes ->
-                val isSelected = selectedLayer == index
-                Box(
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.settings_contrast_and_scrim_title),
+                    fontSize = 12.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = primaryTextColor.color,
+                    style = TextStyle(shadow = shadow)
+                )
+                Text(
+                    text = stringResource(
+                        R.string.settings_contrast_summary_format,
+                        (screenScrimAlpha * 100).toInt(),
+                        (capsuleAlpha * 100).toInt(),
+                        (popupAlpha * 100).toInt()
+                    ),
+                    fontSize = 11.sp,
+                    color = primaryTextColor.color.copy(alpha = 0.65f),
+                    style = TextStyle(shadow = shadow)
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ThreeColorCapsuleIndicator(
+                    bgColor = if (screenScrimIsDark) Color.Black else Color.White,
+                    capsuleColor = if (capsuleIsDark) Color.Black else Color.White,
+                    popupColor = if (popupTheme == PopupTheme.DARK) Color.Black else Color.White,
+                    accentColor = accentColor
+                )
+
+                Icon(
+                    imageVector = Icons.Outlined.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = accentColor.color,
                     modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (isSelected) accentColor.color.copy(alpha = 0.25f) else Color.Transparent)
-                        .clickable { selectedLayer = index }
-                        .padding(vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(labelRes),
-                        fontSize = 12.sp,
-                        color = if (isSelected) accentColor.color else primaryTextColor.color,
-                        style = TextStyle(shadow = shadow)
-                    )
-                }
+                        .size(20.dp)
+                        .rotate(arrowRotation)
+                )
             }
         }
-        Text(
-            stringResource(
-                if (isBackgroundLayer) R.string.settings_background_dim_format else R.string.settings_capsule_contrast_format,
-                (layerAlpha * 100).toInt()
-            ),
-            fontSize = 11.sp,
-            color = primaryTextColor.color
-        )
-        Slider(
-            value = layerAlpha,
-            onValueChange = { if (isBackgroundLayer) onScrimAlphaChange(it) else onCapsuleAlphaChange(it) },
-            valueRange = 0f..1f,
-            colors = SliderDefaults.colors(
-                thumbColor = accentColor.color,
-                activeTrackColor = accentColor.color,
-                inactiveTrackColor = popupTheme.contentColor.copy(alpha = 0.15f)
-            )
-        )
+
+        AnimatedVisibility(
+            visible = isContrastExpanded,
+            enter = if (animationsEnabled) expandVertically() + fadeIn() else androidx.compose.animation.EnterTransition.None,
+            exit = if (animationsEnabled) shrinkVertically() + fadeOut() else androidx.compose.animation.ExitTransition.None
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    val tabs = listOf(
+                        Triple(
+                            "${stringResource(R.string.settings_layer_background)} (${(screenScrimAlpha * 100).toInt()}%)",
+                            screenScrimIsDark,
+                            { onScrimIsDarkChange(!screenScrimIsDark) }
+                        ),
+                        Triple(
+                            "${stringResource(R.string.settings_layer_capsules)} (${(capsuleAlpha * 100).toInt()}%)",
+                            capsuleIsDark,
+                            { onCapsuleIsDarkChange(!capsuleIsDark) }
+                        ),
+                        Triple(
+                            "${stringResource(R.string.settings_layer_popup)} (${(popupAlpha * 100).toInt()}%)",
+                            popupTheme == PopupTheme.DARK,
+                            { onPopupThemeChange(if (popupTheme == PopupTheme.DARK) PopupTheme.LIGHT else PopupTheme.DARK) }
+                        )
+                    )
+
+                    tabs.forEachIndexed { index, (label, isDark, onToggle) ->
+                        val isSelected = selectedLayer == index
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            if (isSelected) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .border(
+                                            1.dp,
+                                            accentColor.color.copy(alpha = 0.45f),
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(accentColor.color.copy(alpha = 0.25f))
+                                            .clickable { onToggle() }
+                                            .padding(horizontal = 2.dp, vertical = 6.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = accentColor.color,
+                                            maxLines = 1,
+                                            style = TextStyle(shadow = shadow)
+                                        )
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(0.5.dp)
+                                            .background(accentColor.color.copy(alpha = 0.35f))
+                                    )
+
+                                    BlackWhiteEdgeToggle(
+                                        isFirstSelected = isDark,
+                                        cornerRadius = 8.dp,
+                                        onToggle = onToggle
+                                    )
+                                }
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(primaryTextColor.capsuleColor(0.08f, isNested = true))
+                                        .border(1.dp, primaryTextColor.capsuleBorderColor(0.15f), RoundedCornerShape(8.dp))
+                                        .clickable { selectedLayer = index }
+                                        .padding(horizontal = 2.dp, vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = label,
+                                        fontSize = 11.5.sp,
+                                        fontWeight = FontWeight.Normal,
+                                        color = primaryTextColor.color,
+                                        maxLines = 1,
+                                        style = TextStyle(shadow = shadow)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                val currentAlpha = when (selectedLayer) {
+                    0 -> screenScrimAlpha
+                    1 -> capsuleAlpha
+                    else -> popupAlpha
+                }
+                Slider(
+                    value = currentAlpha,
+                    onValueChange = {
+                        when (selectedLayer) {
+                            0 -> onScrimAlphaChange(it)
+                            1 -> onCapsuleAlphaChange(it)
+                            else -> onPopupAlphaChange(it)
+                        }
+                    },
+                    valueRange = 0f..1f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = accentColor.color,
+                        activeTrackColor = accentColor.color,
+                        inactiveTrackColor = popupTheme.contentColor.copy(alpha = 0.15f)
+                    )
+                )
+            }
+        }
     }
 
     Spacer(modifier = Modifier.height(8.dp))
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -1500,8 +1663,12 @@ private fun ThemeAndColorsSection(
                 color = primaryTextColor.color,
                 style = TextStyle(shadow = shadow, fontSize = 13.sp)
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            MainColorSelector(primaryTextColor, primaryTextColor, onPrimaryTextColorChange)
+            Spacer(modifier = Modifier.height(6.dp))
+            MainColorSelector(
+                selectedColor = primaryTextColor,
+                accentColor = accentColor,
+                onSelect = onPrimaryTextColorChange
+            )
         }
 
         Column(modifier = Modifier.weight(1f)) {
@@ -1510,18 +1677,12 @@ private fun ThemeAndColorsSection(
                 color = primaryTextColor.color,
                 style = TextStyle(shadow = shadow, fontSize = 13.sp)
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            MainColorSelector(buttonTextColor, primaryTextColor, onButtonTextColorChange)
-        }
-
-        Column(modifier = Modifier.weight(1f)) {
-            TouchMarqueeText(
-                text = stringResource(R.string.settings_popup_theme),
-                color = primaryTextColor.color,
-                style = TextStyle(shadow = shadow, fontSize = 13.sp)
+            Spacer(modifier = Modifier.height(6.dp))
+            MainColorSelector(
+                selectedColor = buttonTextColor,
+                accentColor = accentColor,
+                onSelect = onButtonTextColorChange
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            PopupThemeSelector(popupTheme, primaryTextColor, onPopupThemeChange)
         }
 
         Column(
@@ -1542,7 +1703,9 @@ private fun ThemeAndColorsSection(
             val isAutoMatched = (primaryTextColor == recommendedMainColor) &&
                     (shadowColorOverride == recommendedShadowColor) &&
                     (buttonTextColor == recommendedBtnText) &&
-                    (popupTheme == recommendedPopupTheme)
+                    (popupTheme == recommendedPopupTheme) &&
+                    (screenScrimIsDark == (recommendedMainColor != PrimaryTextColor.BLACK)) &&
+                    (capsuleIsDark == (recommendedMainColor != PrimaryTextColor.BLACK))
 
             val haptic = LocalHapticFeedback.current
             CircleActionButton(
@@ -1550,9 +1713,9 @@ private fun ThemeAndColorsSection(
                 isSelected = isAutoMatched,
                 contentDescription = stringResource(R.string.settings_auto_colors),
                 accentColor = accentColor,
+                primaryTextColor = primaryTextColor,
                 selectedIconTint = if (isLightAccent) Color.Black else Color.White,
                 showShadows = showShadows,
-                isWpDark = isWpDark,
                 animationsEnabled = animationsEnabled,
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -1913,8 +2076,8 @@ private fun AccentColorDropdown(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
-                .background(primaryTextColor.capsuleColor(0.08f))
-                .border(1.dp, primaryTextColor.color.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
+                .background(primaryTextColor.capsuleColor(0.08f, isNested = true))
+                .border(1.dp, primaryTextColor.capsuleBorderColor(0.18f), RoundedCornerShape(8.dp))
                 .clickable { showDialog = true }
                 .padding(horizontal = 12.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -2538,7 +2701,6 @@ private fun HandArrowButton(
     primaryTextColor: PrimaryTextColor,
     buttonTextColor: PrimaryTextColor,
     showShadows: Boolean,
-    isWpDark: Boolean,
     animationsEnabled: Boolean,
     onClick: () -> Unit
 ) {
@@ -2547,9 +2709,9 @@ private fun HandArrowButton(
         isSelected = isSelected,
         contentDescription = contentDescription,
         accentColor = accentColor,
+        primaryTextColor = primaryTextColor,
         selectedIconTint = buttonTextColor.color,
         showShadows = showShadows,
-        isWpDark = isWpDark,
         animationsEnabled = animationsEnabled,
         onClick = onClick
     )
@@ -2567,8 +2729,8 @@ private fun SearchMethodIconOption(
     val boxWidth = if (isHorizontal) 36.dp else 22.dp
     val boxHeight = if (isHorizontal) 22.dp else 36.dp
 
-    val bgColor = if (isSelected) accentColor.color.copy(alpha = 0.25f) else primaryTextColor.capsuleColor(0.05f)
-    val borderColor = if (isSelected) accentColor.color else primaryTextColor.color.copy(alpha = 0.20f)
+    val bgColor = if (isSelected) accentColor.color.copy(alpha = 0.25f) else primaryTextColor.capsuleColor(0.08f, isNested = true)
+    val borderColor = if (isSelected) accentColor.color else primaryTextColor.capsuleBorderColor(0.15f)
 
     Box(
         modifier = Modifier
@@ -2606,12 +2768,16 @@ private fun SearchMethodIconOption(
 
 
 /**
- * Generic split black/white capsule toggle with animated thumb.
+ * Edge-to-edge split black/white capsule toggle with animated thumb.
+ * Occupies the full capsule area with an accent-colored border.
  */
 @Composable
 private fun BlackWhiteCapsuleToggle(
     isFirstSelected: Boolean,
-    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    accentColor: AccentColor,
+    modifier: Modifier = Modifier,
+    shape: Shape = RoundedCornerShape(8.dp),
+    height: Dp = 26.dp,
     onToggle: () -> Unit
 ) {
     val animationsEnabled = LocalAnimationsEnabled.current
@@ -2626,67 +2792,171 @@ private fun BlackWhiteCapsuleToggle(
         label = "thumbColor"
     )
 
-    Row(
-        modifier = Modifier
+    BoxWithConstraints(
+        modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(primaryTextColor.capsuleColor(0.1f))
+            .height(height)
+            .clip(shape)
+            .border(1.dp, accentColor.color, shape)
             .clickable(onClick = onToggle)
-            .padding(horizontal = 4.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
     ) {
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .height(16.dp)
-        ) {
-            Row(modifier = Modifier.fillMaxSize()) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clipToBounds()
-                        .drawBehind {
-                            val cornerRadius = 3.dp.toPx()
-                            drawRoundRect(
-                                color = Color.Black,
-                                topLeft = Offset.Zero,
-                                size = Size(size.width + cornerRadius, size.height),
-                                cornerRadius = CornerRadius(cornerRadius, cornerRadius)
-                            )
-                        }
-                )
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clipToBounds()
-                        .drawBehind {
-                            val cornerRadius = 3.dp.toPx()
-                            drawRoundRect(
-                                color = Color.White,
-                                topLeft = Offset(-cornerRadius, 0f),
-                                size = Size(size.width + cornerRadius, size.height),
-                                cornerRadius = CornerRadius(cornerRadius, cornerRadius)
-                            )
-                        }
-                )
-            }
-
-            val thumbSize = 6.5.dp
-            val startOffset = (maxWidth * 0.25f) - (thumbSize / 2)
-            val endOffset = (maxWidth * 0.75f) - (thumbSize / 2)
-            val currentOffset = startOffset + (endOffset - startOffset) * thumbOffset
-
+        Row(modifier = Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .offset(x = currentOffset)
-                    .size(thumbSize)
-                    .clip(CircleShape)
-                    .background(thumbColor)
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .background(Color.Black)
             )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .background(Color.White)
+            )
+        }
+
+        val thumbSize = 8.5.dp
+        val startOffset = (maxWidth * 0.25f) - (thumbSize / 2)
+        val endOffset = (maxWidth * 0.75f) - (thumbSize / 2)
+        val currentOffset = startOffset + (endOffset - startOffset) * thumbOffset
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .offset(x = currentOffset)
+                .size(thumbSize)
+                .clip(CircleShape)
+                .background(thumbColor)
+        )
+    }
+}
+
+/**
+ * Edge-to-edge split black/white toggle whose bottom corners match [cornerRadius]
+ * and top corners are square (0.dp), perfectly seamless when fused under a tab.
+ */
+@Composable
+private fun BlackWhiteEdgeToggle(
+    isFirstSelected: Boolean,
+    cornerRadius: Dp = 8.dp,
+    onToggle: () -> Unit
+) {
+    val animationsEnabled = LocalAnimationsEnabled.current
+    val thumbOffset by animateFloatAsState(
+        targetValue = if (isFirstSelected) 0f else 1f,
+        animationSpec = if (animationsEnabled) spring(stiffness = Spring.StiffnessMediumLow) else snap(),
+        label = "thumbOffset"
+    )
+    val thumbColor by animateColorAsState(
+        targetValue = if (isFirstSelected) Color.White else Color.Black,
+        animationSpec = if (animationsEnabled) spring() else snap(),
+        label = "thumbColor"
+    )
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(18.dp)
+            .clip(
+                RoundedCornerShape(
+                    topStart = 0.dp,
+                    topEnd = 0.dp,
+                    bottomStart = cornerRadius,
+                    bottomEnd = cornerRadius
+                )
+            )
+            .clickable(onClick = onToggle)
+    ) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .background(
+                        Color.Black,
+                        RoundedCornerShape(
+                            topStart = 0.dp,
+                            topEnd = 0.dp,
+                            bottomStart = cornerRadius,
+                            bottomEnd = 0.dp
+                        )
+                    )
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .background(
+                        Color.White,
+                        RoundedCornerShape(
+                            topStart = 0.dp,
+                            topEnd = 0.dp,
+                            bottomStart = 0.dp,
+                            bottomEnd = cornerRadius
+                        )
+                    )
+            )
+        }
+
+        val thumbSize = 7.dp
+        val startOffset = (maxWidth * 0.25f) - (thumbSize / 2)
+        val endOffset = (maxWidth * 0.75f) - (thumbSize / 2)
+        val currentOffset = startOffset + (endOffset - startOffset) * thumbOffset
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .offset(x = currentOffset)
+                .size(thumbSize)
+                .clip(CircleShape)
+                .background(thumbColor)
+        )
+    }
+}
+
+/**
+ * 3-segment capsule indicator displaying Background, Capsule, and Pop-up colors (Black/White).
+ * Outlined with accent color.
+ * Displays a thin vertical divider of the opposite color between matching adjacent colors.
+ * When adjacent colors differ, no divider is rendered.
+ */
+@Composable
+private fun ThreeColorCapsuleIndicator(
+    bgColor: Color,
+    capsuleColor: Color,
+    popupColor: Color,
+    accentColor: AccentColor,
+    modifier: Modifier = Modifier
+) {
+    val colors = listOf(bgColor, capsuleColor, popupColor)
+    val pillShape = RoundedCornerShape(5.dp)
+
+    Row(
+        modifier = modifier
+            .clip(pillShape)
+            .border(1.dp, accentColor.color, pillShape)
+            .height(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        colors.forEachIndexed { index, color ->
+            Box(
+                modifier = Modifier
+                    .width(13.dp)
+                    .fillMaxHeight()
+                    .background(color)
+            )
+            if (index < colors.size - 1) {
+                val nextColor = colors[index + 1]
+                if (color == nextColor) {
+                    val dividerColor = if (color == Color.Black) Color.White else Color.Black
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .fillMaxHeight()
+                            .background(dividerColor)
+                    )
+                }
+            }
         }
     }
 }
@@ -2697,29 +2967,17 @@ private fun BlackWhiteCapsuleToggle(
 @Composable
 private fun MainColorSelector(
     selectedColor: PrimaryTextColor?,
-    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    accentColor: AccentColor,
+    modifier: Modifier = Modifier,
+    height: Dp = 26.dp,
     onSelect: (PrimaryTextColor) -> Unit
 ) {
     BlackWhiteCapsuleToggle(
         isFirstSelected = selectedColor == PrimaryTextColor.BLACK,
-        primaryTextColor = primaryTextColor,
+        accentColor = accentColor,
+        modifier = modifier,
+        height = height,
         onToggle = { onSelect(if (selectedColor == PrimaryTextColor.BLACK) PrimaryTextColor.WHITE else PrimaryTextColor.BLACK) }
-    )
-}
-
-/**
- * Selector for Popup Theme (Dark / Light).
- */
-@Composable
-private fun PopupThemeSelector(
-    selectedTheme: PopupTheme,
-    primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
-    onSelect: (PopupTheme) -> Unit
-) {
-    BlackWhiteCapsuleToggle(
-        isFirstSelected = selectedTheme == PopupTheme.DARK,
-        primaryTextColor = primaryTextColor,
-        onToggle = { onSelect(if (selectedTheme == PopupTheme.DARK) PopupTheme.LIGHT else PopupTheme.DARK) }
     )
 }
 
