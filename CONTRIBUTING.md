@@ -104,7 +104,7 @@ app/src/main/java/dev/msbs/cyclauncher/
 ## 🐛 Reporting Issues
 
 When filing a bug report in our [GitHub Issues](https://github.com/msbluesnow/Cyclauncher/issues), please ensure you provide the following to help us resolve it quickly:
-1. **App Version**: Always specify the exact version name or build code of the application you are running (e.g. `v1.0.0-beta.2` or `21`). You can find this in the Settings screen or build config.
+1. **App Version**: Always specify the exact version name or build code of the application you are running (e.g. `v1.0.0-rc.3` or `25`). You can find this in the Settings screen or build config.
 2. **Detailed Reproducing Steps**: Provide a step-by-step description of what triggers the issue.
 3. **Screen Recording (Highly Recommended)**: We highly prefer that you attach a screen recording/video showing the full process of reproducing the issue from start to finish. Visual context is incredibly helpful for tracing touch coordinates, gestures, and layout states.
 
@@ -160,6 +160,10 @@ Use conventional commit prefixes:
    - **🌐 Translations**: Create a new resource directory `app/src/main/res/values-<lang_code>/strings.xml` copying keys from `app/src/main/res/values/strings.xml`, translate the values, and submit a PR with prefix `docs(i18n): add <language> translation`.
 
    All contributors are credited in the project repository and in the upcoming in-app **Contributors** section!
+
+### 7. Recognition of Contributors
+We warmly thank all community members who dedicate time to improving Cyclauncher:
+- [@alanpoulain](https://github.com/alanpoulain) — PR [#6](https://github.com/msbluesnow/Cyclauncher/pull/6) (adaptive background dimming and capsule contrast controls foundation)
 
 ---
 

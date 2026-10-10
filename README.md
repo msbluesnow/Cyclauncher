@@ -27,10 +27,10 @@
 Cyclauncher is **not just yet another bicycle**. Built entirely with **Jetpack Compose**, it is designed from the ground up for comfortable one-handed navigation and instant app access. Daily workflows are streamlined through an ergonomic side alphabet grid, an alternative rectangular alphabet wheel with inertia physics, chromatic icon color search, interactive tag folders, adaptive Hue Angle Shift theming, and an expandable widget hub.
 
 > [!IMPORTANT]
-> **Release Candidate**: This project is currently in Release Candidate 2 (RC2) for v1.0.0. Core features and architecture are finalized and stable. Feedback and bug reports are highly appreciated.
+> **Release Candidate**: This project is currently in Release Candidate 3 (RC3) for v1.0.0. Core features and architecture are finalized and stable. Feedback and bug reports are highly appreciated.
 
 > [!TIP]
-> **Get the Latest Build**: Download the latest signed APK (**v1.0.0-rc.2**, Build 24) directly from [GitHub Releases](https://github.com/msbluesnow/Cyclauncher/releases/tag/v1.0.0-rc.2).
+> **Get the Latest Build**: Download the latest signed APK (**v1.0.0-rc.3**, Build 25) directly from [GitHub Releases](https://github.com/msbluesnow/Cyclauncher/releases/tag/v1.0.0-rc.3).
 
 ## 📽️ Demo Showcases
 
@@ -80,6 +80,10 @@ Cyclauncher is an open-source project and warmly welcomes all forms of contribut
 Check out our [CONTRIBUTING.md](CONTRIBUTING.md) for architecture details, code standards, and PR workflows. All contributors are credited here and in the upcoming in-app **Contributors** screen!
 
 ### 👥 Contributors
+ 
+Thank you to everyone who has contributed to Cyclauncher!
+
+* [@alanpoulain](https://github.com/alanpoulain) — PR [#6](https://github.com/msbluesnow/Cyclauncher/pull/6) (adaptive background dimming and capsule contrast controls)
 
 <a href="https://github.com/msbluesnow/Cyclauncher/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=msbluesnow/Cyclauncher" alt="Contributors" />

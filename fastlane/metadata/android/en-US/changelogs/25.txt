@@ -1,0 +1,6 @@
+Release Candidate 3 focusing on contrast controls, search enhancements, and backup reliability.
+- Added background scrim dimming, capsule contrast, and popup transparency controls.
+- Redesigned compact black-white theme toggles with accent borders.
+- Added Quick Palette search tap overlay and onboarding tutorial.
+- Fixed icon rendering clarity on high-DPI displays and optimized Coil caching.
+- Enhanced settings backup import and export with strict float type preservation.
