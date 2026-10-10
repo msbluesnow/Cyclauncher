@@ -112,31 +112,48 @@ When filing a bug report in our [GitHub Issues](https://github.com/msbluesnow/Cy
 
 ## 🔄 How to Submit Changes
 
-1. **Find an Issue or Start a Discussion**
-   - Check open [GitHub Issues](https://github.com/msbluesnow/Cyclauncher/issues) for `good first issue` or `help wanted` tags.
-   - For major features or architectural changes, discuss your idea first on [Discord](https://discord.gg/Zw4EBe92Qn) in `#development`.
+### 1. Align First: Discord `#development` & Genuine Motivation
+Cyclauncher was created with a clear aesthetic and architectural vision: pure, lightweight, borderless minimalism where the wallpaper remains a first-class citizen.
 
-2. **Create a Feature Branch**
-   ```bash
-   git checkout -b feat/your-feature-name
-   # or
-   git checkout -b fix/your-bug-description
-   ```
+* **Genuine Motivation:** We welcome contributors whose primary motivation is genuinely refining and polishing the user experience, rather than rushing code changes.
+* **Discuss Before Coding:** For any UI modifications, new features, or architectural adjustments, **please open a discussion in our Discord server in the `#development` channel first** ([Join Discord](https://discord.gg/Zw4EBe92Qn)).
+* Co-designing ideas in Discord saves you time and ensures proposed changes align with the launcher's core design principles. We are setting up dedicated developer roles and GitHub webhook integrations on the server to make collaboration smooth and organized!
 
-3. **Commit Messages**
-   Use conventional commit prefixes:
-   - `feat:` for new features
-   - `fix:` for bug fixes
-   - `perf:` for performance improvements
-   - `refactor:` for code restructures
-   - `docs:` for documentation updates
+### 2. Testing Standards: Physical Device vs. Emulator
+Because Cyclauncher is a home-screen application that directly overlays the user's wallpaper and relies on edge gestures, **testing on a physical Android device is crucial for the vast majority of contributions**.
 
-4. **Submit a Pull Request**
-   - Push your branch to your fork and submit a PR against `master`.
-   - Include a concise explanation of what your PR changes and why.
-   - Attach screenshots or screen recordings for any visual/UI changes.
+* **Physical Device Testing is Mandatory For:**
+  * Any UI/UX, layout, typography, or styling changes (text readability, contrast over light/dark wallpapers, margins, and animations can only be judged properly on real hardware).
+  * Touch physics, alphabet wheel dragging, edge-swipe navigation, and system bar insets.
+  * Core architecture, lifecycle transitions, Coil image loading, or memory-sensitive changes.
 
-5. **Non-Code Contributions (Design, Media & Translations)**
+* **Emulator Testing is Permitted ONLY IF:**
+  * The changes are strictly minor, isolated, and do not touch core architecture or visual design (e.g. string localizations, data parser bugfixes, or standalone non-UI utility helpers).
+  * The changes are completely invariant to device hardware specs, screen aspect ratios, display panels, or DPI scaling.
+
+> **Rule of thumb:** If your PR changes anything the user sees or touches on screen, it **must** be verified on a real device before submitting.
+
+### 3. Create a Feature Branch
+```bash
+git checkout -b feat/your-feature-name
+# or
+git checkout -b fix/your-bug-description
+```
+
+### 4. Commit Messages
+Use conventional commit prefixes:
+- `feat:` for new features
+- `fix:` for bug fixes
+- `perf:` for performance improvements
+- `refactor:` for code restructures
+- `docs:` for documentation updates
+
+### 5. Submit a Pull Request
+- Push your branch to your fork and submit a PR against `master`.
+- Fill in the pull request template completely and check all verification boxes.
+- Attach screenshots or screen recordings for any visual/UI changes (mandatory for UI).
+
+### 6. Non-Code Contributions (Design, Media & Translations)
    We deeply appreciate contributions beyond code:
    - **🎨 Design & Artwork**: Mockups and asset proposals can be shared in design issues (e.g. [#3](https://github.com/msbluesnow/Cyclauncher/issues/3)). Approved vector graphics and icons are merged via PR into `app/src/main/res/` and `assets/`.
    - **🎬 Media & Showcases**: Video previews, tutorials, and walkthrough clips can be shared in media issues (e.g. [#4](https://github.com/msbluesnow/Cyclauncher/issues/4)).
