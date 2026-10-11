@@ -26,6 +26,9 @@ import dev.msbs.cyclauncher.utils.getSafeStorageContext
 class AppActionsManager(context: Context) {
     private val context: Context = context.getSafeStorageContext()
     private val prefs: SharedPreferences = this.context.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+    private val storageExecutor = java.util.concurrent.Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "AppActionsStorageThread").apply { isDaemon = true }
+    }
 
     private fun showToast(msg: String, length: Int = Toast.LENGTH_SHORT) {
         if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
@@ -152,11 +155,14 @@ class AppActionsManager(context: Context) {
     }
 
     private fun saveRecentlyUpdated(set: Set<String>) {
-        try {
-            val json = org.json.JSONArray()
-            set.forEach { json.put(it) }
-            prefs.edit().putString("recently_updated_apps", json.toString()).apply()
-        } catch (_: Exception) {}
+        val snapshot = set.toSet()
+        storageExecutor.execute {
+            try {
+                val json = org.json.JSONArray()
+                snapshot.forEach { json.put(it) }
+                prefs.edit().putString("recently_updated_apps", json.toString()).apply()
+            } catch (_: Exception) {}
+        }
     }
 
     private val _searchHistory = MutableStateFlow<List<String>>(loadSearchHistory())
@@ -232,21 +238,23 @@ class AppActionsManager(context: Context) {
         } else Pair(null, null)
 
         if (updatedRecentlyUpdated != null || updatedHistory != null || updatedSearchHistory != null) {
-            try {
-                val editor = prefs.edit()
-                if (updatedRecentlyUpdated != null) {
-                    val json = org.json.JSONArray()
-                    updatedRecentlyUpdated.forEach { json.put(it) }
-                    editor.putString("recently_updated_apps", json.toString())
-                }
-                if (updatedHistory != null) {
-                    editor.putString("history", JSONArray(updatedHistory).toString())
-                }
-                if (updatedSearchHistory != null) {
-                    editor.putString("search_history", JSONArray(updatedSearchHistory).toString())
-                }
-                editor.apply()
-            } catch (_: Exception) {}
+            storageExecutor.execute {
+                try {
+                    val editor = prefs.edit()
+                    if (updatedRecentlyUpdated != null) {
+                        val json = org.json.JSONArray()
+                        updatedRecentlyUpdated.forEach { json.put(it) }
+                        editor.putString("recently_updated_apps", json.toString())
+                    }
+                    if (updatedHistory != null) {
+                        editor.putString("history", JSONArray(updatedHistory).toString())
+                    }
+                    if (updatedSearchHistory != null) {
+                        editor.putString("search_history", JSONArray(updatedSearchHistory).toString())
+                    }
+                    editor.apply()
+                } catch (_: Exception) {}
+            }
         }
     }
 
@@ -263,16 +271,18 @@ class AppActionsManager(context: Context) {
             limited
         } else null
 
-        try {
-            val editor = prefs.edit()
-            val json = org.json.JSONArray()
-            updatedSet.forEach { json.put(it) }
-            editor.putString("recently_updated_apps", json.toString())
-            if (updatedHistory != null) {
-                editor.putString("history", JSONArray(updatedHistory).toString())
-            }
-            editor.apply()
-        } catch (_: Exception) {}
+        storageExecutor.execute {
+            try {
+                val editor = prefs.edit()
+                val json = org.json.JSONArray()
+                updatedSet.forEach { json.put(it) }
+                editor.putString("recently_updated_apps", json.toString())
+                if (updatedHistory != null) {
+                    editor.putString("history", JSONArray(updatedHistory).toString())
+                }
+                editor.apply()
+            } catch (_: Exception) {}
+        }
     }
 
     fun onAppsInstalledOrUpdated(componentKeys: List<String>) {
@@ -1471,7 +1481,12 @@ class AppActionsManager(context: Context) {
     }
 
     private fun saveList(key: String, list: List<String>) {
-        prefs.edit().putString(key, JSONArray(list).toString()).apply()
+        val snapshot = list.toList()
+        storageExecutor.execute {
+            try {
+                prefs.edit().putString(key, JSONArray(snapshot).toString()).apply()
+            } catch (_: Exception) {}
+        }
     }
 
     private fun loadList(key: String): List<String> {
