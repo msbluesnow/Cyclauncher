@@ -120,7 +120,6 @@ class MainActivity : ComponentActivity() {
                 "android.intent.action.PROFILE_INACCESSIBLE" -> {
                     viewModel.refreshApps()
                 }
-                Intent.ACTION_CONFIGURATION_CHANGED,
                 "android.intent.action.OVERLAY_CHANGED",
                 "android.intent.action.THEME_CHANGED",
                 "com.samsung.android.theme.SAMSUNG_THEME_CHANGED" -> {
@@ -198,7 +197,6 @@ class MainActivity : ComponentActivity() {
             addAction(Intent.ACTION_USER_UNLOCKED)
             addAction(Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE)
             addAction(Intent.ACTION_EXTERNAL_APPLICATIONS_UNAVAILABLE)
-            addAction(Intent.ACTION_CONFIGURATION_CHANGED)
             addAction("android.intent.action.OVERLAY_CHANGED")
             addAction("android.intent.action.THEME_CHANGED")
             addAction("com.samsung.android.theme.SAMSUNG_THEME_CHANGED")
