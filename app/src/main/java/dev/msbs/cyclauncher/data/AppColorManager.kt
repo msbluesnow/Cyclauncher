@@ -99,11 +99,12 @@ class AppColorManager(context: Context) {
 
             val missingApps = apps.filter { !currentMap.containsKey(it.componentKey) }
             if (missingApps.isNotEmpty()) {
+                val indexingDispatcher = Dispatchers.IO.limitedParallelism(3)
                 val chunks = missingApps.chunked(16)
                 for (chunk in chunks) {
                     val chunkResults = coroutineScope {
                         chunk.map { app ->
-                            async(Dispatchers.Default) {
+                            async(indexingDispatcher) {
                                 val drawable = resolveAppIcon(pm, app.componentKey, app.packageName, app.activityName, app.userHandle)
                                 if (drawable != null) {
                                     val bucket = AppColorExtractor.extractColorBucket(drawable)
