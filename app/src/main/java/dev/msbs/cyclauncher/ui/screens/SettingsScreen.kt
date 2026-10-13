@@ -62,6 +62,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.geometry.Offset
@@ -113,6 +115,8 @@ fun SettingsScreen(
     val hapticFeedbackEnabled by viewModel.hapticFeedbackEnabled.collectAsState()
     val monochromeHistory by viewModel.monochromeHistory.collectAsState()
     val monochromeTags by viewModel.monochromeTags.collectAsState()
+    val showTagsArea by viewModel.showTagsArea.collectAsState()
+    val showHistoryArea by viewModel.showHistoryArea.collectAsState()
     val showKeepAndroidOpenDays by viewModel.showKeepAndroidOpenDays.collectAsState()
     val isWpDark by viewModel.isWallpaperDark.collectAsState()
     val customCharMappings by viewModel.customCharMappings.collectAsState()
@@ -233,6 +237,8 @@ fun SettingsScreen(
                             hapticFeedbackEnabled = hapticFeedbackEnabled,
                             monochromeHistory = monochromeHistory,
                             monochromeTags = monochromeTags,
+                            showTagsArea = showTagsArea,
+                            showHistoryArea = showHistoryArea,
                             accentColor = accentColor,
                             primaryTextColor = primaryTextColor,
                             popupTheme = popupTheme,
@@ -244,7 +250,9 @@ fun SettingsScreen(
                             onMarqueeChange = { viewModel.setMarqueeEnabled(it) },
                             onHapticFeedbackChange = { viewModel.setHapticFeedbackEnabled(it) },
                             onMonochromeHistoryChange = { viewModel.setMonochromeHistory(it) },
-                            onMonochromeTagsChange = { viewModel.setMonochromeTags(it) }
+                            onMonochromeTagsChange = { viewModel.setMonochromeTags(it) },
+                            onShowTagsAreaChange = { viewModel.setShowTagsArea(it) },
+                            onShowHistoryAreaChange = { viewModel.setShowHistoryArea(it) }
                         )
 
                         SettingsDivider(primaryTextColor, top = 5.dp, bottom = 8.dp)
@@ -818,6 +826,32 @@ private fun InteractionSection(
     }
 }
 
+@Composable
+private fun CrossedOutIcon(
+    imageVector: ImageVector,
+    contentDescription: String?,
+    tint: Color,
+    modifier: Modifier = Modifier,
+    crossColor: Color = tint
+) {
+    Icon(
+        imageVector = imageVector,
+        contentDescription = contentDescription,
+        tint = tint,
+        modifier = modifier.drawWithContent {
+            drawContent()
+            val strokeWidth = 1.75.dp.toPx()
+            drawLine(
+                color = crossColor,
+                start = Offset(size.width * 0.15f, size.height * 0.15f),
+                end = Offset(size.width * 0.85f, size.height * 0.85f),
+                strokeWidth = strokeWidth,
+                cap = StrokeCap.Round
+            )
+        }
+    )
+}
+
 /**
  * Section for Status Bar visibility and animations toggles.
  */
@@ -829,6 +863,8 @@ private fun StatusBarAndAnimationsSection(
     hapticFeedbackEnabled: Boolean,
     monochromeHistory: Boolean,
     monochromeTags: Boolean,
+    showTagsArea: Boolean,
+    showHistoryArea: Boolean,
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     popupTheme: PopupTheme,
@@ -840,7 +876,9 @@ private fun StatusBarAndAnimationsSection(
     onMarqueeChange: (Boolean) -> Unit,
     onHapticFeedbackChange: (Boolean) -> Unit,
     onMonochromeHistoryChange: (Boolean) -> Unit,
-    onMonochromeTagsChange: (Boolean) -> Unit
+    onMonochromeTagsChange: (Boolean) -> Unit,
+    onShowTagsAreaChange: (Boolean) -> Unit,
+    onShowHistoryAreaChange: (Boolean) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -1070,6 +1108,7 @@ private fun StatusBarAndAnimationsSection(
             }
         }
 
+
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -1208,6 +1247,165 @@ private fun StatusBarAndAnimationsSection(
                     }
                 }
             }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                TouchMarqueeText(
+                    text = stringResource(R.string.settings_main_screen),
+                    color = primaryTextColor.color,
+                    style = TextStyle(shadow = shadow, fontSize = 13.5.sp),
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+
+                var mainScreenExpanded by remember { mutableStateOf(false) }
+
+                Box {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(primaryTextColor.capsuleColor(0.08f, isNested = true))
+                            .border(1.dp, primaryTextColor.capsuleBorderColor(0.18f), RoundedCornerShape(8.dp))
+                            .clickable { mainScreenExpanded = true }
+                            .padding(horizontal = 7.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (showHistoryArea && showTagsArea) {
+                            Icon(
+                                imageVector = Icons.Outlined.Visibility,
+                                contentDescription = stringResource(R.string.settings_main_screen_all_visible),
+                                tint = primaryTextColor.color.copy(alpha = 0.5f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        } else {
+                            if (!showHistoryArea) {
+                                CrossedOutIcon(
+                                    imageVector = Icons.Outlined.History,
+                                    contentDescription = stringResource(R.string.settings_hide_history_desc),
+                                    tint = accentColor.color,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            if (!showTagsArea) {
+                                CrossedOutIcon(
+                                    imageVector = Icons.Outlined.Folder,
+                                    contentDescription = stringResource(R.string.settings_hide_tags_desc),
+                                    tint = accentColor.color,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.Outlined.ArrowDropDown,
+                            contentDescription = stringResource(R.string.settings_main_screen_options),
+                            tint = primaryTextColor.color.copy(alpha = 0.7f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = mainScreenExpanded,
+                        onDismissRequest = { mainScreenExpanded = false },
+                        shape = RoundedCornerShape(14.dp),
+                        containerColor = popupTheme.solidBackgroundColor,
+                        border = BorderStroke(1.dp, popupTheme.borderColor),
+                        shadowElevation = 8.dp
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                TouchMarqueeText(
+                                    text = stringResource(R.string.settings_monochrome_history),
+                                    color = if (showHistoryArea) accentColor.color else popupTheme.contentColor,
+                                    fontWeight = if (showHistoryArea) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 14.sp
+                                )
+                            },
+                            leadingIcon = {
+                                if (showHistoryArea) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.History,
+                                        contentDescription = null,
+                                        tint = accentColor.color,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                } else {
+                                    CrossedOutIcon(
+                                        imageVector = Icons.Outlined.History,
+                                        contentDescription = null,
+                                        tint = popupTheme.contentColor.copy(alpha = 0.5f),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            },
+                            trailingIcon = if (showHistoryArea) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Check,
+                                        contentDescription = null,
+                                        tint = accentColor.color,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            } else null,
+                            onClick = {
+                                onShowHistoryAreaChange(!showHistoryArea)
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = {
+                                TouchMarqueeText(
+                                    text = stringResource(R.string.settings_monochrome_tags),
+                                    color = if (showTagsArea) accentColor.color else popupTheme.contentColor,
+                                    fontWeight = if (showTagsArea) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 14.sp
+                                )
+                            },
+                            leadingIcon = {
+                                if (showTagsArea) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Folder,
+                                        contentDescription = null,
+                                        tint = accentColor.color,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                } else {
+                                    CrossedOutIcon(
+                                        imageVector = Icons.Outlined.Folder,
+                                        contentDescription = null,
+                                        tint = popupTheme.contentColor.copy(alpha = 0.5f),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            },
+                            trailingIcon = if (showTagsArea) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Check,
+                                        contentDescription = null,
+                                        tint = accentColor.color,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            } else null,
+                            onClick = {
+                                onShowTagsAreaChange(!showTagsArea)
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }

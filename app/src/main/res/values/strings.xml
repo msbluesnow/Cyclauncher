@@ -141,6 +141,13 @@
     <string name="settings_monochrome_options">Select Monochrome Options</string>
     <string name="settings_monochrome_history">History</string>
     <string name="settings_monochrome_tags">Tags</string>
+    <string name="settings_show_tags_area">Tags area</string>
+    <string name="settings_show_history_area">History area</string>
+    <string name="settings_main_screen">Main screen</string>
+    <string name="settings_main_screen_options">Main screen options</string>
+    <string name="settings_main_screen_all_visible">All areas visible</string>
+    <string name="settings_hide_history_desc">History hidden</string>
+    <string name="settings_hide_tags_desc">Tags hidden</string>
 
     <string name="settings_language">Language</string>
     <string name="settings_select_language">Select language</string>

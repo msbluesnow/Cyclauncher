@@ -1045,7 +1045,7 @@ class AppActionsManager(context: Context) {
             "popup_theme", "show_shadows", "shadow_color", "hide_status_bar",
             "show_search_widgets", "show_search_history", "animations_enabled",
             "marquee_enabled", "haptic_feedback_enabled", "monochrome_history", "monochrome_favorites",
-            "monochrome_tags", "search_method", "side_alphabet_button_y_ratio",
+            "monochrome_tags", "show_tags_area", "show_history_area", "search_method", "side_alphabet_button_y_ratio",
             "side_alphabet_slot_mode",
             "icon_pack_package", "show_keep_android_open_days",
             "screen_scrim_alpha", "screen_scrim_is_dark", "capsule_alpha", "capsule_is_dark", "popup_alpha"
