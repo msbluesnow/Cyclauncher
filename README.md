@@ -27,10 +27,10 @@
 Cyclauncher is **not just yet another bicycle**. Built entirely with **Jetpack Compose**, it is designed from the ground up for comfortable one-handed navigation and instant app access. Daily workflows are streamlined through an ergonomic side alphabet grid, an alternative rectangular alphabet wheel with inertia physics, chromatic icon color search, interactive tag folders, adaptive Hue Angle Shift theming, and an expandable widget hub.
 
 > [!IMPORTANT]
-> **Release Candidate**: This project is currently in Release Candidate 3 (RC3) for v1.0.0. Core features and architecture are finalized and stable. Feedback and bug reports are highly appreciated.
+> **Feature Freeze & Release Candidate**: Cyclauncher is currently in **Release Candidate 4 (RC4, Build 26)** leading into the final **v1.0.0 Stable** release. A **Feature Freeze** is in effect: new functional features are paused until the stable release is published. Only bug fixes, stability improvements, performance polish, and translations are currently accepted.
 
 > [!TIP]
-> **Get the Latest Build**: Download the latest signed APK (**v1.0.0-rc.3**, Build 25) directly from [GitHub Releases](https://github.com/msbluesnow/Cyclauncher/releases/tag/v1.0.0-rc.3).
+> **Get the Latest Build**: Download the latest signed APK (**v1.0.0-rc.4**, Build 26) directly from [GitHub Releases](https://github.com/msbluesnow/Cyclauncher/releases/tag/v1.0.0-rc.4).
 
 ## 📽️ Demo Showcases
 

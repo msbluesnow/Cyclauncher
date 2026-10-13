@@ -4,6 +4,10 @@ Thank you for your interest in contributing to **Cyclauncher**! We welcome bug f
 
 This guide provides an overview of the project setup, architectural conventions, and the workflow for submitting pull requests.
 
+> [!IMPORTANT]
+> **Feature Freeze in Effect (v1.0.0-rc.4 / Build 26)**:
+> The project is currently in **Feature Freeze** preparing for the upcoming `v1.0.0` stable release. During this phase, pull requests proposing new functional features or major architectural shifts are postponed until post-v1.0.0. Contributions focusing on **bug fixes, crash resolutions, stability, performance polish, and translations** are actively encouraged and prioritized.
+
 ---
 
 ## 🛠️ Prerequisites & Setup
@@ -104,7 +108,7 @@ app/src/main/java/dev/msbs/cyclauncher/
 ## 🐛 Reporting Issues
 
 When filing a bug report in our [GitHub Issues](https://github.com/msbluesnow/Cyclauncher/issues), please ensure you provide the following to help us resolve it quickly:
-1. **App Version**: Always specify the exact version name or build code of the application you are running (e.g. `v1.0.0-rc.3` or `25`). You can find this in the Settings screen or build config.
+1. **App Version**: Always specify the exact version name or build code of the application you are running (e.g. `v1.0.0-rc.4` or `26`). You can find this in the Settings screen or build config.
 2. **Detailed Reproducing Steps**: Provide a step-by-step description of what triggers the issue.
 3. **Screen Recording (Highly Recommended)**: We highly prefer that you attach a screen recording/video showing the full process of reproducing the issue from start to finish. Visual context is incredibly helpful for tracing touch coordinates, gestures, and layout states.
 

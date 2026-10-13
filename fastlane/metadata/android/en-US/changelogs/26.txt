@@ -1,0 +1,6 @@
+Release Candidate 4 focusing on main screen controls, feature freeze, and performance.
+- Added options to hide tags and history with adaptive full-height expansion.
+- Feature freeze in effect until v1.0.0 stable; prioritizing fixes and polish.
+- Offloaded history disk serialization and WallpaperManager IPC from UI thread.
+- Unified dialog styling, eliminated grey tints, bound dynamic opacity.
+- Debounced package updates to eliminate reload thrashing.
