@@ -257,7 +257,10 @@ fun CharacterMappingScreen(
                             DropdownMenu(
                                 expanded = showTargetDropdown,
                                 onDismissRequest = { showTargetDropdown = false },
-                                modifier = Modifier.background(popupTheme.solidBackgroundColor)
+                                shape = RoundedCornerShape(14.dp),
+                                containerColor = popupTheme.solidBackgroundColor,
+                                border = BorderStroke(1.dp, popupTheme.borderColor),
+                                shadowElevation = 8.dp
                             ) {
                                 alphabetOptions.forEach { char ->
                                     DropdownMenuItem(
@@ -653,8 +656,11 @@ fun CharacterMappingScreen(
 
     viewingLetterDetail?.let { targetChar ->
         val symbols = groupedMappings[targetChar] ?: emptyList()
+        val dialogShape = RoundedCornerShape(20.dp)
         AlertDialog(
             onDismissRequest = { viewingLetterDetail = null },
+            modifier = Modifier.border(1.dp, popupTheme.borderColor, dialogShape),
+            tonalElevation = 0.dp,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(
@@ -751,13 +757,17 @@ fun CharacterMappingScreen(
                 }
             },
             containerColor = popupTheme.solidBackgroundColor,
-            textContentColor = popupTheme.contentColor
+            textContentColor = popupTheme.contentColor,
+            shape = dialogShape
         )
     }
 
     if (showResetConfirmDialog) {
+        val dialogShape = RoundedCornerShape(20.dp)
         AlertDialog(
             onDismissRequest = { showResetConfirmDialog = false },
+            modifier = Modifier.border(1.dp, popupTheme.borderColor, dialogShape),
+            tonalElevation = 0.dp,
             title = {
                 Text(
                     text = stringResource(R.string.char_map_reset_title),
@@ -793,7 +803,8 @@ fun CharacterMappingScreen(
                 }
             },
             containerColor = popupTheme.solidBackgroundColor,
-            textContentColor = popupTheme.contentColor
+            textContentColor = popupTheme.contentColor,
+            shape = dialogShape
         )
     }
 }

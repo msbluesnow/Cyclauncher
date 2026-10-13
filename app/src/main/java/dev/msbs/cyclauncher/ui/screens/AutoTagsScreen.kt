@@ -303,8 +303,11 @@ private fun ExportFormatDialog(
     onDismiss: () -> Unit,
     onSelect: (ExportFormat) -> Unit
 ) {
+    val dialogShape = RoundedCornerShape(20.dp)
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.border(1.dp, popupTheme.borderColor, dialogShape),
+        tonalElevation = 0.dp,
         title = { Text(stringResource(R.string.auto_tags_export_dialog_title), color = accentColor.color, fontWeight = FontWeight.Bold) },
         text = {
             Column {
@@ -357,7 +360,7 @@ private fun ExportFormatDialog(
         },
         containerColor = popupTheme.solidBackgroundColor,
         textContentColor = popupTheme.contentColor,
-        shape = RoundedCornerShape(20.dp)
+        shape = dialogShape
     )
 }
 

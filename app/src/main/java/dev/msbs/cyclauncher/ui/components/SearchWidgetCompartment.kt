@@ -201,10 +201,14 @@ fun SearchWidgetCompartment(
             }
         }
         val widgetLabel = customLabel ?: defaultTitle
+        val dialogShape = RoundedCornerShape(20.dp)
 
         AlertDialog(
             onDismissRequest = { slotForOptions = null },
+            modifier = Modifier.border(1.dp, popupTheme.borderColor, dialogShape),
+            tonalElevation = 0.dp,
             containerColor = popupTheme.backgroundColor,
+            shape = dialogShape,
             title = {
                 Text(
                     text = widgetLabel,
@@ -554,10 +558,14 @@ fun SideSearchWidgetSlot(
             }
         }
         val widgetLabel = customLabel ?: defaultTitle
+        val dialogShape = RoundedCornerShape(20.dp)
 
         AlertDialog(
             onDismissRequest = { showOptions = false },
+            modifier = Modifier.border(1.dp, popupTheme.borderColor, dialogShape),
+            tonalElevation = 0.dp,
             containerColor = popupTheme.backgroundColor,
+            shape = dialogShape,
             title = {
                 Text(
                     text = widgetLabel,
@@ -767,10 +775,14 @@ fun SideAlphabetWidgetSlot(
             }
         }
         val widgetLabel = customLabel ?: defaultTitle
+        val dialogShape = RoundedCornerShape(20.dp)
 
         AlertDialog(
             onDismissRequest = { showOptions = false },
+            modifier = Modifier.border(1.dp, popupTheme.borderColor, dialogShape),
+            tonalElevation = 0.dp,
             containerColor = popupTheme.backgroundColor,
+            shape = dialogShape,
             title = {
                 Text(
                     text = widgetLabel,

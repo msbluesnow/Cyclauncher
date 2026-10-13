@@ -15,6 +15,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
+import dev.msbs.cyclauncher.ui.theme.LocalPopupAlpha
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.ShadowSettings
@@ -116,6 +117,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -676,6 +678,7 @@ fun HighlightScreen(
                     showShadows = showShadows,
                     shadowSettings = shadowSettings,
                     primaryTextColor = primaryTextColor,
+                    popupTheme = popupTheme,
                     animationsEnabled = animationsEnabled,
                     onAddWidget = { showCustomWidgetPicker = true },
                     onConfigureWidget = onConfigureWidget,
@@ -1362,6 +1365,7 @@ private fun WidgetsSection(
     showShadows: Boolean,
     shadowSettings: ShadowSettings,
     primaryTextColor: PrimaryTextColor,
+    popupTheme: PopupTheme = PopupTheme.DARK,
     animationsEnabled: Boolean,
     onAddWidget: () -> Unit,
     onConfigureWidget: ((widgetId: Int, isReconfigure: Boolean, options: Bundle?, callback: (Boolean) -> Unit) -> Unit)? = null,
@@ -1508,6 +1512,7 @@ private fun WidgetsSection(
                             accentColor = accentColor,
                             buttonTextColor = buttonTextColor,
                             primaryTextColor = primaryTextColor,
+                            popupTheme = popupTheme,
                             showShadows = showShadows,
                             shadowSettings = shadowSettings,
                             animationsEnabled = animationsEnabled,
@@ -1542,6 +1547,7 @@ private fun WidgetCard(
     accentColor: AccentColor,
     buttonTextColor: PrimaryTextColor,
     primaryTextColor: PrimaryTextColor,
+    popupTheme: PopupTheme = PopupTheme.DARK,
     showShadows: Boolean,
     shadowSettings: ShadowSettings,
     animationsEnabled: Boolean,
@@ -1830,6 +1836,7 @@ private fun WidgetCard(
             accentColor = accentColor,
             primaryTextColor = primaryTextColor,
             buttonTextColor = buttonTextColor,
+            popupTheme = popupTheme,
             showShadows = showShadows,
             shadowSettings = shadowSettings,
             onDismiss = { showResizeDialog = false },
@@ -1850,6 +1857,7 @@ private fun WidgetResizeDialog(
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     buttonTextColor: PrimaryTextColor,
+    popupTheme: PopupTheme = PopupTheme.DARK,
     showShadows: Boolean,
     shadowSettings: ShadowSettings,
     onDismiss: () -> Unit,
@@ -1858,6 +1866,7 @@ private fun WidgetResizeDialog(
     var heightDp by remember { mutableIntStateOf(widgetConfig.heightDp) }
     var widthFraction by remember { mutableFloatStateOf(widgetConfig.widthFraction) }
     val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
+    val popupAlpha = LocalPopupAlpha.current
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -1865,8 +1874,8 @@ private fun WidgetResizeDialog(
                 .fillMaxWidth()
                 .padding(8.dp),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.95f)),
-            border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = 0.2f))
+            colors = CardDefaults.cardColors(containerColor = popupTheme.solidBackgroundColor(popupAlpha)),
+            border = BorderStroke(1.dp, popupTheme.borderColor)
         ) {
             Column(
                 modifier = Modifier
@@ -1891,12 +1900,12 @@ private fun WidgetResizeDialog(
                         text = "${heightDp}dp • ${(widthFraction * 100).toInt()}%",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = primaryTextColor.color.copy(alpha = 0.7f),
+                        color = popupTheme.secondaryContentColor,
                         style = TextStyle(shadow = shadow)
                     )
                 }
 
-                HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.12f))
+                HorizontalDivider(color = popupTheme.dividerColor)
 
                 // Height Slider
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1904,7 +1913,7 @@ private fun WidgetResizeDialog(
                         text = stringResource(R.string.highlight_resize_height, heightDp),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = primaryTextColor.color,
+                        color = popupTheme.contentColor,
                         style = TextStyle(shadow = shadow)
                     )
                     Slider(
@@ -1915,7 +1924,7 @@ private fun WidgetResizeDialog(
                         colors = SliderDefaults.colors(
                             thumbColor = accentColor.color,
                             activeTrackColor = accentColor.color,
-                            inactiveTrackColor = primaryTextColor.color.copy(alpha = 0.2f)
+                            inactiveTrackColor = popupTheme.contentColor.copy(alpha = 0.2f)
                         )
                     )
 
@@ -1931,30 +1940,38 @@ private fun WidgetResizeDialog(
                             stringResource(R.string.highlight_preset_tall) to 320
                         )
                         for ((name, valDp) in presets) {
-                            val isSelected = heightDp == valDp
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isSelected) accentColor.color.copy(alpha = 0.25f) else primaryTextColor.capsuleColor(0.08f))
-                                    .border(1.dp, if (isSelected) accentColor.color else primaryTextColor.color.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
-                                    .clickable { heightDp = valDp }
-                                    .padding(vertical = 6.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = name,
-                                    fontSize = 10.5.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) accentColor.color else primaryTextColor.color,
-                                    style = TextStyle(shadow = shadow)
-                                )
+                            key(valDp) {
+                                val isSelected = heightDp == valDp
+                                val interactionSource = remember { MutableInteractionSource() }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSelected) accentColor.color.copy(alpha = 0.25f) else popupTheme.contentColor.copy(alpha = 0.08f))
+                                        .border(1.dp, if (isSelected) accentColor.color else popupTheme.contentColor.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+                                        .clickable(
+                                            interactionSource = interactionSource,
+                                            indication = null
+                                        ) { heightDp = valDp }
+                                        .padding(horizontal = 4.dp, vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    TouchMarqueeText(
+                                        text = name,
+                                        fontSize = 10.5.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) accentColor.color else popupTheme.contentColor,
+                                        style = TextStyle(shadow = shadow),
+                                        textAlign = TextAlign.Center,
+                                        interactionSource = interactionSource
+                                    )
+                                }
                             }
                         }
                     }
                 }
 
-                HorizontalDivider(color = primaryTextColor.color.copy(alpha = 0.12f))
+                HorizontalDivider(color = popupTheme.dividerColor)
 
                 // Width Options
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1962,7 +1979,7 @@ private fun WidgetResizeDialog(
                         text = stringResource(R.string.highlight_resize_width),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = primaryTextColor.color,
+                        color = popupTheme.contentColor,
                         style = TextStyle(shadow = shadow)
                     )
                     Row(
@@ -1975,24 +1992,32 @@ private fun WidgetResizeDialog(
                             stringResource(R.string.highlight_width_half) to 0.5f
                         )
                         for ((wLabel, wFraction) in widthOptions) {
-                            val isSelected = kotlin.math.abs(widthFraction - wFraction) < 0.05f
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isSelected) accentColor.color.copy(alpha = 0.25f) else primaryTextColor.capsuleColor(0.08f))
-                                    .border(1.dp, if (isSelected) accentColor.color else primaryTextColor.color.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
-                                    .clickable { widthFraction = wFraction }
-                                    .padding(vertical = 8.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = wLabel,
-                                    fontSize = 11.5.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) accentColor.color else primaryTextColor.color,
-                                    style = TextStyle(shadow = shadow)
-                                )
+                            key(wFraction) {
+                                val isSelected = kotlin.math.abs(widthFraction - wFraction) < 0.05f
+                                val interactionSource = remember { MutableInteractionSource() }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSelected) accentColor.color.copy(alpha = 0.25f) else popupTheme.contentColor.copy(alpha = 0.08f))
+                                        .border(1.dp, if (isSelected) accentColor.color else popupTheme.contentColor.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+                                        .clickable(
+                                            interactionSource = interactionSource,
+                                            indication = null
+                                        ) { widthFraction = wFraction }
+                                        .padding(horizontal = 4.dp, vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    TouchMarqueeText(
+                                        text = wLabel,
+                                        fontSize = 11.5.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) accentColor.color else popupTheme.contentColor,
+                                        style = TextStyle(shadow = shadow),
+                                        textAlign = TextAlign.Center,
+                                        interactionSource = interactionSource
+                                    )
+                                }
                             }
                         }
                     }
@@ -2013,7 +2038,7 @@ private fun WidgetResizeDialog(
                     ) {
                         TouchMarqueeText(
                             text = stringResource(R.string.common_cancel),
-                            color = primaryTextColor.color.copy(alpha = 0.8f),
+                            color = popupTheme.secondaryContentColor,
                             fontWeight = FontWeight.Medium,
                             interactionSource = cancelInteractionSource
                         )

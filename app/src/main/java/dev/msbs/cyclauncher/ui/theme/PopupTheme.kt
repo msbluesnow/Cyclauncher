@@ -1,5 +1,8 @@
 package dev.msbs.cyclauncher.ui.theme
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
@@ -11,25 +14,37 @@ enum class PopupTheme(val displayName: String) {
 
     /**
      * Translucent background color for floating popups and menus.
+     * Guaranteed strictly pure Black or pure White with custom alpha.
      */
-    fun backgroundColor(alpha: Float = 0.81f): Color = when (this) {
+    fun backgroundColor(alpha: Float): Color = when (this) {
         DARK -> Color.Black.copy(alpha = alpha)
-        LIGHT -> Color(0xFFF6F6F6).copy(alpha = alpha)
+        LIGHT -> Color.White.copy(alpha = alpha)
     }
 
+    /**
+     * Dynamically reads the user-configured [LocalPopupAlpha] transparency.
+     */
     val backgroundColor: Color
-        get() = backgroundColor(0.81f)
+        @Composable
+        @ReadOnlyComposable
+        get() = backgroundColor(LocalPopupAlpha.current)
 
     /**
      * Solid background color for dialogs and nested cards.
+     * Unified to strictly pure Black or pure White with custom alpha.
      */
-    fun solidBackgroundColor(alpha: Float = 0.81f): Color = when (this) {
-        DARK -> Color(0xFF1E1E1E).copy(alpha = alpha)
-        LIGHT -> Color(0xFFF2F2F2).copy(alpha = alpha)
+    fun solidBackgroundColor(alpha: Float): Color = when (this) {
+        DARK -> Color.Black.copy(alpha = alpha)
+        LIGHT -> Color.White.copy(alpha = alpha)
     }
 
+    /**
+     * Dynamically reads the user-configured [LocalPopupAlpha] transparency.
+     */
     val solidBackgroundColor: Color
-        get() = solidBackgroundColor(0.81f)
+        @Composable
+        @ReadOnlyComposable
+        get() = solidBackgroundColor(LocalPopupAlpha.current)
 
     /**
      * Primary text and icon color inside the popup.
@@ -37,7 +52,7 @@ enum class PopupTheme(val displayName: String) {
     val contentColor: Color
         get() = when (this) {
             DARK -> Color.White
-            LIGHT -> Color(0xFF1C1C1E)
+            LIGHT -> Color.Black
         }
 
     /**
@@ -46,7 +61,7 @@ enum class PopupTheme(val displayName: String) {
     val secondaryContentColor: Color
         get() = when (this) {
             DARK -> Color.White.copy(alpha = 0.65f)
-            LIGHT -> Color(0xFF1C1C1E).copy(alpha = 0.65f)
+            LIGHT -> Color.Black.copy(alpha = 0.65f)
         }
 
     /**
@@ -55,7 +70,7 @@ enum class PopupTheme(val displayName: String) {
     val borderColor: Color
         get() = when (this) {
             DARK -> Color.White.copy(alpha = 0.15f)
-            LIGHT -> Color.Black.copy(alpha = 0.12f)
+            LIGHT -> Color.Black.copy(alpha = 0.15f)
         }
 
     /**
@@ -77,3 +92,6 @@ enum class PopupTheme(val displayName: String) {
         }
     }
 }
+
+val LocalPopupTheme = compositionLocalOf { PopupTheme.DARK }
+

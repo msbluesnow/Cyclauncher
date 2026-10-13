@@ -443,8 +443,11 @@ fun SettingsScreen(
     }
 
     if (showDefaultLauncherDialog) {
+        val defaultLauncherDialogShape = RoundedCornerShape(20.dp)
         AlertDialog(
             onDismissRequest = { showDefaultLauncherDialog = false },
+            modifier = Modifier.border(1.dp, popupTheme.borderColor, defaultLauncherDialogShape),
+            tonalElevation = 0.dp,
             title = { Text(stringResource(R.string.settings_default_launcher_title), color = accentColor.color) },
             text = {
                 Text(
@@ -469,7 +472,8 @@ fun SettingsScreen(
                 }
             },
             containerColor = popupTheme.solidBackgroundColor,
-            textContentColor = popupTheme.contentColor
+            textContentColor = popupTheme.contentColor,
+            shape = defaultLauncherDialogShape
         )
     }
 }
@@ -2162,10 +2166,13 @@ private fun AccentColorDialog(
         mutableStateOf(String.format("%06X", 0xFFFFFF and argb))
     }
 
+    val dialogShape = RoundedCornerShape(20.dp)
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.border(1.dp, popupTheme.borderColor, dialogShape),
+        tonalElevation = 0.dp,
         containerColor = popupTheme.solidBackgroundColor,
-        shape = RoundedCornerShape(20.dp),
+        shape = dialogShape,
         title = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -2993,8 +3000,11 @@ private fun IconPackSelectionDialog(
     onSelect: (String?) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val dialogShape = RoundedCornerShape(20.dp)
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.border(1.dp, popupTheme.borderColor, dialogShape),
+        tonalElevation = 0.dp,
         title = {
             TouchMarqueeText(
                 text = stringResource(R.string.settings_icon_pack_title),
@@ -3162,7 +3172,7 @@ private fun IconPackSelectionDialog(
         },
         containerColor = popupTheme.solidBackgroundColor,
         textContentColor = popupTheme.contentColor,
-        shape = RoundedCornerShape(20.dp)
+        shape = dialogShape
     )
 }
 

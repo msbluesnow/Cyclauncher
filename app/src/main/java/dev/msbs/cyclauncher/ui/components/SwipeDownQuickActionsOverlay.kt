@@ -262,19 +262,21 @@ private fun ActionTargetCard(
 ) {
     val textColor = if (popupTheme == PopupTheme.LIGHT) Color.Black else Color.White
 
-    val backgroundBrush = remember(isSelected, accentColor.color, popupTheme.backgroundColor, popupTheme.solidBackgroundColor) {
+    val popupBg = popupTheme.backgroundColor
+    val popupSolidBg = popupTheme.solidBackgroundColor
+    val backgroundBrush = remember(isSelected, accentColor.color, popupBg, popupSolidBg) {
         if (isSelected) {
             Brush.verticalGradient(
                 colors = listOf(
                     accentColor.color.copy(alpha = 0.35f),
-                    popupTheme.solidBackgroundColor.copy(alpha = 0.95f)
+                    popupSolidBg.copy(alpha = 0.95f)
                 )
             )
         } else {
             Brush.verticalGradient(
                 colors = listOf(
-                    popupTheme.backgroundColor.copy(alpha = 0.88f),
-                    popupTheme.solidBackgroundColor.copy(alpha = 0.92f)
+                    popupBg.copy(alpha = 0.88f),
+                    popupSolidBg.copy(alpha = 0.92f)
                 )
             )
         }

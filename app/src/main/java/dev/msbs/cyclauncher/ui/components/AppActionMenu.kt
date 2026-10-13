@@ -363,9 +363,11 @@ fun TagSelectionDialog(
     var showCreateDialog by remember { mutableStateOf(false) }
     var tagToEdit by remember { mutableStateOf<Tag?>(null) }
     val scrollState = rememberScrollState()
-
+    val dialogShape = RoundedCornerShape(20.dp)
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.border(1.dp, popupTheme.borderColor, dialogShape),
+        tonalElevation = 0.dp,
         title = { Text(stringResource(R.string.tag_dialog_title, app.label), color = popupTheme.contentColor) },
         text = {
             Column(
@@ -469,7 +471,8 @@ fun TagSelectionDialog(
             }
         },
         containerColor = popupTheme.solidBackgroundColor,
-        textContentColor = popupTheme.contentColor
+        textContentColor = popupTheme.contentColor,
+        shape = dialogShape
     )
 
     if (showCreateDialog) {
@@ -664,9 +667,12 @@ fun TagEditDialog(
     }
 
     val previewVectorIcon = remember(emojiText) { TagIconRegistry.getVectorIcon(emojiText) }
+    val dialogShape = RoundedCornerShape(20.dp)
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.border(1.dp, popupTheme.borderColor, dialogShape),
+        tonalElevation = 0.dp,
         title = {
             TagEditHeader(
                 title = if (tag == null) stringResource(R.string.tag_dialog_create_title) else stringResource(R.string.tag_dialog_edit_tag),
@@ -1312,7 +1318,7 @@ fun TagEditDialog(
         },
         containerColor = popupTheme.solidBackgroundColor,
         textContentColor = popupTheme.contentColor,
-        shape = RoundedCornerShape(20.dp)
+        shape = dialogShape
     )
 
     if (showAllIconsDialog) {
@@ -1361,8 +1367,11 @@ fun AllTagVectorIconsDialog(
         }
     }
 
+    val dialogShape = RoundedCornerShape(20.dp)
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.border(1.dp, popupTheme.borderColor, dialogShape),
+        tonalElevation = 0.dp,
         title = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1539,7 +1548,8 @@ fun AllTagVectorIconsDialog(
             }
         },
         containerColor = popupTheme.solidBackgroundColor,
-        textContentColor = popupTheme.contentColor
+        textContentColor = popupTheme.contentColor,
+        shape = dialogShape
     )
 }
 
@@ -1590,9 +1600,12 @@ fun RenameDialog(
     popupTheme: PopupTheme = PopupTheme.DARK
 ) {
     var text by remember { mutableStateOf(initialValue) }
+    val dialogShape = RoundedCornerShape(20.dp)
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.border(1.dp, popupTheme.borderColor, dialogShape),
+        tonalElevation = 0.dp,
         title = { Text(stringResource(R.string.rename_dialog_title), color = accentColor.color) },
         text = {
             AppTextField(
@@ -1636,6 +1649,6 @@ fun RenameDialog(
         },
         containerColor = popupTheme.solidBackgroundColor,
         textContentColor = popupTheme.contentColor,
-        shape = RoundedCornerShape(20.dp)
+        shape = dialogShape
     )
 }

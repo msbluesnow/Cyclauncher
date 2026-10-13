@@ -39,10 +39,12 @@ import androidx.activity.viewModels
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -248,6 +250,7 @@ class MainActivity : ComponentActivity() {
                 val capsuleAlpha by viewModel.capsuleAlpha.collectAsState()
                 val capsuleIsDark by viewModel.capsuleIsDark.collectAsState()
                 val popupAlpha by viewModel.popupAlpha.collectAsState()
+                val popupTheme by viewModel.popupTheme.collectAsState()
                 val primaryTextColor by viewModel.primaryTextColor.collectAsState()
                 val hapticFeedbackEnabled by viewModel.hapticFeedbackEnabled.collectAsState()
                 val showShadows by viewModel.showShadows.collectAsState()
@@ -272,6 +275,7 @@ class MainActivity : ComponentActivity() {
                     dev.msbs.cyclauncher.ui.theme.LocalMarqueeEnabled provides marqueeEnabled,
                     dev.msbs.cyclauncher.ui.theme.LocalCapsuleAlpha provides capsuleAlpha,
                     dev.msbs.cyclauncher.ui.theme.LocalCapsuleIsDark provides capsuleIsDark,
+                    dev.msbs.cyclauncher.ui.theme.LocalPopupTheme provides popupTheme,
                     dev.msbs.cyclauncher.ui.theme.LocalPopupAlpha provides popupAlpha,
                     dev.msbs.cyclauncher.ui.theme.LocalIconPackVersion provides iconPackVersion
                 ) {
@@ -385,7 +389,6 @@ class MainActivity : ComponentActivity() {
                     val handSide by viewModel.handSide.collectAsState()
                     val accentColor by viewModel.accentColor.collectAsState()
                     val buttonTextColor by viewModel.buttonTextColor.collectAsState()
-                    val popupTheme by viewModel.popupTheme.collectAsState()
                     val allTags by viewModel.tags.collectAsState()
                     val appTagsMap by viewModel.appTags.collectAsState()
                     val autoTagsPreview by viewModel.autoTagsPreview.collectAsState()
@@ -1086,8 +1089,11 @@ private fun BaseLauncherConfirmDialog(
     onDismiss: () -> Unit,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val dialogShape = RoundedCornerShape(20.dp)
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.border(1.dp, popupTheme.borderColor, dialogShape),
+        tonalElevation = 0.dp,
         title = {
             Text(
                 title,
@@ -1115,12 +1121,12 @@ private fun BaseLauncherConfirmDialog(
                 onClick = onDismiss,
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Cancel", color = popupTheme.secondaryContentColor)
+                Text(stringResource(R.string.common_cancel), color = popupTheme.secondaryContentColor)
             }
         },
         containerColor = popupTheme.solidBackgroundColor,
         textContentColor = popupTheme.contentColor,
-        shape = RoundedCornerShape(20.dp)
+        shape = dialogShape
     )
 }
 
