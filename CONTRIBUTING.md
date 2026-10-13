@@ -163,7 +163,9 @@ Use conventional commit prefixes:
 
 ### 7. Recognition of Contributors
 We warmly thank all community members who dedicate time to improving Cyclauncher:
-- [@alanpoulain](https://github.com/alanpoulain) — PR [#6](https://github.com/msbluesnow/Cyclauncher/pull/6) (adaptive background dimming and capsule contrast controls foundation)
+- [@alanpoulain](https://github.com/alanpoulain):
+  - PR [#6](https://github.com/msbluesnow/Cyclauncher/pull/6) — Adaptive background dimming and capsule contrast controls foundation.
+  - PR [#7](https://github.com/msbluesnow/Cyclauncher/pull/7) — Main screen visibility controls for popular tags and history areas with adaptive full-height layout redistribution.
 
 ---
 

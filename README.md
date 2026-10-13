@@ -83,7 +83,9 @@ Check out our [CONTRIBUTING.md](CONTRIBUTING.md) for architecture details, code 
  
 Thank you to everyone who has contributed to Cyclauncher!
 
-* [@alanpoulain](https://github.com/alanpoulain) — PR [#6](https://github.com/msbluesnow/Cyclauncher/pull/6) (adaptive background dimming and capsule contrast controls)
+* [@alanpoulain](https://github.com/alanpoulain):
+  * PR [#6](https://github.com/msbluesnow/Cyclauncher/pull/6) — Adaptive background dimming and capsule contrast controls.
+  * PR [#7](https://github.com/msbluesnow/Cyclauncher/pull/7) — Main screen visibility controls for popular tags and history areas with adaptive full-height layout redistribution.
 
 <a href="https://github.com/msbluesnow/Cyclauncher/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=msbluesnow/Cyclauncher" alt="Contributors" />
