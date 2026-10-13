@@ -638,6 +638,8 @@ private fun SideAlphabetGrid(
     val rows = 7
     val density = LocalDensity.current
     val currentOnLetterSelected by rememberUpdatedState(onLetterSelected)
+    val currentSelectedLetter by rememberUpdatedState(selectedLetter)
+    val haptic = LocalHapticFeedback.current
     var gridBoundsSize by remember { mutableStateOf(androidx.compose.ui.geometry.Size.Zero) }
 
     fun getCharFromOffset(offset: Offset): Char? {
@@ -668,18 +670,31 @@ private fun SideAlphabetGrid(
                     val down = awaitFirstDown(requireUnconsumed = false)
                     val downChar = getCharFromOffset(down.position)
                     var lastChar = downChar
+                    var hasDragged = false
+                    val initialSelectedLetter = currentSelectedLetter
 
                     if (downChar != null) {
-                        currentOnLetterSelected(downChar, true)
+                        if (downChar != initialSelectedLetter) {
+                            currentOnLetterSelected(downChar, false)
+                        } else {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        }
                     }
 
                     while (true) {
                         val event = awaitPointerEvent()
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                        if (!change.pressed) break
+                        if (!change.pressed) {
+                            val upChar = getCharFromOffset(change.position)
+                            if (!hasDragged && upChar == downChar && downChar == initialSelectedLetter && downChar != null) {
+                                currentOnLetterSelected(downChar, true)
+                            }
+                            break
+                        }
 
                         val char = getCharFromOffset(change.position)
                         if (char != null && char != lastChar) {
+                            hasDragged = true
                             lastChar = char
                             change.consume()
                             currentOnLetterSelected(char, false)
