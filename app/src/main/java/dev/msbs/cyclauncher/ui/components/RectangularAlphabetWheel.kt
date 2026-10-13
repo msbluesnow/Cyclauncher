@@ -432,10 +432,14 @@ private fun AlphabetLetterItem(
         derivedStateOf {
             if (selectedLetter == null) return@derivedStateOf false
             val floatIndex = floatIndexProvider()
-            val dist = abs(floatIndex - index).let { if (it > 13.5) 27 - it else it }
+            val dist = abs(floatIndex - index).let { if (it > 13.5f) 27f - it else it }
             dist < 0.5f
         }
     }
+
+    val density = LocalDensity.current
+    val circleRadiusPx = remember(stepSize, density) { with(density) { (stepSize * 0.85f).toPx() / 2f } }
+    val stroke1Dp = remember(density) { with(density) { Stroke(width = 1.dp.toPx()) } }
 
     Box(
         modifier = modifier
@@ -449,7 +453,7 @@ private fun AlphabetLetterItem(
                     this.alpha = 0.85f
                 } else {
                     val floatIndex = floatIndexProvider()
-                    val dist = abs(floatIndex - index).let { if (it > 13.5) 27 - it else it }.toFloat()
+                    val dist = abs(floatIndex - index).let { if (it > 13.5f) 27f - it else it }
                     val scale = (1.5f - (dist * 0.4f)).coerceIn(1.0f, 1.5f)
                     val alpha = (1.0f - (dist * 0.2f)).coerceIn(0.4f, 1.0f)
                     
@@ -463,19 +467,18 @@ private fun AlphabetLetterItem(
             .drawBehind {
                 if (selectedLetter == null) return@drawBehind
                 val floatIndex = floatIndexProvider()
-                val dist = abs(floatIndex - index).let { if (it > 13.5) 27 - it else it }.toFloat()
+                val dist = abs(floatIndex - index).let { if (it > 13.5f) 27f - it else it }
                 val glowAlpha = (1f - dist * 2f).coerceIn(0f, 1f)
                 
                 if (glowAlpha > 0f) {
-                    val radius = (stepSize * 0.85f).toPx() / 2f
                     drawCircle(
                         color = accentColor.glowColor.copy(alpha = accentColor.glowColor.alpha * glowAlpha),
-                        radius = radius
+                        radius = circleRadiusPx
                     )
                     drawCircle(
                         color = accentColor.color.copy(alpha = 0.25f * glowAlpha),
-                        radius = radius,
-                        style = Stroke(width = 1.dp.toPx())
+                        radius = circleRadiusPx,
+                        style = stroke1Dp
                     )
                 }
             }

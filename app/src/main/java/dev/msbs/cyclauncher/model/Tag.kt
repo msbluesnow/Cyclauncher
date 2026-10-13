@@ -1,11 +1,13 @@
 package dev.msbs.cyclauncher.model
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import org.json.JSONObject
 import java.util.UUID
 
 /** Represents a custom user-defined tag for categorizing applications. */
+@Immutable
 data class Tag(
     val id: String = UUID.randomUUID().toString(),
     val name: String,

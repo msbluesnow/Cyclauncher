@@ -2,12 +2,14 @@ package dev.msbs.cyclauncher.model
 
 import android.os.Process
 import android.os.UserHandle
+import androidx.compose.runtime.Immutable
 
 /**
  * Metadata for an installed application.
  * App icons are loaded lazily on demand via Coil using [iconKey]
  * to prevent ViewModels from holding decoded Bitmaps in memory.
  */
+@Immutable
 data class AppInfo(
     val label: String,
     val packageName: String,
