@@ -371,24 +371,30 @@ private fun SingleWidgetSlot(
         ) {
             AndroidView(
                 factory = { ctx ->
-                    val view = cachedHostView ?: run {
-                        val host = appWidgetHost
-                        val newView = (host?.createView(ctx, widgetId, widgetInfo) as? LauncherAppWidgetHostView)
-                            ?: LauncherAppWidgetHostView(ctx).apply {
-                                setAppWidget(widgetId, widgetInfo)
-                            }
-                        cachedHostView = newView
-                        newView
+                    try {
+                        val view = cachedHostView ?: run {
+                            val host = appWidgetHost
+                            val newView = (host?.createView(ctx, widgetId, widgetInfo) as? LauncherAppWidgetHostView)
+                                ?: LauncherAppWidgetHostView(ctx).apply {
+                                    setAppWidget(widgetId, widgetInfo)
+                                }
+                            cachedHostView = newView
+                            newView
+                        }
+                        (view.parent as? ViewGroup)?.removeView(view)
+                        view
+                    } catch (_: Throwable) {
+                        android.widget.FrameLayout(ctx)
                     }
-                    (view.parent as? ViewGroup)?.removeView(view)
-                    view
                 },
                 modifier = Modifier.fillMaxSize(),
                 update = { view ->
-                    val displayDensity = context.resources.displayMetrics.density
-                    val targetWidthDp = (slotWidthPx / displayDensity).toInt().coerceAtLeast(30)
-                    val targetHeightDp = (slotHeightPx / displayDensity).toInt().coerceAtLeast(30)
-                    view.applyWidgetSize(targetWidthDp, targetHeightDp)
+                    try {
+                        val displayDensity = context.resources.displayMetrics.density
+                        val targetWidthDp = (slotWidthPx / displayDensity).toInt().coerceAtLeast(30)
+                        val targetHeightDp = (slotHeightPx / displayDensity).toInt().coerceAtLeast(30)
+                        (view as? LauncherAppWidgetHostView)?.applyWidgetSize(targetWidthDp, targetHeightDp)
+                    } catch (_: Throwable) {}
                 }
             )
 
@@ -504,23 +510,29 @@ fun SideSearchWidgetSlot(
             ) {
                 AndroidView(
                     factory = { ctx ->
-                        cachedHostView ?: run {
-                            val host = appWidgetHost
-                            val view = (host?.createView(ctx, currentWidgetId, widgetInfo) as? LauncherAppWidgetHostView)
-                                ?: LauncherAppWidgetHostView(ctx).apply {
-                                    setAppWidget(currentWidgetId, widgetInfo)
-                                }
-                            (view.parent as? ViewGroup)?.removeView(view)
-                            cachedHostView = view
-                            view
+                        try {
+                            cachedHostView ?: run {
+                                val host = appWidgetHost
+                                val view = (host?.createView(ctx, currentWidgetId, widgetInfo) as? LauncherAppWidgetHostView)
+                                    ?: LauncherAppWidgetHostView(ctx).apply {
+                                        setAppWidget(currentWidgetId, widgetInfo)
+                                    }
+                                (view.parent as? ViewGroup)?.removeView(view)
+                                cachedHostView = view
+                                view
+                            }
+                        } catch (_: Throwable) {
+                            android.widget.FrameLayout(ctx)
                         }
                     },
                     modifier = Modifier.fillMaxSize(),
                     update = { view ->
-                        val displayDensity = context.resources.displayMetrics.density
-                        val targetWidthDp = (slotWidthPx / displayDensity).toInt().coerceAtLeast(30)
-                        val targetHeightDp = (slotHeightPx / displayDensity).toInt().coerceAtLeast(30)
-                        view.applyWidgetSize(targetWidthDp, targetHeightDp)
+                        try {
+                            val displayDensity = context.resources.displayMetrics.density
+                            val targetWidthDp = (slotWidthPx / displayDensity).toInt().coerceAtLeast(30)
+                            val targetHeightDp = (slotHeightPx / displayDensity).toInt().coerceAtLeast(30)
+                            (view as? LauncherAppWidgetHostView)?.applyWidgetSize(targetWidthDp, targetHeightDp)
+                        } catch (_: Throwable) {}
                     }
                 )
 
@@ -721,23 +733,29 @@ fun SideAlphabetWidgetSlot(
             ) {
                 AndroidView(
                     factory = { ctx ->
-                        cachedHostView ?: run {
-                            val host = appWidgetHost
-                            val view = (host?.createView(ctx, currentWidgetId, widgetInfo) as? LauncherAppWidgetHostView)
-                                ?: LauncherAppWidgetHostView(ctx).apply {
-                                    setAppWidget(currentWidgetId, widgetInfo)
-                                }
-                            (view.parent as? ViewGroup)?.removeView(view)
-                            cachedHostView = view
-                            view
+                        try {
+                            cachedHostView ?: run {
+                                val host = appWidgetHost
+                                val view = (host?.createView(ctx, currentWidgetId, widgetInfo) as? LauncherAppWidgetHostView)
+                                    ?: LauncherAppWidgetHostView(ctx).apply {
+                                        setAppWidget(currentWidgetId, widgetInfo)
+                                    }
+                                (view.parent as? ViewGroup)?.removeView(view)
+                                cachedHostView = view
+                                view
+                            }
+                        } catch (_: Throwable) {
+                            android.widget.FrameLayout(ctx)
                         }
                     },
                     modifier = Modifier.fillMaxSize(),
                     update = { view ->
-                        val displayDensity = context.resources.displayMetrics.density
-                        val targetWidthDp = (slotWidthPx / displayDensity).toInt().coerceAtLeast(30)
-                        val targetHeightDp = (slotHeightPx / displayDensity).toInt().coerceAtLeast(30)
-                        view.applyWidgetSize(targetWidthDp, targetHeightDp)
+                        try {
+                            val displayDensity = context.resources.displayMetrics.density
+                            val targetWidthDp = (slotWidthPx / displayDensity).toInt().coerceAtLeast(30)
+                            val targetHeightDp = (slotHeightPx / displayDensity).toInt().coerceAtLeast(30)
+                            (view as? LauncherAppWidgetHostView)?.applyWidgetSize(targetWidthDp, targetHeightDp)
+                        } catch (_: Throwable) {}
                     }
                 )
 

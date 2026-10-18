@@ -456,13 +456,19 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val installs = mutableListOf<AppInfo>()
             val updates = mutableListOf<AppInfo>()
 
-            val installedPackages = pm.getInstalledPackagesCompat()
-            val packageInfoMap = installedPackages.associateBy { it.packageName }
             val updateTimeMap = mutableMapOf<String, Long>()
+            val packageInfoMap = mutableMapOf<String, PackageInfo>()
+            for (app in personalList) {
+                if (!packageInfoMap.containsKey(app.packageName)) {
+                    pm.getPackageInfoCompat(app.packageName)?.let {
+                        packageInfoMap[app.packageName] = it
+                    }
+                }
+            }
 
             for (app in personalList) {
                 try {
-                    val pInfo = packageInfoMap[app.packageName] ?: pm.getPackageInfoCompat(app.packageName) ?: continue
+                    val pInfo = packageInfoMap[app.packageName] ?: continue
                     val firstInstall = pInfo.firstInstallTime
                     val lastUpdate = pInfo.lastUpdateTime
                     updateTimeMap[app.componentKey] = lastUpdate
@@ -1810,19 +1816,23 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 val currentUpdateTimes = mutableMapOf<String, Long>()
                 val newlyInstalledOrUpdated = mutableListOf<Pair<String, Long>>()
 
-                val installedPackages = pm.getInstalledPackagesCompat()
-                for (pInfo in installedPackages) {
-                    currentUpdateTimes[pInfo.packageName] = pInfo.lastUpdateTime
+                for (app in personalAppsCache) {
+                    val pkgName = app.packageName
+                    if (!currentUpdateTimes.containsKey(pkgName)) {
+                        val updateTime = pm.getPackageInfoCompat(pkgName)?.lastUpdateTime ?: 0L
+                        if (updateTime > 0L) {
+                            currentUpdateTimes[pkgName] = updateTime
+                        }
+                    }
                 }
 
                 if (!isFirstTimeTracking) {
                     for (app in personalAppsCache) {
                         val pkgName = app.packageName
                         val compKey = app.componentKey
-                        val updateTime = currentUpdateTimes[pkgName] ?: pm.getPackageInfoCompat(pkgName)?.lastUpdateTime ?: 0L
+                        val updateTime = currentUpdateTimes[pkgName] ?: 0L
 
                         if (updateTime > 0L) {
-                            currentUpdateTimes[pkgName] = updateTime
                             val prevTime = prevUpdateTimes[pkgName]
                             if (prevTime == null || updateTime > prevTime) {
                                 newlyInstalledOrUpdated.add(compKey to updateTime)
@@ -1913,7 +1923,7 @@ private fun PackageManager.getInstalledPackagesCompat(): List<PackageInfo> = try
         @Suppress("DEPRECATION")
         getInstalledPackages(0)
     }
-} catch (_: Exception) {
+} catch (_: Throwable) {
     emptyList()
 }
 
@@ -1924,6 +1934,6 @@ private fun PackageManager.getPackageInfoCompat(packageName: String): PackageInf
         @Suppress("DEPRECATION")
         getPackageInfo(packageName, 0)
     }
-} catch (_: Exception) {
+} catch (_: Throwable) {
     null
 }

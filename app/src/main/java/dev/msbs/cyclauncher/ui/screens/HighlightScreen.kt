@@ -1808,20 +1808,26 @@ private fun WidgetCard(
                 ) {
                     AndroidView(
                         factory = { ctx ->
-                            val view = (appWidgetHost.createView(ctx, config.id, widgetInfo) as? LauncherAppWidgetHostView)
-                                ?: LauncherAppWidgetHostView(ctx).apply {
-                                    setAppWidget(config.id, widgetInfo)
-                                }
-                            (view.parent as? ViewGroup)?.removeView(view)
-                            currentHostView = view
-                            view
+                            try {
+                                val view = (appWidgetHost.createView(ctx, config.id, widgetInfo) as? LauncherAppWidgetHostView)
+                                    ?: LauncherAppWidgetHostView(ctx).apply {
+                                        setAppWidget(config.id, widgetInfo)
+                                    }
+                                (view.parent as? ViewGroup)?.removeView(view)
+                                currentHostView = view
+                                view
+                            } catch (_: Throwable) {
+                                android.widget.FrameLayout(ctx)
+                            }
                         },
                         modifier = Modifier.fillMaxSize(),
                         update = { view ->
-                            val displayDensity = context.resources.displayMetrics.density
-                            val screenWidthDp = (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
-                            val targetWidthDp = (screenWidthDp * config.widthFraction).toInt() - 24
-                            view.applyWidgetSize(targetWidthDp, config.heightDp)
+                            try {
+                                val displayDensity = context.resources.displayMetrics.density
+                                val screenWidthDp = (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
+                                val targetWidthDp = (screenWidthDp * config.widthFraction).toInt() - 24
+                                (view as? LauncherAppWidgetHostView)?.applyWidgetSize(targetWidthDp, config.heightDp)
+                            } catch (_: Throwable) {}
                         }
                     )
                 }

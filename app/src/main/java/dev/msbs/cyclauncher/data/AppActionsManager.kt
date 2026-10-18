@@ -1483,18 +1483,32 @@ class AppActionsManager(context: Context) {
 
         if (preview.settings.isNotEmpty()) {
             val editor = prefs.edit()
+            val existingPrefs = prefs.all
             preview.settings.forEach { (key, value) ->
-                when (value) {
-                    "true" -> editor.putBoolean(key, true)
-                    "false" -> editor.putBoolean(key, false)
+                val existingVal = existingPrefs[key]
+                when {
+                    existingVal is Boolean -> {
+                        editor.putBoolean(key, value.toBoolean())
+                    }
+                    existingVal is Int -> {
+                        value.toIntOrNull()?.let { editor.putInt(key, it) } ?: editor.putString(key, value)
+                    }
+                    existingVal is Long -> {
+                        value.toLongOrNull()?.let { editor.putLong(key, it) } ?: editor.putString(key, value)
+                    }
+                    existingVal is Float -> {
+                        value.toFloatOrNull()?.let { editor.putFloat(key, it) } ?: editor.putString(key, value)
+                    }
+                    value == "true" -> editor.putBoolean(key, true)
+                    value == "false" -> editor.putBoolean(key, false)
+                    key.endsWith("_id") || key == "cached_colors_algo_version" -> {
+                        value.toIntOrNull()?.let { editor.putInt(key, it) } ?: editor.putString(key, value)
+                    }
+                    key.endsWith("_alpha") || key.contains("ratio") -> {
+                        value.toFloatOrNull()?.let { editor.putFloat(key, it) } ?: editor.putString(key, value)
+                    }
                     else -> {
-                        val floatVal = value.toFloatOrNull()
-                        val isFloatKey = key.endsWith("_alpha") || key.contains("ratio")
-                        if (floatVal != null && isFloatKey) {
-                            editor.putFloat(key, floatVal)
-                        } else {
-                            editor.putString(key, value)
-                        }
+                        editor.putString(key, value)
                     }
                 }
             }
