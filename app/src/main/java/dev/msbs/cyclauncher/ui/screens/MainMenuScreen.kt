@@ -733,7 +733,7 @@ private fun HistorySection(
             if (showHistoryArea && history.isNotEmpty() && (listState.firstVisibleItemIndex != 0 || listState.firstVisibleItemScrollOffset != 0)) {
                 listState.scrollToItem(0)
             }
-            if (showTagsArea && showHistoryArea && popularTags.isNotEmpty() && (tagGridState.firstVisibleItemIndex != 0 || tagGridState.firstVisibleItemScrollOffset != 0)) {
+            if (showTagsArea && popularTags.isNotEmpty() && (tagGridState.firstVisibleItemIndex != 0 || tagGridState.firstVisibleItemScrollOffset != 0)) {
                 tagGridState.scrollToItem(0)
             }
         }
@@ -761,7 +761,7 @@ private fun HistorySection(
         } else if (!showHistoryArea) {
             Column(
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Top,
+                verticalArrangement = Arrangement.Bottom,
                 horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
             ) {
                 TagsContentBlock(
@@ -778,7 +778,8 @@ private fun HistorySection(
                     onTagSectionIconClick = onTagSectionIconClick,
                     onSettingsClick = currentOnSettingsClick,
                     onTagFolderClick = onTagFolderClick,
-                    onTagFolderLongClick = onTagFolderLongClick
+                    onTagFolderLongClick = onTagFolderLongClick,
+                    showHistoryArea = false
                 )
             }
         } else if (!showTagsArea) {
@@ -976,9 +977,10 @@ private fun ColumnScope.TagsContentBlock(
     onTagSectionIconClick: (Offset) -> Unit = {},
     onSettingsClick: () -> Unit,
     onTagFolderClick: (Tag, List<AppInfo>, Offset) -> Unit,
-    onTagFolderLongClick: (Tag, List<AppInfo>, Offset) -> Unit
+    onTagFolderLongClick: (Tag, List<AppInfo>, Offset) -> Unit,
+    showHistoryArea: Boolean = true
 ) {
-    if (popularTags.isEmpty()) return
+    if (popularTags.isEmpty() && showHistoryArea) return
 
     val layoutDirection = if (handSide == HandSide.RIGHT) LayoutDirection.Rtl else LayoutDirection.Ltr
     val isRtl = handSide == HandSide.RIGHT
@@ -1208,7 +1210,9 @@ private fun ColumnScope.TagsContentBlock(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        if (popularTags.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+        }
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
