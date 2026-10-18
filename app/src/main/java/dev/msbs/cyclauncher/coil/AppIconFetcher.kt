@@ -80,38 +80,42 @@ internal class AppIconFetcher private constructor(
     }
 
     override suspend fun fetch(): FetchResult? = withContext(iconDispatcher) {
-        val slashIndex = key.componentKey.indexOf('/')
-        if (slashIndex <= 0 || slashIndex >= key.componentKey.length - 1) return@withContext null
-        val pkg = key.componentKey.substring(0, slashIndex)
-        val activity = key.componentKey.substring(slashIndex + 1)
-        val pm = context.packageManager
+        try {
+            val slashIndex = key.componentKey.indexOf('/')
+            if (slashIndex <= 0 || slashIndex >= key.componentKey.length - 1) return@withContext null
+            val pkg = key.componentKey.substring(0, slashIndex)
+            val activity = key.componentKey.substring(slashIndex + 1)
+            val pm = context.packageManager
 
-        val iconPackDrawable: Drawable? = try {
-            IconPackManager.getIcon(key.componentKey)
-        } catch (_: Exception) {
+            val iconPackDrawable: Drawable? = try {
+                IconPackManager.getIcon(key.componentKey)
+            } catch (_: Throwable) {
+                null
+            }
+
+            var isFallback = false
+            val drawable: Drawable = iconPackDrawable ?: try {
+                resolveIcon(context, pm, pkg, activity)
+            } catch (_: Throwable) {
+                try {
+                    pm.getApplicationIcon(pkg)
+                } catch (_: Throwable) {
+                    isFallback = true
+                    pm.defaultActivityIcon
+                }
+            }
+
+            val targetSize = resolveTargetSize(drawable, options)
+            val bitmap = drawableToBitmap(drawable, targetSize) ?: return@withContext null
+
+            ImageFetchResult(
+                image = bitmap.asImage(),
+                isSampled = isFallback,
+                dataSource = if (isFallback) DataSource.NETWORK else DataSource.DISK,
+            )
+        } catch (_: Throwable) {
             null
         }
-
-        var isFallback = false
-        val drawable: Drawable = iconPackDrawable ?: try {
-            resolveIcon(context, pm, pkg, activity)
-        } catch (_: Exception) {
-            try {
-                pm.getApplicationIcon(pkg)
-            } catch (_: Exception) {
-                isFallback = true
-                pm.defaultActivityIcon
-            }
-        }
-
-        val targetSize = resolveTargetSize(drawable, options)
-        val bitmap = drawableToBitmap(drawable, targetSize)
-
-        ImageFetchResult(
-            image = bitmap.asImage(),
-            isSampled = isFallback,
-            dataSource = if (isFallback) DataSource.NETWORK else DataSource.DISK,
-        )
     }
 
     private fun resolveTargetSize(drawable: Drawable, options: Options): Int {
@@ -129,9 +133,13 @@ internal class AppIconFetcher private constructor(
         return if (intrinsic > 0) maxOf(intrinsic, standardSize).coerceIn(48, 288) else standardSize
     }
 
-    private fun drawableToBitmap(drawable: Drawable, size: Int): Bitmap {
+    private fun drawableToBitmap(drawable: Drawable, size: Int): Bitmap? {
         val safeSize = size.coerceAtLeast(1)
-        val bitmap = Bitmap.createBitmap(safeSize, safeSize, Bitmap.Config.ARGB_8888)
+        val bitmap = try {
+            Bitmap.createBitmap(safeSize, safeSize, Bitmap.Config.ARGB_8888)
+        } catch (_: Throwable) {
+            return null
+        }
         val canvas = Canvas(bitmap)
 
         // Apply bilinear filtering and dithering to eliminate pixelation and banding (matching AOSP Launcher3 BaseIconFactory)
@@ -145,17 +153,23 @@ internal class AppIconFetcher private constructor(
         canvas.save()
         canvas.clipPath(scaledPath)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && drawable is android.graphics.drawable.AdaptiveIconDrawable) {
-            drawable.setBounds(0, 0, safeSize, safeSize)
-            drawable.draw(canvas)
+        val workingDrawable = try {
+            drawable.mutate()
+        } catch (_: Throwable) {
+            drawable
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && workingDrawable is android.graphics.drawable.AdaptiveIconDrawable) {
+            workingDrawable.setBounds(0, 0, safeSize, safeSize)
+            workingDrawable.draw(canvas)
         } else {
-            if (drawable is BitmapDrawable) {
-                drawable.isFilterBitmap = true
-                drawable.setDither(true)
+            if (workingDrawable is BitmapDrawable) {
+                workingDrawable.isFilterBitmap = true
+                workingDrawable.setDither(true)
             }
             val inset = (safeSize * 0.10f).toInt()
-            drawable.setBounds(inset, inset, safeSize - inset, safeSize - inset)
-            drawable.draw(canvas)
+            workingDrawable.setBounds(inset, inset, safeSize - inset, safeSize - inset)
+            workingDrawable.draw(canvas)
         }
 
         canvas.restore()

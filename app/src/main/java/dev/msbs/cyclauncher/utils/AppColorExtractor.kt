@@ -29,18 +29,36 @@ object AppColorExtractor {
                 val foreground = drawable.foreground
                 if (foreground != null) {
                     val fgBitmap = drawableToBitmap(foreground, TARGET_BITMAP_SIZE)
-                    val fgBucket = analyzeBitmapPixels(fgBitmap)
-                    // If the foreground has distinct chromatic color(s), use it!
-                    if (fgBucket != AppColorBucket.MONOCHROME) {
-                        return fgBucket
+                    if (fgBitmap != null) {
+                        try {
+                            val fgBucket = analyzeBitmapPixels(fgBitmap)
+                            // If the foreground has distinct chromatic color(s), use it!
+                            if (fgBucket != AppColorBucket.MONOCHROME) {
+                                return fgBucket
+                            }
+                        } finally {
+                            if (fgBitmap != (foreground as? BitmapDrawable)?.bitmap) {
+                                fgBitmap.recycle()
+                            }
+                        }
                     }
                 }
             }
 
             // Full composite icon analysis
             val bitmap = drawableToBitmap(drawable, TARGET_BITMAP_SIZE)
-            analyzeBitmapPixels(bitmap)
-        } catch (_: Exception) {
+            if (bitmap != null) {
+                try {
+                    analyzeBitmapPixels(bitmap)
+                } finally {
+                    if (bitmap != (drawable as? BitmapDrawable)?.bitmap) {
+                        bitmap.recycle()
+                    }
+                }
+            } else {
+                AppColorBucket.MONOCHROME
+            }
+        } catch (_: Throwable) {
             AppColorBucket.MONOCHROME
         }
     }
@@ -128,21 +146,30 @@ object AppColorExtractor {
         }
     }
 
-    private fun drawableToBitmap(drawable: Drawable, size: Int): Bitmap {
-        if (drawable is BitmapDrawable && drawable.bitmap != null) {
-            val src = drawable.bitmap
-            if (src.width == size && src.height == size) {
-                return src
+    private fun drawableToBitmap(drawable: Drawable, size: Int): Bitmap? {
+        try {
+            if (drawable is BitmapDrawable && drawable.bitmap != null) {
+                val src = drawable.bitmap
+                if (src.width == size && src.height == size) {
+                    return src
+                }
+                if (src.width > 0 && src.height > 0) {
+                    return Bitmap.createScaledBitmap(src, size, size, true)
+                }
             }
-            if (src.width > 0 && src.height > 0) {
-                return Bitmap.createScaledBitmap(src, size, size, true)
+            val safeSize = size.coerceAtLeast(1)
+            val bitmap = Bitmap.createBitmap(safeSize, safeSize, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            val workingDrawable = try {
+                drawable.mutate()
+            } catch (_: Throwable) {
+                drawable
             }
+            workingDrawable.setBounds(0, 0, safeSize, safeSize)
+            workingDrawable.draw(canvas)
+            return bitmap
+        } catch (_: Throwable) {
+            return null
         }
-        val safeSize = size.coerceAtLeast(1)
-        val bitmap = Bitmap.createBitmap(safeSize, safeSize, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, safeSize, safeSize)
-        drawable.draw(canvas)
-        return bitmap
     }
 }

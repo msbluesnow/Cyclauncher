@@ -1632,6 +1632,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun onPackageRemoved(packageName: String, user: UserHandle = Process.myUserHandle()) {
         invalidateIconCache(packageName)
+        if (packageName == IconPackManager.activePackageName) {
+            IconPackManager.onPackageRemoved(packageName)
+            editPrefs { remove("icon_pack_package") }
+            _iconPackVersion.value = System.currentTimeMillis()
+        }
         if (user != Process.myUserHandle()) {
             onProfileAvailabilityChanged(user, isAvailable = true)
             return

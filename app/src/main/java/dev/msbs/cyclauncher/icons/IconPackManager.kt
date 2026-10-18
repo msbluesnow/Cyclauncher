@@ -195,6 +195,23 @@ object IconPackManager {
         }
 
     /**
+     * Releases active icon pack resources and mappings from memory.
+     */
+    fun unload() {
+        activePackageName = null
+        activeResources = null
+        componentToDrawableMap.clear()
+        packageToDrawableMap.clear()
+        drawableToResIdMap.clear()
+    }
+
+    fun onPackageRemoved(packageName: String) {
+        if (activePackageName == packageName) {
+            unload()
+        }
+    }
+
+    /**
      * Asynchronously loads and parses the icon pack's appfilter.xml mapping.
      * If [packageName] is null or blank, automatically attempts to load the custom ROM's
      * active system icon pack.
@@ -207,11 +224,7 @@ object IconPackManager {
         }
 
         if (targetPackage.isNullOrBlank()) {
-            activePackageName = null
-            activeResources = null
-            componentToDrawableMap.clear()
-            packageToDrawableMap.clear()
-            drawableToResIdMap.clear()
+            unload()
             return@withContext
         }
 
