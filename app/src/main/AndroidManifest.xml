@@ -57,6 +57,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:directBootAware="true"
             android:launchMode="singleTask"
             android:clearTaskOnLaunch="true"
             android:stateNotNeeded="true"

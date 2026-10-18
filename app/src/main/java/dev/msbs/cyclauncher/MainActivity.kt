@@ -634,7 +634,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
             unlockReceiver = receiver
-            registerReceiver(receiver, filter)
+            androidx.core.content.ContextCompat.registerReceiver(
+                this,
+                receiver,
+                filter,
+                androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+            )
         }
     }
 
@@ -885,22 +890,38 @@ class MainActivity : ComponentActivity() {
             }
 
             if (!launched) {
-                try {
-                    val intent = Intent(Intent.ACTION_MAIN).apply {
-                        addCategory(Intent.CATEGORY_LAUNCHER)
-                        component = componentName
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
-                    }
-                    startActivity(intent, optionsBundle)
-                } catch (e: Exception) {
-                    packageManager.getLaunchIntentForPackage(packageName)?.let { intent ->
+                if (userHandle == android.os.Process.myUserHandle()) {
+                    try {
+                        val intent = Intent(Intent.ACTION_MAIN).apply {
+                            addCategory(Intent.CATEGORY_LAUNCHER)
+                            component = componentName
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+                        }
                         startActivity(intent, optionsBundle)
+                    } catch (_: Exception) {
+                        try {
+                            packageManager.getLaunchIntentForPackage(packageName)?.let { intent ->
+                                startActivity(intent, optionsBundle)
+                            } ?: run {
+                                Toast.makeText(this, "Could not open app", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (_: Exception) {
+                            Toast.makeText(this, "Could not open app", Toast.LENGTH_SHORT).show()
+                        }
                     }
+                } else {
+                    Toast.makeText(this, "Could not open profile app", Toast.LENGTH_SHORT).show()
                 }
             }
         } else {
-            packageManager.getLaunchIntentForPackage(componentKey)?.let { intent ->
-                startActivity(intent, optionsBundle)
+            try {
+                packageManager.getLaunchIntentForPackage(componentKey)?.let { intent ->
+                    startActivity(intent, optionsBundle)
+                } ?: run {
+                    Toast.makeText(this, "Could not open app", Toast.LENGTH_SHORT).show()
+                }
+            } catch (_: Exception) {
+                Toast.makeText(this, "Could not open app", Toast.LENGTH_SHORT).show()
             }
         }
     }
