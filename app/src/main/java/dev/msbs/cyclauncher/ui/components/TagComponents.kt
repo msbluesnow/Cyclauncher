@@ -535,7 +535,6 @@ fun TagFolderPopup(
                                 val movedItem = localApps.removeAt(curIndex)
                                 localApps.add(targetItem.index, movedItem)
                                 currentOnReorderApp?.invoke(curIndex, targetItem.index)
-                                currentOnSaveOrder?.invoke(localApps.map { it.componentKey })
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             }
                         }

@@ -415,6 +415,7 @@ fun MainMenuScreen(
                         isReorderMode = it
                     },
                     onReorder = { from, to -> viewModel.reorderFavorites(from, to) },
+                    onReorderKeys = { fromKey, toKey -> viewModel.reorderFavoritesByKeys(fromKey, toKey) },
                     onToggleFavorite = { viewModel.toggleFavorite(it) },
                     onAppClick = handleAppClick,
                     onAppLongClick = handleAppLongClick,
@@ -1566,6 +1567,7 @@ private fun FavoritesSection(
     isReorderMode: Boolean,
     setReorderMode: (Boolean) -> Unit,
     onReorder: (Int, Int) -> Unit,
+    onReorderKeys: ((String, String) -> Unit)? = null,
     onToggleFavorite: (String) -> Unit,
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit,
@@ -1603,6 +1605,7 @@ private fun FavoritesSection(
     }
 
     val currentOnReorder by rememberUpdatedState(onReorder)
+    val currentOnReorderKeys by rememberUpdatedState(onReorderKeys)
     LaunchedEffect(isReorderMode) {
         if (!isReorderMode) {
             draggingKey = null
@@ -1884,9 +1887,15 @@ private fun FavoritesSection(
                                             val actualChange = targetIndex - curIndex
                                             val dyToSub = -actualChange * stepHeight
                                             dragVerticalOffset -= dyToSub
+                                            val fromKey = localFavorites[curIndex].key
+                                            val toKey = localFavorites[targetIndex].key
                                             val moved = localFavorites.removeAt(curIndex)
                                             localFavorites.add(targetIndex, moved)
-                                            currentOnReorder(curIndex, targetIndex)
+                                            if (currentOnReorderKeys != null) {
+                                                currentOnReorderKeys?.invoke(fromKey, toKey)
+                                            } else {
+                                                currentOnReorder(curIndex, targetIndex)
+                                            }
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         }
                                     }

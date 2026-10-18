@@ -102,11 +102,10 @@ class AppActionsManager(context: Context) {
 
     fun reorderFavorites(fromIndex: Int, toIndex: Int) {
         val current = _favorites.value.toMutableList()
-        if (fromIndex in current.indices && toIndex in current.indices) {
-            val item = current.removeAt(fromIndex)
-            current.add(toIndex, item)
-            _favorites.value = current
-            saveList("favorites", current)
+        if (fromIndex in current.indices && toIndex in current.indices && fromIndex != toIndex) {
+            val fromKey = current[fromIndex]
+            val toKey = current[toIndex]
+            reorderFavoritesByKeys(fromKey, toKey)
         }
     }
 
@@ -497,6 +496,48 @@ class AppActionsManager(context: Context) {
         val updateTimes = loadAppUpdateTimes().toMutableMap()
         if (updateTimes.remove(packageName) != null) {
             saveAppUpdateTimes(updateTimes)
+        }
+
+        val newFavs = _favorites.value.filterNot { it.startsWith("$packageName/") || it == packageName }
+        if (newFavs.size != _favorites.value.size) {
+            _favorites.value = newFavs
+            saveList("favorites", newFavs)
+        }
+
+        val newHistory = _history.value.filterNot { it.startsWith("$packageName/") || it == packageName }
+        if (newHistory.size != _history.value.size) {
+            _history.value = newHistory
+            saveList("history", newHistory)
+        }
+
+        val currentAppTags = _appTags.value.toMutableMap()
+        val appTagKeysToRemove = currentAppTags.keys.filter { it.startsWith("$packageName/") || it == packageName }
+        if (appTagKeysToRemove.isNotEmpty()) {
+            appTagKeysToRemove.forEach { currentAppTags.remove(it) }
+            _appTags.value = currentAppTags
+            saveAppTags(currentAppTags)
+        }
+
+        val currentOrders = _tagAppOrders.value.toMutableMap()
+        var ordersChanged = false
+        currentOrders.forEach { (tagId, list) ->
+            val filtered = list.filterNot { it.startsWith("$packageName/") || it == packageName }
+            if (filtered.size != list.size) {
+                currentOrders[tagId] = filtered
+                ordersChanged = true
+            }
+        }
+        if (ordersChanged) {
+            _tagAppOrders.value = currentOrders
+            saveTagAppOrders(currentOrders)
+        }
+
+        val currentLabels = _customLabels.value.toMutableMap()
+        val labelKeysToRemove = currentLabels.keys.filter { it.startsWith("$packageName/") || it == packageName }
+        if (labelKeysToRemove.isNotEmpty()) {
+            labelKeysToRemove.forEach { currentLabels.remove(it) }
+            _customLabels.value = currentLabels
+            saveMap("custom_labels", currentLabels)
         }
     }
 
@@ -1500,8 +1541,13 @@ class AppActionsManager(context: Context) {
     }
 
     private fun saveMap(key: String, map: Map<String, String>) {
-        val json = JSONObject(map)
-        prefs.edit().putString(key, json.toString()).apply()
+        val snapshot = HashMap(map)
+        storageExecutor.execute {
+            try {
+                val json = JSONObject(snapshot)
+                prefs.edit().putString(key, json.toString()).apply()
+            } catch (_: Exception) {}
+        }
     }
 
     private fun loadMap(key: String): Map<String, String> {
@@ -1519,9 +1565,14 @@ class AppActionsManager(context: Context) {
     }
 
     private fun saveTags(list: List<Tag>) {
-        val array = JSONArray()
-        list.forEach { array.put(it.toJsonObject()) }
-        prefs.edit().putString("tags", array.toString()).apply()
+        val snapshot = list.toList()
+        storageExecutor.execute {
+            try {
+                val array = JSONArray()
+                snapshot.forEach { array.put(it.toJsonObject()) }
+                prefs.edit().putString("tags", array.toString()).apply()
+            } catch (_: Exception) {}
+        }
     }
 
     private fun loadTags(): List<Tag> {
@@ -1535,9 +1586,14 @@ class AppActionsManager(context: Context) {
     }
 
     private fun saveAppTags(map: Map<String, List<String>>) {
-        val json = JSONObject()
-        map.forEach { (k, v) -> json.put(k, JSONArray(v)) }
-        prefs.edit().putString("app_tags", json.toString()).apply()
+        val snapshot = map.mapValues { it.value.toList() }
+        storageExecutor.execute {
+            try {
+                val json = JSONObject()
+                snapshot.forEach { (k, v) -> json.put(k, JSONArray(v)) }
+                prefs.edit().putString("app_tags", json.toString()).apply()
+            } catch (_: Exception) {}
+        }
     }
 
     private fun loadAppTags(): Map<String, List<String>> {
@@ -1556,9 +1612,14 @@ class AppActionsManager(context: Context) {
     }
 
     private fun saveTagAppOrders(map: Map<String, List<String>>) {
-        val json = JSONObject()
-        map.forEach { (k, v) -> json.put(k, JSONArray(v)) }
-        prefs.edit().putString("tag_app_orders", json.toString()).apply()
+        val snapshot = map.mapValues { it.value.toList() }
+        storageExecutor.execute {
+            try {
+                val json = JSONObject()
+                snapshot.forEach { (k, v) -> json.put(k, JSONArray(v)) }
+                prefs.edit().putString("tag_app_orders", json.toString()).apply()
+            } catch (_: Exception) {}
+        }
     }
 
     private fun loadTagAppOrders(): Map<String, List<String>> {

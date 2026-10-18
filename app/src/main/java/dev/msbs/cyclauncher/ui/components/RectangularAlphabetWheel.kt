@@ -539,6 +539,13 @@ fun Modifier.alphabetWheelDragGesture(
 
     coroutineScope {
         while (true) {
+            val dragChannel = kotlinx.coroutines.channels.Channel<Float>(kotlinx.coroutines.channels.Channel.CONFLATED)
+            val dragJob = launch {
+                for (pos in dragChannel) {
+                    scrollOffset.snapTo(pos)
+                }
+            }
+
             awaitPointerEventScope {
                 val down = awaitFirstDown()
                 launch { scrollOffset.stop() }
@@ -575,23 +582,24 @@ fun Modifier.alphabetWheelDragGesture(
                     val deltaLetters = (dragAmount / (s * 1.2f)) * scaleFactor
                     position -= deltaLetters
 
-                    launch {
-                        scrollOffset.snapTo(position)
-                    }
+                    dragChannel.trySend(position)
                 }
+            }
 
-                launch {
-                    if (animationsEnabled) {
-                        scrollOffset.animateTo(
-                            targetValue = scrollOffset.value.roundToInt().toFloat(),
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioLowBouncy,
-                                stiffness = Spring.StiffnessLow
-                            )
+            dragChannel.close()
+            dragJob.cancel()
+
+            launch {
+                if (animationsEnabled) {
+                    scrollOffset.animateTo(
+                        targetValue = scrollOffset.value.roundToInt().toFloat(),
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessLow
                         )
-                    } else {
-                        scrollOffset.snapTo(scrollOffset.value.roundToInt().toFloat())
-                    }
+                    )
+                } else {
+                    scrollOffset.snapTo(scrollOffset.value.roundToInt().toFloat())
                 }
             }
         }

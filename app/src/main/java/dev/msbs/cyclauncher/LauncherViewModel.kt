@@ -1139,9 +1139,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val fromKey = items[fromIndex].key
             val toKey = items[toIndex].key
             actionsManager.reorderFavoritesByKeys(fromKey, toKey)
-        } else {
-            actionsManager.reorderFavorites(fromIndex, toIndex)
         }
+    }
+
+    fun reorderFavoritesByKeys(fromKey: String, toKey: String) {
+        actionsManager.reorderFavoritesByKeys(fromKey, toKey)
     }
 
     fun reorderAppInTag(tagId: String, fromIndex: Int, toIndex: Int, currentApps: List<AppInfo>) {
@@ -1605,8 +1607,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         packageEventsJob?.cancel()
         packageEventsJob = viewModelScope.launch(Dispatchers.IO) {
             delay(350L)
-            val packages = pendingPackagesToProcess.toList()
-            pendingPackagesToProcess.clear()
+            val packages = mutableListOf<String>()
+            val iterator = pendingPackagesToProcess.iterator()
+            while (iterator.hasNext()) {
+                packages.add(iterator.next())
+                iterator.remove()
+            }
 
             if (packages.isNotEmpty()) {
                 val pm = getApplication<Application>().packageManager
