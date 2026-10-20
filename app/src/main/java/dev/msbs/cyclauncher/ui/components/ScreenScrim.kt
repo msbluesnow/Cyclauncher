@@ -16,15 +16,16 @@ import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 fun ScreenScrim(
     alpha: Float,
     isDark: Boolean,
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    val modifier = if (alpha > 0f) {
+    val scrimModifier = if (alpha > 0f) {
         val scrimBase = if (isDark) Color.Black else Color.White
-        Modifier.fillMaxSize().background(scrimBase.copy(alpha = alpha))
+        modifier.fillMaxSize().background(scrimBase.copy(alpha = alpha))
     } else {
-        Modifier.fillMaxSize()
+        modifier.fillMaxSize()
     }
-    Box(modifier = modifier) {
+    Box(modifier = scrimModifier) {
         content()
     }
 }
@@ -33,5 +34,6 @@ fun ScreenScrim(
 fun ScreenScrim(
     alpha: Float,
     textColor: PrimaryTextColor,
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit
-) = ScreenScrim(alpha, isDark = textColor != PrimaryTextColor.BLACK, content = content)
+) = ScreenScrim(alpha, isDark = textColor != PrimaryTextColor.BLACK, modifier = modifier, content = content)

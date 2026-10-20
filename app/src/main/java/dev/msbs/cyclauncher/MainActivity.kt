@@ -11,6 +11,7 @@ import dev.msbs.cyclauncher.ui.components.AppActionMenu
 import dev.msbs.cyclauncher.ui.components.RenameDialog
 import dev.msbs.cyclauncher.ui.components.TagEditDialog
 import dev.msbs.cyclauncher.ui.components.TagSelectionDialog
+import dev.msbs.cyclauncher.ui.components.ScreenScrim
 import dev.msbs.cyclauncher.ui.components.TutorialOverlay
 import dev.msbs.cyclauncher.ui.screens.HighlightScreen
 import dev.msbs.cyclauncher.ui.screens.MainMenuScreen
@@ -399,7 +400,8 @@ class MainActivity : ComponentActivity() {
                         color = Color.Transparent
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
-                            HorizontalPager(
+                            ScreenScrim(screenScrimAlpha, isDark = screenScrimIsDark) {
+                                HorizontalPager(
                                 state = horizontalPagerState,
                                 modifier = Modifier.fillMaxSize(),
                                 beyondViewportPageCount = 0,
@@ -434,21 +436,19 @@ class MainActivity : ComponentActivity() {
                                                 label = "MainHighlightScreenTransition"
                                             ) { showHighlight ->
                                                 if (showHighlight) {
-                                                    dev.msbs.cyclauncher.ui.components.ScreenScrim(screenScrimAlpha, isDark = screenScrimIsDark) {
-                                                        HighlightScreen(
-                                                            viewModel = viewModel,
-                                                            appWidgetHost = appWidgetHost,
-                                                            appWidgetManager = appWidgetManager,
-                                                            onClose = { isHighlightScreenVisible = false },
-                                                            onAppClick = ::openApp,
-                                                            onConfigureWidget = ::startWidgetConfiguration,
-                                                            onAppLongClick = { app, offset ->
-                                                                showActionMenuFor = app
-                                                                menuOffset = offset
-                                                                menuSource = "highlight"
-                                                            }
-                                                        )
-                                                    }
+                                                    HighlightScreen(
+                                                        viewModel = viewModel,
+                                                        appWidgetHost = appWidgetHost,
+                                                        appWidgetManager = appWidgetManager,
+                                                        onClose = { isHighlightScreenVisible = false },
+                                                        onAppClick = ::openApp,
+                                                        onConfigureWidget = ::startWidgetConfiguration,
+                                                        onAppLongClick = { app, offset ->
+                                                            showActionMenuFor = app
+                                                            menuOffset = offset
+                                                            menuSource = "highlight"
+                                                        }
+                                                    )
                                                 } else {
                                                     MainMenuScreen(
                                                         viewModel = viewModel,
@@ -476,41 +476,38 @@ class MainActivity : ComponentActivity() {
                                                 }
                                             }
                                         } else {
-                                            dev.msbs.cyclauncher.ui.components.ScreenScrim(screenScrimAlpha, isDark = screenScrimIsDark) {
-                                                SearchScreen(
-                                                    viewModel = viewModel,
-                                                    enabled = isSearchActive,
-                                                    appWidgetHost = appWidgetHost,
-                                                    appWidgetManager = appWidgetManager,
-                                                    onConfigureWidget = ::startWidgetConfiguration,
-                                                    onBackToMain = {
-                                                        scope.launch { verticalPagerState.scrollToPageCompat(0, animationsEnabled, fastAnimSpec) }
-                                                    },
-                                                    onAppClick = { appKey ->
-                                                        viewModel.setSelectedLetter(null)
-                                                        openApp(appKey)
-                                                    },
-                                                    onAppLongClick = { app, offset -> 
-                                                        showActionMenuFor = app
-                                                        menuOffset = offset
-                                                        menuSource = "search"
-                                                    }
-                                                )
-                                            }
+                                            SearchScreen(
+                                                viewModel = viewModel,
+                                                enabled = isSearchActive,
+                                                appWidgetHost = appWidgetHost,
+                                                appWidgetManager = appWidgetManager,
+                                                onConfigureWidget = ::startWidgetConfiguration,
+                                                onBackToMain = {
+                                                    scope.launch { verticalPagerState.scrollToPageCompat(0, animationsEnabled, fastAnimSpec) }
+                                                },
+                                                onAppClick = { appKey ->
+                                                    viewModel.setSelectedLetter(null)
+                                                    openApp(appKey)
+                                                },
+                                                onAppLongClick = { app, offset -> 
+                                                    showActionMenuFor = app
+                                                    menuOffset = offset
+                                                    menuSource = "search"
+                                                }
+                                            )
                                         }
                                     }
                                 } else {
-                                    dev.msbs.cyclauncher.ui.components.ScreenScrim(screenScrimAlpha, isDark = screenScrimIsDark) {
-                                        SettingsScreen(
-                                            viewModel = viewModel,
-                                            enabled = isSettingsActive,
-                                            onBack = {
-                                                scope.launch { horizontalPagerState.scrollToPageCompat(0, animationsEnabled, fastAnimSpec) }
-                                            }
-                                        )
-                                    }
+                                    SettingsScreen(
+                                        viewModel = viewModel,
+                                        enabled = isSettingsActive,
+                                        onBack = {
+                                            scope.launch { horizontalPagerState.scrollToPageCompat(0, animationsEnabled, fastAnimSpec) }
+                                        }
+                                    )
                                 }
                             }
+                        }
 
                             showActionMenuFor?.let { app ->
                                 val componentKey = app.componentKey
