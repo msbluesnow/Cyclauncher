@@ -60,6 +60,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.SizeTransform
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.draw.rotate
@@ -171,7 +173,7 @@ fun HighlightScreen(
     val buttonTextColor by viewModel.buttonTextColor.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
     val shadowSettings = LocalShadowSettings.current
-    val animationsEnabled by viewModel.animationsEnabled.collectAsState()
+    val animationsEnabled = LocalAnimationsEnabled.current
     val highlightSectionOrder by viewModel.highlightSectionOrder.collectAsState()
     val popupTheme by viewModel.popupTheme.collectAsState()
 
@@ -542,9 +544,17 @@ fun HighlightScreen(
                                 targetState = expandedSection,
                                 transitionSpec = {
                                     if (animationsEnabled) {
-                                        fadeIn(animationSpec = tween(150)) togetherWith fadeOut(animationSpec = tween(100))
+                                        ContentTransform(
+                                            targetContentEnter = fadeIn(animationSpec = tween(150)),
+                                            initialContentExit = fadeOut(animationSpec = tween(100)),
+                                            sizeTransform = SizeTransform(clip = false) { _, _ -> tween(180) }
+                                        )
                                     } else {
-                                        EnterTransition.None togetherWith ExitTransition.None
+                                        ContentTransform(
+                                            targetContentEnter = EnterTransition.None,
+                                            initialContentExit = ExitTransition.None,
+                                            sizeTransform = null
+                                        )
                                     }
                                 },
                                 label = "HighlightSectionContent"

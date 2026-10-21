@@ -419,19 +419,25 @@ class MainActivity : ComponentActivity() {
                                             androidx.compose.animation.AnimatedContent(
                                                 targetState = isHighlightScreenVisible,
                                                 transitionSpec = {
-                                                    val direction = if (targetState == (handSide == HandSide.RIGHT)) 1 else -1
-                                                    val slideSpec = if (animationsEnabled) slideAnimSpec else androidx.compose.animation.core.snap<androidx.compose.ui.unit.IntOffset>()
-                                                    val fadeSpec = if (animationsEnabled) androidx.compose.animation.core.tween<Float>(150) else androidx.compose.animation.core.snap<Float>()
-                                                    (androidx.compose.animation.slideInHorizontally(
-                                                        initialOffsetX = { fullWidth -> direction * fullWidth },
-                                                        animationSpec = slideSpec
-                                                    ) + androidx.compose.animation.fadeIn(animationSpec = fadeSpec))
-                                                    .togetherWith(
-                                                        androidx.compose.animation.slideOutHorizontally(
-                                                            targetOffsetX = { fullWidth -> -direction * fullWidth },
-                                                            animationSpec = slideSpec
-                                                        ) + androidx.compose.animation.fadeOut(animationSpec = fadeSpec)
-                                                    )
+                                                    if (animationsEnabled) {
+                                                        val direction = if (targetState == (handSide == HandSide.RIGHT)) 1 else -1
+                                                        (androidx.compose.animation.slideInHorizontally(
+                                                            initialOffsetX = { fullWidth -> direction * fullWidth },
+                                                            animationSpec = slideAnimSpec
+                                                        ) + androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween<Float>(150)))
+                                                        .togetherWith(
+                                                            androidx.compose.animation.slideOutHorizontally(
+                                                                targetOffsetX = { fullWidth -> -direction * fullWidth },
+                                                                animationSpec = slideAnimSpec
+                                                            ) + androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween<Float>(150))
+                                                        )
+                                                    } else {
+                                                        androidx.compose.animation.ContentTransform(
+                                                            targetContentEnter = androidx.compose.animation.EnterTransition.None,
+                                                            initialContentExit = androidx.compose.animation.ExitTransition.None,
+                                                            sizeTransform = null
+                                                        )
+                                                    }
                                                 },
                                                 label = "MainHighlightScreenTransition"
                                             ) { showHighlight ->
