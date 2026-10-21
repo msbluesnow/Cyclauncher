@@ -1470,8 +1470,8 @@ private fun WidgetsSection(
                             ShadowedIcon(
                                 imageVector = Icons.Outlined.Widgets,
                                 contentDescription = null,
-                                tint = accentColor.color.copy(alpha = 0.7f),
-                                modifier = Modifier.size(32.dp),
+                                tint = accentColor.color,
+                                size = 32.dp,
                                 showShadows = showShadows,
                                 primaryTextColor = primaryTextColor,
                                 shadowSettings = shadowSettings
