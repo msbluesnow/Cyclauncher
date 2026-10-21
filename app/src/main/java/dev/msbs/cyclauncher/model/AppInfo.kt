@@ -17,7 +17,10 @@ data class AppInfo(
     val iconKey: String,
     val searchChar: Char = ' ',
     val userHandle: UserHandle = Process.myUserHandle(),
-    val profileType: ProfileType = ProfileType.PERSONAL
+    val profileType: ProfileType = ProfileType.PERSONAL,
+    val firstInstallTime: Long = 0L,
+    val lastUpdateTime: Long = 0L,
+    val firstSymbol: String = ""
 ) {
     val baseComponentKey: String = "$packageName/$activityName"
     val componentKey: String = if (userHandle == Process.myUserHandle()) {
@@ -26,6 +29,5 @@ data class AppInfo(
         "$baseComponentKey#${userHandle.hashCode()}"
     }
 
-    val normalizedLabel: String
-        get() = label.lowercase().trim()
+    val normalizedLabel: String = label.lowercase().trim()
 }

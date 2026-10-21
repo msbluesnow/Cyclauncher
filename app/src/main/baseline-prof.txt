@@ -1,0 +1,26 @@
+# Cyclauncher Baseline Profile
+# Pre-compiles critical launcher startup, app drawer, search, and gesture rendering paths.
+
+Ldev/msbs/cyclauncher/MainActivity;
+Ldev/msbs/cyclauncher/CyclauncherApp;
+Ldev/msbs/cyclauncher/LauncherViewModel;
+Ldev/msbs/cyclauncher/model/AppInfo;
+Ldev/msbs/cyclauncher/model/ProfileType;
+Ldev/msbs/cyclauncher/model/Tag;
+Ldev/msbs/cyclauncher/coil/AppIconFetcher;
+Ldev/msbs/cyclauncher/coil/IconEpochManager;
+Ldev/msbs/cyclauncher/coil/AppIconKey;
+Ldev/msbs/cyclauncher/data/AppActionsManager;
+Ldev/msbs/cyclauncher/data/AppColorManager;
+Ldev/msbs/cyclauncher/icons/IconPackManager;
+Ldev/msbs/cyclauncher/icons/IconShape;
+Ldev/msbs/cyclauncher/ui/theme/AccentColor;
+Ldev/msbs/cyclauncher/ui/theme/PrimaryTextColor;
+Ldev/msbs/cyclauncher/ui/theme/HandSide;
+Ldev/msbs/cyclauncher/ui/theme/ThemeKt;
+Ldev/msbs/cyclauncher/ui/components/AppUiComponentsKt;
+Ldev/msbs/cyclauncher/ui/components/RectangularAlphabetWheelKt;
+Ldev/msbs/cyclauncher/ui/components/TagComponentsKt;
+Ldev/msbs/cyclauncher/ui/screens/MainMenuScreenKt;
+Ldev/msbs/cyclauncher/ui/screens/SearchScreenKt;
+Ldev/msbs/cyclauncher/ui/screens/HighlightScreenKt;

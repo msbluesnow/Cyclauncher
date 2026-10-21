@@ -389,13 +389,21 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val apps: StateFlow<List<AppInfo>> = combine(_apps, actionsManager.customLabels, actionsManager.customCharMappings) { all, customLabels, customMappings ->
         all.map { app ->
             val customLabel = customLabels[app.componentKey]
-            val effectiveLabel = customLabel ?: app.label
-            val symbol = extractFirstSymbol(effectiveLabel)
-            val searchChar = mapToSearchChar(symbol, customMappings)
-            if (customLabel != null || app.searchChar != searchChar) {
-                app.copy(label = effectiveLabel, searchChar = searchChar)
+            if (customLabel == null) {
+                val searchChar = mapToSearchChar(app.firstSymbol, customMappings)
+                if (app.searchChar != searchChar) {
+                    app.copy(searchChar = searchChar)
+                } else {
+                    app
+                }
             } else {
-                app
+                val symbol = extractFirstSymbol(customLabel)
+                val searchChar = mapToSearchChar(symbol, customMappings)
+                if (app.label != customLabel || app.searchChar != searchChar) {
+                    app.copy(label = customLabel, searchChar = searchChar, firstSymbol = symbol)
+                } else {
+                    app
+                }
             }
         }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
@@ -449,53 +457,37 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val recentlyUpdatedApps: StateFlow<Set<String>> = actionsManager.recentlyUpdated
 
     val todayActivity: StateFlow<Pair<List<AppInfo>, List<AppInfo>>> = combine(personalApps, actionsManager.recentlyUpdated) { personalList, recentlyUpdatedKeys ->
-        withContext(Dispatchers.IO) {
-            val recentThreshold = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
-            val pm = safeContext.packageManager
-            val installs = mutableListOf<AppInfo>()
-            val updates = mutableListOf<AppInfo>()
+        val recentThreshold = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
+        val installs = mutableListOf<AppInfo>()
+        val updates = mutableListOf<AppInfo>()
 
-            val updateTimeMap = mutableMapOf<String, Long>()
-            val packageInfoMap = mutableMapOf<String, PackageInfo>()
-            for (app in personalList) {
-                if (!packageInfoMap.containsKey(app.packageName)) {
-                    pm.getPackageInfoCompat(app.packageName)?.let {
-                        packageInfoMap[app.packageName] = it
-                    }
-                }
+        for (app in personalList) {
+            val firstInstall = app.firstInstallTime
+            val lastUpdate = app.lastUpdateTime
+            if (firstInstall == 0L && lastUpdate == 0L) continue
+
+            val isMarkedRecentlyUpdated = recentlyUpdatedKeys.contains(app.componentKey) ||
+                    recentlyUpdatedKeys.contains(app.packageName)
+
+            // Fresh install: installed within last 24h or marked as unlaunched fresh install
+            val isNewInstall = (firstInstall >= recentThreshold && lastUpdate - firstInstall < 60000L) ||
+                    (isMarkedRecentlyUpdated && lastUpdate - firstInstall < 60000L)
+
+            // Updated: lastUpdate is within 24h (or marked in recentlyUpdated), and distinctly after firstInstall
+            val isRecentUpdate = (lastUpdate > firstInstall + 60000L) &&
+                    (lastUpdate >= recentThreshold || isMarkedRecentlyUpdated)
+
+            if (isNewInstall) {
+                installs.add(app)
+            } else if (isRecentUpdate) {
+                updates.add(app)
             }
-
-            for (app in personalList) {
-                try {
-                    val pInfo = packageInfoMap[app.packageName] ?: continue
-                    val firstInstall = pInfo.firstInstallTime
-                    val lastUpdate = pInfo.lastUpdateTime
-                    updateTimeMap[app.componentKey] = lastUpdate
-
-                    val isMarkedRecentlyUpdated = recentlyUpdatedKeys.contains(app.componentKey) ||
-                            recentlyUpdatedKeys.contains(app.packageName)
-
-                    // Fresh install: installed within last 24h or marked as unlaunched fresh install
-                    val isNewInstall = (firstInstall >= recentThreshold && lastUpdate - firstInstall < 60000L) ||
-                            (isMarkedRecentlyUpdated && lastUpdate - firstInstall < 60000L)
-
-                    // Updated: lastUpdate is within 24h (or marked in recentlyUpdated), and distinctly after firstInstall
-                    val isRecentUpdate = (lastUpdate > firstInstall + 60000L) &&
-                            (lastUpdate >= recentThreshold || isMarkedRecentlyUpdated)
-
-                    if (isNewInstall) {
-                        installs.add(app)
-                    } else if (isRecentUpdate) {
-                        updates.add(app)
-                    }
-                } catch (_: Exception) {}
-            }
-
-            val sortedInstalls = installs.sortedByDescending { updateTimeMap[it.componentKey] ?: 0L }
-            val sortedUpdates = updates.sortedByDescending { updateTimeMap[it.componentKey] ?: 0L }
-
-            Pair(sortedInstalls, sortedUpdates)
         }
+
+        val sortedInstalls = installs.sortedByDescending { it.lastUpdateTime }
+        val sortedUpdates = updates.sortedByDescending { it.lastUpdateTime }
+
+        Pair(sortedInstalls, sortedUpdates)
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Pair(emptyList(), emptyList()))
 
     val untaggedApps: StateFlow<List<AppInfo>> = combine(apps, tags, appTags) { allApps, allTags, allAppTags ->
@@ -1557,13 +1549,22 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _apps.value = reindexed
     }
 
+    private val breakIterator = ThreadLocal.withInitial { java.text.BreakIterator.getCharacterInstance() }
+
     /**
      * Extracts the first symbol or character from a string using BreakIterator.
      */
     fun extractFirstSymbol(text: String): String {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return ""
-        val iterator = java.text.BreakIterator.getCharacterInstance()
+        if (trimmed.length == 1) return trimmed
+        val firstChar = trimmed[0]
+        // Fast path: standard ASCII / Latin / Cyrillic single character without surrogate or combining marks
+        if (firstChar in 'a'..'z' || firstChar in 'A'..'Z' || firstChar in '0'..'9' ||
+            firstChar in '\u0400'..'\u04FF') {
+            return trimmed.substring(0, 1)
+        }
+        val iterator = breakIterator.get() ?: java.text.BreakIterator.getCharacterInstance()
         iterator.setText(trimmed)
         val end = iterator.next()
         return if (end != java.text.BreakIterator.DONE) trimmed.substring(0, end) else trimmed.take(1)
@@ -1698,8 +1699,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val launcherApps = safeContext.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? LauncherApps ?: return emptyList()
         val myUser = Process.myUserHandle()
         val result = mutableListOf<AppInfo>()
+        val packageInfoMap = if (profile == myUser) {
+            safeContext.packageManager.getInstalledPackagesCompat().associateBy { it.packageName }
+        } else {
+            emptyMap()
+        }
+
         try {
             val activityList = launcherApps.getActivityList(null, profile)
+            val customMappings = actionsManager.customCharMappings.value
             for (info in activityList) {
                 val pkgName = info.componentName.packageName
                 if (profile != myUser && pkgName == safeContext.packageName) continue
@@ -1707,15 +1715,21 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 val label = try { info.label.toString().trim().ifEmpty { pkgName } } catch (_: Exception) { pkgName }
                 val compKey = if (profile == myUser) "$pkgName/$actName" else "$pkgName/$actName#${profile.hashCode()}"
                 val firstSymbol = extractFirstSymbol(label)
+                val pInfo = packageInfoMap[pkgName]
+                val firstInstall = pInfo?.firstInstallTime ?: 0L
+                val lastUpdate = pInfo?.lastUpdateTime ?: 0L
                 result.add(
                     AppInfo(
                         label = label,
                         packageName = pkgName,
                         activityName = actName,
                         iconKey = compKey,
-                        searchChar = mapToSearchChar(firstSymbol, actionsManager.customCharMappings.value),
+                        searchChar = mapToSearchChar(firstSymbol, customMappings),
                         userHandle = profile,
-                        profileType = profileType
+                        profileType = profileType,
+                        firstInstallTime = firstInstall,
+                        lastUpdateTime = lastUpdate,
+                        firstSymbol = firstSymbol
                     )
                 )
             }
@@ -1725,8 +1739,22 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private var loadAppsJob: kotlinx.coroutines.Job? = null
 
+    private var _cachedWidgetGroups: List<dev.msbs.cyclauncher.ui.components.AppWidgetGroup>? = null
+
+    suspend fun getWidgetGroups(): List<dev.msbs.cyclauncher.ui.components.AppWidgetGroup> = withContext(Dispatchers.IO) {
+        _cachedWidgetGroups?.let { return@withContext it }
+        val loaded = dev.msbs.cyclauncher.ui.components.discoverAppWidgetGroups(safeContext, _apps.value)
+        _cachedWidgetGroups = loaded
+        loaded
+    }
+
+    fun invalidateWidgetGroupsCache() {
+        _cachedWidgetGroups = null
+    }
+
     private fun loadInstalledApps() {
         loadAppsJob?.cancel()
+        invalidateWidgetGroupsCache()
         loadAppsJob = viewModelScope.launch(Dispatchers.IO) {
             val context = safeContext
             val userManager = context.getSystemService(Context.USER_SERVICE) as? UserManager
@@ -1752,6 +1780,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     val actName = info.activityInfo.name
                     val label = try { info.loadLabel(pm).toString().trim().ifEmpty { pkgName } } catch (_: Exception) { pkgName }
                     val firstSymbol = extractFirstSymbol(label)
+                    val pInfo = pm.getPackageInfoCompat(pkgName)
+                    val firstInstall = pInfo?.firstInstallTime ?: 0L
+                    val lastUpdate = pInfo?.lastUpdateTime ?: 0L
                     newPersonalApps.add(
                         AppInfo(
                             label = label,
@@ -1760,7 +1791,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                             iconKey = "$pkgName/$actName",
                             searchChar = mapToSearchChar(firstSymbol, actionsManager.customCharMappings.value),
                             userHandle = myUser,
-                            profileType = ProfileType.PERSONAL
+                            profileType = ProfileType.PERSONAL,
+                            firstInstallTime = firstInstall,
+                            lastUpdateTime = lastUpdate,
+                            firstSymbol = firstSymbol
                         )
                     )
                 }
@@ -1811,7 +1845,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 for (app in personalAppsCache) {
                     val pkgName = app.packageName
                     if (!currentUpdateTimes.containsKey(pkgName)) {
-                        val updateTime = pm.getPackageInfoCompat(pkgName)?.lastUpdateTime ?: 0L
+                        val updateTime = app.lastUpdateTime
                         if (updateTime > 0L) {
                             currentUpdateTimes[pkgName] = updateTime
                         }

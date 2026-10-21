@@ -19,9 +19,12 @@ android {
 
     buildTypes {
         release {
-            optimization {
-                enable = false
-            }
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "src/main/keepRules/rules.keep"
+            )
         }
     }
 
@@ -71,6 +74,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.palette)
+    implementation(libs.androidx.profileinstaller)
 
     implementation(libs.coil.compose)
     implementation(libs.freedroidwarn)

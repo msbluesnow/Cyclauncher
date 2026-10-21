@@ -698,6 +698,7 @@ fun HighlightScreen(
     if (showCustomWidgetPicker) {
         CustomWidgetPickerSheet(
             apps = apps,
+            viewModel = viewModel,
             accentColor = accentColor,
             primaryTextColor = primaryTextColor,
             showShadows = showShadows,

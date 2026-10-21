@@ -155,6 +155,8 @@ fun TouchMarqueeText(
 
 /**
  * Text component that automatically scales down font size to prevent horizontal visual overflow.
+ * Computes the optimal font size in a single pass using [rememberTextMeasurer] to eliminate
+ * multi-pass recompositions, transparent frame flickers, and layout thrashing.
  */
 @Composable
 fun AutoResizingText(
@@ -167,29 +169,62 @@ fun AutoResizingText(
 ) {
     val shadowSettings = LocalShadowSettings.current
     val shadow = primaryTextColor.getShadow(showShadows || shadowSettings.showShadows, shadowSettings.shadowColorOverride)
+    val textStyle = MaterialTheme.typography.bodyLarge.copy(shadow = shadow)
+    val textMeasurer = rememberTextMeasurer()
 
     BoxWithConstraints(modifier = modifier) {
-        val containerWidth = maxWidth
-        var fontSize by remember(text, targetFontSize, containerWidth) { mutableStateOf(targetFontSize.sp) }
-        var readyToDraw by remember(text, targetFontSize, containerWidth) { mutableStateOf(text.length <= 14) }
+        val maxPx = constraints.maxWidth.toFloat()
+        val maxFontSize = targetFontSize.sp
+        val minFontSize = 10.sp
+
+        val optimalFontSize = remember(text, textStyle, maxPx, targetFontSize) {
+            if (maxPx <= 0f || maxPx.isInfinite() || text.isEmpty()) {
+                maxFontSize
+            } else {
+                // First check if targetFontSize fits comfortably
+                val initialMeasure = textMeasurer.measure(
+                    text = text,
+                    style = textStyle.copy(fontSize = maxFontSize),
+                    maxLines = 1,
+                    softWrap = false
+                )
+                if (initialMeasure.size.width <= maxPx) {
+                    maxFontSize
+                } else {
+                    // Binary search for optimal font size that fits maxPx
+                    var low = minFontSize.value
+                    var high = maxFontSize.value
+                    var best = minFontSize.value
+                    for (i in 0 until 6) {
+                        val mid = (low + high) / 2f
+                        val measured = textMeasurer.measure(
+                            text = text,
+                            style = textStyle.copy(fontSize = mid.sp),
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                        if (measured.size.width <= maxPx) {
+                            best = mid
+                            low = mid
+                        } else {
+                            high = mid
+                        }
+                    }
+                    best.sp
+                }
+            }
+        }
 
         Text(
             text = text,
-            color = if (readyToDraw) primaryTextColor.color else Color.Transparent,
+            color = primaryTextColor.color,
             modifier = Modifier.fillMaxWidth(),
             textAlign = textAlign,
-            fontSize = fontSize,
+            fontSize = optimalFontSize,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             softWrap = false,
-            onTextLayout = { textLayoutResult ->
-                if (textLayoutResult.hasVisualOverflow && fontSize.value > 10f) {
-                    fontSize = (fontSize.value * 0.85f).sp
-                } else {
-                    readyToDraw = true
-                }
-            },
-            style = MaterialTheme.typography.bodyLarge.copy(shadow = shadow)
+            style = textStyle
         )
     }
 }

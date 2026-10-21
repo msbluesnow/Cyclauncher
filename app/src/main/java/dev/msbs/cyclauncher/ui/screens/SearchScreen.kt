@@ -245,6 +245,7 @@ fun SearchScreen(
 
         CustomWidgetPickerSheet(
             apps = allApps,
+            viewModel = viewModel,
             accentColor = accentColor,
             primaryTextColor = primaryTextColor,
             showShadows = showShadows,
