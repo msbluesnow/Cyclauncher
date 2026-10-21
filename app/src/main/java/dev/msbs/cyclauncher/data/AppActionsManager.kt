@@ -61,11 +61,6 @@ class AppActionsManager(context: Context) {
     private val _customCharMappings = MutableStateFlow<Map<String, Char>>(loadCustomCharMappings())
     val customCharMappings: StateFlow<Map<String, Char>> = _customCharMappings
 
-    fun setFavorites(newList: List<String>) {
-        val capped = newList.distinct().take(13)
-        _favorites.value = capped
-        saveList("favorites", capped)
-    }
 
     fun toggleFavorite(componentKey: String) {
         var current = _favorites.value.toMutableList()
@@ -850,7 +845,6 @@ class AppActionsManager(context: Context) {
      */
     fun importAppNamesFromUri(uri: Uri, currentApps: List<dev.msbs.cyclauncher.model.AppInfo>): AppNamesImportResult {
         val raw = readStringFromUri(uri)
-            ?: throw IllegalArgumentException("Cannot read file")
         val trimmed = cleanJsonString(raw)
         val packageToApps = currentApps.groupBy { it.packageName }
         val importedLabels = mutableMapOf<String, String>()
@@ -1127,7 +1121,7 @@ class AppActionsManager(context: Context) {
      * Parses a backup or AI-tagged JSON file into a preview without applying changes yet.
      */
     fun parseTagsBackup(uri: Uri): TagsBackupPreview {
-        val raw = readStringFromUri(uri) ?: throw IllegalArgumentException("Cannot read file")
+        val raw = readStringFromUri(uri)
         val trimmed = cleanJsonString(raw)
 
         val existingNames = _tags.value.map { it.name.lowercase().trim() }.toMutableSet()

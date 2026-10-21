@@ -1,7 +1,6 @@
 package dev.msbs.cyclauncher.ui.screens
 
 import dev.msbs.cyclauncher.ui.theme.capsuleColor
-import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
@@ -29,8 +28,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Upload
@@ -39,7 +36,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
@@ -81,7 +77,7 @@ fun AutoTagsScreen(
 
     val importTaggedLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
-    ) { uri -> uri?.let { viewModel.loadTagsBackupPreview(it) } }
+    ) { uri -> uri?.let { viewModel.loadAutoTagsPreview(it) } }
 
     BackHandler(onBack = onBack)
 

@@ -226,7 +226,7 @@ data class AccentColor(
                             ?: wpManager?.getWallpaperColors(WallpaperManager.FLAG_LOCK)
                     }
                     if (colors != null) {
-                        val hints = colors.colorHints
+                        val hints = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) colors.colorHints else 0
                         // 1. Explicit OS flag for light wallpaper (requires dark text)
                         val supportsDarkText = (hints and WallpaperColors.HINT_SUPPORTS_DARK_TEXT) != 0
                         if (supportsDarkText) {

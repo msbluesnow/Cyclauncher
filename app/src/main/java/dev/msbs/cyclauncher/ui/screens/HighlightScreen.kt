@@ -28,7 +28,6 @@ import androidx.compose.ui.res.stringResource
 import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -59,7 +58,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.SizeTransform
 import androidx.compose.foundation.BorderStroke
@@ -83,8 +81,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.automirrored.outlined.LabelOff
 import androidx.compose.material.icons.outlined.Add
@@ -286,18 +282,8 @@ fun HighlightScreen(
             }
 
             val canBind = try {
-                val profile = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    providerInfo.profile ?: android.os.Process.myUserHandle()
-                } else {
-                    null
-                }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && profile != null) {
-                    manager.bindAppWidgetIdIfAllowed(newWidgetId, profile, providerInfo.provider, options)
-                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                    manager.bindAppWidgetIdIfAllowed(newWidgetId, providerInfo.provider, options)
-                } else {
-                    manager.bindAppWidgetIdIfAllowed(newWidgetId, providerInfo.provider)
-                }
+                val profile = providerInfo.profile ?: android.os.Process.myUserHandle()
+                manager.bindAppWidgetIdIfAllowed(newWidgetId, profile, providerInfo.provider, options)
             } catch (_: Exception) {
                 false
             }
@@ -316,9 +302,7 @@ fun HighlightScreen(
                     val bindIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
                         putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, newWidgetId)
                         putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, providerInfo.provider)
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, providerInfo.profile ?: android.os.Process.myUserHandle())
-                        }
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, providerInfo.profile ?: android.os.Process.myUserHandle())
                         putExtra(AppWidgetManager.EXTRA_APPWIDGET_OPTIONS, options)
                     }
                     bindWidgetLauncher.launch(bindIntent)

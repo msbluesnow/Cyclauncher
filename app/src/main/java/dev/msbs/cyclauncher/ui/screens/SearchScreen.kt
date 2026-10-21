@@ -11,8 +11,6 @@ import dev.msbs.cyclauncher.ui.components.AppListItem
 import dev.msbs.cyclauncher.ui.components.RectangularAlphabetWheel
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -21,8 +19,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -161,18 +157,8 @@ fun SearchScreen(
                 val options = createWidgetOptions(context)
 
                 val canBind = try {
-                    val profile = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        providerInfo.profile ?: android.os.Process.myUserHandle()
-                    } else {
-                        null
-                    }
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && profile != null) {
-                        manager.bindAppWidgetIdIfAllowed(newWidgetId, profile, providerInfo.provider, options)
-                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                        manager.bindAppWidgetIdIfAllowed(newWidgetId, providerInfo.provider, options)
-                    } else {
-                        manager.bindAppWidgetIdIfAllowed(newWidgetId, providerInfo.provider)
-                    }
+                    val profile = providerInfo.profile ?: android.os.Process.myUserHandle()
+                    manager.bindAppWidgetIdIfAllowed(newWidgetId, profile, providerInfo.provider, options)
                 } catch (_: Exception) {
                     false
                 }
@@ -192,9 +178,7 @@ fun SearchScreen(
                         val bindIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
                             putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, newWidgetId)
                             putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, providerInfo.provider)
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, providerInfo.profile ?: android.os.Process.myUserHandle())
-                            }
+                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, providerInfo.profile ?: android.os.Process.myUserHandle())
                             putExtra(AppWidgetManager.EXTRA_APPWIDGET_OPTIONS, options)
                         }
                         bindWidgetLauncher.launch(bindIntent)

@@ -5,11 +5,9 @@
     <string name="common_save">Сохранить</string>
     <string name="common_create">Создать</string>
     <string name="common_done">Готово</string>
-    <string name="common_edit">Редактировать</string>
     <string name="common_delete">Удалить</string>
     <string name="common_close">Закрыть</string>
     <string name="common_clear">Очистить</string>
-    <string name="common_search">Поиск</string>
     <string name="common_restore">Сбросить</string>
     <string name="common_all">Все</string>
     <string name="common_export">Экспорт</string>
@@ -85,11 +83,7 @@
 
     <!-- Search Screen & Components -->
     <string name="search_apps_placeholder">Поиск приложений…</string>
-    <string name="search_close_content_description">Закрыть поиск</string>
-    <string name="palette_done_editing">Завершить редактирование</string>
     <string name="side_overlay_colors_title">Цвета</string>
-    <string name="side_overlay_reset">Сбросить</string>
-    <string name="side_overlay_history_empty">История поиска пуста</string>
     <string name="side_overlay_history_desc">Действия истории (очистка, пауза)</string>
 
     <!-- Swipe Down Quick Actions Overlay -->
@@ -139,8 +133,6 @@
     <string name="settings_monochrome_options">Выбрать параметры монохрома</string>
     <string name="settings_monochrome_history">История</string>
     <string name="settings_monochrome_tags">Теги</string>
-    <string name="settings_show_tags_area">Область тегов</string>
-    <string name="settings_show_history_area">Область истории</string>
     <string name="settings_main_screen">Главный экран</string>
     <string name="settings_main_screen_options">Параметры главного экрана</string>
     <string name="settings_main_screen_all_visible">Все области видны</string>
@@ -162,7 +154,6 @@
     <string name="settings_adaptive_shadows">Адаптивный</string>
     <string name="settings_main_color">Основной цвет</string>
     <string name="settings_button_text">Текст кнопок</string>
-    <string name="settings_popup_theme">Тема меню</string>
     <string name="settings_auto_colors">Автоподбор</string>
 
     <string name="settings_backup">Бэкап</string>
@@ -210,11 +201,9 @@
     <string name="settings_hue_format">Тон (%1$d°)</string>
     <string name="settings_saturation_format">Насыщенность (%1$d%%)</string>
     <string name="settings_brightness_format">Яркость (%1$d%%)</string>
-    <string name="settings_background_dim_format">Затемнение фона (%1$d%%)</string>
     <string name="settings_layer_background">Фон</string>
     <string name="settings_layer_capsules">Капсулы</string>
     <string name="settings_layer_popup">Поп-ап</string>
-    <string name="settings_capsule_contrast_format">Контраст капсул (%1$d%%)</string>
     <string name="settings_contrast_and_scrim_title">Фон и капсулы</string>
     <string name="settings_contrast_summary_format">Фон: %1$d%% • Капсулы: %2$d%% • Поп-ап: %3$d%%</string>
     <string name="settings_hex_code">HEX код</string>
@@ -334,7 +323,6 @@
     <string name="highlight_width_half">Половина (50%)</string>
     <string name="highlight_private_space_locked">Личное пространство заблокировано</string>
     <string name="highlight_private_space_unlock">Разблокировать</string>
-    <string name="highlight_private_space_lock">Заблокировать</string>
     <string name="highlight_private_space_empty">Личные приложения не установлены</string>
     <string name="highlight_private_space_install">Установить приложения</string>
     <string name="highlight_collapse_section">Свернуть секцию</string>
@@ -342,8 +330,6 @@
     <string name="highlight_expand_named">Развернуть %1$s</string>
     <string name="highlight_set_position">Позиция карточки</string>
     <string name="highlight_lock_private_space">Заблокировать личное пространство</string>
-    <string name="highlight_unlock_private_space">Разблокировать личное пространство</string>
-    <string name="highlight_install_private_apps">Установить приложения в личное пространство</string>
     <string name="highlight_widget_move_up">Переместить виджет выше</string>
     <string name="highlight_widget_move_down">Переместить виджет ниже</string>
     <string name="highlight_widget_configure">Настроить виджет</string>

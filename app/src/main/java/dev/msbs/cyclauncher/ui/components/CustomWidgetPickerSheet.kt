@@ -51,7 +51,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -144,7 +143,7 @@ fun CustomWidgetPickerSheet(
             // 1. Initial providers already in AppWidgetManager memory cache across all user profiles
             for (profile in profiles) {
                 try {
-                    manager.getInstalledProvidersForProfile(profile)?.let { providers.addAll(it) }
+                    manager.getInstalledProvidersForProfile(profile).let { providers.addAll(it) }
                 } catch (_: Exception) {}
             }
             if (providers.isEmpty()) {
@@ -164,9 +163,11 @@ fun CustomWidgetPickerSheet(
             for (pkg in pendingPackages) {
                 for (profile in profiles) {
                     try {
-                        val pkgProviders = manager.getInstalledProvidersForPackage(pkg, profile)
-                        if (!pkgProviders.isNullOrEmpty()) {
-                            providers.addAll(pkgProviders)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            val pkgProviders = manager.getInstalledProvidersForPackage(pkg, profile)
+                            if (!pkgProviders.isNullOrEmpty()) {
+                                providers.addAll(pkgProviders)
+                            }
                         }
                     } catch (_: Exception) {}
                 }
@@ -188,7 +189,7 @@ fun CustomWidgetPickerSheet(
                         val info = AppWidgetProviderInfo().apply {
                             provider = cn
                             label = try {
-                                ri.loadLabel(pm)?.toString()?.takeIf { it.isNotBlank() } ?: ri.activityInfo.name
+                                ri.loadLabel(pm).toString().takeIf { it.isNotBlank() } ?: ri.activityInfo.name
                             } catch (_: Exception) {
                                 ri.activityInfo.name
                             }

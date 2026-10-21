@@ -24,7 +24,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.content.SharedPreferences
-import android.content.pm.ApplicationInfo
 import android.content.pm.LauncherApps
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
@@ -968,10 +967,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         editPrefs { putBoolean("show_search_widgets", show) }
     }
 
-    fun setShowSearchHistory(show: Boolean) {
-        _showSearchHistory.value = show
-        editPrefs { putBoolean("show_search_history", show) }
-    }
 
     fun setAnimationsEnabled(enabled: Boolean) {
         _animationsEnabled.value = enabled
@@ -1190,9 +1185,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         actionsManager.removeFromHistory(componentKey)
     }
 
-    fun logSearchLaunch(componentKey: String) {
-        logAppLaunch(componentKey)
-    }
 
     fun removeFromSearchHistory(componentKey: String) {
         actionsManager.removeFromSearchHistory(componentKey)

@@ -1,6 +1,5 @@
 package dev.msbs.cyclauncher.icons
 
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
