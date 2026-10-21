@@ -334,6 +334,7 @@
     <string name="highlight_width_half">Половина (50%)</string>
     <string name="highlight_private_space_locked">Личное пространство заблокировано</string>
     <string name="highlight_private_space_unlock">Разблокировать</string>
+    <string name="highlight_private_space_lock">Заблокировать</string>
     <string name="highlight_private_space_empty">Личные приложения не установлены</string>
     <string name="highlight_private_space_install">Установить приложения</string>
     <string name="highlight_collapse_section">Свернуть секцию</string>

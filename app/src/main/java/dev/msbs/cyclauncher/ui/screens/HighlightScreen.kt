@@ -2155,48 +2155,40 @@ private fun HighlightPrivateSpaceContent(
                 )
             }
             if (!isLocked) {
+                val lockBtnSource = remember { MutableInteractionSource() }
+                Button(
+                    onClick = onLockClick,
+                    interactionSource = lockBtnSource,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = accentColor.color,
+                        contentColor = buttonTextColor.color
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.size(34.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Lock,
+                        contentDescription = stringResource(R.string.highlight_lock_private_space),
+                        tint = buttonTextColor.color,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            } else {
                 IconButton(
-                    onClick = onInstallAppsClick,
+                    onClick = onClose,
                     modifier = Modifier.size(24.dp)
                 ) {
                     ShadowedIcon(
-                        imageVector = Icons.Outlined.AddCircleOutline,
-                        contentDescription = stringResource(R.string.highlight_install_private_apps),
-                        tint = accentColor.color,
-                        modifier = Modifier.size(16.dp),
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = stringResource(R.string.highlight_collapse_section),
+                        tint = primaryTextColor.color.copy(alpha = 0.6f),
+                        size = 16.dp,
                         showShadows = showShadows,
                         primaryTextColor = primaryTextColor,
                         shadowSettings = shadowSettings
                     )
                 }
-            }
-            IconButton(
-                onClick = { if (isLocked) onUnlockClick() else onLockClick() },
-                modifier = Modifier.size(24.dp)
-            ) {
-                ShadowedIcon(
-                    imageVector = if (isLocked) Icons.Outlined.LockOpen else Icons.Outlined.Lock,
-                    contentDescription = if (isLocked) stringResource(R.string.highlight_unlock_private_space) else stringResource(R.string.highlight_lock_private_space),
-                    tint = accentColor.color,
-                    modifier = Modifier.size(16.dp),
-                    showShadows = showShadows,
-                    primaryTextColor = primaryTextColor,
-                    shadowSettings = shadowSettings
-                )
-            }
-            IconButton(
-                onClick = onClose,
-                modifier = Modifier.size(24.dp)
-            ) {
-                ShadowedIcon(
-                    imageVector = Icons.Outlined.Close,
-                    contentDescription = stringResource(R.string.highlight_collapse_section),
-                    tint = primaryTextColor.color.copy(alpha = 0.6f),
-                    modifier = Modifier.size(16.dp),
-                    showShadows = showShadows,
-                    primaryTextColor = primaryTextColor,
-                    shadowSettings = shadowSettings
-                )
             }
         }
     }
@@ -2228,12 +2220,15 @@ private fun HighlightPrivateSpaceContent(
                     containerColor = accentColor.color,
                     contentColor = buttonTextColor.color
                 ),
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
                 modifier = Modifier.heightIn(min = 40.dp)
             ) {
                 TouchMarqueeText(
                     text = stringResource(R.string.highlight_private_space_unlock),
                     color = buttonTextColor.color,
                     fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
                     interactionSource = unlockInteractionSource
                 )
             }

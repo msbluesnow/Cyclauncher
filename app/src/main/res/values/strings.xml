@@ -336,6 +336,7 @@
     <string name="highlight_width_half">Half (50%)</string>
     <string name="highlight_private_space_locked">Private Space is locked</string>
     <string name="highlight_private_space_unlock">Unlock</string>
+    <string name="highlight_private_space_lock">Lock</string>
     <string name="highlight_private_space_empty">No private apps installed</string>
     <string name="highlight_private_space_install">Install Apps</string>
     <string name="highlight_collapse_section">Collapse section</string>
