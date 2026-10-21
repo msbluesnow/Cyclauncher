@@ -1,0 +1,7 @@
+Release Candidate 5 focusing on R8 shrinking, memory leaks, and stability.
+- Enabled R8 shrinking and baseline profiles, reducing APK size by 90%.
+- Fixed memory leaks in icon packs, widget drawables, and backup parsing.
+- Unified background dim and contrast scrim across all screens.
+- Resolved AppWidget crash loops and TransactionTooLargeException.
+- Fixed race conditions in package events, reordering, and wheel rendering.
+- Optimized text layout with single-pass measurement.

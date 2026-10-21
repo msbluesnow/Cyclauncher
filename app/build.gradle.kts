@@ -11,8 +11,8 @@ android {
         applicationId = "dev.msbs.cyclauncher"
         minSdk = 24
         targetSdk = 36
-        versionCode = 26
-        versionName = "v1.0.0-rc.4"
+        versionCode = 27
+        versionName = "v1.0.0-rc.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
