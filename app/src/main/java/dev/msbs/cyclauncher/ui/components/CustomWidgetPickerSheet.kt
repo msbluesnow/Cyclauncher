@@ -70,7 +70,7 @@ import kotlin.math.roundToInt
 data class AppWidgetGroup(
     val packageName: String,
     val appLabel: String,
-    val appIcon: Drawable?,
+    val iconKey: String,
     val widgets: List<AppWidgetProviderInfo>
 )
 
@@ -240,20 +240,12 @@ suspend fun discoverAppWidgetGroups(context: Context, apps: List<AppInfo>): List
                 firstWidget?.safeLabel(pm)?.takeIf { it.isNotBlank() } ?: packageName
             }
 
-            val appIcon = try {
-                pm.getApplicationIcon(packageName)
-            } catch (_: Exception) {
-                try {
-                    firstWidget?.loadIcon(context, 0)
-                } catch (_: Exception) {
-                    null
-                }
-            }
+            val iconKey = knownApp?.iconKey ?: packageName
 
             AppWidgetGroup(
                 packageName = packageName,
                 appLabel = appLabel,
-                appIcon = appIcon,
+                iconKey = iconKey,
                 widgets = widgetList.sortedBy { it.safeLabel(pm).lowercase() }
             )
         }
@@ -529,10 +521,6 @@ private fun AppWidgetAccordionCard(
     var isExpanded by remember(initiallyExpanded) { mutableStateOf(initiallyExpanded) }
     val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
 
-    val appIconBitmap = remember(group.appIcon) {
-        group.appIcon?.toSafeBitmap()?.asImageBitmap()
-    }
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -554,30 +542,13 @@ private fun AppWidgetAccordionCard(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    if (appIconBitmap != null) {
-                        Image(
-                            bitmap = appIconBitmap,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(accentColor.color.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Widgets,
-                                contentDescription = null,
-                                tint = accentColor.color,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
+                    Image(
+                        painter = rememberAppIconPainter(group.iconKey, sizeDp = 28),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                    )
 
                     Text(
                         text = group.appLabel,
@@ -634,7 +605,6 @@ private fun AppWidgetAccordionCard(
                     for (widgetInfo in group.widgets) {
                         SingleWidgetPreviewCard(
                             widgetInfo = widgetInfo,
-                            appIcon = group.appIcon,
                             accentColor = accentColor,
                             primaryTextColor = primaryTextColor,
                             showShadows = showShadows,
@@ -654,7 +624,6 @@ private fun AppWidgetAccordionCard(
 @Composable
 private fun SingleWidgetPreviewCard(
     widgetInfo: AppWidgetProviderInfo,
-    appIcon: Drawable?,
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
@@ -675,7 +644,7 @@ private fun SingleWidgetPreviewCard(
             try {
                 val drawable = widgetInfo.loadPreviewImage(context, 0)
                     ?: widgetInfo.loadIcon(context, 0)
-                    ?: appIcon
+                    ?: try { pm.getApplicationIcon(widgetInfo.provider.packageName) } catch (_: Exception) { null }
                 drawable?.toSafeBitmap()?.asImageBitmap()
             } catch (_: Exception) {
                 null

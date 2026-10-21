@@ -2,7 +2,10 @@ package dev.msbs.cyclauncher.icons
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
+import android.os.Process
+import android.os.UserManager
 import android.content.res.Resources
 import android.content.res.XmlResourceParser
 import android.graphics.drawable.Drawable
@@ -215,7 +218,51 @@ object IconPackManager {
      * If [packageName] is null or blank, automatically attempts to load the custom ROM's
      * active system icon pack.
      */
-    suspend fun loadIconPack(context: Context, packageName: String?) = withContext(Dispatchers.IO) {
+    /**
+     * Resolves installed launcher package names across all user profiles to prevent
+     * holding tens of thousands of unused mapping strings for non-installed apps in memory.
+     */
+    private fun getInstalledPackages(context: Context): Set<String> {
+        val result = HashSet<String>()
+        try {
+            val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? LauncherApps
+            val userManager = context.getSystemService(Context.USER_SERVICE) as? UserManager
+            val profiles = try {
+                userManager?.userProfiles ?: listOf(Process.myUserHandle())
+            } catch (_: Throwable) {
+                listOf(Process.myUserHandle())
+            }
+
+            if (launcherApps != null) {
+                for (profile in profiles) {
+                    try {
+                        val list = launcherApps.getActivityList(null, profile)
+                        for (info in list) {
+                            result.add(info.componentName.packageName)
+                        }
+                    } catch (_: Throwable) {}
+                }
+            }
+        } catch (_: Throwable) {}
+
+        if (result.isEmpty()) {
+            try {
+                val pm = context.packageManager
+                val intent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
+                val resolved = queryIntentActivities(pm, intent)
+                for (info in resolved) {
+                    result.add(info.activityInfo.packageName)
+                }
+            } catch (_: Throwable) {}
+        }
+        return result
+    }
+
+    suspend fun loadIconPack(
+        context: Context,
+        packageName: String?,
+        forceReload: Boolean = false
+    ) = withContext(Dispatchers.IO) {
         val targetPackage = if (!packageName.isNullOrBlank()) {
             packageName
         } else {
@@ -227,29 +274,31 @@ object IconPackManager {
             return@withContext
         }
 
-        if (targetPackage == activePackageName && activeResources != null && componentToDrawableMap.isNotEmpty()) {
+        if (!forceReload && targetPackage == activePackageName && activeResources != null && componentToDrawableMap.isNotEmpty()) {
             return@withContext
         }
 
         try {
             val pm = context.packageManager
             val res = pm.getResourcesForApplication(targetPackage)
-            val compMap = HashMap<String, String>(2048)
-            val pkgMap = HashMap<String, String>(1024)
+            val installedPackages = getInstalledPackages(context)
+            val capacity = if (installedPackages.isNotEmpty()) installedPackages.size * 2 else 2048
+            val compMap = HashMap<String, String>(capacity)
+            val pkgMap = HashMap<String, String>(capacity / 2)
 
-            // Try opening appfilter.xml from assets or res/xml
-            var parsed = parseXmlFromAssets(res, compMap, pkgMap, "appfilter.xml")
+            // Try opening appfilter.xml from assets or res/xml, filtered by installed packages
+            var parsed = parseXmlFromAssets(res, compMap, pkgMap, installedPackages, "appfilter.xml")
             if (!parsed) {
-                parsed = parseXmlFromRes(res, targetPackage, compMap, pkgMap, "appfilter")
+                parsed = parseXmlFromRes(res, targetPackage, compMap, pkgMap, installedPackages, "appfilter")
             }
             if (!parsed) {
-                parsed = parseXmlFromRes(res, targetPackage, compMap, pkgMap, "theme_resources")
+                parsed = parseXmlFromRes(res, targetPackage, compMap, pkgMap, installedPackages, "theme_resources")
             }
             if (!parsed) {
-                parsed = parseXmlFromRes(res, targetPackage, compMap, pkgMap, "iconpack")
+                parsed = parseXmlFromRes(res, targetPackage, compMap, pkgMap, installedPackages, "iconpack")
             }
             if (!parsed) {
-                parseXmlFromAssets(res, compMap, pkgMap, "iconpack.xml")
+                parseXmlFromAssets(res, compMap, pkgMap, installedPackages, "iconpack.xml")
             }
 
             componentToDrawableMap.clear()
@@ -268,10 +317,20 @@ object IconPackManager {
         }
     }
 
+    /**
+     * Purges entries belonging to an uninstalled package from mapping caches.
+     */
+    fun onAppRemoved(packageName: String) {
+        packageToDrawableMap.remove(packageName)
+        val prefix = "$packageName/"
+        componentToDrawableMap.keys.removeIf { it.startsWith(prefix) }
+    }
+
     private fun parseXmlFromAssets(
         res: Resources,
         compMap: MutableMap<String, String>,
         pkgMap: MutableMap<String, String>,
+        installedPackages: Set<String>,
         fileName: String
     ): Boolean {
         var inputStream: InputStream? = null
@@ -280,7 +339,7 @@ object IconPackManager {
             val factory = XmlPullParserFactory.newInstance()
             val parser = factory.newPullParser()
             parser.setInput(inputStream, "UTF-8")
-            parseAppFilter(parser, compMap, pkgMap)
+            parseAppFilter(parser, compMap, pkgMap, installedPackages)
             true
         } catch (_: Exception) {
             false
@@ -294,6 +353,7 @@ object IconPackManager {
         packageName: String,
         compMap: MutableMap<String, String>,
         pkgMap: MutableMap<String, String>,
+        installedPackages: Set<String>,
         resName: String
     ): Boolean {
         val resId = res.getIdentifier(resName, "xml", packageName)
@@ -301,7 +361,7 @@ object IconPackManager {
         var parser: XmlResourceParser? = null
         return try {
             parser = res.getXml(resId)
-            parseAppFilter(parser, compMap, pkgMap)
+            parseAppFilter(parser, compMap, pkgMap, installedPackages)
             true
         } catch (_: Exception) {
             false
@@ -313,14 +373,25 @@ object IconPackManager {
     private fun parseAppFilter(
         parser: XmlPullParser,
         compMap: MutableMap<String, String>,
-        pkgMap: MutableMap<String, String>
+        pkgMap: MutableMap<String, String>,
+        installedPackages: Set<String>
     ) {
+        val filterByInstalled = installedPackages.isNotEmpty()
         var eventType = parser.eventType
         while (eventType != XmlPullParser.END_DOCUMENT) {
             if (eventType == XmlPullParser.START_TAG && parser.name == "item") {
                 val componentAttr = parser.getAttributeValue(null, "component")
                 val drawableAttr = parser.getAttributeValue(null, "drawable")
                 if (!componentAttr.isNullOrBlank() && !drawableAttr.isNullOrBlank()) {
+                    if (filterByInstalled) {
+                        val raw = componentAttr.removePrefix("ComponentInfo{").trim()
+                        val slashIdx = raw.indexOf('/')
+                        val rawPkg = if (slashIdx != -1) raw.substring(0, slashIdx).trim() else raw.removeSuffix("}").trim()
+                        if (!installedPackages.contains(rawPkg)) {
+                            eventType = parser.next()
+                            continue
+                        }
+                    }
                     val key = normalizeComponentKey(componentAttr)
                     if (key.isNotEmpty()) {
                         compMap[key] = drawableAttr

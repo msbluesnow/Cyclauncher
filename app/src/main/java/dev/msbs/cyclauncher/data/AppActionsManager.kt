@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.FileOutputStream
+import java.io.ByteArrayOutputStream
+import android.provider.OpenableColumns
 import java.io.IOException
 import java.util.UUID
 
@@ -679,11 +681,50 @@ class AppActionsManager(context: Context) {
 
     /**
      * Reads a UTF-8 string from a content [uri], handling UTF-8 BOM if present.
+     * Enforces a maximum size limit ([maxBytes], default 10MB) to prevent OutOfMemoryError
+     * if an unexpected or malicious large file (e.g. video, binary archive) is selected.
      */
-    fun readStringFromUri(uri: Uri): String {
+    fun readStringFromUri(uri: Uri, maxBytes: Long = 10 * 1024 * 1024L): String {
+        // 1. Check ContentResolver size column if available
+        try {
+            context.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                    if (sizeIndex != -1 && !cursor.isNull(sizeIndex)) {
+                        val size = cursor.getLong(sizeIndex)
+                        if (size > maxBytes) {
+                            throw IOException("File size ($size bytes) exceeds limit of $maxBytes bytes")
+                        }
+                    }
+                }
+            }
+        } catch (e: IOException) {
+            throw e
+        } catch (_: Exception) {
+            // Some providers don't report size; bounded stream read below guarantees enforcement
+        }
+
         val inputStream = context.contentResolver.openInputStream(uri)
             ?: throw IOException("Cannot open input stream for URI: $uri")
-        val content = inputStream.reader(Charsets.UTF_8).use { it.readText() }
+
+        // 2. Bounded stream reading to strictly enforce maxBytes
+        val buffer = ByteArray(8192)
+        val baos = ByteArrayOutputStream()
+        var totalBytes = 0L
+
+        inputStream.use { stream ->
+            while (true) {
+                val read = stream.read(buffer)
+                if (read == -1) break
+                totalBytes += read
+                if (totalBytes > maxBytes) {
+                    throw IOException("File exceeds maximum allowed size of $maxBytes bytes")
+                }
+                baos.write(buffer, 0, read)
+            }
+        }
+
+        val content = baos.toString("UTF-8")
         return if (content.startsWith("\uFEFF")) content.substring(1) else content
     }
 

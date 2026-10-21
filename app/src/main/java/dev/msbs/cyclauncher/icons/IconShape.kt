@@ -70,15 +70,18 @@ object IconShapeHelper {
     /**
      * Returns a cached scaled Path for the given pixel [size], avoiding redundant allocations
      * and matrix transformations during icon rasterization.
+     * Always returns a defensive copy of the cached Path to ensure thread safety when called
+     * concurrently across multiple threads during icon rasterization.
      */
     fun getScaledPath(context: Context, size: Int): Path {
         val safeSize = size.coerceAtLeast(1)
-        return scaledPathCache.getOrPut(safeSize) {
+        val cached = scaledPathCache.getOrPut(safeSize) {
             val basePath = getSystemPath(context)
             val scale = safeSize / 100f
             val matrix = android.graphics.Matrix().apply { setScale(scale, scale) }
             Path(basePath).apply { transform(matrix) }
         }
+        return Path(cached)
     }
 
     /**

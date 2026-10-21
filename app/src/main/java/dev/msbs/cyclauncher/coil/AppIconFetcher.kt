@@ -82,9 +82,16 @@ internal class AppIconFetcher private constructor(
     override suspend fun fetch(): FetchResult? = withContext(iconDispatcher) {
         try {
             val slashIndex = key.componentKey.indexOf('/')
-            if (slashIndex <= 0 || slashIndex >= key.componentKey.length - 1) return@withContext null
-            val pkg = key.componentKey.substring(0, slashIndex)
-            val activity = key.componentKey.substring(slashIndex + 1)
+            val pkg: String
+            val activity: String?
+            if (slashIndex > 0) {
+                pkg = key.componentKey.substring(0, slashIndex)
+                activity = key.componentKey.substring(slashIndex + 1).takeIf { it.isNotBlank() }
+            } else {
+                pkg = key.componentKey.substringBefore('#')
+                activity = null
+            }
+            if (pkg.isBlank()) return@withContext null
             val pm = context.packageManager
 
             val iconPackDrawable: Drawable? = try {
@@ -95,7 +102,11 @@ internal class AppIconFetcher private constructor(
 
             var isFallback = false
             val drawable: Drawable = iconPackDrawable ?: try {
-                resolveIcon(context, pm, pkg, activity)
+                if (activity != null) {
+                    resolveIcon(context, pm, pkg, activity)
+                } else {
+                    pm.getApplicationIcon(pkg)
+                }
             } catch (_: Throwable) {
                 try {
                     pm.getApplicationIcon(pkg)

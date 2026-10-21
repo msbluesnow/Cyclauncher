@@ -1630,6 +1630,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
             }
+            val activePack = _selectedIconPack.value
+            if (!activePack.isNullOrEmpty()) {
+                IconPackManager.loadIconPack(safeContext, activePack, forceReload = true)
+            }
             reloadInstalledIconPacks()
             loadInstalledApps()
         }
@@ -1641,6 +1645,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             IconPackManager.onPackageRemoved(packageName)
             editPrefs { remove("icon_pack_package") }
             _iconPackVersion.value = System.currentTimeMillis()
+        } else {
+            IconPackManager.onAppRemoved(packageName)
         }
         if (user != Process.myUserHandle()) {
             onProfileAvailabilityChanged(user, isAvailable = true)
