@@ -1180,7 +1180,7 @@ private fun StatusBarAndAnimationsSection(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         TouchMarqueeText(
-                            text = stringResource(currentLang.labelRes),
+                            text = if (currentLang.code.isBlank()) stringResource(currentLang.labelRes) else currentLang.nativeName,
                             color = accentColor.color,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
@@ -1208,7 +1208,7 @@ private fun StatusBarAndAnimationsSection(
                                 text = {
                                     Column {
                                         TouchMarqueeText(
-                                            text = stringResource(lang.labelRes),
+                                            text = if (lang.code.isBlank()) stringResource(lang.labelRes) else lang.englishName,
                                             color = if (isSelected) accentColor.color else popupTheme.contentColor,
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                             fontSize = 14.sp

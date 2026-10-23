@@ -1,0 +1,398 @@
+<resources>
+    <!-- Non-translatable brand and technical constants -->
+    <string name="app_name" translatable="false">Cyclauncher</string>
+
+    <!-- Common UI Actions -->
+    <string name="common_cancel">取消</string>
+    <string name="common_save">保存</string>
+    <string name="common_create">创建</string>
+    <string name="common_done">完成</string>
+    <string name="common_delete">删除</string>
+    <string name="common_close">关闭</string>
+    <string name="common_clear">清除</string>
+    <string name="common_restore">恢复</string>
+    <string name="common_all">全部</string>
+    <string name="common_export">导出</string>
+    <string name="common_import">导入</string>
+    <string name="common_reset">重置</string>
+    <string name="common_apply">应用</string>
+    <string name="common_back">返回</string>
+
+    <!-- Application Action Context Menu -->
+    <string name="action_menu_add_favorite">添加到收藏</string>
+    <string name="action_menu_remove_favorite">从收藏中移除</string>
+    <string name="action_menu_manage_tags">管理标签</string>
+    <string name="action_menu_rename">重命名</string>
+    <string name="action_menu_info">应用信息</string>
+    <string name="action_menu_uninstall">卸载</string>
+
+    <!-- History Context Menu -->
+    <string name="history_menu_title">历史记录</string>
+    <string name="history_menu_paused">（已暂停）</string>
+    <string name="history_menu_edit">编辑历史记录</string>
+    <string name="history_menu_done_edit">完成编辑</string>
+    <string name="history_menu_pause">暂停记录</string>
+    <string name="history_menu_resume">恢复记录</string>
+    <string name="history_menu_clear">清除历史记录</string>
+
+    <!-- Tag Selection & Edit Dialogs -->
+    <string name="tag_dialog_title">应用标签：%1$s</string>
+    <string name="tag_dialog_empty">尚未创建任何标签。</string>
+    <string name="tag_dialog_new_tag">新建标签</string>
+    <string name="tag_dialog_create_title">创建新标签</string>
+    <string name="tag_dialog_edit_tag">编辑标签</string>
+    <string name="tag_dialog_preview">标签预览</string>
+    <string name="tag_dialog_name_label">标签名称</string>
+    <string name="tag_dialog_name_placeholder">例如：游戏、工作</string>
+    <string name="tag_dialog_folder_icon">文件夹图标</string>
+    <string name="tag_dialog_choose_icon">选择图标</string>
+    <string name="tag_dialog_tab_vector">矢量图标</string>
+    <string name="tag_dialog_tab_emoji">表情符号</string>
+    <string name="tag_dialog_tab_presets">预设</string>
+    <string name="tag_dialog_tab_custom">自定义颜色</string>
+    <string name="tag_dialog_hold_to_delete">长按 2.3 秒以删除</string>
+    <string name="tag_dialog_hex_code">HEX 代码</string>
+    <string name="tag_dialog_search_icons">搜索图标…</string>
+    <string name="tag_dialog_no_icons">未找到图标</string>
+
+    <!-- Rename Dialog -->
+    <string name="rename_dialog_title">重命名应用</string>
+    <string name="rename_dialog_button">重命名</string>
+
+    <!-- Main Menu & Tag Components -->
+    <string name="main_exit_tag_reorder">退出标签重排模式</string>
+    <string name="main_tag_folders">标签文件夹</string>
+    <string name="main_remove_from_history">从历史记录中移除</string>
+    <string name="main_exit_history_edit">退出历史记录编辑模式</string>
+    <string name="main_exit_edit_mode">退出编辑模式</string>
+    <string name="main_remove">移除</string>
+    <string name="tag_empty_folder">此标签下没有应用</string>
+    <string name="tag_remove_from_tag">从标签中移除</string>
+    <string name="tag_menu_edit">编辑标签</string>
+    <string name="tag_menu_reorder">重排</string>
+    <string name="tag_menu_delete">删除标签</string>
+    <string name="tag_menu_hold_to_delete">长按以删除标签</string>
+    <string name="tag_folders_title">标签文件夹</string>
+    <string name="tag_folders_reorder">重排文件夹</string>
+    <string name="tag_sort_title">排序文件夹</string>
+    <string name="tag_sort_by_ellipsis">排序方式…</string>
+    <string name="tag_sort_by_name">按名称</string>
+    <string name="tag_sort_name_az">名称 A 到 Z</string>
+    <string name="tag_sort_name_za">名称 Z 到 A</string>
+    <string name="tag_sort_by_count">按应用数量</string>
+    <string name="tag_sort_count_high_low">应用数量由多到少</string>
+    <string name="tag_sort_count_low_high">应用数量由少到多</string>
+
+    <!-- Search Screen & Components -->
+    <string name="search_apps_placeholder">搜索应用…</string>
+    <string name="side_overlay_colors_title">色彩</string>
+    <string name="side_overlay_history_desc">管理历史记录（清除、暂停）</string>
+
+    <!-- Swipe Down Quick Actions Overlay -->
+    <string name="quick_action_notifications_title">通知</string>
+    <string name="quick_action_notifications_subtitle">通知栏</string>
+    <string name="quick_action_quick_settings_title">快捷设置</string>
+    <string name="quick_action_quick_settings_subtitle">WLAN、蓝牙</string>
+
+    <!-- Widgets -->
+    <string name="widget_title">小部件</string>
+    <string name="widget_left_title">左侧小部件</string>
+    <string name="widget_right_title">右侧小部件</string>
+    <string name="widget_action_add">添加小部件</string>
+    <string name="widget_action_change">更换小部件</string>
+    <string name="widget_action_reset_split">重置比例（50/50）</string>
+    <string name="widget_action_remove">移除小部件</string>
+    <string name="widget_action_options">小部件选项</string>
+    <string name="widget_picker_title">小部件</string>
+    <string name="widget_picker_search_placeholder">搜索应用或小部件…</string>
+    <string name="widget_picker_no_widgets">未找到小部件</string>
+    <string name="widget_picker_no_matching_apps">未找到匹配的应用</string>
+    <string name="widget_picker_collapse">折叠</string>
+    <string name="widget_picker_expand">展开</string>
+    <string name="widget_picker_close">关闭选择器</string>
+    <string name="widget_picker_clear_search">清除搜索</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">设置</string>
+    <string name="settings_hand_left">左手模式</string>
+    <string name="settings_hand_right">右手模式</string>
+    <string name="settings_toggle_search_widgets">切换搜索小部件可见性</string>
+    <string name="settings_side_slot">侧边栏槽位</string>
+    <string name="settings_select_side_slot_mode">选择侧边栏槽位模式</string>
+    <string name="settings_side_slot_history">历史记录</string>
+    <string name="settings_side_slot_widget">小部件</string>
+    <string name="settings_side_slot_disabled">已禁用</string>
+
+    <string name="settings_status_bar">状态栏</string>
+    <string name="settings_toggle_status_bar">切换状态栏可见性</string>
+    <string name="settings_animations">动画效果</string>
+    <string name="settings_marquee">跑马灯文本</string>
+    <string name="settings_haptics">触觉反馈</string>
+    <string name="settings_monochrome">单色模式</string>
+    <string name="settings_monochrome_disabled">单色已禁用</string>
+    <string name="settings_monochrome_history_desc">单色历史记录</string>
+    <string name="settings_monochrome_tags_desc">单色标签</string>
+    <string name="settings_monochrome_options">选择单色选项</string>
+    <string name="settings_monochrome_history">历史记录</string>
+    <string name="settings_monochrome_tags">标签</string>
+    <string name="settings_main_screen">主屏幕</string>
+    <string name="settings_main_screen_options">主屏幕选项</string>
+    <string name="settings_main_screen_all_visible">所有区域可见</string>
+    <string name="settings_hide_history_desc">隐藏历史记录</string>
+    <string name="settings_hide_tags_desc">隐藏标签</string>
+
+    <string name="settings_language">语言</string>
+    <string name="settings_select_language">选择语言</string>
+    <string name="settings_language_system">系统默认</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_ru">俄语</string>
+    <string name="settings_language_zh">简体中文</string>
+
+    <string name="settings_mapping">字符映射</string>
+    <string name="settings_mapping_configure">配置字符映射</string>
+    <string name="settings_icon_pack">图标包</string>
+    <string name="settings_icon_pack_select">选择图标包</string>
+
+    <string name="settings_accent">强调色</string>
+    <string name="settings_adaptive_shadows">自适应</string>
+    <string name="settings_main_color">主要颜色</string>
+    <string name="settings_button_text">按钮文字</string>
+    <string name="settings_auto_colors">自动配色</string>
+
+    <string name="settings_backup">备份</string>
+    <string name="settings_export_backup">导出备份</string>
+    <string name="settings_import_backup">导入备份</string>
+    <string name="settings_ai_tags">AI 标签</string>
+
+    <string name="settings_default_launcher">默认桌面</string>
+    <string name="settings_default_launcher_set_status">已设为默认</string>
+    <string name="settings_default_launcher_not_set">未设置</string>
+    <string name="settings_default_launcher_change">更改</string>
+    <string name="settings_default_launcher_set">设置</string>
+    <string name="settings_relaunch_app">重启桌面</string>
+    <string name="settings_relaunch_subtitle">可能解决某些问题</string>
+    <string name="settings_relaunch_action">重启</string>
+
+    <string name="settings_tutorial">新手引导</string>
+
+    <string name="settings_support_and_community">支持与社区</string>
+    <string name="settings_github">GitHub</string>
+    <string name="settings_github_subtitle">⭐ 项目主页</string>
+    <string name="settings_discord">Discord</string>
+    <string name="settings_discord_subtitle">加入群聊</string>
+    <string name="settings_tribute">赞助支持</string>
+    <string name="settings_tribute_subtitle">赞助开发者</string>
+
+    <string name="settings_version">版本 %1$s</string>
+
+    <!-- Settings Dialogs -->
+    <string name="settings_default_launcher_title">默认桌面</string>
+    <string name="settings_default_launcher_success">Cyclauncher 现已成为您的默认桌面！</string>
+    <string name="settings_default_launcher_failed">Cyclauncher 未被设为默认桌面。是否重试？</string>
+    <string name="settings_default_launcher_great">太棒了！</string>
+
+    <string name="settings_theme_accent_title">主题强调色</string>
+    <string name="settings_tab_presets_wallpaper">预设与壁纸</string>
+    <string name="settings_tab_custom_color">自定义颜色</string>
+    <string name="settings_adaptive_wallpaper_accent">自适应壁纸强调色</string>
+    <string name="settings_hue_angle_shift">色相偏移</string>
+    <string name="settings_luminous_highlight">深色壁纸的高亮效果</string>
+    <string name="settings_deep_dark_shade">浅色壁纸的深色暗影</string>
+    <string name="settings_echo_presets">Echo 图标主题预设</string>
+    <string name="settings_interactive_picker">交互式取色器</string>
+    <string name="settings_quick_swatches">快速色板</string>
+    <string name="settings_hue_format">色相（%1$d°）</string>
+    <string name="settings_saturation_format">饱和度（%1$d%%）</string>
+    <string name="settings_brightness_format">亮度（%1$d%%）</string>
+    <string name="settings_layer_background">背景</string>
+    <string name="settings_layer_capsules">胶囊按键</string>
+    <string name="settings_layer_popup">弹窗</string>
+    <string name="settings_contrast_and_scrim_title">背景与胶囊按键</string>
+    <string name="settings_contrast_summary_format">变暗：%1$d%% • 胶囊：%2$d%% • 弹窗：%3$d%%</string>
+    <string name="settings_hex_code">HEX 代码</string>
+    <string name="settings_apply_custom_color">应用自定义颜色</string>
+
+    <string name="settings_icon_pack_title">图标包</string>
+    <string name="settings_icon_pack_system_default">系统默认</string>
+    <string name="settings_icon_pack_system_auto">自动：%1$s（ROM 主题）</string>
+    <string name="settings_icon_pack_system_original">原生应用图标</string>
+    <string name="settings_icon_pack_none_installed">设备上未安装第三方图标包。</string>
+
+    <string name="settings_char_mapping_default">默认</string>
+    <string name="settings_char_mapping_active">%1$d 个生效中</string>
+
+    <!-- Keep Android Open Banner & Dialog -->
+    <string name="kao_title">Keep Android Open</string>
+    <string name="kao_subtitle">你的手机即将不再真正属于你</string>
+    <string name="kao_subtitle_dot">你的手机即将不再真正属于你。</string>
+    <string name="kao_hide_days">隐藏剩余天数</string>
+    <string name="kao_show_days">显示剩余天数</string>
+    <string name="kao_days_left">剩余天数</string>
+    <string name="kao_days_until_lockdown">距离封锁还剩</string>
+    <string name="kao_banner_summary">自 2027 年起，Google 将阻止未向其登记并提交政府身份证件的开发者开发的任何 Android 应用。</string>
+    <string name="kao_learn_more">了解更多</string>
+    <string name="kao_petition">联名请愿 ↗</string>
+    <string name="kao_what_is_happening">正在发生什么？</string>
+    <string name="kao_dialog_explanation">自 2027 年起，Google 推送的静默更新将阻止任何开发者未在 Google 注册、未缴费且未提交政府身份证件的 Android 应用。\n\n全球范围内的每款应用和每台设备都将受到影响，且无法退出。</string>
+    <string name="kao_feat_privacy_title">开发者隐私</string>
+    <string name="kao_feat_privacy_desc">独立开发者与志愿者不应被迫将个人身份证件提交给单一商业巨头。</string>
+    <string name="kao_feat_sideload_title">自由侧载权</string>
+    <string name="kao_feat_sideload_desc">你购买了手机。你应当拥有自由运行所选软件并自由使用 F-Droid 的权利。</string>
+    <string name="kao_feat_foss_title">开源软件与分叉</string>
+    <string name="kao_feat_foss_desc">如果每个定制分支都需要商业公司认证与身份验证，开源志愿者项目与分叉将被扼杀。</string>
+    <string name="kao_alternatives">自由且去 Google 化的替代系统：LineageOS、GrapheneOS、/e/OS、CalyxOS。</string>
+    <string name="kao_take_action">参与行动 ↗</string>
+
+    <!-- Auto Tags Screen -->
+    <string name="auto_tags_title">标签</string>
+    <string name="auto_tags_subtitle">利用 AI 自动将应用归类到标签中</string>
+    <string name="auto_tags_step1_title">导出应用列表</string>
+    <string name="auto_tags_step1_desc">导出已安装应用列表（名称、包名、收藏与标签）。选择 JSON（供 AI 归类）或 TXT（便于人类阅读）。</string>
+    <string name="auto_tags_step1_button">导出应用列表</string>
+    <string name="auto_tags_step2_title">发送给 AI</string>
+    <string name="auto_tags_step2_desc">复制下方提示词，并连同导出的应用列表文件一起发送给 AI 模型（ChatGPT、Claude、Gemini 等）。</string>
+    <string name="auto_tags_copy_prompt">复制提示词</string>
+    <string name="auto_tags_copied">已复制！</string>
+    <string name="auto_tags_prompt_copied_toast">提示词已复制！</string>
+    <string name="auto_tags_step3_title">导入已标记应用</string>
+    <string name="auto_tags_step3_desc">AI 生成标记后的 JSON 结果后，将其保存为 .json 文件并在此导入。应用前将预览所有标签、颜色和归属分配。</string>
+    <string name="auto_tags_step3_button">上传标记结果</string>
+    <string name="auto_tags_export_dialog_title">导出格式</string>
+    <string name="auto_tags_export_dialog_message">选择导出应用列表的格式：</string>
+    <string name="auto_tags_export_dialog_hint">JSON — 包含名称、收藏和标签。TXT — 便于阅读的纯文本列表。</string>
+
+    <!-- Character Mapping Screen -->
+    <string name="char_map_title">字符映射</string>
+    <string name="char_map_customize_title">自定义搜索索引</string>
+    <string name="char_map_customize_desc">将自定义字符、表情符号、其他文字（阿拉伯语、西里尔字母、中日韩汉字等）或符号映射到特定字母（\'A\'–\'Z\' 或 \'#\'），适用于所有搜索模式。</string>
+    <string name="char_map_add_title">添加自定义映射</string>
+    <string name="char_map_placeholder">例如：🤗、ب、Ö</string>
+    <string name="char_map_select_target">选择目标字母</string>
+    <string name="char_map_mapped_success">已映射 \'%1$s\' ➔ \'%2$s\'</string>
+    <string name="char_map_invalid_input">请输入有效的字符或表情符号</string>
+    <string name="char_map_add_button">添加映射</string>
+    <string name="char_map_backup_title">备份与恢复</string>
+    <string name="char_map_backup_desc">将规则导出为 JSON 或从文件导入</string>
+    <string name="char_map_import_success">已成功导入 %1$d 条字符映射规则</string>
+    <string name="char_map_import_failed">导入失败：%1$s</string>
+    <string name="char_map_quick_presets">快速预设</string>
+    <string name="char_map_added_cyrillic">已添加西里尔字母映射</string>
+    <string name="char_map_added_emoji">已添加常用表情符号映射</string>
+    <string name="char_map_added_german">已添加德语/北欧字母映射</string>
+    <string name="char_map_added_arabic">已添加阿拉伯字母映射</string>
+    <string name="char_map_added_romance">已添加法语/西班牙语字母映射</string>
+    <string name="char_map_letter_rows">字母行</string>
+    <string name="char_map_rules_count">（%1$d 个字母，%2$d 条规则）</string>
+    <string name="char_map_reset_all">重置所有映射</string>
+    <string name="char_map_empty_desc">尚未添加自定义映射。\n应用将使用默认字符索引。</string>
+    <string name="char_map_removed_symbol">已移除 \'%1$s\'</string>
+    <string name="char_map_remove_symbol_desc">移除 %1$s</string>
+    <string name="char_map_add_to_target_desc">将符号添加到 \'%1$s\'</string>
+    <string name="char_map_detail_title">已映射符号（%1$d）</string>
+    <string name="char_map_no_symbols_mapped">没有映射到 \'%1$s\' 的符号</string>
+    <string name="char_map_reset_title">重置映射</string>
+    <string name="char_map_reset_message">确定要移除所有自定义字符映射规则吗？</string>
+    <string name="char_map_reset_toast">映射已重置为默认值</string>
+
+    <!-- Highlight Screen -->
+    <string name="highlight_title">精选</string>
+    <string name="highlight_section_overview">概览</string>
+    <string name="highlight_section_untagged">未分类应用</string>
+    <string name="highlight_section_updates">今日更新</string>
+    <string name="highlight_section_installs">今日安装</string>
+    <string name="highlight_section_work_profile">工作资料</string>
+    <string name="highlight_section_private_space">私密空间</string>
+    <string name="highlight_empty_untagged">暂无未分类应用</string>
+    <string name="highlight_empty_updates">今日暂无应用更新</string>
+    <string name="highlight_empty_installs">今日暂无新安装应用</string>
+    <string name="highlight_empty_work_profile">暂无工作资料应用</string>
+    <string name="highlight_metric_installed_apps">已安装应用</string>
+    <string name="highlight_metric_created_tags">已创建标签</string>
+    <string name="highlight_metric_favorites">收藏夹</string>
+    <string name="highlight_metric_recent_launches">最近启动</string>
+    <string name="highlight_widgets_title">小部件</string>
+    <string name="highlight_widgets_add">添加小部件</string>
+    <string name="highlight_widgets_empty_title">尚未添加小部件</string>
+    <string name="highlight_widgets_empty_desc">点击「添加小部件」，通过预览和应用搜索浏览小部件。</string>
+    <string name="highlight_resize_title">调整小部件尺寸</string>
+    <string name="highlight_resize_height">高度：%1$d dp</string>
+    <string name="highlight_preset_compact">紧凑</string>
+    <string name="highlight_preset_medium">中等</string>
+    <string name="highlight_preset_large">大号</string>
+    <string name="highlight_preset_tall">高号</string>
+    <string name="highlight_resize_width">宽度</string>
+    <string name="highlight_width_full">完整（100%）</string>
+    <string name="highlight_width_75">75%</string>
+    <string name="highlight_width_half">半宽（50%）</string>
+    <string name="highlight_private_space_locked">私密空间已锁定</string>
+    <string name="highlight_private_space_unlock">解锁</string>
+    <string name="highlight_private_space_empty">未安装私密应用</string>
+    <string name="highlight_private_space_install">安装应用</string>
+    <string name="highlight_collapse_section">折叠区域</string>
+    <string name="highlight_collapse_named">折叠 %1$s</string>
+    <string name="highlight_expand_named">展开 %1$s</string>
+    <string name="highlight_set_position">设置卡片位置</string>
+    <string name="highlight_lock_private_space">锁定私密空间</string>
+    <string name="highlight_widget_move_up">上移小部件</string>
+    <string name="highlight_widget_move_down">下移小部件</string>
+    <string name="highlight_widget_configure">配置小部件</string>
+    <string name="highlight_widget_resize">调整小部件尺寸</string>
+    <string name="highlight_widget_delete_hold">长按以删除小部件</string>
+
+    <!-- Tutorial Overlay -->
+    <string name="tutorial_tested_feedback">已测试：%1$s！</string>
+    <string name="tutorial_skip">跳过</string>
+    <string name="tutorial_next">下一步</string>
+    <string name="tutorial_finish">完成</string>
+    <string name="tutorial_favorites">收藏夹</string>
+    <string name="tutorial_tags">标签</string>
+    <string name="tutorial_step1_title">上滑 — 搜索应用</string>
+    <string name="tutorial_step1_desc">在主屏幕的「收藏夹」图标区域向上滑动，即可打开应用搜索。</string>
+    <string name="tutorial_step1_hint">在「收藏夹」图标区域向上滑！</string>
+    <string name="tutorial_step2_title">系统返回 — 返回主屏幕</string>
+    <string name="tutorial_step2_desc">使用设备的系统返回手势（边缘侧滑）或按返回键，即可从搜索或设置界面返回主屏幕。</string>
+    <string name="tutorial_step2_hint">使用系统返回手势或返回键！</string>
+    <string name="tutorial_step3_title">下滑 — 快捷操作</string>
+    <string name="tutorial_step3_desc">在「收藏夹」区域向下滑动以唤出快捷操作卡片。在手指所在位置松开即可打开通知栏，或滑动到相邻卡片打开快捷设置。</string>
+    <string name="tutorial_step3_hint">试一试：向下滑动、在卡片间滑动并松开！</string>
+    <string name="tutorial_step4_title">侧滑 — 精选中心</string>
+    <string name="tutorial_step4_desc">从屏幕中央区域水平滑动（根据左右手偏好向左或向右）即可打开「精选」界面。查看桌面概览指标与自定义 Android 小部件。</string>
+    <string name="tutorial_step4_hint">从中央区域水平滑动！</string>
+    <string name="tutorial_step5_title">长按 — 菜单与设置</string>
+    <string name="tutorial_step5_desc">按住屏幕任意空白区域即可进入桌面设置，长按应用图标可进行快捷操作。</string>
+    <string name="tutorial_step5_hint">在屏幕上按住不放！</string>
+    <string name="tutorial_step6_title">收藏夹、历史记录与标签</string>
+    <string name="tutorial_step6_desc">长按收藏项可重排或移除。点击历史图标打开菜单（编辑列表、暂停/继续记录或清除历史）。点击标签文件夹打开应用，或长按编辑分组及添加/移除收藏。</string>
+    <string name="tutorial_step6_hint">长按收藏夹，点击历史图标，或点击/长按标签文件夹！</string>
+    <string name="tutorial_step7_title">历史记录位置切换</string>
+    <string name="tutorial_step7_desc">当历史记录位于底部时向上滑动，可将其移动到屏幕顶部区域。当历史记录在顶部时在标签区域向下滑动，可调换它们的位置。</string>
+    <string name="tutorial_step7_hint">在历史记录区域上滑，或在标签区域下滑！</string>
+    <string name="tutorial_step8_title">快捷调色板 — 色彩与历史</string>
+    <string name="tutorial_step8_desc">点击搜索中字母网格上方的横条即可打开快捷调色板。点击任意颜色即可筛选应用，或点击历史卡片管理历史记录。</string>
+    <string name="tutorial_step8_hint">点击网格上方的横条，然后选择操作！</string>
+
+    <!-- Toast & Feedback Messages -->
+    <string name="toast_removed_from_favorites">已从收藏夹移除“%1$s”</string>
+    <string name="toast_favorites_limit">已达收藏上限（最多 13 项）</string>
+    <string name="toast_added_to_favorites">已添加“%1$s”到收藏夹</string>
+    <string name="toast_history_recording_paused">已暂停记录历史</string>
+    <string name="toast_history_recording_resumed">已恢复记录历史</string>
+    <string name="toast_search_history_cleared">已清除搜索历史</string>
+    <string name="toast_removed_from_history">已从历史记录移除“%1$s”</string>
+    <string name="toast_history_cleared">历史记录已清除</string>
+    <string name="toast_backup_imported_success">备份导入成功</string>
+    <string name="toast_backup_import_assignments">已导入 %1$d 项关联</string>
+    <string name="toast_backup_import_new_tags">（%1$d 个新标签）</string>
+    <string name="toast_backup_import_labels">%1$d 个自定义名称</string>
+    <string name="toast_backup_import_favorites">%1$d 个收藏应用</string>
+    <string name="toast_backup_import_settings">设置已恢复</string>
+    <string name="toast_applied_tags">已将 %1$d 个标签应用到 %2$d 个应用</string>
+    <string name="toast_uninstaller_failed">无法打开应用卸载界面</string>
+    <string name="toast_exported_apps">已导出 %1$d 个应用</string>
+    <string name="toast_export_failed">导出失败：%1$s</string>
+    <string name="toast_import_failed">导入失败：%1$s</string>
+    <string name="toast_parse_tags_failed">解析标签失败：%1$s</string>
+    <string name="toast_parse_tags_file_failed">解析标签文件失败：%1$s</string>
+    <string name="toast_backup_exported">备份已导出（%1$d 个标签，%2$d 个应用）</string>
+    <string name="toast_exported_mappings">已导出 %1$d 条映射规则</string>
+</resources>

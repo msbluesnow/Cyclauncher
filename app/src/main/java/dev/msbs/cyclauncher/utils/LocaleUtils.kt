@@ -18,13 +18,35 @@ object LocaleUtils {
     data class SupportedLanguage(
         val code: String,
         val labelRes: Int,
+        val englishName: String,
         val nativeName: String
     )
 
     val SUPPORTED_LANGUAGES = listOf(
-        SupportedLanguage(code = "", labelRes = R.string.settings_language_system, nativeName = "System default"),
-        SupportedLanguage(code = "en", labelRes = R.string.settings_language_en, nativeName = "English"),
-        SupportedLanguage(code = "ru", labelRes = R.string.settings_language_ru, nativeName = "Русский")
+        SupportedLanguage(
+            code = "",
+            labelRes = R.string.settings_language_system,
+            englishName = "System default",
+            nativeName = ""
+        ),
+        SupportedLanguage(
+            code = "en",
+            labelRes = R.string.settings_language_en,
+            englishName = "English",
+            nativeName = "English"
+        ),
+        SupportedLanguage(
+            code = "ru",
+            labelRes = R.string.settings_language_ru,
+            englishName = "Russian",
+            nativeName = "Русский"
+        ),
+        SupportedLanguage(
+            code = "zh",
+            labelRes = R.string.settings_language_zh,
+            englishName = "Chinese (Simplified)",
+            nativeName = "简体中文"
+        )
     )
 
     private const val PREFS_NAME = "cyclauncher_prefs"
@@ -61,7 +83,14 @@ object LocaleUtils {
             val localeManager = context.getSystemService(LocaleManager::class.java)
             val locales = localeManager?.applicationLocales
             if (locales != null && !locales.isEmpty) {
-                return locales[0]?.language ?: ""
+                val locale = locales[0] ?: return ""
+                val tag = locale.toLanguageTag()
+                val lang = locale.language ?: ""
+                return when {
+                    SUPPORTED_LANGUAGES.any { it.code.equals(tag, ignoreCase = true) } -> tag
+                    SUPPORTED_LANGUAGES.any { it.code.equals(lang, ignoreCase = true) } -> lang
+                    else -> lang
+                }
             }
         }
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -81,4 +110,3 @@ object LocaleUtils {
         return base.createConfigurationContext(config)
     }
 }
-
