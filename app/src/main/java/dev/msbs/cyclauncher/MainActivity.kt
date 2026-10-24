@@ -1221,6 +1221,14 @@ private fun TagsBackupConfirmDialog(
                     if (isNotEmpty()) append("\n")
                     append("Favorites to restore: ${preview.favorites.size}")
                 }
+                if (preview.settings.isNotEmpty()) {
+                    if (isNotEmpty()) append("\n")
+                    append("Settings to restore: ${preview.settings.size}")
+                }
+                if (preview.customCharMappings.isNotEmpty()) {
+                    if (isNotEmpty()) append("\n")
+                    append("Character mappings to restore: ${preview.customCharMappings.size}")
+                }
             },
             color = popupTheme.contentColor.copy(alpha = 0.85f),
             fontSize = 14.sp

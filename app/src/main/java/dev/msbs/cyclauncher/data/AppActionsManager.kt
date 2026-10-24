@@ -1115,22 +1115,69 @@ class AppActionsManager(context: Context) {
             root.put("tag_app_orders", tagOrdersObj)
         }
 
-        val settingsObj = JSONObject()
-        val settingsKeys = listOf(
-            "hand_side", "accent_color", "primary_text_color", "button_text_color",
-            "popup_theme", "show_shadows", "shadow_color", "hide_status_bar",
-            "show_search_widgets", "show_search_history", "animations_enabled",
-            "marquee_enabled", "haptic_feedback_enabled", "monochrome_history", "monochrome_favorites",
-            "monochrome_tags", "show_tags_area", "show_history_area", "search_method", "side_alphabet_button_y_ratio",
-            "side_alphabet_slot_mode",
-            "icon_pack_package", "show_keep_android_open_days",
-            "screen_scrim_alpha", "screen_scrim_is_dark", "capsule_alpha", "capsule_is_dark", "popup_alpha"
+        val customCharMappingsObj = JSONObject()
+        _customCharMappings.value.forEach { (k, v) ->
+            customCharMappingsObj.put(k, v.toString())
+        }
+        if (_customCharMappings.value.isNotEmpty()) {
+            root.put("custom_char_mappings", customCharMappingsObj)
+        }
+
+        val internalKeys = setOf(
+            "tags", "app_tags", "custom_labels", "favorites", "tag_app_orders",
+            "custom_char_mappings", "history", "search_history", "app_icon_colors",
+            "cached_colors_algo_version", "cached_colors_icon_pack_version",
+            "app_last_update_times", "recently_updated_apps", "prefs_migrated_to_de",
+            "is_default_launcher"
         )
-        settingsKeys.forEach { key ->
-            if (prefs.contains(key)) {
-                settingsObj.put(key, prefs.all[key].toString())
+        val settingsObj = JSONObject()
+        prefs.all.forEach { (key, value) ->
+            if (key !in internalKeys && value != null) {
+                settingsObj.put(key, value.toString())
             }
         }
+
+        // Guarantee all core settings have their current/default values in the backup
+        if (!settingsObj.has("highlight_section_order")) {
+            settingsObj.put(
+                "highlight_section_order",
+                dev.msbs.cyclauncher.model.HighlightSection.values().joinToString(",") { it.name }
+            )
+        }
+        if (!settingsObj.has("side_alphabet_slot_mode")) {
+            val mode = if (prefs.contains("show_search_history") && !prefs.getBoolean("show_search_history", true)) "DISABLED" else "HISTORY"
+            settingsObj.put("side_alphabet_slot_mode", mode)
+        }
+        if (!settingsObj.has("search_method")) settingsObj.put("search_method", "SIDE_ALPHABET")
+        if (!settingsObj.has("hand_side")) settingsObj.put("hand_side", "LEFT")
+        if (!settingsObj.has("accent_color")) settingsObj.put("accent_color", "SKY")
+        if (!settingsObj.has("primary_text_color")) settingsObj.put("primary_text_color", "WHITE")
+        if (!settingsObj.has("button_text_color")) settingsObj.put("button_text_color", "BLACK")
+        if (!settingsObj.has("popup_theme")) settingsObj.put("popup_theme", "DARK")
+        if (!settingsObj.has("show_shadows")) settingsObj.put("show_shadows", "true")
+        if (!settingsObj.has("shadow_color")) settingsObj.put("shadow_color", "BLACK")
+        if (!settingsObj.has("hide_status_bar")) settingsObj.put("hide_status_bar", "false")
+        if (!settingsObj.has("show_search_widgets")) settingsObj.put("show_search_widgets", "true")
+        if (!settingsObj.has("show_search_history")) settingsObj.put("show_search_history", "true")
+        if (!settingsObj.has("animations_enabled")) settingsObj.put("animations_enabled", "true")
+        if (!settingsObj.has("marquee_enabled")) settingsObj.put("marquee_enabled", "true")
+        if (!settingsObj.has("haptic_feedback_enabled")) settingsObj.put("haptic_feedback_enabled", "true")
+        if (!settingsObj.has("monochrome_history")) settingsObj.put("monochrome_history", "false")
+        if (!settingsObj.has("monochrome_tags")) settingsObj.put("monochrome_tags", "false")
+        if (!settingsObj.has("show_tags_area")) settingsObj.put("show_tags_area", "true")
+        if (!settingsObj.has("show_history_area")) settingsObj.put("show_history_area", "true")
+        if (!settingsObj.has("show_keep_android_open_days")) settingsObj.put("show_keep_android_open_days", "true")
+        if (!settingsObj.has("screen_scrim_alpha")) settingsObj.put("screen_scrim_alpha", "0.0")
+        if (!settingsObj.has("capsule_alpha")) settingsObj.put("capsule_alpha", "0.0")
+        if (!settingsObj.has("popup_alpha")) settingsObj.put("popup_alpha", "0.81")
+        if (!settingsObj.has("side_alphabet_button_y_ratio")) settingsObj.put("side_alphabet_button_y_ratio", "0.23")
+        if (!settingsObj.has("last_alphabet_search_method")) settingsObj.put("last_alphabet_search_method", "SIDE_ALPHABET")
+
+        val appLang = dev.msbs.cyclauncher.utils.LocaleUtils.getCurrentLanguageCode(context)
+        if (appLang.isNotBlank()) {
+            settingsObj.put("pref_app_language", appLang)
+        }
+
         if (settingsObj.length() > 0) {
             root.put("settings", settingsObj)
         }
@@ -1173,6 +1220,7 @@ class AppActionsManager(context: Context) {
         val parsedFavorites = mutableListOf<String>()
         val parsedTagAppOrders = mutableMapOf<String, List<String>>()
         val parsedSettings = mutableMapOf<String, String>()
+        val parsedCharMappings = mutableMapOf<String, Char>()
 
         fun extractIsFavorite(obj: JSONObject): Boolean {
             return when {
@@ -1257,6 +1305,35 @@ class AppActionsManager(context: Context) {
             val appsArray = root.optJSONArray("apps")
             val tagOrdersObj = root.optJSONObject("tag_app_orders")
             val settingsObj = root.optJSONObject("settings")
+            val charMappingsObj = root.optJSONObject("custom_char_mappings")
+                ?: root.optJSONObject("mappings")
+                ?: settingsObj?.optJSONObject("custom_char_mappings")
+
+            if (charMappingsObj != null) {
+                val keys = charMappingsObj.keys()
+                while (keys.hasNext()) {
+                    val k = keys.next()
+                    val v = charMappingsObj.optString(k).trim()
+                    if (v.isNotEmpty()) {
+                        parsedCharMappings[k] = v[0].uppercaseChar()
+                    }
+                }
+            } else if (settingsObj != null && settingsObj.has("custom_char_mappings")) {
+                val rawMappings = settingsObj.optString("custom_char_mappings", "").trim()
+                if (rawMappings.startsWith("{")) {
+                    try {
+                        val json = JSONObject(rawMappings)
+                        val keys = json.keys()
+                        while (keys.hasNext()) {
+                            val k = keys.next()
+                            val v = json.optString(k).trim()
+                            if (v.isNotEmpty()) {
+                                parsedCharMappings[k] = v[0].uppercaseChar()
+                            }
+                        }
+                    } catch (_: Exception) {}
+                }
+            }
 
             if (customLabelsObj != null) {
                 val keys = customLabelsObj.keys()
@@ -1393,7 +1470,8 @@ class AppActionsManager(context: Context) {
             customLabels = parsedCustomLabels,
             favorites = parsedFavorites.distinct(),
             tagAppOrders = parsedTagAppOrders,
-            settings = parsedSettings
+            settings = parsedSettings,
+            customCharMappings = parsedCharMappings
         )
     }
 
@@ -1516,10 +1594,26 @@ class AppActionsManager(context: Context) {
             saveTagAppOrders(currentOrders)
         }
 
+        if (preview.customCharMappings.isNotEmpty()) {
+            val current = _customCharMappings.value.toMutableMap()
+            current.putAll(preview.customCharMappings)
+            _customCharMappings.value = current
+            saveCustomCharMappings(current)
+        }
+
         if (preview.settings.isNotEmpty()) {
             val editor = prefs.edit()
             val existingPrefs = prefs.all
             preview.settings.forEach { (key, value) ->
+                if (key == "pref_app_language" || key == "app_language") {
+                    try {
+                        dev.msbs.cyclauncher.utils.LocaleUtils.setAppLanguage(context, value)
+                    } catch (_: Exception) {}
+                    return@forEach
+                }
+                if (key == "custom_char_mappings") {
+                    return@forEach
+                }
                 val existingVal = existingPrefs[key]
                 when {
                     existingVal is Boolean -> {
@@ -1534,8 +1628,8 @@ class AppActionsManager(context: Context) {
                     existingVal is Float -> {
                         value.toFloatOrNull()?.let { editor.putFloat(key, it) } ?: editor.putString(key, value)
                     }
-                    value == "true" -> editor.putBoolean(key, true)
-                    value == "false" -> editor.putBoolean(key, false)
+                    value.equals("true", ignoreCase = true) -> editor.putBoolean(key, true)
+                    value.equals("false", ignoreCase = true) -> editor.putBoolean(key, false)
                     key.endsWith("_id") || key == "cached_colors_algo_version" -> {
                         value.toIntOrNull()?.let { editor.putInt(key, it) } ?: editor.putString(key, value)
                     }
@@ -1884,7 +1978,8 @@ data class TagsBackupPreview(
     val customLabels: Map<String, String> = emptyMap(),
     val favorites: List<String> = emptyList(),
     val tagAppOrders: Map<String, List<String>> = emptyMap(),
-    val settings: Map<String, String> = emptyMap()
+    val settings: Map<String, String> = emptyMap(),
+    val customCharMappings: Map<String, Char> = emptyMap()
 ) {
     /**
      * Holds basic tag definition metadata in a backup.
