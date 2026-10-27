@@ -11,6 +11,7 @@ import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.icons.IconPackInfo
 import dev.msbs.cyclauncher.icons.IconPackManager
+import dev.msbs.cyclauncher.ui.components.AppDropdownMenu
 import dev.msbs.cyclauncher.ui.components.KeepAndroidOpenBanner
 import dev.msbs.cyclauncher.ui.components.KeepAndroidOpenDialog
 import dev.msbs.cyclauncher.ui.components.ScreenTopBar
@@ -768,7 +769,7 @@ private fun InteractionSection(
                     )
                 }
 
-                DropdownMenu(
+                AppDropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false },
                     shape = RoundedCornerShape(14.dp),
@@ -1038,7 +1039,7 @@ private fun StatusBarAndAnimationsSection(
                         )
                     }
 
-                    DropdownMenu(
+                    AppDropdownMenu(
                         expanded = monochromeExpanded,
                         onDismissRequest = { monochromeExpanded = false },
                         shape = RoundedCornerShape(14.dp),
@@ -1205,7 +1206,7 @@ private fun StatusBarAndAnimationsSection(
                         )
                     }
 
-                    DropdownMenu(
+                    AppDropdownMenu(
                         expanded = languageExpanded,
                         onDismissRequest = { languageExpanded = false },
                         shape = RoundedCornerShape(14.dp),
@@ -1318,7 +1319,7 @@ private fun StatusBarAndAnimationsSection(
                         )
                     }
 
-                    DropdownMenu(
+                    AppDropdownMenu(
                         expanded = mainScreenExpanded,
                         onDismissRequest = { mainScreenExpanded = false },
                         shape = RoundedCornerShape(14.dp),

@@ -11,6 +11,7 @@ import dev.msbs.cyclauncher.ui.components.rememberAppIconPainter
 import dev.msbs.cyclauncher.ui.components.ScreenTopBar
 import dev.msbs.cyclauncher.ui.components.ShadowedIcon
 import dev.msbs.cyclauncher.ui.components.TouchMarqueeText
+import dev.msbs.cyclauncher.ui.components.AppDropdownMenu
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
@@ -902,7 +903,7 @@ private fun HighlightSectionOrderMenu(
             )
         }
 
-        DropdownMenu(
+        AppDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
             shape = RoundedCornerShape(12.dp),

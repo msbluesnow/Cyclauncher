@@ -8,7 +8,27 @@ import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.ui.theme.ShadowSettings
 import dev.msbs.cyclauncher.ui.theme.LocalIconPackVersion
 import dev.msbs.cyclauncher.ui.theme.LocalMarqueeEnabled
+import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
+import dev.msbs.cyclauncher.ui.theme.LocalPopupTheme
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -610,4 +630,96 @@ private fun RecentlyUpdatedBadge(
         primaryTextColor = primaryTextColor,
         shadowSettings = shadowSettings
     )
+}
+
+/**
+ * Custom PopupPositionProvider for instant dropdown menus when animations are disabled.
+ * Positions the dropdown menu below or above the anchor bounds, clamped inside the window.
+ */
+object InstantDropdownMenuPositionProvider : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize
+    ): IntOffset {
+        val x = if (layoutDirection == LayoutDirection.Rtl) {
+            (anchorBounds.right - popupContentSize.width).coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0))
+        } else {
+            anchorBounds.left.coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0))
+        }
+
+        val fitsBelow = anchorBounds.bottom + popupContentSize.height <= windowSize.height
+        val y = if (fitsBelow) {
+            anchorBounds.bottom
+        } else {
+            (anchorBounds.top - popupContentSize.height).coerceAtLeast(0)
+        }
+
+        return IntOffset(x, y)
+    }
+}
+
+/**
+ * DropdownMenu wrapper that respects [LocalAnimationsEnabled].
+ * Plays standard Material 3 scale/fade transition when animations are enabled.
+ * Appears and disappears instantaneously without transition when animations are disabled.
+ */
+@Composable
+fun AppDropdownMenu(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    offset: DpOffset = DpOffset(0.dp, 0.dp),
+    scrollState: ScrollState = rememberScrollState(),
+    properties: PopupProperties = PopupProperties(focusable = true),
+    shape: Shape = RoundedCornerShape(14.dp),
+    containerColor: Color = LocalPopupTheme.current.solidBackgroundColor,
+    tonalElevation: Dp = 0.dp,
+    shadowElevation: Dp = 8.dp,
+    border: BorderStroke? = null,
+    animationsEnabled: Boolean = LocalAnimationsEnabled.current,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    if (animationsEnabled) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = onDismissRequest,
+            modifier = modifier,
+            offset = offset,
+            scrollState = scrollState,
+            properties = properties,
+            shape = shape,
+            containerColor = containerColor,
+            tonalElevation = tonalElevation,
+            shadowElevation = shadowElevation,
+            border = border,
+            content = content
+        )
+    } else {
+        if (expanded) {
+            Popup(
+                onDismissRequest = onDismissRequest,
+                popupPositionProvider = InstantDropdownMenuPositionProvider,
+                properties = properties
+            ) {
+                Surface(
+                    modifier = modifier,
+                    shape = shape,
+                    color = containerColor,
+                    tonalElevation = tonalElevation,
+                    shadowElevation = shadowElevation,
+                    border = border
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(vertical = 8.dp)
+                            .width(IntrinsicSize.Max)
+                            .verticalScroll(scrollState),
+                        content = content
+                    )
+                }
+            }
+        }
+    }
 }

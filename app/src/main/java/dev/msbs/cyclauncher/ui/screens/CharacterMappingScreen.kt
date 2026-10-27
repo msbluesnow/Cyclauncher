@@ -8,6 +8,7 @@ import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.R
 import dev.msbs.cyclauncher.ui.components.ScreenTopBar
 import dev.msbs.cyclauncher.ui.components.TouchMarqueeText
+import dev.msbs.cyclauncher.ui.components.AppDropdownMenu
 import androidx.compose.foundation.interaction.MutableInteractionSource
 
 import android.widget.Toast
@@ -248,7 +249,7 @@ fun CharacterMappingScreen(
                                 }
                             }
 
-                            DropdownMenu(
+                            AppDropdownMenu(
                                 expanded = showTargetDropdown,
                                 onDismissRequest = { showTargetDropdown = false },
                                 shape = RoundedCornerShape(14.dp),
