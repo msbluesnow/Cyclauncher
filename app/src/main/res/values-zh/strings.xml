@@ -54,6 +54,7 @@
     <string name="tag_dialog_hex_code">HEX 代码</string>
     <string name="tag_dialog_search_icons">搜索图标…</string>
     <string name="tag_dialog_no_icons">未找到图标</string>
+    <string name="tag_dialog_emoji_placeholder">输入或粘贴 1 个表情符号</string>
 
     <!-- Rename Dialog -->
     <string name="rename_dialog_title">重命名应用</string>

@@ -52,6 +52,7 @@
     <string name="tag_dialog_hex_code">HEX-код</string>
     <string name="tag_dialog_search_icons">Поиск иконок…</string>
     <string name="tag_dialog_no_icons">Иконки не найдены</string>
+    <string name="tag_dialog_emoji_placeholder">Введите или вставьте 1 эмодзи</string>
 
     <!-- Rename Dialog -->
     <string name="rename_dialog_title">Переименовать приложение</string>

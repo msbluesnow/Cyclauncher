@@ -54,6 +54,7 @@
     <string name="tag_dialog_hex_code">HEX-Code</string>
     <string name="tag_dialog_search_icons">Symbole suchen…</string>
     <string name="tag_dialog_no_icons">Keine Symbole gefunden</string>
+    <string name="tag_dialog_emoji_placeholder">1 Emoji eingeben oder einfügen</string>
 
     <!-- Rename Dialog -->
     <string name="rename_dialog_title">Anwendung Umbenennen</string>

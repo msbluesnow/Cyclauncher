@@ -896,10 +896,10 @@ fun TagEditDialog(
                                     .clip(RoundedCornerShape(6.dp))
                                     .background(if (iconTab == 0) accentColor.color.copy(alpha = 0.22f) else Color.Transparent)
                                     .clickable { iconTab = 0 }
-                                    .padding(vertical = 5.dp),
+                                    .padding(vertical = 5.dp, horizontal = 4.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
+                                TouchMarqueeText(
                                     text = stringResource(R.string.tag_dialog_tab_vector),
                                     fontSize = 11.sp,
                                     fontWeight = if (iconTab == 0) FontWeight.Bold else FontWeight.Normal,
@@ -912,10 +912,10 @@ fun TagEditDialog(
                                     .clip(RoundedCornerShape(6.dp))
                                     .background(if (iconTab == 1) accentColor.color.copy(alpha = 0.22f) else Color.Transparent)
                                     .clickable { iconTab = 1 }
-                                    .padding(vertical = 5.dp),
+                                    .padding(vertical = 5.dp, horizontal = 4.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
+                                TouchMarqueeText(
                                     text = stringResource(R.string.tag_dialog_tab_emoji),
                                     fontSize = 11.sp,
                                     fontWeight = if (iconTab == 1) FontWeight.Bold else FontWeight.Normal,
@@ -1006,8 +1006,8 @@ fun TagEditDialog(
                                     }
                                 },
                                 placeholder = {
-                                    Text(
-                                        "Type or paste 1 emoji",
+                                    TouchMarqueeText(
+                                        text = stringResource(R.string.tag_dialog_emoji_placeholder),
                                         fontSize = 12.sp,
                                         color = popupTheme.secondaryContentColor.copy(alpha = 0.6f)
                                     )
@@ -1070,10 +1070,10 @@ fun TagEditDialog(
                             .clip(RoundedCornerShape(8.dp))
                             .background(if (selectedTab == 0) popupTheme.contentColor.copy(alpha = 0.16f) else Color.Transparent)
                             .clickable { selectedTab = 0 }
-                            .padding(vertical = 7.dp),
+                            .padding(vertical = 7.dp, horizontal = 4.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
+                        TouchMarqueeText(
                             text = stringResource(R.string.tag_dialog_tab_presets),
                             fontSize = 12.sp,
                             fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
@@ -1086,10 +1086,10 @@ fun TagEditDialog(
                             .clip(RoundedCornerShape(8.dp))
                             .background(if (selectedTab == 1) popupTheme.contentColor.copy(alpha = 0.16f) else Color.Transparent)
                             .clickable { selectedTab = 1 }
-                            .padding(vertical = 7.dp),
+                            .padding(vertical = 7.dp, horizontal = 4.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
+                        TouchMarqueeText(
                             text = stringResource(R.string.tag_dialog_tab_custom),
                             fontSize = 12.sp,
                             fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
@@ -1172,7 +1172,11 @@ fun TagEditDialog(
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("Hue (${currentHue.toInt()}°)", fontSize = 11.sp, color = popupTheme.secondaryContentColor)
+                        TouchMarqueeText(
+                            text = stringResource(R.string.settings_hue_format, currentHue.toInt()),
+                            fontSize = 11.sp,
+                            color = popupTheme.secondaryContentColor
+                        )
                         TagHueSlider(
                             hue = currentHue,
                             onHueChange = {
@@ -1186,8 +1190,8 @@ fun TagEditDialog(
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            "Saturation (${(currentSat * 100).toInt()}%)",
+                        TouchMarqueeText(
+                            text = stringResource(R.string.settings_saturation_format, (currentSat * 100).toInt()),
                             fontSize = 11.sp,
                             color = popupTheme.secondaryContentColor
                         )
@@ -1210,8 +1214,8 @@ fun TagEditDialog(
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            "Brightness (${(currentVal * 100).toInt()}%)",
+                        TouchMarqueeText(
+                            text = stringResource(R.string.settings_brightness_format, (currentVal * 100).toInt()),
                             fontSize = 11.sp,
                             color = popupTheme.secondaryContentColor
                         )
