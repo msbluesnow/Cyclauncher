@@ -114,42 +114,42 @@
 
     <!-- Settings Screen -->
     <string name="settings_title">SETTINGS</string>
-    <string name="settings_hand_left">Left hand</string>
-    <string name="settings_hand_right">Right hand</string>
-    <string name="settings_toggle_search_widgets">Toggle search widgets visibility</string>
+    <string name="settings_hand_left">Left Hand</string>
+    <string name="settings_hand_right">Right Hand</string>
+    <string name="settings_toggle_search_widgets">Toggle Search Widgets Visibility</string>
     <string name="settings_side_slot">Side Slot</string>
-    <string name="settings_select_side_slot_mode">Select side slot mode</string>
+    <string name="settings_select_side_slot_mode">Select Side Slot Mode</string>
     <string name="settings_side_slot_history">History</string>
     <string name="settings_side_slot_widget">Widget</string>
     <string name="settings_side_slot_disabled">Disabled</string>
 
     <string name="settings_status_bar">Status Bar</string>
-    <string name="settings_toggle_status_bar">Toggle status bar visibility</string>
+    <string name="settings_toggle_status_bar">Toggle Status Bar Visibility</string>
     <string name="settings_animations">Animations</string>
-    <string name="settings_marquee">Marquee text</string>
+    <string name="settings_marquee">Marquee Text</string>
     <string name="settings_haptics">Haptics</string>
     <string name="settings_monochrome">Monochrome</string>
-    <string name="settings_monochrome_disabled">Monochrome disabled</string>
+    <string name="settings_monochrome_disabled">Monochrome Disabled</string>
     <string name="settings_monochrome_history_desc">History Monochrome</string>
     <string name="settings_monochrome_tags_desc">Tags Monochrome</string>
     <string name="settings_monochrome_options">Select Monochrome Options</string>
     <string name="settings_monochrome_history">History</string>
     <string name="settings_monochrome_tags">Tags</string>
-    <string name="settings_main_screen">Main screen</string>
-    <string name="settings_main_screen_options">Main screen options</string>
-    <string name="settings_main_screen_all_visible">All areas visible</string>
-    <string name="settings_hide_history_desc">History hidden</string>
-    <string name="settings_hide_tags_desc">Tags hidden</string>
+    <string name="settings_main_screen">Main Screen</string>
+    <string name="settings_main_screen_options">Main Screen Options</string>
+    <string name="settings_main_screen_all_visible">All Areas Visible</string>
+    <string name="settings_hide_history_desc">History Hidden</string>
+    <string name="settings_hide_tags_desc">Tags Hidden</string>
 
     <string name="settings_language">Language</string>
-    <string name="settings_select_language">Select language</string>
-    <string name="settings_language_system">System default</string>
+    <string name="settings_select_language">Select Language</string>
+    <string name="settings_language_system">System Default</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_ru">Russian</string>
     <string name="settings_language_zh">Chinese (Simplified)</string>
 
     <string name="settings_mapping">Mapping</string>
-    <string name="settings_mapping_configure">Configure character mappings</string>
+    <string name="settings_mapping_configure">Configure Character Mappings</string>
     <string name="settings_icon_pack">Icon Pack</string>
     <string name="settings_icon_pack_select">Select Icon Pack</string>
 
@@ -165,12 +165,12 @@
     <string name="settings_ai_tags">AI Tags</string>
 
     <string name="settings_default_launcher">Default Launcher</string>
-    <string name="settings_default_launcher_set_status">Set as default</string>
-    <string name="settings_default_launcher_not_set">Not set</string>
+    <string name="settings_default_launcher_set_status">Set as Default</string>
+    <string name="settings_default_launcher_not_set">Not Set</string>
     <string name="settings_default_launcher_change">Change</string>
     <string name="settings_default_launcher_set">Set</string>
     <string name="settings_relaunch_app">Relaunch App</string>
-    <string name="settings_relaunch_subtitle">May fix some issues</string>
+    <string name="settings_relaunch_subtitle">May Fix Some Issues</string>
     <string name="settings_relaunch_action">Relaunch</string>
 
     <string name="settings_tutorial">Tutorial</string>
@@ -179,7 +179,7 @@
     <string name="settings_github">GitHub</string>
     <string name="settings_github_subtitle">⭐ Project</string>
     <string name="settings_discord">Discord</string>
-    <string name="settings_discord_subtitle">Join chat</string>
+    <string name="settings_discord_subtitle">Join Chat</string>
     <string name="settings_tribute">Tribute</string>
     <string name="settings_tribute_subtitle">Sponsor</string>
 
@@ -196,8 +196,8 @@
     <string name="settings_tab_custom_color">Custom Color</string>
     <string name="settings_adaptive_wallpaper_accent">Adaptive Wallpaper Accent</string>
     <string name="settings_hue_angle_shift">Hue Angle Shift</string>
-    <string name="settings_luminous_highlight">Luminous highlight for dark wallpaper</string>
-    <string name="settings_deep_dark_shade">Deep dark shade for light wallpaper</string>
+    <string name="settings_luminous_highlight">Luminous Highlight for Dark Wallpaper</string>
+    <string name="settings_deep_dark_shade">Deep Dark Shade for Light Wallpaper</string>
     <string name="settings_echo_presets">Echo Icon Theme Presets</string>
     <string name="settings_interactive_picker">Interactive Color Picker</string>
     <string name="settings_quick_swatches">Quick Swatches</string>
@@ -214,12 +214,12 @@
 
     <string name="settings_icon_pack_title">Icon Pack</string>
     <string name="settings_icon_pack_system_default">System Default</string>
-    <string name="settings_icon_pack_system_auto">Auto: %1$s (ROM theme)</string>
-    <string name="settings_icon_pack_system_original">Original application icons</string>
+    <string name="settings_icon_pack_system_auto">Auto: %1$s (ROM Theme)</string>
+    <string name="settings_icon_pack_system_original">Original Application Icons</string>
     <string name="settings_icon_pack_none_installed">No third-party icon packs found installed on your device.</string>
 
     <string name="settings_char_mapping_default">Default</string>
-    <string name="settings_char_mapping_active">%1$d active</string>
+    <string name="settings_char_mapping_active">%1$d Active</string>
 
     <!-- Keep Android Open Banner & Dialog -->
     <string name="kao_title">Keep Android Open</string>

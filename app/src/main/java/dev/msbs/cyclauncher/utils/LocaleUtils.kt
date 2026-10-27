@@ -26,7 +26,7 @@ object LocaleUtils {
         SupportedLanguage(
             code = "",
             labelRes = R.string.settings_language_system,
-            englishName = "System default",
+            englishName = "System Default",
             nativeName = ""
         ),
         SupportedLanguage(

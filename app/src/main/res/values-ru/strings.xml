@@ -112,112 +112,112 @@
 
     <!-- Settings Screen -->
     <string name="settings_title">НАСТРОЙКИ</string>
-    <string name="settings_hand_left">Для левой руки</string>
-    <string name="settings_hand_right">Для правой руки</string>
-    <string name="settings_toggle_search_widgets">Переключить видимость виджетов поиска</string>
-    <string name="settings_side_slot">Боковой слот</string>
-    <string name="settings_select_side_slot_mode">Выбрать режим бокового слота</string>
+    <string name="settings_hand_left">Для Левой Руки</string>
+    <string name="settings_hand_right">Для Правой Руки</string>
+    <string name="settings_toggle_search_widgets">Переключить Видимость Виджетов Поиска</string>
+    <string name="settings_side_slot">Боковой Слот</string>
+    <string name="settings_select_side_slot_mode">Выбрать Режим Бокового Слота</string>
     <string name="settings_side_slot_history">История</string>
     <string name="settings_side_slot_widget">Виджет</string>
     <string name="settings_side_slot_disabled">Отключен</string>
 
-    <string name="settings_status_bar">Строка состояния</string>
-    <string name="settings_toggle_status_bar">Переключить строку состояния</string>
+    <string name="settings_status_bar">Строка Состояния</string>
+    <string name="settings_toggle_status_bar">Переключить Строку Состояния</string>
     <string name="settings_animations">Анимации</string>
-    <string name="settings_marquee">Бегущая строка</string>
+    <string name="settings_marquee">Бегущая Строка</string>
     <string name="settings_haptics">Вибрация</string>
     <string name="settings_monochrome">Монохром</string>
-    <string name="settings_monochrome_disabled">Монохром выключен</string>
-    <string name="settings_monochrome_history_desc">Монохромная история</string>
-    <string name="settings_monochrome_tags_desc">Монохромные теги</string>
-    <string name="settings_monochrome_options">Выбрать параметры монохрома</string>
+    <string name="settings_monochrome_disabled">Монохром Выключен</string>
+    <string name="settings_monochrome_history_desc">Монохромная История</string>
+    <string name="settings_monochrome_tags_desc">Монохромные Теги</string>
+    <string name="settings_monochrome_options">Выбрать Параметры Монохрома</string>
     <string name="settings_monochrome_history">История</string>
     <string name="settings_monochrome_tags">Теги</string>
-    <string name="settings_main_screen">Главный экран</string>
-    <string name="settings_main_screen_options">Параметры главного экрана</string>
-    <string name="settings_main_screen_all_visible">Все области видны</string>
-    <string name="settings_hide_history_desc">История скрыта</string>
-    <string name="settings_hide_tags_desc">Теги скрыты</string>
+    <string name="settings_main_screen">Главный Экран</string>
+    <string name="settings_main_screen_options">Параметры Главного Экрана</string>
+    <string name="settings_main_screen_all_visible">Все Области Видны</string>
+    <string name="settings_hide_history_desc">История Скрыта</string>
+    <string name="settings_hide_tags_desc">Теги Скрыты</string>
 
     <string name="settings_language">Язык</string>
-    <string name="settings_select_language">Выбрать язык</string>
+    <string name="settings_select_language">Выбрать Язык</string>
     <string name="settings_language_system">Системный</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_ru">Русский</string>
-    <string name="settings_language_zh">Китайский (упрощенный)</string>
+    <string name="settings_language_zh">Китайский (Упрощенный)</string>
 
     <string name="settings_mapping">Раскладка</string>
-    <string name="settings_mapping_configure">Настроить соответствия символов</string>
+    <string name="settings_mapping_configure">Настроить Соответствия Символов</string>
     <string name="settings_icon_pack">Иконки</string>
-    <string name="settings_icon_pack_select">Выбрать набор иконок</string>
+    <string name="settings_icon_pack_select">Выбрать Набор Иконок</string>
 
     <string name="settings_accent">Акцент</string>
     <string name="settings_adaptive_shadows">Адаптивный</string>
-    <string name="settings_main_color">Основной цвет</string>
-    <string name="settings_button_text">Текст кнопок</string>
+    <string name="settings_main_color">Основной Цвет</string>
+    <string name="settings_button_text">Текст Кнопок</string>
     <string name="settings_auto_colors">Автоподбор</string>
 
     <string name="settings_backup">Бэкап</string>
-    <string name="settings_export_backup">Экспорт бэкапа</string>
-    <string name="settings_import_backup">Импорт бэкапа</string>
+    <string name="settings_export_backup">Экспорт Бэкапа</string>
+    <string name="settings_import_backup">Импорт Бэкапа</string>
     <string name="settings_ai_tags">ИИ Теги</string>
 
-    <string name="settings_default_launcher">Главный лаунчер</string>
-    <string name="settings_default_launcher_set_status">По умолчанию</string>
-    <string name="settings_default_launcher_not_set">Не назначен</string>
+    <string name="settings_default_launcher">Главный Лаунчер</string>
+    <string name="settings_default_launcher_set_status">По Умолчанию</string>
+    <string name="settings_default_launcher_not_set">Не Назначен</string>
     <string name="settings_default_launcher_change">Изменить</string>
     <string name="settings_default_launcher_set">Назначить</string>
     <string name="settings_relaunch_app">Перезапуск</string>
-    <string name="settings_relaunch_subtitle">Может исправить неполадки</string>
+    <string name="settings_relaunch_subtitle">Может Исправить Неполадки</string>
     <string name="settings_relaunch_action">Перезапустить</string>
 
     <string name="settings_tutorial">Обучение</string>
 
-    <string name="settings_support_and_community">Поддержка и сообщество</string>
+    <string name="settings_support_and_community">Поддержка и Сообщество</string>
     <string name="settings_github">GitHub</string>
     <string name="settings_github_subtitle">⭐ Проект</string>
     <string name="settings_discord">Discord</string>
-    <string name="settings_discord_subtitle">Наш чат</string>
+    <string name="settings_discord_subtitle">Наш Чат</string>
     <string name="settings_tribute">Донат</string>
     <string name="settings_tribute_subtitle">Поддержать</string>
 
     <string name="settings_version">Версия %1$s</string>
 
     <!-- Settings Dialogs -->
-    <string name="settings_default_launcher_title">Главный экран</string>
+    <string name="settings_default_launcher_title">Главный Экран</string>
     <string name="settings_default_launcher_success">Cyclauncher теперь ваш лаунчер по умолчанию!</string>
     <string name="settings_default_launcher_failed">Cyclauncher не назначен по умолчанию. Попробовать снова?</string>
     <string name="settings_default_launcher_great">Отлично!</string>
 
-    <string name="settings_theme_accent_title">Акцентный цвет</string>
-    <string name="settings_tab_presets_wallpaper">Пресеты и обои</string>
-    <string name="settings_tab_custom_color">Свой цвет</string>
-    <string name="settings_adaptive_wallpaper_accent">Адаптивный акцент обоев</string>
-    <string name="settings_hue_angle_shift">Смещение цветового тона</string>
-    <string name="settings_luminous_highlight">Светлый акцент для темных обоев</string>
-    <string name="settings_deep_dark_shade">Глубокий оттенок для светлых обоев</string>
-    <string name="settings_echo_presets">Пресеты темы Echo</string>
-    <string name="settings_interactive_picker">Выбор цвета</string>
-    <string name="settings_quick_swatches">Быстрые цвета</string>
+    <string name="settings_theme_accent_title">Акцентный Цвет</string>
+    <string name="settings_tab_presets_wallpaper">Пресеты и Обои</string>
+    <string name="settings_tab_custom_color">Свой Цвет</string>
+    <string name="settings_adaptive_wallpaper_accent">Адаптивный Акцент Обоев</string>
+    <string name="settings_hue_angle_shift">Смещение Цветового Тона</string>
+    <string name="settings_luminous_highlight">Светлый Акцент для Темных Обоев</string>
+    <string name="settings_deep_dark_shade">Глубокий Оттенок для Светлых Обоев</string>
+    <string name="settings_echo_presets">Пресеты Темы Echo</string>
+    <string name="settings_interactive_picker">Выбор Цвета</string>
+    <string name="settings_quick_swatches">Быстрые Цвета</string>
     <string name="settings_hue_format">Тон (%1$d°)</string>
     <string name="settings_saturation_format">Насыщенность (%1$d%%)</string>
     <string name="settings_brightness_format">Яркость (%1$d%%)</string>
     <string name="settings_layer_background">Фон</string>
     <string name="settings_layer_capsules">Капсулы</string>
     <string name="settings_layer_popup">Поп-ап</string>
-    <string name="settings_contrast_and_scrim_title">Фон и капсулы</string>
+    <string name="settings_contrast_and_scrim_title">Фон и Капсулы</string>
     <string name="settings_contrast_summary_format">Фон: %1$d%% • Капсулы: %2$d%% • Поп-ап: %3$d%%</string>
-    <string name="settings_hex_code">HEX код</string>
-    <string name="settings_apply_custom_color">Применить свой цвет</string>
+    <string name="settings_hex_code">HEX Код</string>
+    <string name="settings_apply_custom_color">Применить Свой Цвет</string>
 
-    <string name="settings_icon_pack_title">Набор иконок</string>
+    <string name="settings_icon_pack_title">Набор Иконок</string>
     <string name="settings_icon_pack_system_default">Системные</string>
-    <string name="settings_icon_pack_system_auto">Авто: %1$s (тема прошивки)</string>
-    <string name="settings_icon_pack_system_original">Оригинальные значки приложений</string>
+    <string name="settings_icon_pack_system_auto">Авто: %1$s (Тема Прошивки)</string>
+    <string name="settings_icon_pack_system_original">Оригинальные Значки Приложений</string>
     <string name="settings_icon_pack_none_installed">Сторонние наборы иконок не найдены на устройстве.</string>
 
-    <string name="settings_char_mapping_default">По умолчанию</string>
-    <string name="settings_char_mapping_active">%1$d активных</string>
+    <string name="settings_char_mapping_default">По Умолчанию</string>
+    <string name="settings_char_mapping_active">%1$d Активных</string>
 
     <!-- Keep Android Open Banner & Dialog -->
     <string name="kao_title">Keep Android Open</string>
