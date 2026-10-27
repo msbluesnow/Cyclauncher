@@ -128,7 +128,9 @@ class AppActionsManager(context: Context) {
     fun toggleHistoryPaused(): Boolean {
         val newVal = !_isHistoryPaused.value
         _isHistoryPaused.value = newVal
-        prefs.edit().putBoolean("is_history_paused", newVal).apply()
+        storageExecutor.execute {
+            prefs.edit().putBoolean("is_history_paused", newVal).apply()
+        }
         showToast(context.getString(if (newVal) R.string.toast_history_recording_paused else R.string.toast_history_recording_resumed))
         return newVal
     }
@@ -483,32 +485,50 @@ class AppActionsManager(context: Context) {
         saveTagAppOrders(currentMap)
     }
     
-    fun onPackageRemoved(packageName: String) {
-        val newRecent = _recentlyUpdated.value.filterNot { it.startsWith("$packageName/") || it == packageName }.toSet()
+    fun onPackageRemoved(packageName: String, user: android.os.UserHandle = android.os.Process.myUserHandle()) {
+        val isPersonalProfile = user == android.os.Process.myUserHandle()
+        val profileSuffix = "#${user.hashCode()}"
+        fun matchesRemovedPackage(key: String): Boolean {
+            return if (isPersonalProfile) {
+                key == packageName || (key.startsWith("$packageName/") && !key.contains('#'))
+            } else {
+                key.startsWith("$packageName/") && key.endsWith(profileSuffix)
+            }
+        }
+
+        val newRecent = _recentlyUpdated.value.filterNot(::matchesRemovedPackage).toSet()
         if (newRecent.size != _recentlyUpdated.value.size) {
             _recentlyUpdated.value = newRecent
             saveRecentlyUpdated(newRecent)
         }
 
-        val updateTimes = loadAppUpdateTimes().toMutableMap()
-        if (updateTimes.remove(packageName) != null) {
-            saveAppUpdateTimes(updateTimes)
+        if (isPersonalProfile) {
+            val updateTimes = loadAppUpdateTimes().toMutableMap()
+            if (updateTimes.remove(packageName) != null) {
+                saveAppUpdateTimes(updateTimes)
+            }
         }
 
-        val newFavs = _favorites.value.filterNot { it.startsWith("$packageName/") || it == packageName }
+        val newFavs = _favorites.value.filterNot(::matchesRemovedPackage)
         if (newFavs.size != _favorites.value.size) {
             _favorites.value = newFavs
             saveList("favorites", newFavs)
         }
 
-        val newHistory = _history.value.filterNot { it.startsWith("$packageName/") || it == packageName }
+        val newHistory = _history.value.filterNot(::matchesRemovedPackage)
         if (newHistory.size != _history.value.size) {
             _history.value = newHistory
             saveList("history", newHistory)
         }
 
+        val newSearchHistory = _searchHistory.value.filterNot(::matchesRemovedPackage)
+        if (newSearchHistory.size != _searchHistory.value.size) {
+            _searchHistory.value = newSearchHistory
+            saveList("search_history", newSearchHistory)
+        }
+
         val currentAppTags = _appTags.value.toMutableMap()
-        val appTagKeysToRemove = currentAppTags.keys.filter { it.startsWith("$packageName/") || it == packageName }
+        val appTagKeysToRemove = currentAppTags.keys.filter(::matchesRemovedPackage)
         if (appTagKeysToRemove.isNotEmpty()) {
             appTagKeysToRemove.forEach { currentAppTags.remove(it) }
             _appTags.value = currentAppTags
@@ -518,7 +538,7 @@ class AppActionsManager(context: Context) {
         val currentOrders = _tagAppOrders.value.toMutableMap()
         var ordersChanged = false
         currentOrders.forEach { (tagId, list) ->
-            val filtered = list.filterNot { it.startsWith("$packageName/") || it == packageName }
+            val filtered = list.filterNot(::matchesRemovedPackage)
             if (filtered.size != list.size) {
                 currentOrders[tagId] = filtered
                 ordersChanged = true
@@ -530,7 +550,7 @@ class AppActionsManager(context: Context) {
         }
 
         val currentLabels = _customLabels.value.toMutableMap()
-        val labelKeysToRemove = currentLabels.keys.filter { it.startsWith("$packageName/") || it == packageName }
+        val labelKeysToRemove = currentLabels.keys.filter(::matchesRemovedPackage)
         if (labelKeysToRemove.isNotEmpty()) {
             labelKeysToRemove.forEach { currentLabels.remove(it) }
             _customLabels.value = currentLabels
@@ -561,11 +581,14 @@ class AppActionsManager(context: Context) {
      * Saves the map of tracked package names and their last known update timestamps.
      */
     fun saveAppUpdateTimes(map: Map<String, Long>) {
-        try {
-            val json = org.json.JSONObject()
-            map.forEach { (k, v) -> json.put(k, v) }
-            prefs.edit().putString("app_last_update_times", json.toString()).apply()
-        } catch (_: Exception) {}
+        val snapshot = map.toMap()
+        storageExecutor.execute {
+            try {
+                val json = org.json.JSONObject()
+                snapshot.forEach { (k, v) -> json.put(k, v) }
+                prefs.edit().putString("app_last_update_times", json.toString()).apply()
+            } catch (_: Exception) {}
+        }
     }
 
 
@@ -596,11 +619,14 @@ class AppActionsManager(context: Context) {
      * Saves custom character mappings to SharedPreferences.
      */
     private fun saveCustomCharMappings(map: Map<String, Char>) {
-        try {
-            val json = JSONObject()
-            map.forEach { (k, v) -> json.put(k, v.toString()) }
-            prefs.edit().putString("custom_char_mappings", json.toString()).apply()
-        } catch (_: Exception) {}
+        val snapshot = map.toMap()
+        storageExecutor.execute {
+            try {
+                val json = JSONObject()
+                snapshot.forEach { (k, v) -> json.put(k, v.toString()) }
+                prefs.edit().putString("custom_char_mappings", json.toString()).apply()
+            } catch (_: Exception) {}
+        }
     }
 
     /**
@@ -649,7 +675,9 @@ class AppActionsManager(context: Context) {
      */
     fun resetCharMappings(): Map<String, Char> {
         _customCharMappings.value = emptyMap()
-        prefs.edit().remove("custom_char_mappings").apply()
+        storageExecutor.execute {
+            prefs.edit().remove("custom_char_mappings").apply()
+        }
         return emptyMap()
     }
 

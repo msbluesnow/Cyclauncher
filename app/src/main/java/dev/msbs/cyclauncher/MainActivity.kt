@@ -859,7 +859,15 @@ class MainActivity : ComponentActivity() {
             val componentName = android.content.ComponentName(packageName, activityName)
 
             val app = viewModel.apps.value.find { it.componentKey == componentKey }
-            val userHandle = app?.userHandle ?: android.os.Process.myUserHandle()
+            val userHandle = app?.userHandle ?: run {
+                val hashPart = componentKey.substringAfter('#', "").toIntOrNull()
+                if (hashPart != null) {
+                    val um = getSystemService(Context.USER_SERVICE) as? android.os.UserManager
+                    um?.userProfiles?.find { it.hashCode() == hashPart } ?: android.os.Process.myUserHandle()
+                } else {
+                    android.os.Process.myUserHandle()
+                }
+            }
 
             val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
             val launched = try {

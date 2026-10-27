@@ -59,6 +59,7 @@ object IconPackManager {
     var activePackageName: String? = null
         private set
 
+    @Volatile
     private var activeResources: Resources? = null
     private val componentToDrawableMap = ConcurrentHashMap<String, String>()
     private val packageToDrawableMap = ConcurrentHashMap<String, String>()
@@ -301,19 +302,17 @@ object IconPackManager {
                 parseXmlFromAssets(res, compMap, pkgMap, installedPackages, "iconpack.xml")
             }
 
+            activePackageName = null
+            activeResources = null
+            drawableToResIdMap.clear()
             componentToDrawableMap.clear()
             componentToDrawableMap.putAll(compMap)
             packageToDrawableMap.clear()
             packageToDrawableMap.putAll(pkgMap)
-            drawableToResIdMap.clear()
             activeResources = res
             activePackageName = targetPackage
         } catch (_: Exception) {
-            activePackageName = null
-            activeResources = null
-            componentToDrawableMap.clear()
-            packageToDrawableMap.clear()
-            drawableToResIdMap.clear()
+            unload()
         }
     }
 

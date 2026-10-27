@@ -1666,11 +1666,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         } else {
             IconPackManager.onAppRemoved(packageName)
         }
+        actionsManager.onPackageRemoved(packageName, user)
         if (user != Process.myUserHandle()) {
             onProfileAvailabilityChanged(user, isAvailable = true)
             return
         }
-        actionsManager.onPackageRemoved(packageName)
         scheduleDebouncedPackageRefresh()
     }
 
