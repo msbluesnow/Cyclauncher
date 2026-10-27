@@ -1,0 +1,404 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Non-translatable brand and technical constants -->
+    <string name="app_name" translatable="false">Cyclauncher</string>
+
+    <!-- Common UI Actions -->
+    <string name="common_cancel">キャンセル</string>
+    <string name="common_save">保存</string>
+    <string name="common_create">作成</string>
+    <string name="common_done">完了</string>
+    <string name="common_delete">削除</string>
+    <string name="common_close">閉じる</string>
+    <string name="common_clear">消去</string>
+    <string name="common_restore">復元</string>
+    <string name="common_all">すべて</string>
+    <string name="common_export">エクスポート</string>
+    <string name="common_import">インポート</string>
+    <string name="common_reset">リセット</string>
+    <string name="common_apply">適用</string>
+    <string name="common_back">戻る</string>
+
+    <!-- Application Action Context Menu -->
+    <string name="action_menu_add_favorite">お気に入りに追加</string>
+    <string name="action_menu_remove_favorite">お気に入りから削除</string>
+    <string name="action_menu_manage_tags">タグを管理</string>
+    <string name="action_menu_rename">名前を変更</string>
+    <string name="action_menu_info">アプリ情報</string>
+    <string name="action_menu_uninstall">アンインストール</string>
+
+    <!-- History Context Menu -->
+    <string name="history_menu_title">履歴</string>
+    <string name="history_menu_paused">（一時停止中）</string>
+    <string name="history_menu_edit">履歴を編集</string>
+    <string name="history_menu_done_edit">編集完了</string>
+    <string name="history_menu_pause">記録を一時停止</string>
+    <string name="history_menu_resume">記録を再開</string>
+    <string name="history_menu_clear">履歴を消去</string>
+
+    <!-- Tag Selection & Edit Dialogs -->
+    <string name="tag_dialog_title">アプリタグ：%1$s</string>
+    <string name="tag_dialog_empty">タグがまだ作成されていません。</string>
+    <string name="tag_dialog_new_tag">新規タグ</string>
+    <string name="tag_dialog_create_title">新規タグを作成</string>
+    <string name="tag_dialog_edit_tag">タグを編集</string>
+    <string name="tag_dialog_preview">タグプレビュー</string>
+    <string name="tag_dialog_name_label">タグ名</string>
+    <string name="tag_dialog_name_placeholder">例：ゲーム、仕事</string>
+    <string name="tag_dialog_folder_icon">フォルダアイコン</string>
+    <string name="tag_dialog_choose_icon">アイコンを選択</string>
+    <string name="tag_dialog_tab_vector">ベクターアイコン</string>
+    <string name="tag_dialog_tab_emoji">絵文字</string>
+    <string name="tag_dialog_tab_presets">プリセット</string>
+    <string name="tag_dialog_tab_custom">カスタムカラー</string>
+    <string name="tag_dialog_hold_to_delete">削除するには2.3秒間長押し</string>
+    <string name="tag_dialog_hex_code">HEXコード</string>
+    <string name="tag_dialog_search_icons">アイコンを検索…</string>
+    <string name="tag_dialog_no_icons">アイコンが見つかりません</string>
+    <string name="tag_dialog_emoji_placeholder">絵文字を1つ入力または貼り付け</string>
+
+    <!-- Rename Dialog -->
+    <string name="rename_dialog_title">アプリ名を変更</string>
+    <string name="rename_dialog_button">名前を変更</string>
+
+    <!-- Main Menu & Tag Components -->
+    <string name="main_exit_tag_reorder">タグ並べ替えモードを終了</string>
+    <string name="main_tag_folders">タグフォルダ</string>
+    <string name="main_remove_from_history">履歴から削除</string>
+    <string name="main_exit_history_edit">履歴編集モードを終了</string>
+    <string name="main_exit_edit_mode">編集モードを終了</string>
+    <string name="main_remove">削除</string>
+    <string name="tag_empty_folder">このタグにアプリはありません</string>
+    <string name="tag_remove_from_tag">タグから削除</string>
+    <string name="tag_menu_edit">タグを編集</string>
+    <string name="tag_menu_reorder">並べ替え</string>
+    <string name="tag_menu_delete">タグを削除</string>
+    <string name="tag_menu_hold_to_delete">長押しでタグを削除</string>
+    <string name="tag_folders_title">タグフォルダ</string>
+    <string name="tag_folders_reorder">フォルダを並べ替え</string>
+    <string name="tag_sort_title">フォルダをソート</string>
+    <string name="tag_sort_by_ellipsis">並べ替え基準…</string>
+    <string name="tag_sort_by_name">名前順</string>
+    <string name="tag_sort_name_az">名前：昇順 (A-Z)</string>
+    <string name="tag_sort_name_za">名前：降順 (Z-A)</string>
+    <string name="tag_sort_by_count">アプリ数順</string>
+    <string name="tag_sort_count_high_low">アプリ数：多い順</string>
+    <string name="tag_sort_count_low_high">アプリ数：少ない順</string>
+
+    <!-- Search Screen & Components -->
+    <string name="search_apps_placeholder">アプリを検索…</string>
+    <string name="side_overlay_colors_title">カラー</string>
+    <string name="side_overlay_history_desc">履歴管理（消去、一時停止）</string>
+
+    <!-- Swipe Down Quick Actions Overlay -->
+    <string name="quick_action_notifications_title">通知</string>
+    <string name="quick_action_notifications_subtitle">通知シェード</string>
+    <string name="quick_action_quick_settings_title">クイック設定</string>
+    <string name="quick_action_quick_settings_subtitle">Wi-Fi、Bluetooth</string>
+
+    <!-- Widgets -->
+    <string name="widget_title">ウィジェット</string>
+    <string name="widget_left_title">左ウィジェット</string>
+    <string name="widget_right_title">右ウィジェット</string>
+    <string name="widget_action_add">ウィジェットを追加</string>
+    <string name="widget_action_change">ウィジェットを変更</string>
+    <string name="widget_action_reset_split">分割をリセット (50/50)</string>
+    <string name="widget_action_remove">ウィジェットを削除</string>
+    <string name="widget_action_options">ウィジェットのオプション</string>
+    <string name="widget_picker_title">ウィジェット</string>
+    <string name="widget_picker_search_placeholder">アプリまたはウィジェットを検索…</string>
+    <string name="widget_picker_no_widgets">ウィジェットが見つかりません</string>
+    <string name="widget_picker_no_matching_apps">一致するアプリが見つかりません</string>
+    <string name="widget_picker_collapse">折りたたむ</string>
+    <string name="widget_picker_expand">展開</string>
+    <string name="widget_picker_close">ピッカーを閉じる</string>
+    <string name="widget_picker_clear_search">検索を消去</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">設定</string>
+    <string name="settings_hand_left">左手</string>
+    <string name="settings_hand_right">右手</string>
+    <string name="settings_toggle_search_widgets">検索ウィジェットの表示切り替え</string>
+    <string name="settings_side_slot">サイドスロット</string>
+    <string name="settings_select_side_slot_mode">サイドスロットモードを選択</string>
+    <string name="settings_side_slot_history">履歴</string>
+    <string name="settings_side_slot_widget">ウィジェット</string>
+    <string name="settings_side_slot_disabled">無効</string>
+
+    <string name="settings_status_bar">ステータスバー</string>
+    <string name="settings_toggle_status_bar">ステータスバーの表示切り替え</string>
+    <string name="settings_animations">アニメーション</string>
+    <string name="settings_marquee">マーキーテキスト</string>
+    <string name="settings_haptics">ハプティクス（振動）</string>
+    <string name="settings_monochrome">モノクロ</string>
+    <string name="settings_monochrome_disabled">モノクロ無効</string>
+    <string name="settings_monochrome_history_desc">履歴のモノクロ化</string>
+    <string name="settings_monochrome_tags_desc">タグのモノクロ化</string>
+    <string name="settings_monochrome_options">モノクロオプションを選択</string>
+    <string name="settings_monochrome_history">履歴</string>
+    <string name="settings_monochrome_tags">タグ</string>
+    <string name="settings_main_screen">メイン画面</string>
+    <string name="settings_main_screen_options">メイン画面のオプション</string>
+    <string name="settings_main_screen_all_visible">すべてのエリアを表示</string>
+    <string name="settings_hide_history_desc">履歴を非表示</string>
+    <string name="settings_hide_tags_desc">タグを非表示</string>
+
+    <string name="settings_language">言語</string>
+    <string name="settings_select_language">言語を選択</string>
+    <string name="settings_language_system">システムデフォルト</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_es">スペイン語</string>
+    <string name="settings_language_de">ドイツ語</string>
+    <string name="settings_language_ru">ロシア語</string>
+    <string name="settings_language_zh">中国語（簡体字）</string>
+    <string name="settings_language_hi">ヒンディー語</string>
+    <string name="settings_language_ja">日本語</string>
+
+    <string name="settings_mapping">マッピング</string>
+    <string name="settings_mapping_configure">文字マッピングを設定</string>
+    <string name="settings_icon_pack">アイコンパック</string>
+    <string name="settings_icon_pack_select">アイコンパックを選択</string>
+
+    <string name="settings_accent">アクセントカラー</string>
+    <string name="settings_adaptive_shadows">アダプティブ</string>
+    <string name="settings_main_color">メインカラー</string>
+    <string name="settings_button_text">ボタンテキスト</string>
+    <string name="settings_auto_colors">自動アクション</string>
+
+    <string name="settings_backup">バックアップ</string>
+    <string name="settings_export_backup">バックアップをエクスポート</string>
+    <string name="settings_import_backup">バックアップをインポート</string>
+    <string name="settings_ai_tags">AIタグ</string>
+
+    <string name="settings_default_launcher">デフォルトのランチャー</string>
+    <string name="settings_default_launcher_set_status">デフォルトに設定</string>
+    <string name="settings_default_launcher_not_set">未設定</string>
+    <string name="settings_default_launcher_change">変更</string>
+    <string name="settings_default_launcher_set">設定</string>
+    <string name="settings_relaunch_app">アプリを再起動</string>
+    <string name="settings_relaunch_subtitle">一部の問題を解決する場合があります</string>
+    <string name="settings_relaunch_action">再起動</string>
+
+    <string name="settings_tutorial">チュートリアル</string>
+
+    <string name="settings_support_and_community">サポートとコミュニティ</string>
+    <string name="settings_github">GitHub</string>
+    <string name="settings_github_subtitle">⭐ プロジェクト</string>
+    <string name="settings_discord">Discord</string>
+    <string name="settings_discord_subtitle">チャットに参加</string>
+    <string name="settings_tribute">スポンサー</string>
+    <string name="settings_tribute_subtitle">支援する</string>
+
+    <string name="settings_version">バージョン %1$s</string>
+
+    <!-- Settings Dialogs -->
+    <string name="settings_default_launcher_title">デフォルトのランチャー</string>
+    <string name="settings_default_launcher_success">Cyclauncherがデフォルトのランチャーになりました！</string>
+    <string name="settings_default_launcher_failed">Cyclauncherがデフォルトに設定されていません。再試行しますか？</string>
+    <string name="settings_default_launcher_great">素晴らしい！</string>
+
+    <string name="settings_theme_accent_title">テーマアクセント</string>
+    <string name="settings_tab_presets_wallpaper">プリセット＆壁紙</string>
+    <string name="settings_tab_custom_color">カスタムカラー</string>
+    <string name="settings_adaptive_wallpaper_accent">アダプティブ壁紙アクセント</string>
+    <string name="settings_hue_angle_shift">色相角シフト</string>
+    <string name="settings_luminous_highlight">ダーク壁紙用ルミナスハイライト</string>
+    <string name="settings_deep_dark_shade">ライト壁紙用ディープダークシェード</string>
+    <string name="settings_echo_presets">Echoアイコンテーマプリセット</string>
+    <string name="settings_interactive_picker">インタラクティブカラーピッカー</string>
+    <string name="settings_quick_swatches">クイックスウォッチ</string>
+    <string name="settings_hue_format">色相 (%1$d°)</string>
+    <string name="settings_saturation_format">彩度 (%1$d%%)</string>
+    <string name="settings_brightness_format">明度 (%1$d%%)</string>
+    <string name="settings_layer_background">背景</string>
+    <string name="settings_layer_capsules">カプセル</string>
+    <string name="settings_layer_popup">ポップアップ</string>
+    <string name="settings_contrast_and_scrim_title">背景＆カプセル</string>
+    <string name="settings_contrast_summary_format">ディム：%1$d%% • カプセル：%2$d%% • ポップアップ：%3$d%%</string>
+    <string name="settings_hex_code">HEXコード</string>
+    <string name="settings_apply_custom_color">カスタムカラーを適用</string>
+
+    <string name="settings_icon_pack_title">アイコンパック</string>
+    <string name="settings_icon_pack_system_default">システムデフォルト</string>
+    <string name="settings_icon_pack_system_auto">自動：%1$s（ROMテーマ）</string>
+    <string name="settings_icon_pack_system_original">オリジナルアプリアイコン</string>
+    <string name="settings_icon_pack_none_installed">サードパーティのアイコンパックがインストールされていません。</string>
+
+    <string name="settings_char_mapping_default">デフォルト</string>
+    <string name="settings_char_mapping_active">%1$d件有効</string>
+
+    <!-- Keep Android Open Banner & Dialog -->
+    <string name="kao_title">Keep Android Open</string>
+    <string name="kao_subtitle">あなたのスマホが、あなたの物でなくなる前に</string>
+    <string name="kao_subtitle_dot">あなたのスマホが、あなたの物でなくなろうとしています。</string>
+    <string name="kao_hide_days">残り日数を非表示</string>
+    <string name="kao_show_days">残り日数を表示</string>
+    <string name="kao_days_left">残り日数</string>
+    <string name="kao_days_until_lockdown">ロックダウンまでの日数</string>
+    <string name="kao_banner_summary">2027年以降、Googleに登録せず身分証明書を提出していない開発者のAndroidアプリは、すべてGoogleによってブロックされます。</string>
+    <string name="kao_learn_more">詳細を見る</string>
+    <string name="kao_petition">署名運動 ↗</string>
+    <string name="kao_what_is_happening">何が起きているのか？</string>
+    <string name="kao_dialog_explanation">2027年以降、Googleのサイレントアップデートにより、Googleに登録し手数料を支払い身分証明書を提出していない開発者のAndroidアプリはすべてブロックされます。\n\nオプトアウト手段はなく、世界中のすべてのアプリおよび端末が対象です。</string>
+    <string name="kao_feat_privacy_title">開発者のプライバシー</string>
+    <string name="kao_feat_privacy_desc">個人開発者やボランティアが、単一の企業に身分証明書を提出することを強制されるべきではありません。</string>
+    <string name="kao_feat_sideload_title">サイドロードの権利</string>
+    <string name="kao_feat_sideload_desc">購入した端末で好きなソフトウェアを実行し、F-Droidを自由に利用する権利があります。</string>
+    <string name="kao_feat_foss_title">FOSSとフォーク</string>
+    <string name="kao_feat_foss_desc">カスタマイズされたすべてのバージョンに企業の登録と身分証明が必要になれば、ボランティアやフォーク開発は大きな打撃を受けます。</string>
+    <string name="kao_alternatives">無料の脱Googleの選択肢：LineageOS、GrapheneOS、/e/OS、CalyxOS。</string>
+    <string name="kao_take_action">行動を起こす ↗</string>
+
+    <!-- Auto Tags Screen -->
+    <string name="auto_tags_title">タグ</string>
+    <string name="auto_tags_subtitle">AIを使用してアプリをタグに自動分類します</string>
+    <string name="auto_tags_step1_title">アプリリストをエクスポート</string>
+    <string name="auto_tags_step1_desc">インストール済みアプリのリスト（ラベル、パッケージ名、お気に入り、タグ）をエクスポートします。JSON（AI分類用）またはTXT（閲覧用）を選択してください。</string>
+    <string name="auto_tags_step1_button">アプリリストをエクスポート</string>
+    <string name="auto_tags_step2_title">AIに送信</string>
+    <string name="auto_tags_step2_desc">以下のプロンプトをコピーし、エクスポートしたアプリリストファイルと一緒にAIモデル（ChatGPT、Claude、Geminiなど）に送信してください。</string>
+    <string name="auto_tags_copy_prompt">プロンプトをコピー</string>
+    <string name="auto_tags_copied">コピーしました！</string>
+    <string name="auto_tags_prompt_copied_toast">プロンプトをコピーしました！</string>
+    <string name="auto_tags_step3_title">タグ付けされたアプリをインポート</string>
+    <string name="auto_tags_step3_desc">AIが生成したタグ付きJSON結果を.jsonファイルとして保存し、ここにインポートします。適用前にすべてのタグ、カラー、割当がプレビューされます。</string>
+    <string name="auto_tags_step3_button">タグ付け結果をアップロード</string>
+    <string name="auto_tags_export_dialog_title">エクスポート形式</string>
+    <string name="auto_tags_export_dialog_message">エクスポートするアプリリストの形式を選択してください：</string>
+    <string name="auto_tags_export_dialog_hint">JSON — ラベル、お気に入り、タグを含む。   TXT — 閲覧可能なリスト。</string>
+
+    <!-- Character Mapping Screen -->
+    <string name="char_map_title">文字マッピング</string>
+    <string name="char_map_customize_title">検索インデックスのカスタマイズ</string>
+    <string name="char_map_customize_desc">カスタム文字、絵文字、外国語文字（アラビア文字、キリル文字、CJKなど）、記号を特定の文字（「A」〜「Z」または「#」）にマッピングします。</string>
+    <string name="char_map_add_title">カスタムマッピングを追加</string>
+    <string name="char_map_placeholder">例：🤗, ب, Ö</string>
+    <string name="char_map_select_target">ターゲット文字を選択</string>
+    <string name="char_map_mapped_success">マッピング完了：\'%1$s\' ➔ \'%2$s\'</string>
+    <string name="char_map_invalid_input">有効な文字または絵文字を入力してください</string>
+    <string name="char_map_add_button">マッピングを追加</string>
+    <string name="char_map_backup_title">バックアップと復元</string>
+    <string name="char_map_backup_desc">ルールをJSONにエクスポート、またはファイルからインポート</string>
+    <string name="char_map_import_success">%1$d件の文字マッピングをインポートしました</string>
+    <string name="char_map_import_failed">インポート失敗：%1$s</string>
+    <string name="char_map_quick_presets">クイックプリセット</string>
+    <string name="char_map_added_cyrillic">キリル文字マッピングを追加しました</string>
+    <string name="char_map_added_emoji">人気絵文字マッピングを追加しました</string>
+    <string name="char_map_added_german">ドイツ語/北欧文字マッピングを追加しました</string>
+    <string name="char_map_added_arabic">アラビア文字マッピングを追加しました</string>
+    <string name="char_map_added_romance">フランス語/スペイン語文字マッピングを追加しました</string>
+    <string name="char_map_letter_rows">文字行</string>
+    <string name="char_map_rules_count">(%1$d文字、%2$dルール)</string>
+    <string name="char_map_reset_all">すべてのマッピングをリセット</string>
+    <string name="char_map_empty_desc">カスタムマッピングが追加されていません。\nアプリはデフォルトの文字インデックスを使用します。</string>
+    <string name="char_map_removed_symbol">\'%1$s\' を削除しました</string>
+    <string name="char_map_remove_symbol_desc">%1$s を削除</string>
+    <string name="char_map_add_to_target_desc">\'%1$s\' に記号を追加</string>
+    <string name="char_map_detail_title">マッピング済み記号 (%1$d)</string>
+    <string name="char_map_no_symbols_mapped">\'%1$s\' にマッピングされた記号はありません</string>
+    <string name="char_map_reset_title">マッピングのリセット</string>
+    <string name="char_map_reset_message">すべてのカスタム文字マッピングを削除してもよろしいですか？</string>
+    <string name="char_map_reset_toast">マッピングをデフォルトにリセットしました</string>
+
+    <!-- Highlight Screen -->
+    <string name="highlight_title">ハイライト</string>
+    <string name="highlight_section_overview">概要</string>
+    <string name="highlight_section_untagged">未タグのアプリ</string>
+    <string name="highlight_section_updates">本日の更新</string>
+    <string name="highlight_section_installs">本日のインストール</string>
+    <string name="highlight_section_work_profile">仕事用プロファイル</string>
+    <string name="highlight_section_private_space">プライベートスペース</string>
+    <string name="highlight_empty_untagged">未タグのアプリはありません</string>
+    <string name="highlight_empty_updates">本日更新されたアプリはありません</string>
+    <string name="highlight_empty_installs">本日インストールされたアプリはありません</string>
+    <string name="highlight_empty_work_profile">仕事用プロファイルのアプリはありません</string>
+    <string name="highlight_metric_installed_apps">インストール済みアプリ</string>
+    <string name="highlight_metric_created_tags">作成されたタグ</string>
+    <string name="highlight_metric_favorites">お気に入り</string>
+    <string name="highlight_metric_recent_launches">最近の起動</string>
+    <string name="highlight_widgets_title">ウィジェット</string>
+    <string name="highlight_widgets_add">ウィジェットを追加</string>
+    <string name="highlight_widgets_empty_title">ウィジェットがまだ追加されていません</string>
+    <string name="highlight_widgets_empty_desc">「ウィジェットを追加」をタップしてプレビュー付きでウィジェットを検索・追加できます。</string>
+    <string name="highlight_resize_title">ウィジェットサイズ変更</string>
+    <string name="highlight_resize_height">高さ：%1$d dp</string>
+    <string name="highlight_preset_compact">コンパクト</string>
+    <string name="highlight_preset_medium">中</string>
+    <string name="highlight_preset_large">大</string>
+    <string name="highlight_preset_tall">高</string>
+    <string name="highlight_resize_width">幅</string>
+    <string name="highlight_width_full">全体 (100%)</string>
+    <string name="highlight_width_75">75%</string>
+    <string name="highlight_width_half">半分 (50%)</string>
+    <string name="highlight_private_space_locked">プライベートスペースはロックされています</string>
+    <string name="highlight_private_space_unlock">ロック解除</string>
+    <string name="highlight_private_space_empty">プライベートアプリはインストールされていません</string>
+    <string name="highlight_private_space_install">アプリをインストール</string>
+    <string name="highlight_collapse_section">セクションを折りたたむ</string>
+    <string name="highlight_collapse_named">%1$s を折りたたむ</string>
+    <string name="highlight_expand_named">%1$s を展開</string>
+    <string name="highlight_set_position">カード位置を設定</string>
+    <string name="highlight_lock_private_space">プライベートスペースをロック</string>
+    <string name="highlight_widget_move_up">ウィジェットを上に移動</string>
+    <string name="highlight_widget_move_down">ウィジェットを下に移動</string>
+    <string name="highlight_widget_configure">ウィジェットを設定</string>
+    <string name="highlight_widget_resize">ウィジェットサイズ変更</string>
+    <string name="highlight_widget_delete_hold">長押しでウィジェットを削除</string>
+
+    <!-- Tutorial Overlay -->
+    <string name="tutorial_tested_feedback">テスト完了：%1$s！</string>
+    <string name="tutorial_skip">スキップ</string>
+    <string name="tutorial_next">次へ</string>
+    <string name="tutorial_finish">終了</string>
+    <string name="tutorial_favorites">お気に入り</string>
+    <string name="tutorial_tags">タグ</string>
+    <string name="tutorial_step1_title">上にスワイプ — アプリ検索</string>
+    <string name="tutorial_step1_desc">ホーム画面のお気に入りアイコンエリアで上方向にスワイプするとアプリ検索が開きます。</string>
+    <string name="tutorial_step1_hint">お気に入りアイコンエリアで上にスワイプ！</string>
+    <string name="tutorial_step2_title">システム戻る — ホームに戻る</string>
+    <string name="tutorial_step2_desc">検索や設定からホーム画面に戻るには、端末の戻るジェスチャー（端からのスワイプ）または戻るボタンを使用します。</string>
+    <string name="tutorial_step2_hint">戻るジェスチャーまたは戻るボタンを使用！</string>
+    <string name="tutorial_step3_title">下にスワイプ — クイックアクション</string>
+    <string name="tutorial_step3_desc">お気に入りエリアで下方向にスワイプするとクイックアクションカードがアクティブになります。指を離すと通知が開き、隣のカードへスライドするとクイック設定が開きます。</string>
+    <string name="tutorial_step3_hint">以下を試してください：下にスワイプし、カード間をスライドして指を離します！</string>
+    <string name="tutorial_step4_title">横にスワイプ — ハイライト</string>
+    <string name="tutorial_step4_desc">中央エリアから横方向にスワイプするとハイライト画面が開きます。ランチャーの概要メトリクスやカスタムウィジェットにアクセスできます。</string>
+    <string name="tutorial_step4_hint">中央エリアから横方向にスワイプ！</string>
+    <string name="tutorial_step5_title">長押し — メニュー＆設定</string>
+    <string name="tutorial_step5_desc">画面の空白エリアを長押しするとランチャー設定が開き、アプリを長押しするとクイックアクションが開きます。</string>
+    <string name="tutorial_step5_hint">画面を長押し！</string>
+    <string name="tutorial_step6_title">お気に入り、履歴、タグ</string>
+    <string name="tutorial_step6_desc">お気に入りアイテムを長押しすると並べ替えや削除ができます。履歴アイコンをタップするとメニューが開きます。タグフォルダをタップするとアプリが開き、長押しするとグループ編集ができます。</string>
+    <string name="tutorial_step6_hint">お気に入りを長押し、履歴アイコンをタップ、またはタグをタップ/長押し！</string>
+    <string name="tutorial_step7_title">履歴位置の切り替え</string>
+    <string name="tutorial_step7_desc">履歴リストが下部にあるときに上にスワイプすると、画面上部にシフトします。履歴が上部にあるときにタグエリアで下にスワイプすると位置が入れ替わります。</string>
+    <string name="tutorial_step7_hint">履歴を上にスワイプ、またはタグエリアを下にスワイプ！</string>
+    <string name="tutorial_step8_title">クイックパレット — カラー＆履歴</string>
+    <string name="tutorial_step8_desc">検索画面のアルファベットグリッド上部のバーをタップするとクイックパレットが開きます。色をタップしてアプリをフィルタリングするか、履歴カードをタップして履歴を管理します。</string>
+    <string name="tutorial_step8_hint">グリッド上部のバーをタップして、アクションを選択！</string>
+
+    <!-- Toast & Feedback Messages -->
+    <string name="toast_removed_from_favorites">お気に入りから「%1$s」を削除しました</string>
+    <string name="toast_favorites_limit">お気に入りの上限に達しました（最大13件）</string>
+    <string name="toast_added_to_favorites">お気に入りに「%1$s」を追加しました</string>
+    <string name="toast_history_recording_paused">履歴の記録を一時停止しました</string>
+    <string name="toast_history_recording_resumed">履歴の記録を再開しました</string>
+    <string name="toast_search_history_cleared">検索履歴を消去しました</string>
+    <string name="toast_removed_from_history">履歴から「%1$s」を削除しました</string>
+    <string name="toast_history_cleared">履歴を消去しました</string>
+    <string name="toast_backup_imported_success">バックアップのインポートに成功しました</string>
+    <string name="toast_backup_import_assignments">%1$d件の割り当てをインポートしました</string>
+    <string name="toast_backup_import_new_tags">（%1$d件の新規タグ）</string>
+    <string name="toast_backup_import_labels">%1$d件のラベル</string>
+    <string name="toast_backup_import_favorites">%1$d件のお気に入り</string>
+    <string name="toast_backup_import_settings">設定を復元しました</string>
+    <string name="toast_applied_tags">%2$d個のアプリに%1$d個のタグを適用しました</string>
+    <string name="toast_uninstaller_failed">アンインストーラーを開けませんでした</string>
+    <string name="toast_exported_apps">%1$d件のアプリをエクスポートしました</string>
+    <string name="toast_export_failed">エクスポート失敗：%1$s</string>
+    <string name="toast_import_failed">インポート失敗：%1$s</string>
+    <string name="toast_parse_tags_failed">タグの解析に失敗しました：%1$s</string>
+    <string name="toast_parse_tags_file_failed">タグファイルの解析に失敗しました：%1$s</string>
+    <string name="toast_backup_exported">バックアップをエクスポートしました（タグ：%1$d件、アプリ：%2$d件）</string>
+    <string name="toast_exported_mappings">%1$d件のマッピングをエクスポートしました</string>
+</resources>

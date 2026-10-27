@@ -1,0 +1,404 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Non-translatable brand and technical constants -->
+    <string name="app_name" translatable="false">Cyclauncher</string>
+
+    <!-- Common UI Actions -->
+    <string name="common_cancel">रद्द करें</string>
+    <string name="common_save">सहेजें</string>
+    <string name="common_create">बनाएं</string>
+    <string name="common_done">हो गया</string>
+    <string name="common_delete">हटाएं</string>
+    <string name="common_close">बंद करें</string>
+    <string name="common_clear">साफ़ करें</string>
+    <string name="common_restore">पुनर्स्थापित करें</string>
+    <string name="common_all">सभी</string>
+    <string name="common_export">निर्यात करें</string>
+    <string name="common_import">आयात करें</string>
+    <string name="common_reset">रीसेट करें</string>
+    <string name="common_apply">लागू करें</string>
+    <string name="common_back">वापस</string>
+
+    <!-- Application Action Context Menu -->
+    <string name="action_menu_add_favorite">पसंदीदा में जोड़ें</string>
+    <string name="action_menu_remove_favorite">पसंदीदा से हटाएं</string>
+    <string name="action_menu_manage_tags">टैग प्रबंधित करें</string>
+    <string name="action_menu_rename">नाम बदलें</string>
+    <string name="action_menu_info">जानकारी</string>
+    <string name="action_menu_uninstall">अनइंस्टॉल करें</string>
+
+    <!-- History Context Menu -->
+    <string name="history_menu_title">इतिहास</string>
+    <string name="history_menu_paused">(रुका हुआ)</string>
+    <string name="history_menu_edit">इतिहास संपादित करें</string>
+    <string name="history_menu_done_edit">संपादन पूर्ण</string>
+    <string name="history_menu_pause">रिकॉर्डिंग रोकें</string>
+    <string name="history_menu_resume">रिकॉर्डिंग फिर शुरू करें</string>
+    <string name="history_menu_clear">इतिहास साफ़ करें</string>
+
+    <!-- Tag Selection & Edit Dialogs -->
+    <string name="tag_dialog_title">ऐप टैग: %1$s</string>
+    <string name="tag_dialog_empty">अभी तक कोई टैग नहीं बनाया गया।</string>
+    <string name="tag_dialog_new_tag">नया टैग</string>
+    <string name="tag_dialog_create_title">नया टैग बनाएं</string>
+    <string name="tag_dialog_edit_tag">टैग संपादित करें</string>
+    <string name="tag_dialog_preview">टैग पूर्वावलोकन</string>
+    <string name="tag_dialog_name_label">टैग का नाम</string>
+    <string name="tag_dialog_name_placeholder">जैसे: खेल, काम</string>
+    <string name="tag_dialog_folder_icon">फ़ोल्डर आइकन</string>
+    <string name="tag_dialog_choose_icon">आइकन चुनें</string>
+    <string name="tag_dialog_tab_vector">वेक्टर आइकन</string>
+    <string name="tag_dialog_tab_emoji">इमोजी</string>
+    <string name="tag_dialog_tab_presets">प्रीसेट</string>
+    <string name="tag_dialog_tab_custom">कस्टम रंग</string>
+    <string name="tag_dialog_hold_to_delete">हटाने के लिए 2.3 सेकंड तक दबाकर रखें</string>
+    <string name="tag_dialog_hex_code">HEX कोड</string>
+    <string name="tag_dialog_search_icons">आइकन खोजें…</string>
+    <string name="tag_dialog_no_icons">कोई आइकन नहीं मिला</string>
+    <string name="tag_dialog_emoji_placeholder">1 इमोजी टाइप या पेस्ट करें</string>
+
+    <!-- Rename Dialog -->
+    <string name="rename_dialog_title">ऐप का नाम बदलें</string>
+    <string name="rename_dialog_button">नाम बदलें</string>
+
+    <!-- Main Menu & Tag Components -->
+    <string name="main_exit_tag_reorder">टैग पुनर्व्यवस्था मोड से बाहर निकलें</string>
+    <string name="main_tag_folders">टैग फ़ोल्डर</string>
+    <string name="main_remove_from_history">इतिहास से हटाएं</string>
+    <string name="main_exit_history_edit">इतिहास संपादन मोड से बाहर निकलें</string>
+    <string name="main_exit_edit_mode">संपादन मोड से बाहर निकलें</string>
+    <string name="main_remove">हटाएं</string>
+    <string name="tag_empty_folder">इस टैग में कोई ऐप नहीं है</string>
+    <string name="tag_remove_from_tag">टैग से हटाएं</string>
+    <string name="tag_menu_edit">टैग संपादित करें</string>
+    <string name="tag_menu_reorder">पुनर्व्यवस्थित करें</string>
+    <string name="tag_menu_delete">टैग हटाएं</string>
+    <string name="tag_menu_hold_to_delete">टैग हटाने के लिए दबाकर रखें</string>
+    <string name="tag_folders_title">टैग फ़ोल्डर</string>
+    <string name="tag_folders_reorder">फ़ोल्डर पुनर्व्यवस्थित करें</string>
+    <string name="tag_sort_title">फ़ोल्डर क्रमित करें</string>
+    <string name="tag_sort_by_ellipsis">इसके अनुसार क्रमित करें…</string>
+    <string name="tag_sort_by_name">नाम के अनुसार</string>
+    <string name="tag_sort_name_az">नाम A से Z</string>
+    <string name="tag_sort_name_za">नाम Z से A</string>
+    <string name="tag_sort_by_count">ऐप संख्या के अनुसार</string>
+    <string name="tag_sort_count_high_low">ऐप संख्या: अधिक से कम</string>
+    <string name="tag_sort_count_low_high">ऐप संख्या: कम से अधिक</string>
+
+    <!-- Search Screen & Components -->
+    <string name="search_apps_placeholder">ऐप खोजें…</string>
+    <string name="side_overlay_colors_title">रंग</string>
+    <string name="side_overlay_history_desc">इतिहास प्रबंधित करें (साफ़ करें, रोकें)</string>
+
+    <!-- Swipe Down Quick Actions Overlay -->
+    <string name="quick_action_notifications_title">सूचनाएं</string>
+    <string name="quick_action_notifications_subtitle">नोटिफिकेशन शेड</string>
+    <string name="quick_action_quick_settings_title">त्वरित सेटिंग्स</string>
+    <string name="quick_action_quick_settings_subtitle">वाई-फ़ाई, ब्लूटूथ</string>
+
+    <!-- Widgets -->
+    <string name="widget_title">विजेट</string>
+    <string name="widget_left_title">बायां विजेट</string>
+    <string name="widget_right_title">दायां विजेट</string>
+    <string name="widget_action_add">विजेट जोड़ें</string>
+    <string name="widget_action_change">विजेट बदलें</string>
+    <string name="widget_action_reset_split">विभाजन रीसेट करें (50/50)</string>
+    <string name="widget_action_remove">विजेट हटाएं</string>
+    <string name="widget_action_options">विजेट विकल्प</string>
+    <string name="widget_picker_title">विजेट्स</string>
+    <string name="widget_picker_search_placeholder">ऐप्स या विजेट खोजें…</string>
+    <string name="widget_picker_no_widgets">कोई विजेट नहीं मिला</string>
+    <string name="widget_picker_no_matching_apps">कोई मेल खाने वाला ऐप नहीं मिला</string>
+    <string name="widget_picker_collapse">समेटें</string>
+    <string name="widget_picker_expand">विस्तार करें</string>
+    <string name="widget_picker_close">चयनकर्ता बंद करें</string>
+    <string name="widget_picker_clear_search">खोज साफ़ करें</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">सेटिंग्स</string>
+    <string name="settings_hand_left">बायां हाथ</string>
+    <string name="settings_hand_right">दायां हाथ</string>
+    <string name="settings_toggle_search_widgets">खोज विजेट दृश्यता बदलें</string>
+    <string name="settings_side_slot">साइड स्लॉट</string>
+    <string name="settings_select_side_slot_mode">साइड स्लॉट मोड चुनें</string>
+    <string name="settings_side_slot_history">इतिहास</string>
+    <string name="settings_side_slot_widget">विजेट</string>
+    <string name="settings_side_slot_disabled">अक्षम</string>
+
+    <string name="settings_status_bar">स्टेटस बार</string>
+    <string name="settings_toggle_status_bar">स्टेटस बार दृश्यता बदलें</string>
+    <string name="settings_animations">एनिमेशन</string>
+    <string name="settings_marquee">चलता-फिरता टेक्स्ट</string>
+    <string name="settings_haptics">हैप्टिक्स</string>
+    <string name="settings_monochrome">मोनोक्रोम</string>
+    <string name="settings_monochrome_disabled">मोनोक्रोम अक्षम</string>
+    <string name="settings_monochrome_history_desc">इतिहास मोनोक्रोम</string>
+    <string name="settings_monochrome_tags_desc">टैग मोनोक्रोम</string>
+    <string name="settings_monochrome_options">मोनोक्रोम विकल्प चुनें</string>
+    <string name="settings_monochrome_history">इतिहास</string>
+    <string name="settings_monochrome_tags">टैग</string>
+    <string name="settings_main_screen">मुख्य स्क्रीन</string>
+    <string name="settings_main_screen_options">मुख्य स्क्रीन विकल्प</string>
+    <string name="settings_main_screen_all_visible">सभी क्षेत्र दिखाई दे रहे हैं</string>
+    <string name="settings_hide_history_desc">इतिहास छिपा हुआ</string>
+    <string name="settings_hide_tags_desc">टैग छिपे हुए</string>
+
+    <string name="settings_language">भाषा</string>
+    <string name="settings_select_language">भाषा चुनें</string>
+    <string name="settings_language_system">सिस्टम डिफ़ॉल्ट</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_es">स्पैनिश</string>
+    <string name="settings_language_de">जर्मन</string>
+    <string name="settings_language_ru">रूसी</string>
+    <string name="settings_language_zh">चीनी (सरलीकृत)</string>
+    <string name="settings_language_hi">हिंदी</string>
+    <string name="settings_language_ja">जापानी</string>
+
+    <string name="settings_mapping">मैपिंग</string>
+    <string name="settings_mapping_configure">वर्ण मैपिंग कॉन्फ़िगर करें</string>
+    <string name="settings_icon_pack">आइकन पैक</string>
+    <string name="settings_icon_pack_select">आइकन पैक चुनें</string>
+
+    <string name="settings_accent">एक्सेंट</string>
+    <string name="settings_adaptive_shadows">अनुकूली</string>
+    <string name="settings_main_color">मुख्य रंग</string>
+    <string name="settings_button_text">बटन टेक्स्ट</string>
+    <string name="settings_auto_colors">स्वचालित कार्रवाई</string>
+
+    <string name="settings_backup">बैकअप</string>
+    <string name="settings_export_backup">बैकअप निर्यात करें</string>
+    <string name="settings_import_backup">बैकअप आयात करें</string>
+    <string name="settings_ai_tags">एआई टैग</string>
+
+    <string name="settings_default_launcher">डिफ़ॉल्ट लॉन्चर</string>
+    <string name="settings_default_launcher_set_status">डिफ़ॉल्ट रूप में सेट करें</string>
+    <string name="settings_default_launcher_not_set">सेट नहीं है</string>
+    <string name="settings_default_launcher_change">बदलें</string>
+    <string name="settings_default_launcher_set">सेट करें</string>
+    <string name="settings_relaunch_app">ऐप फिर चालू करें</string>
+    <string name="settings_relaunch_subtitle">कुछ समस्याओं को ठीक कर सकता है</string>
+    <string name="settings_relaunch_action">फिर चालू करें</string>
+
+    <string name="settings_tutorial">ट्यूटोरियल</string>
+
+    <string name="settings_support_and_community">सहायता और समुदाय</string>
+    <string name="settings_github">GitHub</string>
+    <string name="settings_github_subtitle">⭐ प्रोजेक्ट</string>
+    <string name="settings_discord">Discord</string>
+    <string name="settings_discord_subtitle">चैट में शामिल हों</string>
+    <string name="settings_tribute">श्रद्धांजलि</string>
+    <string name="settings_tribute_subtitle">प्रायोजक</string>
+
+    <string name="settings_version">संस्करण %1$s</string>
+
+    <!-- Settings Dialogs -->
+    <string name="settings_default_launcher_title">डिफ़ॉल्ट लॉन्चर</string>
+    <string name="settings_default_launcher_success">Cyclauncher अब आपका डिफ़ॉल्ट लॉन्चर है!</string>
+    <string name="settings_default_launcher_failed">Cyclauncher डिफ़ॉल्ट रूप से सेट नहीं है। फिर प्रयास करें?</string>
+    <string name="settings_default_launcher_great">बढ़िया!</string>
+
+    <string name="settings_theme_accent_title">थीम एक्सेंट</string>
+    <string name="settings_tab_presets_wallpaper">प्रीसेट और वॉलपेपर</string>
+    <string name="settings_tab_custom_color">कस्टम रंग</string>
+    <string name="settings_adaptive_wallpaper_accent">अनुकूली वॉलपेपर एक्सेंट</string>
+    <string name="settings_hue_angle_shift">ह्यू एंगल शिफ्ट</string>
+    <string name="settings_luminous_highlight">डार्क वॉलपेपर के लिए चमकदार हाइलाइट</string>
+    <string name="settings_deep_dark_shade">लाइट वॉलपेपर के लिए गहरा शेड</string>
+    <string name="settings_echo_presets">Echo आइकन थीम प्रीसेट</string>
+    <string name="settings_interactive_picker">इंटरएक्टिव रंग पिकर</string>
+    <string name="settings_quick_swatches">त्वरित स्वैच</string>
+    <string name="settings_hue_format">ह्यू (%1$d°)</string>
+    <string name="settings_saturation_format">संतृप्ति (%1$d%%)</string>
+    <string name="settings_brightness_format">चमक (%1$d%%)</string>
+    <string name="settings_layer_background">पृष्ठभूमि</string>
+    <string name="settings_layer_capsules">कैप्सूल</string>
+    <string name="settings_layer_popup">पॉप-अप</string>
+    <string name="settings_contrast_and_scrim_title">पृष्ठभूमि और कैप्सूल</string>
+    <string name="settings_contrast_summary_format">डिम्म: %1$d%% • कैप्सूल: %2$d%% • पॉप-अप: %3$d%%</string>
+    <string name="settings_hex_code">HEX कोड</string>
+    <string name="settings_apply_custom_color">कस्टम रंग लागू करें</string>
+
+    <string name="settings_icon_pack_title">आइकन पैक</string>
+    <string name="settings_icon_pack_system_default">सिस्टम डिफ़ॉल्ट</string>
+    <string name="settings_icon_pack_system_auto">ऑटो: %1$s (ROM थीम)</string>
+    <string name="settings_icon_pack_system_original">मूल एप्लिकेशन आइकन</string>
+    <string name="settings_icon_pack_none_installed">आपके डिवाइस पर कोई तृतीय-पक्ष आइकन पैक इंस्टॉल नहीं मिला।</string>
+
+    <string name="settings_char_mapping_default">डिफ़ॉल्ट</string>
+    <string name="settings_char_mapping_active">%1$d सक्रिय</string>
+
+    <!-- Keep Android Open Banner & Dialog -->
+    <string name="kao_title">Keep Android Open</string>
+    <string name="kao_subtitle">आपका फोन आपका नहीं रहने वाला है</string>
+    <string name="kao_subtitle_dot">आपका फोन आपका नहीं रहने वाला है।</string>
+    <string name="kao_hide_days">शेष दिन छिपाएं</string>
+    <string name="kao_show_days">शेष दिन दिखाएं</string>
+    <string name="kao_days_left">दिन शेष</string>
+    <string name="kao_days_until_lockdown">लॉकडाउन तक दिन</string>
+    <string name="kao_banner_summary">2027 से शुरू होकर, Google ऐसे हर Android ऐप को ब्लॉक कर देगा जिसके डेवलपर ने Google के पास पंजीकरण नहीं कराया है और सरकारी पहचान पत्र जमा नहीं किया है।</string>
+    <string name="kao_learn_more">और जानें</string>
+    <string name="kao_petition">याचिका ↗</string>
+    <string name="kao_what_is_happening">क्या हो रहा है?</string>
+    <string name="kao_dialog_explanation">2027 से शुरू होकर, Google द्वारा भेजा गया एक साइलेंट अपडेट हर उस Android ऐप को ब्लॉक कर देगा जिसके डेवलपर ने Google के पास रजिस्ट्रेशन नहीं किया, शुल्क नहीं दिया और सरकारी आईडी नहीं दी।\n\nदुनिया भर में हर ऐप और हर डिवाइस, बिना किसी ऑप्ट-आउट के।</string>
+    <string name="kao_feat_privacy_title">डेवलपर गोपनीयता</string>
+    <string name="kao_feat_privacy_desc">व्यक्तिगत डेवलपर्स और स्वयंसेवकों को एक ही निगम को सरकारी आईडी सौंपने के लिए मजबूर नहीं किया जाना चाहिए।</string>
+    <string name="kao_feat_sideload_title">साइडलोड करने का अधिकार</string>
+    <string name="kao_feat_sideload_desc">आपने अपना फोन खरीदा है। आपको अपनी पसंद का सॉफ्टवेयर चलाने और F-Droid का स्वतंत्र रूप से उपयोग करने की स्वतंत्रता होनी चाहिए।</string>
+    <string name="kao_feat_foss_title">FOSS और फोर्क्स</string>
+    <string name="kao_feat_foss_desc">यदि प्रत्येक अनुकूलित संस्करण के लिए कॉर्पोरेट पंजीकरण और आईडी सत्यापन की आवश्यकता होती है तो स्वयंसेवक और फोर्क्स अपंग हो जाएंगे।</string>
+    <string name="kao_alternatives">मुफ्त और डी-गूगल्ड विकल्प: LineageOS, GrapheneOS, /e/OS, CalyxOS।</string>
+    <string name="kao_take_action">कार्रवाई करें ↗</string>
+
+    <!-- Auto Tags Screen -->
+    <string name="auto_tags_title">टैग</string>
+    <string name="auto_tags_subtitle">अपने ऐप्स को टैग में स्वचालित रूप से वर्गीकृत करने के लिए AI का उपयोग करें</string>
+    <string name="auto_tags_step1_title">ऐप सूची निर्यात करें</string>
+    <string name="auto_tags_step1_desc">अपनी इंस्टॉल की गई ऐप सूची (लेबल, पैकेज नाम, पसंदीदा और टैग) निर्यात करें। JSON (AI वर्गीकरण के लिए) या TXT (पढ़ने योग्य) चुनें।</string>
+    <string name="auto_tags_step1_button">ऐप सूची निर्यात करें</string>
+    <string name="auto_tags_step2_title">AI को भेजें</string>
+    <string name="auto_tags_step2_desc">नीचे दिए गए प्रॉम्प्ट को कॉपी करें और निर्यात की गई ऐप सूची फ़ाइल के साथ AI मॉडल (ChatGPT, Claude, Gemini, आदि) को भेजें।</string>
+    <string name="auto_tags_copy_prompt">प्रॉम्प्ट कॉपी करें</string>
+    <string name="auto_tags_copied">कॉपी हो गया!</string>
+    <string name="auto_tags_prompt_copied_toast">प्रॉम्प्ट कॉपी हो गया!</string>
+    <string name="auto_tags_step3_title">टैग किए गए ऐप्स आयात करें</string>
+    <string name="auto_tags_step3_desc">AI द्वारा टैग किया गया JSON परिणाम उत्पन्न करने के बाद, इसे .json फ़ाइल के रूप में सहेजें और यहां आयात करें। लागू करने से पहले सभी टैग, रंग और असाइनमेंट का पूर्वावलोकन किया जाएगा।</string>
+    <string name="auto_tags_step3_button">टैग किया गया परिणाम अपलोड करें</string>
+    <string name="auto_tags_export_dialog_title">निर्यात प्रारूप</string>
+    <string name="auto_tags_export_dialog_message">निर्यात की गई ऐप सूची के लिए एक प्रारूप चुनें:</string>
+    <string name="auto_tags_export_dialog_hint">JSON — लेबल, पसंदीदा और टैग शामिल हैं। TXT — पढ़ने योग्य सूची।</string>
+
+    <!-- Character Mapping Screen -->
+    <string name="char_map_title">वर्ण मैपिंग</string>
+    <string name="char_map_customize_title">खोज सूचकांक कस्टमाइज़ करें</string>
+    <string name="char_map_customize_desc">सभी खोज मोड के लिए कस्टम वर्णों, इमोजी, विदेशी अक्षरों (अरबी, सिरिलिक, CJK, आदि) या प्रतीकों को एक विशिष्ट अक्षर (\'A\'–\'Z\' या \'#\') से मैप करें।</string>
+    <string name="char_map_add_title">कस्टम मैपिंग जोड़ें</string>
+    <string name="char_map_placeholder">जैसे: 🤗, ب, Ö</string>
+    <string name="char_map_select_target">लक्षित अक्षर चुनें</string>
+    <string name="char_map_mapped_success">मैप किया गया \'%1$s\' ➔ \'%2$s\'</string>
+    <string name="char_map_invalid_input">कृपया एक मान्य वर्ण या इमोजी दर्ज करें</string>
+    <string name="char_map_add_button">मैपिंग जोड़ें</string>
+    <string name="char_map_backup_title">बैकअप और पुनर्स्थापना</string>
+    <string name="char_map_backup_desc">JSON में नियम निर्यात करें या फ़ाइल से आयात करें</string>
+    <string name="char_map_import_success">%1$d वर्ण मैपिंग आयात की गईं</string>
+    <string name="char_map_import_failed">आयात विफल: %1$s</string>
+    <string name="char_map_quick_presets">त्वरित प्रीसेट</string>
+    <string name="char_map_added_cyrillic">सिरिलिक मैपिंग जोड़ी गई</string>
+    <string name="char_map_added_emoji">लोकप्रिय इमोजी मैपिंग जोड़ी गई</string>
+    <string name="char_map_added_german">जर्मन/नॉर्डिक मैपिंग जोड़ी गई</string>
+    <string name="char_map_added_arabic">अरबी मैपिंग जोड़ी गई</string>
+    <string name="char_map_added_romance">फ़्रेंच/स्पैनिश मैपिंग जोड़ी गई</string>
+    <string name="char_map_letter_rows">अक्षर पंक्तियाँ</string>
+    <string name="char_map_rules_count">(%1$d अक्षर, %2$d नियम)</string>
+    <string name="char_map_reset_all">सभी मैपिंग रीसेट करें</string>
+    <string name="char_map_empty_desc">कोई कस्टम मैपिंग नहीं जोड़ी गई।\nऐप्स डिफ़ॉल्ट वर्ण अनुक्रमण का उपयोग करेंगे।</string>
+    <string name="char_map_removed_symbol">\'%1$s\' हटाया गया</string>
+    <string name="char_map_remove_symbol_desc">%1$s हटाएँ</string>
+    <string name="char_map_add_to_target_desc">\'%1$s\' में प्रतीक जोड़ें</string>
+    <string name="char_map_detail_title">मैप किए गए प्रतीक (%1$d)</string>
+    <string name="char_map_no_symbols_mapped">\'%1$s\' के लिए कोई प्रतीक मैप नहीं किया गया</string>
+    <string name="char_map_reset_title">मैपिंग रीसेट करें</string>
+    <string name="char_map_reset_message">क्या आप वाकई सभी कस्टम वर्ण मैपिंग हटाना चाहते हैं?</string>
+    <string name="char_map_reset_toast">मैपिंग डिफ़ॉल्ट पर रीसेट हो गई हैं</string>
+
+    <!-- Highlight Screen -->
+    <string name="highlight_title">हाइलाइट्स</string>
+    <string name="highlight_section_overview">अवलोकन</string>
+    <string name="highlight_section_untagged">बिना टैग वाले ऐप</string>
+    <string name="highlight_section_updates">आज के अपडेट</string>
+    <string name="highlight_section_installs">आज के इंस्टाल</string>
+    <string name="highlight_section_work_profile">कार्य प्रोफ़ाइल</string>
+    <string name="highlight_section_private_space">निजी स्थान</string>
+    <string name="highlight_empty_untagged">कोई बिना टैग वाला ऐप नहीं</string>
+    <string name="highlight_empty_updates">आज कोई ऐप अपडेट नहीं हुआ</string>
+    <string name="highlight_empty_installs">आज कोई नया ऐप इंस्टॉल नहीं हुआ</string>
+    <string name="highlight_empty_work_profile">कोई कार्य प्रोफ़ाइल ऐप नहीं</string>
+    <string name="highlight_metric_installed_apps">इंस्टॉल किए गए ऐप</string>
+    <string name="highlight_metric_created_tags">बनाए गए टैग</string>
+    <string name="highlight_metric_favorites">पसंदीदा</string>
+    <string name="highlight_metric_recent_launches">हाल के लॉन्चेस</string>
+    <string name="highlight_widgets_title">विजेट्स</string>
+    <string name="highlight_widgets_add">विजेट जोड़ें</string>
+    <string name="highlight_widgets_empty_title">अभी तक कोई विजेट नहीं जोड़ा गया</string>
+    <string name="highlight_widgets_empty_desc">पूर्वावलोकन और ऐप खोज के साथ विजेट ब्राउज़ करने के लिए विजेट जोड़ें पर टैप करें।</string>
+    <string name="highlight_resize_title">विजेट का आकार बदलें</string>
+    <string name="highlight_resize_height">ऊंचाई: %1$d dp</string>
+    <string name="highlight_preset_compact">सघन</string>
+    <string name="highlight_preset_medium">मध्यम</string>
+    <string name="highlight_preset_large">बड़ा</string>
+    <string name="highlight_preset_tall">लंबे</string>
+    <string name="highlight_resize_width">चौड़ाई</string>
+    <string name="highlight_width_full">पूरा (100%)</string>
+    <string name="highlight_width_75">75%</string>
+    <string name="highlight_width_half">आधा (50%)</string>
+    <string name="highlight_private_space_locked">निजी स्थान लॉक है</string>
+    <string name="highlight_private_space_unlock">अनलॉक करें</string>
+    <string name="highlight_private_space_empty">कोई निजी ऐप इंस्टॉल नहीं है</string>
+    <string name="highlight_private_space_install">ऐप्स इंस्टॉल करें</string>
+    <string name="highlight_collapse_section">अनुभाग समेटें</string>
+    <string name="highlight_collapse_named">%1$s समेटें</string>
+    <string name="highlight_expand_named">%1$s का विस्तार करें</string>
+    <string name="highlight_set_position">कार्ड की स्थिति सेट करें</string>
+    <string name="highlight_lock_private_space">निजी स्थान लॉक करें</string>
+    <string name="highlight_widget_move_up">विजेट ऊपर ले जाएं</string>
+    <string name="highlight_widget_move_down">विजेट नीचे ले जाएं</string>
+    <string name="highlight_widget_configure">विजेट कॉन्फ़िगर करें</string>
+    <string name="highlight_widget_resize">विजेट का आकार बदलें</string>
+    <string name="highlight_widget_delete_hold">विजेट हटाने के लिए दबाकर रखें</string>
+
+    <!-- Tutorial Overlay -->
+    <string name="tutorial_tested_feedback">परीक्षित: %1$s!</string>
+    <string name="tutorial_skip">छोड़ें</string>
+    <string name="tutorial_next">आगे</string>
+    <string name="tutorial_finish">समाप्त</string>
+    <string name="tutorial_favorites">पसंदीदा</string>
+    <string name="tutorial_tags">टैग</string>
+    <string name="tutorial_step1_title">ऊपर स्वाइप करें — ऐप खोज</string>
+    <string name="tutorial_step1_desc">ऐप खोज खोलने के लिए होम स्क्रीन पर पसंदीदा आइकन क्षेत्र पर ऊपर की ओर स्वाइप करें।</string>
+    <string name="tutorial_step1_hint">पसंदीदा आइकन क्षेत्र पर ऊपर स्वाइप करें!</string>
+    <string name="tutorial_step2_title">सिस्टम बैक — होम पर लौटें</string>
+    <string name="tutorial_step2_desc">खोज या सेटिंग्स से होम स्क्रीन पर लौटने के लिए अपने डिवाइस के बैक जेस्चर (किनारे से स्वाइप) का उपयोग करें या सिस्टम बैक बटन दबाएं।</string>
+    <string name="tutorial_step2_hint">बैक जेस्चर या बैक बटन का उपयोग करें!</string>
+    <string name="tutorial_step3_title">नीचे स्वाइप करें — त्वरित कार्रवाइयां</string>
+    <string name="tutorial_step3_desc">त्वरित कार्रवाई कार्ड सक्रिय करने के लिए पसंदीदा क्षेत्र पर नीचे की ओर स्वाइप करें। सूचनाएं खोलने के लिए सीधे अपनी उंगली के नीचे छोड़ें, या त्वरित सेटिंग्स खोलने के लिए पास के कार्ड पर स्लाइड करें।</string>
+    <string name="tutorial_step3_hint">नीचे प्रयास करें: नीचे स्वाइप करें, कार्ड के बीच स्लाइड करें, और छोड़ें!</string>
+    <string name="tutorial_step4_title">साइड में स्वाइप करें — हाइलाइट्स</string>
+    <string name="tutorial_step4_desc">हाइलाइट्स कार्यस्थान खोलने के लिए केंद्र क्षेत्र से क्षैतिज रूप से स्वाइप करें। लॉन्चर अवलोकन मीट्रिक और कस्टमाइज़ेबल एंड्रॉइड विजेट तक पहुंचें।</string>
+    <string name="tutorial_step4_hint">केंद्र क्षेत्र से क्षैतिज रूप से स्वाइप करें!</string>
+    <string name="tutorial_step5_title">लंबे समय तक दबाएं — मेनू और सेटिंग्स</string>
+    <string name="tutorial_step5_desc">लॉन्चर सेटिंग्स खोलने के लिए स्क्रीन के किसी भी खाली हिस्से को दबाकर रखें, या त्वरित कार्रवाइयों के लिए ऐप पर लंबे समय तक दबाएं।</string>
+    <string name="tutorial_step5_hint">स्क्रीन पर दबाकर रखें!</string>
+    <string name="tutorial_step6_title">पसंदीदा, इतिहास और टैग</string>
+    <string name="tutorial_step6_desc">पसंदीदा आइटम को पुनर्व्यवस्थित करने या हटाने के लिए दबाकर रखें। मेनू खोलने के लिए इतिहास आइकन पर टैप करें। ऐप्स खोलने के लिए टैग फ़ोल्डर पर टैप करें, या समूह को संपादित करने के लिए लंबे समय तक दबाएं।</string>
+    <string name="tutorial_step6_hint">पसंदीदा दबाकर रखें, इतिहास आइकन पर टैप करें, या टैग फ़ोल्डर पर टैप/दबाएं!</string>
+    <string name="tutorial_step7_title">इतिहास स्थिति बदलाव</string>
+    <string name="tutorial_step7_desc">इतिहास सूची जब नीचे हो तो इसे स्क्रीन के शीर्ष भाग में स्थानांतरित करने के लिए ऊपर स्वाइप करें। इतिहास शीर्ष पर होने पर उनकी स्थिति बदलने के लिए टैग क्षेत्र पर नीचे स्वाइप करें।</string>
+    <string name="tutorial_step7_hint">इतिहास पर ऊपर या टैग क्षेत्र पर नीचे स्वाइप करें!</string>
+    <string name="tutorial_step8_title">त्वरित पैलेट — रंग और इतिहास</string>
+    <string name="tutorial_step8_desc">त्वरित पैलेट खोलने के लिए खोज में वर्णमाला ग्रिड के ऊपर की पट्टी पर टैप करें। ऐप्स फ़िल्टर करने के लिए किसी भी रंग पर टैप करें या इतिहास प्रबंधित करने के लिए इतिहास कार्ड पर टैप करें।</string>
+    <string name="tutorial_step8_hint">ग्रिड के ऊपर की पट्टी पर टैप करें, फिर एक कार्रवाई चुनें!</string>
+
+    <!-- Toast & Feedback Messages -->
+    <string name="toast_removed_from_favorites">पसंदीदा से \"%1$s\" हटाया गया</string>
+    <string name="toast_favorites_limit">पसंदीदा सीमा पूरी हो गई (अधिकतम 13)</string>
+    <string name="toast_added_to_favorites">पसंदीदा में \"%1$s\" जोड़ा गया</string>
+    <string name="toast_history_recording_paused">इतिहास रिकॉर्डिंग रोकी गई</string>
+    <string name="toast_history_recording_resumed">इतिहास रिकॉर्डिंग फिर शुरू हुई</string>
+    <string name="toast_search_history_cleared">खोज इतिहास साफ़ किया गया</string>
+    <string name="toast_removed_from_history">इतिहास से \"%1$s\" हटाया गया</string>
+    <string name="toast_history_cleared">इतिहास साफ़ किया गया</string>
+    <string name="toast_backup_imported_success">बैकअप सफलतापूर्वक आयात किया गया</string>
+    <string name="toast_backup_import_assignments">%1$d असाइनमेंट आयात किए गए</string>
+    <string name="toast_backup_import_new_tags">(%1$d नए टैग)</string>
+    <string name="toast_backup_import_labels">%1$d लेबल</string>
+    <string name="toast_backup_import_favorites">%1$d पसंदीदा</string>
+    <string name="toast_backup_import_settings">सेटिंग्स पुनर्स्थापित की गईं</string>
+    <string name="toast_applied_tags">%2$d ऐप्स पर %1$d टैग लागू किए गए</string>
+    <string name="toast_uninstaller_failed">अनइंस्टॉलर नहीं खोला जा सका</string>
+    <string name="toast_exported_apps">%1$d ऐप्स निर्यात किए गए</string>
+    <string name="toast_export_failed">निर्यात विफल: %1$s</string>
+    <string name="toast_import_failed">आयात विफल: %1$s</string>
+    <string name="toast_parse_tags_failed">टैग पार्स करने में विफल: %1$s</string>
+    <string name="toast_parse_tags_file_failed">टैग फ़ाइल पार्स करने में विफल: %1$s</string>
+    <string name="toast_backup_exported">बैकअप निर्यात किया गया (%1$d टैग, %2$d ऐप्स)</string>
+    <string name="toast_exported_mappings">%1$d मैपिंग निर्यात की गईं</string>
+</resources>

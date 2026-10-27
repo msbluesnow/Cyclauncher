@@ -150,6 +150,8 @@
     <string name="settings_language_de">Alemán</string>
     <string name="settings_language_ru">Ruso</string>
     <string name="settings_language_zh">Chino (Simplificado)</string>
+    <string name="settings_language_hi">Hindi</string>
+    <string name="settings_language_ja">Japonés</string>
 
     <string name="settings_mapping">Mapeo</string>
     <string name="settings_mapping_configure">Configurar Mapeo de Caracteres</string>

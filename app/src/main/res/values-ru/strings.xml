@@ -148,6 +148,8 @@
     <string name="settings_language_de">Немецкий</string>
     <string name="settings_language_ru">Русский</string>
     <string name="settings_language_zh">Китайский (Упрощенный)</string>
+    <string name="settings_language_hi">Хинди</string>
+    <string name="settings_language_ja">Японский</string>
 
     <string name="settings_mapping">Раскладка</string>
     <string name="settings_mapping_configure">Настроить Соответствия Символов</string>

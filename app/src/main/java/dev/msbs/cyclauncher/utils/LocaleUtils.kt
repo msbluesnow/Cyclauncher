@@ -58,6 +58,18 @@ object LocaleUtils {
             labelRes = R.string.settings_language_zh,
             englishName = "Chinese (Simplified)",
             nativeName = "简体中文"
+        ),
+        SupportedLanguage(
+            code = "hi",
+            labelRes = R.string.settings_language_hi,
+            englishName = "Hindi",
+            nativeName = "हिंदी"
+        ),
+        SupportedLanguage(
+            code = "ja",
+            labelRes = R.string.settings_language_ja,
+            englishName = "Japanese",
+            nativeName = "日本語"
         )
     )
 

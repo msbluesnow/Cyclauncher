@@ -150,6 +150,8 @@
     <string name="settings_language_de">Deutsch</string>
     <string name="settings_language_ru">Russisch</string>
     <string name="settings_language_zh">Chinesisch (Vereinfacht)</string>
+    <string name="settings_language_hi">Hindi</string>
+    <string name="settings_language_ja">Japanisch</string>
 
     <string name="settings_mapping">Zuordnung</string>
     <string name="settings_mapping_configure">Zeichenzuordnungen Konfigurieren</string>
