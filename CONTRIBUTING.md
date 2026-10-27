@@ -103,6 +103,9 @@ app/src/main/java/dev/msbs/cyclauncher/
 4. **Gesture & SystemUI Compatibility:** Do not re-introduce `windowIsTranslucent` or `FLAG_LAYOUT_NO_LIMITS`. Always preserve standard `taskAffinity` and use `enableEdgeToEdge()` to maintain gesture navigation and Recents overview support.
 5. **Direct Boot Safe Context:** Use `getSafeStorageContext()` when accessing SharedPreferences to prevent crashes before device unlock.
 6. **F-Droid Compatibility:** Keep dependencies 100% open source. Never embed closed binaries, trackers, or non-FOSS dependencies. Keep `dependenciesInfo.includeInApk = false`.
+7. **R8 Minification & Baseline Profiles:** Release APKs use R8 code and resource shrinking alongside `androidx.profileinstaller` Baseline Profiles, yielding an ultra-compact ~2.2MB APK footprint and accelerated cold starts.
+8. **Single-Pass Text Measurements:** Dynamic text resizing (`AutoResizingText`) utilizes single-pass `rememberTextMeasurer` calculations to eliminate measurement flickers and layout thrashing.
+9. **Multi-Language Architecture:** Native per-app locale switching (`LocaleUtils`) supports 7 languages (English, Spanish, German, Russian, Chinese, Hindi, Japanese) integrated with Android 13+ `LocaleManager`.
 
 
 ## 🐛 Reporting Issues

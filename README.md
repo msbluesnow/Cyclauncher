@@ -62,10 +62,12 @@ Cyclauncher is **not just yet another bicycle**. Built entirely with **Jetpack C
 - **Highlights Screen & Widgets**: Dedicated home screen panel showing daily app installs and updates overview, with a full **Widgets section** — add, resize, reconfigure, and remove Android widgets via a custom picker with search, expandable accordions, live previews, and an untagged apps drawer.
 - **Private Space & Work Profiles**: Native multi-profile support (Personal, Work, Private Space) with biometric lock/unlock toggles, private app installer shortcuts, and memory-isolated caching.
 - **Character & Symbol Mapping**: Comprehensive custom mapping engine to bind any symbol, emoji (🤗, 🎮...), or international alphabet letter (Cyrillic, Arabic, German/Nordic, Romance) to specific search index buckets (`A`–`Z`, `#`) with instant presets.
+- **Multi-Language Support**: Complete localization for 7 languages (English, Spanish, German, Russian, Chinese Simplified, Hindi, and Japanese) with Android 13+ native per-app language selector integration (`LocaleUtils`).
 - **Interactive Gesture Tutorial**: Guided onboarding overlay teaching launcher gestures (search, notifications, favorites & history management, Highlights navigation) with animated visualizers — 7 steps.
 - **Dynamic Favorites & History Badges**: Organize top apps with intuitive drag-and-drop reordering, and track newly installed or updated apps via subtle visual update badges in history.
 - **AI-Assisted App Tagging**: Fast batch categorization of applications with an external AI tagging workflow (Export → Process via External Prompt → Import) and full JSON backup options.
 - **Deep Theme Customization & Accessibility**: Adaptive **Hue Angle Shift** dynamic wallpaper theming, Echo Icon Theme accent palettes, interactive custom Color Picker, primary text color modes (Black/White) with adaptive wallpaper drop-shadows, customizable shadow colors, opt-in adaptive background dim and capsule contrast sliders (black behind white text, white behind black text) for Search, Highlights and Settings, and an accessibility toggle to disable all animations including cursor blinking.
+- **Ultra-Lightweight & R8 Optimized**: Compiled with R8 minification, resource shrinking, and bundled Baseline Profiles via `androidx.profileinstaller` for instant cold starts and an APK size of only **~2.2MB** (90%+ size reduction from 23MB).
 
 ## 🤝 Contributing & Help Wanted
 
@@ -143,9 +145,9 @@ A continuous, unified timeline of completed milestones and planned updates.
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Interactive Gesture Tutorial</b> — Guided onboarding overlay (7 steps) teaching launcher gestures with animated visualizers.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Highlights Screen & Widget Integration</b> — Home panel with daily app install/update overview, full widget support (add, resize, reconfigure, remove) with a custom picker.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>2D Tag Folder Reordering</b> — Drag-to-reorder tag folders and apps within folders; sort dialog by name or app count with zero-latency drag architecture.<br>
+<kbd>&nbsp;✓&nbsp;</kbd> <b>Multi-Language Localization</b> — Native translation support for English, Spanish, German, Russian, Chinese (Simplified), Hindi, and Japanese.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>Tag Map</i> — Interactive tag map showing connections between applications and implementing quick tag-based navigation.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>App Shortcuts</i> — Quick-launch actions like dialing specific contacts or opening deep-linked settings.<br>
-<kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>Localization</i> — Native translation support for multiple popular world languages.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>3D Hex Search Grid</i> — Immersive 3D application navigation styled as a rotatable hexagonal prism.<br>
 
 
