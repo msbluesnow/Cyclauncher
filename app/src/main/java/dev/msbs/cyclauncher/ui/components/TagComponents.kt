@@ -448,25 +448,34 @@ fun TagFolderPopup(
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
                 } else {
-                    val infiniteTransition = rememberInfiniteTransition(label = "tag_popup_shake")
-                    val shakeRotation by infiniteTransition.animateFloat(
-                        initialValue = -3.2f,
-                        targetValue = 3.2f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(durationMillis = 110, easing = LinearEasing),
-                            repeatMode = RepeatMode.Reverse
-                        ),
-                        label = "popup_shake_rot"
-                    )
-                    val shakeTranslation by infiniteTransition.animateFloat(
-                        initialValue = -1.2f,
-                        targetValue = 1.2f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(durationMillis = 130, easing = LinearEasing),
-                            repeatMode = RepeatMode.Reverse
-                        ),
-                        label = "popup_shake_trans"
-                    )
+                    val shakeRotation: Float
+                    val shakeTranslation: Float
+                    if (isEditMode && animationsEnabled) {
+                        val infiniteTransition = rememberInfiniteTransition(label = "tag_popup_shake")
+                        val rot by infiniteTransition.animateFloat(
+                            initialValue = -3.2f,
+                            targetValue = 3.2f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(durationMillis = 110, easing = LinearEasing),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "popup_shake_rot"
+                        )
+                        val trans by infiniteTransition.animateFloat(
+                            initialValue = -1.2f,
+                            targetValue = 1.2f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(durationMillis = 130, easing = LinearEasing),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "popup_shake_trans"
+                        )
+                        shakeRotation = rot
+                        shakeTranslation = trans
+                    } else {
+                        shakeRotation = 0f
+                        shakeTranslation = 0f
+                    }
 
                     val localApps = remember(apps) { mutableStateListOf<AppInfo>().apply { addAll(apps) } }
                     LaunchedEffect(apps, draggingKey) {

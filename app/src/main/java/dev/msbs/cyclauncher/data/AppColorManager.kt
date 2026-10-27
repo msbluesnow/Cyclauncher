@@ -94,6 +94,13 @@ class AppColorManager(context: Context) {
                 _appColors.value.toMutableMap()
             }
 
+            val activeKeys = apps.mapTo(HashSet(apps.size * 2)) { it.componentKey }
+            val staleRemoved = if (!isIconPackChanged && apps.isNotEmpty()) {
+                currentMap.keys.removeAll { it !in activeKeys }
+            } else {
+                false
+            }
+
             val pm = appContext.packageManager
             var hasNewItems = false
 
@@ -121,7 +128,7 @@ class AppColorManager(context: Context) {
                 }
             }
 
-            if (hasNewItems || isIconPackChanged) {
+            if (hasNewItems || isIconPackChanged || staleRemoved) {
                 lastIndexedIconPackVersion = iconPackVersion
                 _appColors.value = currentMap
                 saveCachedColors(currentMap, iconPackVersion)

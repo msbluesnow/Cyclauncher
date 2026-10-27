@@ -387,7 +387,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     val apps: StateFlow<List<AppInfo>> = combine(_apps, actionsManager.customLabels, actionsManager.customCharMappings) { all, customLabels, customMappings ->
-        all.map { app ->
+        val mapped = all.map { app ->
             val customLabel = customLabels[app.componentKey]
             if (customLabel == null) {
                 val searchChar = mapToSearchChar(app.firstSymbol, customMappings)
@@ -406,6 +406,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 }
             }
         }
+        if (customLabels.isNotEmpty()) mapped.sortedBy { it.normalizedLabel } else mapped
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val privateSpaceApps: StateFlow<List<AppInfo>> = apps.map { list ->
@@ -714,25 +715,33 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         setSideAlphabetWidget(null)
     }
 
-    val favoriteItems: StateFlow<List<FavoriteItem>> = combine(
+    private val tagToAppsFlow: StateFlow<Map<String, List<AppInfo>>> = combine(
         apps,
-        tags,
-        appTags,
-        tagAppOrders,
-        actionsManager.favorites
-    ) { allApps, allTags, allAppTags, allTagOrders, ids ->
-        if (allApps.isEmpty()) return@combine emptyList()
-        val appMap = allApps.associateBy { it.componentKey }
-        val tagMap = allTags.associateBy { it.id }
-        val tagToAppsMap = mutableMapOf<String, MutableList<AppInfo>>()
+        appTags
+    ) { allApps, allAppTags ->
+        if (allApps.isEmpty() || allAppTags.isEmpty()) return@combine emptyMap()
+        val map = mutableMapOf<String, MutableList<AppInfo>>()
         allApps.forEach { app ->
             val tagIds = allAppTags[app.componentKey]
                 ?: (if (app.profileType == ProfileType.PERSONAL) allAppTags[app.packageName] else null)
                 ?: emptyList()
             tagIds.forEach { tagId ->
-                tagToAppsMap.getOrPut(tagId) { mutableListOf() }.add(app)
+                map.getOrPut(tagId) { mutableListOf() }.add(app)
             }
         }
+        map
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyMap())
+
+    val favoriteItems: StateFlow<List<FavoriteItem>> = combine(
+        apps,
+        tags,
+        tagToAppsFlow,
+        tagAppOrders,
+        actionsManager.favorites
+    ) { allApps, allTags, tagToAppsMap, allTagOrders, ids ->
+        if (allApps.isEmpty()) return@combine emptyList()
+        val appMap = allApps.associateBy { it.componentKey }
+        val tagMap = allTags.associateBy { it.id }
         ids.mapNotNull { id ->
             if (id.startsWith("tag:")) {
                 val tagId = id.removePrefix("tag:")
@@ -759,21 +768,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     val popularTagsWithApps: StateFlow<List<Pair<Tag, List<AppInfo>>>> = combine(
         tags,
-        appTags,
+        tagToAppsFlow,
         tagAppOrders,
-        apps,
         favoriteItems
-    ) { allTags, allAppTags, allTagOrders, allApps, favItems ->
+    ) { allTags, tagToAppsMap, allTagOrders, favItems ->
         val favoritedTagIds = favItems.mapNotNull { (it as? FavoriteItem.TagFolder)?.tag?.id }.toSet()
-        val tagToAppsMap = mutableMapOf<String, MutableList<AppInfo>>()
-        allApps.forEach { app ->
-            val tagIds = allAppTags[app.componentKey]
-                ?: (if (app.profileType == ProfileType.PERSONAL) allAppTags[app.packageName] else null)
-                ?: emptyList()
-            tagIds.forEach { tagId ->
-                tagToAppsMap.getOrPut(tagId) { mutableListOf() }.add(app)
-            }
-        }
         allTags
             .filter { tag -> tag.id !in favoritedTagIds }
             .map { tag ->
@@ -1715,22 +1714,30 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private fun updateCombinedApps() {
         val combined = (personalAppsCache + workAppsCache + privateAppsCache)
             .distinctBy { it.componentKey }
-            .sortedBy { it.label.lowercase() }
+            .sortedBy { it.normalizedLabel }
         _apps.value = combined
     }
 
     private fun loadAppsForProfile(profile: UserHandle, profileType: ProfileType): List<AppInfo> {
         val launcherApps = safeContext.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? LauncherApps ?: return emptyList()
         val myUser = Process.myUserHandle()
+        val pm = safeContext.packageManager
         val result = mutableListOf<AppInfo>()
-        val packageInfoMap = if (profile == myUser) {
-            safeContext.packageManager.getInstalledPackagesCompat().associateBy { it.packageName }
-        } else {
-            emptyMap()
-        }
 
         try {
             val activityList = launcherApps.getActivityList(null, profile)
+            val packageInfoMap = if (profile == myUser) {
+                val map = HashMap<String, PackageInfo>(activityList.size)
+                for (info in activityList) {
+                    val pkg = info.componentName.packageName
+                    if (!map.containsKey(pkg)) {
+                        pm.getPackageInfoCompat(pkg)?.let { map[pkg] = it }
+                    }
+                }
+                map
+            } else {
+                emptyMap()
+            }
             val customMappings = actionsManager.customCharMappings.value
             for (info in activityList) {
                 val pkgName = info.componentName.packageName
@@ -1740,8 +1747,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 val compKey = if (profile == myUser) "$pkgName/$actName" else "$pkgName/$actName#${profile.hashCode()}"
                 val firstSymbol = extractFirstSymbol(label)
                 val pInfo = packageInfoMap[pkgName]
-                val firstInstall = pInfo?.firstInstallTime ?: 0L
-                val lastUpdate = pInfo?.lastUpdateTime ?: 0L
+                val firstInstall = pInfo?.firstInstallTime ?: info.firstInstallTime
+                val lastUpdate = pInfo?.lastUpdateTime ?: firstInstall
                 result.add(
                     AppInfo(
                         label = label,

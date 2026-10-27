@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -885,10 +886,15 @@ private fun SnakeHistoryLazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(rowHeight)
-                    .drawBehind {
+                    .drawWithCache {
                         val strokeWidth = 2.5.dp.toPx()
                         val cornerRadius = 14.dp.toPx()
-                        val pathEffect = PathEffect.cornerPathEffect(cornerRadius)
+                        val strokeStyle = Stroke(
+                            width = strokeWidth,
+                            cap = StrokeCap.Butt,
+                            join = StrokeJoin.Round,
+                            pathEffect = PathEffect.cornerPathEffect(cornerRadius)
+                        )
 
                         val x0 = size.width * (1f / 6f)
                         val x1 = size.width * 0.5f
@@ -928,17 +934,15 @@ private fun SnakeHistoryLazyColumn(
                                 }
                             }
                         }
+                        val lineColor = accentColor.color.copy(alpha = 0.65f)
 
-                        drawPath(
-                            path = path,
-                            color = accentColor.color.copy(alpha = 0.65f),
-                            style = Stroke(
-                                width = strokeWidth,
-                                cap = StrokeCap.Butt,
-                                join = StrokeJoin.Round,
-                                pathEffect = pathEffect
+                        onDrawBehind {
+                            drawPath(
+                                path = path,
+                                color = lineColor,
+                                style = strokeStyle
                             )
-                        )
+                        }
                     }
             ) {
                 Row(
