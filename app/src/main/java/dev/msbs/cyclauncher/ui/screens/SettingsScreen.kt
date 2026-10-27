@@ -705,6 +705,7 @@ private fun InteractionSection(
                 )
             }
             val widgetIcon = if (showSearchWidgets) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff
+            val widgetTint = if (showSearchWidgets) accentColor.color else primaryTextColor.color.copy(alpha = 0.5f)
             IconButton(
                 onClick = onToggleSearchWidgets,
                 modifier = Modifier.size(36.dp)
@@ -712,7 +713,7 @@ private fun InteractionSection(
                 ShadowedIcon(
                     imageVector = widgetIcon,
                     contentDescription = stringResource(R.string.settings_toggle_search_widgets),
-                    tint = accentColor.color,
+                    tint = widgetTint,
                     size = 22.dp,
                     showShadows = showShadows,
                     primaryTextColor = primaryTextColor,
@@ -752,7 +753,11 @@ private fun InteractionSection(
                     Icon(
                         imageVector = currentIcon,
                         contentDescription = stringResource(currentLabelRes),
-                        tint = accentColor.color,
+                        tint = if (sideAlphabetSlotMode == SideAlphabetSlotMode.DISABLED) {
+                            primaryTextColor.color.copy(alpha = 0.5f)
+                        } else {
+                            accentColor.color
+                        },
                         modifier = Modifier.size(16.dp)
                     )
                     Icon(
@@ -795,7 +800,11 @@ private fun InteractionSection(
                                 Icon(
                                     imageVector = modeIcon,
                                     contentDescription = null,
-                                    tint = if (isSelected) accentColor.color else popupTheme.contentColor.copy(alpha = 0.7f),
+                                    tint = if (mode == SideAlphabetSlotMode.DISABLED) {
+                                        popupTheme.contentColor.copy(alpha = 0.5f)
+                                    } else {
+                                        if (isSelected) accentColor.color else popupTheme.contentColor.copy(alpha = 0.7f)
+                                    },
                                     modifier = Modifier.size(20.dp)
                                 )
                             },
@@ -897,6 +906,8 @@ private fun StatusBarAndAnimationsSection(
                 )
                 val visibilityIcon =
                     if (hideStatusBar) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility
+                val statusBarTint =
+                    if (hideStatusBar) primaryTextColor.color.copy(alpha = 0.5f) else accentColor.color
                 IconButton(
                     onClick = onToggleStatusBar,
                     modifier = Modifier.size(32.dp)
@@ -904,7 +915,7 @@ private fun StatusBarAndAnimationsSection(
                     ShadowedIcon(
                         imageVector = visibilityIcon,
                         contentDescription = stringResource(R.string.settings_toggle_status_bar),
-                        tint = accentColor.color,
+                        tint = statusBarTint,
                         size = 20.dp,
                         showShadows = showShadows,
                         primaryTextColor = primaryTextColor,
