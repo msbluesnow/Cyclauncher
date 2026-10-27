@@ -1,0 +1,6 @@
+Release Candidate 5 centrado en compresión R8, fugas de memoria y estabilidad.
+- Compresión R8 y perfiles base activados, reduciendo el APK un 90%.
+- Solucionadas fugas de memoria en paquetes de iconos, widgets y copias de seguridad.
+- Unificado el atenuado de fondo y contraste en todas las pantallas.
+- Resueltos bucles de fallos en AppWidget y TransactionTooLargeException.
+- Corregidas condiciones de carrera en eventos de paquetes y renderizado.

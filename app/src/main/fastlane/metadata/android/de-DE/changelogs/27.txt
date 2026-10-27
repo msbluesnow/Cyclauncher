@@ -1,0 +1,6 @@
+Release Candidate 5 mit Fokus auf R8-Optimierung, Speicherlecks und Stabilität.
+- R8-Schrumpfung und Baseline-Profile aktiviert; APK-Größe um 90 % reduziert.
+- Speicherlecks bei Symbolpaketen, Widgets und Sicherungen behoben.
+- Hintergrund-Abdunkelung und Kontrast auf allen Bildschirmen vereinheitlicht.
+- Absturzschleifen bei AppWidgets und TransactionTooLargeException behoben.
+- Wettlaufsituationen bei Paket-Ereignissen und Rendering behoben.

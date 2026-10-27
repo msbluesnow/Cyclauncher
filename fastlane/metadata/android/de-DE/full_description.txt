@@ -1,0 +1,11 @@
+Cyclauncher ist ein schneller, ergonomischer Android-Launcher, der vollständig mit Jetpack Compose entwickelt wurde. Er ist von Grund auf für eine komfortable Einhandbedienung und den schnellen Zugriff auf Apps konzipiert.
+
+Hauptmerkmale:
+- Ergonomische Einhandbedienung: Vollständiges Spiegeln des Layouts für Links- und Rechtshänder – alle Apps und Steuerelemente bleiben in natürlicher Daumenreichweite.
+- Multimodale App-Suche: Schnelles Finden von Apps über ein ergonomisches seitliches Alphabet-Raster, ein alternatives rechteckiges Alphabet-Rad mit Trägheitsphysik, Farbfilterung nach Symbolfarben und Soforttextsuche.
+- Interaktive Tag-Ordner: Gruppiere Anwendungen mit Live-Symbol-Vorschau (2x2), Kontextmenüs, 2D-Drag-and-Drop im Raster und in Ordnern sowie Anheften von Favoriten auf dem Startbildschirm.
+- Highlights-Hub & Widgets: Dedizierter zweiter Bildschirm mit anpassbaren Android-Widgets in kompakten Akkordeons (Suche, Größe ändern, Konfiguration), täglicher Aktualisierungsverfolgung und einer Schublade für ungetaggte Apps.
+- Privater Bereich & Arbeitsprofile: Integrierte Unterstützung für Multi-Profil-Umgebungen (Persönlich, Arbeit, Privater Bereich) mit biometrischer Entsperrung und isoliertem App-Caching.
+- Zeichen- & Symbolzuordnung: Passen Sie Suchbereiche an, indem Sie Emojis, kyrillische, arabische und internationale Alphabete direkt A–Z und # zuordnen.
+- Adaptives Design & Farbtonverschiebung (Hue Angle Shift): Dynamische Hintergrund-Designs durch einen adaptiven Farbtonverschiebungs-Algorithmus, Echo-Symbol-Voreinstellungen, benutzerdefinierten HSV-Farbauswähler und Schatten-Feinabstimmung.
+- Datenschutz & Energieeffizienz: 100 % Jetpack Compose ohne Telemetrie, keine Hintergrund-Netzwerkaufrufe und eine Einstellung zum Deaktivieren aller Animationen.

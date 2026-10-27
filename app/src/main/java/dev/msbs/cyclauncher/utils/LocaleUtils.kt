@@ -36,6 +36,18 @@ object LocaleUtils {
             nativeName = "English"
         ),
         SupportedLanguage(
+            code = "es",
+            labelRes = R.string.settings_language_es,
+            englishName = "Spanish",
+            nativeName = "Español"
+        ),
+        SupportedLanguage(
+            code = "de",
+            labelRes = R.string.settings_language_de,
+            englishName = "German",
+            nativeName = "Deutsch"
+        ),
+        SupportedLanguage(
             code = "ru",
             labelRes = R.string.settings_language_ru,
             englishName = "Russian",
