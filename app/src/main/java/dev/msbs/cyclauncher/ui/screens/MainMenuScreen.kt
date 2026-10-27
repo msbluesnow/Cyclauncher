@@ -1259,10 +1259,11 @@ private fun ColumnScope.TagsContentBlock(
                 if (isReorderMode) {
                     Box(contentAlignment = Alignment.Center) {
                         if (showShadows) {
+                            val shadowSettings = LocalShadowSettings.current
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = null,
-                                tint = Color.Black.copy(alpha = 0.6f),
+                                tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
                                 modifier = Modifier
                                     .size(22.dp)
                                     .offset(1.dp, 1.dp)
@@ -1501,10 +1502,11 @@ private fun ColumnScope.HistoryContentBlock(
             if (isHistoryEditMode) {
                 Box(contentAlignment = Alignment.Center) {
                     if (showShadows) {
+                        val shadowSettings = LocalShadowSettings.current
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = null,
-                            tint = Color.Black.copy(alpha = 0.6f),
+                            tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
                             modifier = Modifier
                                 .size(22.dp)
                                 .offset(1.dp, 1.dp)
@@ -1585,8 +1587,12 @@ private fun FavoritesSection(
     monochromeTags: Boolean = false
 ) {
     val shadow = primaryTextColor.getShadow(showShadows, LocalShadowSettings.current.shadowColorOverride)
-    val favoriteColorFilter = remember(monochromeFavorites, primaryTextColor) {
-        if (monochromeFavorites) androidx.compose.ui.graphics.ColorFilter.tint(primaryTextColor.color) else null
+    val favoriteColorFilter = remember(monochromeFavorites) {
+        if (monochromeFavorites) {
+            androidx.compose.ui.graphics.ColorFilter.colorMatrix(
+                androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) }
+            )
+        } else null
     }
 
     val haptic = LocalHapticFeedback.current

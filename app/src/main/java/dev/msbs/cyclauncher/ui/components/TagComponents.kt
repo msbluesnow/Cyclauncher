@@ -85,6 +85,7 @@ import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
+import dev.msbs.cyclauncher.ui.theme.LocalCapsuleIsDark
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import kotlin.math.roundToInt
 
@@ -105,6 +106,8 @@ fun TagFolderItem(
     var itemPosition by remember { mutableStateOf(Offset.Zero) }
     val currentOnClick by rememberUpdatedState(onClick)
     val currentOnLongClick by rememberUpdatedState(onLongClick)
+    val capsuleIsDark = LocalCapsuleIsDark.current
+    val folderBaseBg = if (capsuleIsDark) Color.Black.copy(alpha = 0.45f) else Color.White.copy(alpha = 0.65f)
 
     val effectiveTagColor = remember(tag.color, monochromeTags) {
         if (monochromeTags) tag.color.toGrayscale() else tag.color
@@ -130,7 +133,7 @@ fun TagFolderItem(
             modifier = Modifier
                 .size(52.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(Color.Black.copy(alpha = 0.45f))
+                .background(folderBaseBg)
                 .background(effectiveTagColor.copy(alpha = 0.12f))
                 .border(BorderStroke(1.5.dp, effectiveTagColor), shape = RoundedCornerShape(14.dp))
                 .padding(4.dp),
@@ -373,28 +376,15 @@ fun TagFolderPopup(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                         }
-                        BoxWithConstraints(modifier = Modifier.weight(1f)) {
-                            var fontSize by remember(tag.name, maxWidth) { mutableStateOf(17.sp) }
-                            var readyToDraw by remember(tag.name, maxWidth) { mutableStateOf(tag.name.length <= 10) }
-
-                            Text(
-                                text = tag.name,
-                                color = if (readyToDraw) popupTheme.contentColor else Color.Transparent,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = fontSize,
-                                maxLines = 2,
-                                lineHeight = (fontSize.value * 1.15f).sp,
-                                overflow = TextOverflow.Ellipsis,
-                                softWrap = true,
-                                onTextLayout = { textLayoutResult ->
-                                    if (textLayoutResult.hasVisualOverflow && fontSize.value > 11f) {
-                                        fontSize = (fontSize.value * 0.88f).sp
-                                    } else {
-                                        readyToDraw = true
-                                    }
-                                }
-                            )
-                        }
+                        AdaptiveHeaderTitle(
+                            text = tag.name,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = popupTheme.contentColor,
+                            minFontSize = 11.sp,
+                            maxFontSize = 17.sp,
+                            textAlign = TextAlign.Start
+                        )
                     }
 
                     Row(
@@ -981,11 +971,14 @@ fun TagFolderIcon(
         colorFilter ?: if (monochromeTags) ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }) else null
     }
 
+    val capsuleIsDark = LocalCapsuleIsDark.current
+    val folderBaseBg = if (capsuleIsDark) Color.Black.copy(alpha = 0.45f) else Color.White.copy(alpha = 0.65f)
+
     Box(
         modifier = modifier
             .size(size.dp)
             .clip(RoundedCornerShape(13.dp))
-            .background(Color.Black.copy(alpha = 0.45f))
+            .background(folderBaseBg)
             .background(effectiveTagColor.copy(alpha = 0.12f))
             .border(BorderStroke(1.5.dp, effectiveTagColor), shape = RoundedCornerShape(13.dp))
             .padding(3.dp),

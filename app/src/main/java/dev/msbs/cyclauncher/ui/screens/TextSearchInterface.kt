@@ -65,6 +65,7 @@ fun TextSearchInterface(
         SearchTextField(
             value = searchText,
             onValueChange = { viewModel.setSearchText(it) },
+            handSide = handSide,
             accentColor = accentColor,
             primaryTextColor = primaryTextColor,
             showShadows = showShadows,
@@ -140,15 +141,15 @@ private fun CloseSearchButton(
 private fun SearchTextField(
     value: String,
     onValueChange: (String) -> Unit,
+    handSide: HandSide,
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val alignment = TextAlign.Start
+    val alignment = if (handSide == HandSide.LEFT) TextAlign.Start else TextAlign.End
     val shadowSettings = LocalShadowSettings.current
     val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
-    val animationsEnabled = LocalAnimationsEnabled.current
 
     dev.msbs.cyclauncher.ui.components.AppTextField(
         value = value,

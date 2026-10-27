@@ -449,7 +449,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         ids.mapNotNull { id -> appMap[id] }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    val searchHistoryApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.history, actionsManager.recentlyUpdated) { all, ids, updated ->
+    val searchHistoryApps: StateFlow<List<AppInfo>> = combine(apps, actionsManager.searchHistory, actionsManager.recentlyUpdated) { all, ids, updated ->
         val appMap = all.associateBy { it.componentKey }
         ids.filter { id -> !updated.contains(id) && !updated.contains(id.substringBefore('/')) }
             .mapNotNull { id -> appMap[id] }
@@ -808,12 +808,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         loadInstalledApps()
         updateDefaultLauncherStatus()
         refreshDynamicWallpaperColor(safeContext)
-        _searchListAlignment.value = if (_handSide.value == HandSide.LEFT) TextAlign.End else TextAlign.Start
+        _searchListAlignment.value = if (_handSide.value == HandSide.LEFT) TextAlign.Start else TextAlign.End
     }
 
     fun reloadSettings() {
         val savedHand = prefs.getString("hand_side", HandSide.LEFT.name) ?: HandSide.LEFT.name
         _handSide.value = try { HandSide.valueOf(savedHand) } catch (e: Exception) { HandSide.LEFT }
+        _searchListAlignment.value = if (_handSide.value == HandSide.LEFT) TextAlign.Start else TextAlign.End
         
         val savedColor = prefs.getString("accent_color", AccentColor.SKY.name) ?: AccentColor.SKY.name
         _accentColor.value = AccentColor.fromName(savedColor, null)
@@ -961,7 +962,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun setHandSide(side: HandSide) {
         _handSide.value = side
-        _searchListAlignment.value = if (side == HandSide.LEFT) TextAlign.End else TextAlign.Start
+        _searchListAlignment.value = if (side == HandSide.LEFT) TextAlign.Start else TextAlign.End
         editPrefs { putString("hand_side", side.name) }
     }
 

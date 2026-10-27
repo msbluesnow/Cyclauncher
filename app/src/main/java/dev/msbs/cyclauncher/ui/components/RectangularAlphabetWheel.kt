@@ -5,6 +5,7 @@ import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.capsuleBorderColor
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
+import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 
 import android.graphics.Paint
 import androidx.compose.animation.core.*
@@ -274,6 +275,7 @@ fun RectangularAlphabetWheel(
                         }
                     }
             ) {
+                val animationsEnabled = LocalAnimationsEnabled.current
                 alphabet.forEachIndexed { index, letter ->
                     AlphabetLetterItem(
                         letter = letter,
@@ -291,13 +293,17 @@ fun RectangularAlphabetWheel(
                             currentOnLetterSelected(letter)
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             scope.launch {
-                                scrollOffset.animateTo(
-                                    targetValue = index.toFloat(),
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioLowBouncy,
-                                        stiffness = Spring.StiffnessLow
+                                if (animationsEnabled) {
+                                    scrollOffset.animateTo(
+                                        targetValue = index.toFloat(),
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioLowBouncy,
+                                            stiffness = Spring.StiffnessLow
+                                        )
                                     )
-                                )
+                                } else {
+                                    scrollOffset.snapTo(index.toFloat())
+                                }
                             }
                         }
                     )
