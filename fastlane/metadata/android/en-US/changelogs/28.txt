@@ -1,0 +1,8 @@
+First stable release of Cyclauncher: fast, ergonomic, and one-handed.
+- Multi-modal app search: side alphabet grid, inertia wheel, color, and text.
+- Interactive tag folders with 2D reordering and home pinning.
+- Highlights hub with customizable widgets and daily tracking.
+- Multi-profile support: biometric Private Space and Work profiles.
+- Full backup and restore for settings, widgets, and layout.
+- Native localization in 7 languages.
+- R8 minification and Baseline Profiles (~2.2MB APK).

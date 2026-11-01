@@ -26,11 +26,8 @@
 
 Cyclauncher is **not just yet another bicycle**. Built entirely with **Jetpack Compose**, it is designed from the ground up for comfortable one-handed navigation and instant app access. Daily workflows are streamlined through an ergonomic side alphabet grid, an alternative rectangular alphabet wheel with inertia physics, chromatic icon color search, interactive tag folders, adaptive Hue Angle Shift theming, and an expandable widget hub.
 
-> [!IMPORTANT]
-> **Feature Freeze & Release Candidate**: Cyclauncher is currently in **Release Candidate 5 (RC5, Build 27)** leading into the final **v1.0.0 Stable** release. A **Feature Freeze** is in effect: new functional features are paused until the stable release is published. Only bug fixes, stability improvements, performance polish, and translations are currently accepted.
-
 > [!TIP]
-> **Get the Latest Build**: Download the latest signed APK (**v1.0.0-rc.5**, Build 27) directly from [GitHub Releases](https://github.com/msbluesnow/Cyclauncher/releases/tag/v1.0.0-rc.5).
+> **Stable Release (v1.0.0)**: Cyclauncher has reached its first official stable release milestone (**v1.0.0**, Build 28)! Download the signed release APK directly from [GitHub Releases](https://github.com/msbluesnow/Cyclauncher/releases/tag/v1.0.0) or install via [F-Droid](https://f-droid.org/packages/dev.msbs.cyclauncher/).
 
 ## 📽️ Demo Showcases
 
@@ -100,11 +97,12 @@ Thank you to everyone who has contributed to Cyclauncher!
 
 ## 🛠 Tech Stack
 
-- **Language**: [Kotlin 2.2.10](https://kotlinlang.org/)
+- **Language**: [Kotlin 2.4.20](https://kotlinlang.org/)
 - **UI Framework**: [Jetpack Compose](https://developer.android.com/jetpack/compose) (Material 3 & Compose BOM)
-- **Build System**: Gradle 9.6.1 + Android Gradle Plugin 9.3.2 (Target SDK 36, Min SDK 24)
+- **Build System**: Gradle 9.6.1 + Android Gradle Plugin 9.3.3 (Compile SDK 37, Target SDK 36, Min SDK 24)
 - **Architecture**: MVVM with Kotlin Coroutines & `StateFlow`
-- **Image Loading**: [Coil 3](https://coil-kt.github.io/coil/) with custom asynchronous `AppIconFetcher`
+- **Optimization**: R8 code & resource shrinking (~2.2MB APK) with bundled Baseline Profiles (`androidx.profileinstaller`)
+- **Image Loading**: [Coil 3](https://coil-kt.github.io/coil/) with custom asynchronous `AppIconFetcher` & `IconEpochManager`
 - **Graphics**: High-performance custom animations rendered via the low-level Android Canvas API
 - **Code Quality & Docs**: Strict Kotlin code style with comprehensive inline KDoc documentation
 
@@ -146,6 +144,8 @@ A continuous, unified timeline of completed milestones and planned updates.
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Highlights Screen & Widget Integration</b> — Home panel with daily app install/update overview, full widget support (add, resize, reconfigure, remove) with a custom picker.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>2D Tag Folder Reordering</b> — Drag-to-reorder tag folders and apps within folders; sort dialog by name or app count with zero-latency drag architecture.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Multi-Language Localization</b> — Native translation support for English, Spanish, German, Russian, Chinese (Simplified), Hindi, and Japanese.<br>
+<kbd>&nbsp;✓&nbsp;</kbd> <b>R8 Code Shrinking & Baseline Profiles</b> — Sub-2.5MB APK size and instant AOT cold starts.<br>
+<kbd>&nbsp;✓&nbsp;</kbd> <b>v1.0.0 Stable Release Milestone</b> — Hardened memory stability, concurrency, full backup/restore, and ergonomic one-handed workflows.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>Tag Map</i> — Interactive tag map showing connections between applications and implementing quick tag-based navigation.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>App Shortcuts</i> — Quick-launch actions like dialing specific contacts or opening deep-linked settings.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>3D Hex Search Grid</i> — Immersive 3D application navigation styled as a rotatable hexagonal prism.<br>

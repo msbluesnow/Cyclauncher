@@ -36,3 +36,10 @@ scripts/fdroid_state.json
 # Custom local automation & environment scripts
 scripts/adb-*.ps1
 scripts/environment/
+
+# Local update payloads
+payload.bin
+/META-INF/
+
+# Release notes draft
+release_notes.md
