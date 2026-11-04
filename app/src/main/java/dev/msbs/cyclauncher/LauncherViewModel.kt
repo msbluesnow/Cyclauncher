@@ -269,10 +269,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     val imageLoader = coil3.SingletonImageLoader.get(getApplication())
                     val um = safeContext.getSystemService(Context.USER_SERVICE) as? UserManager
                     val serial = try { um?.getSerialNumberForUser(user) ?: -1L } catch (_: Exception) { -1L }
+                    val suffixes = mutableListOf(user.hashCode().toString())
                     if (serial >= 0L) {
-                        dev.msbs.cyclauncher.coil.AppIconFetcher.evictProfileIcons(imageLoader, serial.toString())
+                        suffixes.add(serial.toString())
                     }
-                    dev.msbs.cyclauncher.coil.AppIconFetcher.evictProfileIcons(imageLoader, user.hashCode().toString())
+                    dev.msbs.cyclauncher.coil.AppIconFetcher.evictProfileIcons(imageLoader, suffixes)
                 } catch (_: Exception) {}
             } else {
                 viewModelScope.launch(Dispatchers.IO) {
@@ -1824,7 +1825,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val myUser = Process.myUserHandle()
             val profiles = try { userManager?.userProfiles ?: listOf(myUser) } catch (_: Throwable) { listOf(myUser) }
 
-            dev.msbs.cyclauncher.coil.AppIconFetcher.updateUserProfiles(context, profiles)
+            dev.msbs.cyclauncher.coil.AppIconFetcher.updateUserProfiles(profiles, userManager)
 
             var foundPrivateUser: UserHandle? = null
             var privateLocked = true
