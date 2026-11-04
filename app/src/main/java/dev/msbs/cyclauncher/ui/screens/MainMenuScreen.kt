@@ -1942,9 +1942,7 @@ private fun FavoritesSection(
                                             contentDescription = item.appInfo.label,
                                             contentScale = ContentScale.Fit,
                                             colorFilter = favoriteColorFilter,
-                                            modifier = Modifier
-                                                .size(48.dp)
-                                                .clip(CircleShape)
+                                            modifier = Modifier.size(48.dp)
                                         )
                                     } else {
                                         AppIconItem(

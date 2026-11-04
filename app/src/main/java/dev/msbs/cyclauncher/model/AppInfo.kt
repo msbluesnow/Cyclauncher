@@ -17,6 +17,7 @@ data class AppInfo(
     val iconKey: String,
     val searchChar: Char = ' ',
     val userHandle: UserHandle = Process.myUserHandle(),
+    val userSerialNumber: Long = -1L,
     val profileType: ProfileType = ProfileType.PERSONAL,
     val firstInstallTime: Long = 0L,
     val lastUpdateTime: Long = 0L,
@@ -26,7 +27,8 @@ data class AppInfo(
     val componentKey: String = if (userHandle == Process.myUserHandle()) {
         baseComponentKey
     } else {
-        "$baseComponentKey#${userHandle.hashCode()}"
+        val idSuffix = if (userSerialNumber >= 0L) userSerialNumber.toString() else userHandle.hashCode().toString()
+        "$baseComponentKey#$idSuffix"
     }
 
     val normalizedLabel: String = label.lowercase().trim()

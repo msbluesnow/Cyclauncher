@@ -10,6 +10,7 @@ import dev.msbs.cyclauncher.coil.AppIconFetcher
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
@@ -17,11 +18,12 @@ import kotlinx.coroutines.launch
  */
 class CyclauncherApp : Application(), SingletonImageLoader.Factory {
 
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var imageLoader: ImageLoader? = null
 
     override fun onCreate() {
         super.onCreate()
-        CoroutineScope(Dispatchers.IO).launch {
+        appScope.launch {
             try {
                 val legacyCache = cacheDir.resolve("image_cache")
                 if (legacyCache.exists()) {

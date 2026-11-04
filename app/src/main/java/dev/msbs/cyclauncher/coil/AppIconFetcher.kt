@@ -60,18 +60,27 @@ internal class AppIconFetcher private constructor(
         private val iconDispatcher = Dispatchers.IO.limitedParallelism(4)
         private val userProfilesCache = java.util.concurrent.ConcurrentHashMap<String, android.os.UserHandle>()
 
-        fun updateUserProfiles(profiles: List<android.os.UserHandle>) {
+        fun updateUserProfiles(profiles: List<android.os.UserHandle>, userManager: android.os.UserManager? = null) {
             userProfilesCache.clear()
             for (p in profiles) {
                 userProfilesCache[p.hashCode().toString()] = p
+                try {
+                    val serial = userManager?.getSerialNumberForUser(p)
+                    if (serial != null && serial >= 0L) {
+                        userProfilesCache[serial.toString()] = p
+                    }
+                } catch (_: Throwable) {}
             }
         }
 
-        fun evictProfileIcons(imageLoader: ImageLoader, userHashCodeStr: String) {
+        fun evictProfileIcons(imageLoader: ImageLoader, userSuffixes: Collection<String>) {
             try {
                 val memoryCache = imageLoader.memoryCache ?: return
-                val suffix = "#$userHashCodeStr"
-                val keysToRemove = memoryCache.keys.filter { it.toString().contains(suffix) }
+                val suffixes = userSuffixes.map { "#$it" }
+                val keysToRemove = memoryCache.keys.filter { key ->
+                    val keyStr = key.toString()
+                    suffixes.any { keyStr.contains(it) }
+                }
                 for (k in keysToRemove) {
                     memoryCache.remove(k)
                 }
@@ -191,15 +200,20 @@ internal class AppIconFetcher private constructor(
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
         val iconDpi = am?.launcherLargeIconDensity?.takeIf { it > 0 } ?: context.resources.displayMetrics.densityDpi
         val activity = activityWithUser.substringBefore('#')
-        val userHashCodeStr = activityWithUser.substringAfter('#', "")
+        val userIdentifierStr = activityWithUser.substringAfter('#', "")
 
         val myUser = android.os.Process.myUserHandle()
-        val targetUser = if (userHashCodeStr.isNotEmpty()) {
-            userProfilesCache[userHashCodeStr] ?: run {
+        val targetUser = if (userIdentifierStr.isNotEmpty()) {
+            userProfilesCache[userIdentifierStr] ?: run {
                 val userManager = context.getSystemService(Context.USER_SERVICE) as? android.os.UserManager
-                val found = userManager?.userProfiles?.find { it.hashCode().toString() == userHashCodeStr }
+                val asLong = userIdentifierStr.toLongOrNull()
+                val foundBySerial = if (asLong != null && userManager != null) {
+                    try { userManager.getUserForSerialNumber(asLong) } catch (_: Throwable) { null }
+                } else null
+                val found = foundBySerial
+                    ?: userManager?.userProfiles?.find { it.hashCode().toString() == userIdentifierStr }
                 if (found != null) {
-                    userProfilesCache[userHashCodeStr] = found
+                    userProfilesCache[userIdentifierStr] = found
                     found
                 } else {
                     myUser

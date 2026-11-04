@@ -1073,9 +1073,7 @@ private fun SnakeAppIcon(
             contentDescription = app.label,
             contentScale = ContentScale.Fit,
             colorFilter = colorFilter,
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(CircleShape)
+            modifier = Modifier.fillMaxSize()
         )
 
         if (isEditMode) {

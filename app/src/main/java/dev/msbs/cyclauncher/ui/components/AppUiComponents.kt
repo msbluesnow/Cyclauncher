@@ -478,7 +478,8 @@ fun Modifier.appItemGestures(
 }
 
 /**
- * Circular app icon with click and long-press gestures.
+ * App icon with click and long-press gestures.
+ * Icon bitmaps are already masked to the active system shape by AppIconFetcher.
  */
 @Composable
 fun AppIconItem(
@@ -497,7 +498,6 @@ fun AppIconItem(
         colorFilter = colorFilter,
         modifier = Modifier
             .size(size.dp)
-            .clip(CircleShape)
             .appItemGestures(app.componentKey, onClick, onLongClick)
     )
 }
@@ -569,9 +569,7 @@ fun AppListItemWithIcon(
                 contentDescription = app.label,
                 contentScale = ContentScale.Fit,
                 colorFilter = colorFilter,
-                modifier = Modifier
-                    .size(iconSize.dp)
-                    .clip(CircleShape)
+                modifier = Modifier.size(iconSize.dp)
             )
             Spacer(modifier = Modifier.width(10.dp))
         }
@@ -606,9 +604,7 @@ fun AppListItemWithIcon(
                 contentDescription = app.label,
                 contentScale = ContentScale.Fit,
                 colorFilter = colorFilter,
-                modifier = Modifier
-                    .size(iconSize.dp)
-                    .clip(CircleShape)
+                modifier = Modifier.size(iconSize.dp)
             )
         }
     }

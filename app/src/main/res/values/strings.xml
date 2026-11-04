@@ -400,4 +400,26 @@
     <string name="toast_parse_tags_file_failed">Failed to parse tags file: %1$s</string>
     <string name="toast_backup_exported">Backup exported (%1$d tags, %2$d apps)</string>
     <string name="toast_exported_mappings">Exported %1$d mappings</string>
+    <string name="toast_open_app_failed">Could not open app</string>
+    <string name="toast_open_profile_app_failed">Could not open profile app</string>
+    <string name="toast_opening_uninstaller">Opening uninstaller...</string>
+    <string name="toast_open_app_info_failed">Could not open app info</string>
+    <string name="toast_private_space_no_store">No store found in Private Space. Install a store or use system Settings.</string>
+    <string name="toast_private_space_store_failed">Cannot launch app store in Private Space: %1$s</string>
+
+    <!-- Auto Tags & Backup Confirm Dialogs -->
+    <string name="dialog_auto_tags_title">Apply Auto Tags?</string>
+    <string name="dialog_auto_tags_confirm">Apply</string>
+    <string name="dialog_auto_tags_summary">%1$d apps will be tagged into %2$d categories:</string>
+    <string name="dialog_auto_tags_unmatched">%1$d apps not found on device</string>
+    <string name="dialog_backup_import_title">Import Backup / Tags?</string>
+    <string name="dialog_backup_import_confirm">Import</string>
+    <string name="dialog_backup_new_tags">New tags to create: %1$d</string>
+    <string name="dialog_backup_existing_tags">Existing tags kept: %1$d</string>
+    <string name="dialog_backup_assignments">Tag assignments: %1$d</string>
+    <string name="dialog_backup_custom_labels">Custom labels to restore: %1$d</string>
+    <string name="dialog_backup_favorites">Favorites to restore: %1$d</string>
+    <string name="dialog_backup_settings">Settings to restore: %1$d</string>
+    <string name="dialog_backup_char_mappings">Character mappings to restore: %1$d</string>
+    <string name="dialog_backup_more_tags">… and %1$d more</string>
 </resources>

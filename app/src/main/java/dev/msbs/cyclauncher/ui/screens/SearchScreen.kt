@@ -94,12 +94,15 @@ fun SearchScreen(
     val manager = appWidgetManager ?: remember { AppWidgetManager.getInstance(context.applicationContext) }
 
     var widgetPickTarget by remember { mutableStateOf<WidgetPickTarget?>(null) }
-    var pendingBindWidgetId by remember { mutableIntStateOf(AppWidgetManager.INVALID_APPWIDGET_ID) }
-    var pendingBindProvider by remember { mutableStateOf<AppWidgetProviderInfo?>(null) }
-    var pendingBindTarget by remember { mutableStateOf(WidgetPickTarget.WHEEL_LEFT) }
 
-    val checkConfigureAndAdd: (Int, AppWidgetProviderInfo, Bundle?, WidgetPickTarget) -> Unit = { widgetId, providerInfo, optionsBundle, target ->
-        val onConfigSuccess: () -> Unit = {
+    val onSelectWidgetFromPicker = dev.msbs.cyclauncher.widget.rememberWidgetBindHandler<WidgetPickTarget>(
+        host = host,
+        manager = manager,
+        onConfigureWidget = onConfigureWidget,
+        optionsProvider = { ctx, _ ->
+            dev.msbs.cyclauncher.widget.WidgetBindHelper.createSearchWidgetOptions(ctx)
+        },
+        onWidgetBound = { widgetId, _, target ->
             val replaceWidget: (Int?, (Int) -> Unit) -> Unit = { oldId, updateAction ->
                 if (oldId != null && oldId != widgetId) {
                     try { host?.deleteAppWidgetId(oldId) } catch (_: Exception) {}
@@ -113,82 +116,7 @@ fun SearchScreen(
                 WidgetPickTarget.SIDE_ALPHABET_WIDGET -> replaceWidget(viewModel.sideAlphabetWidgetId.value) { viewModel.setSideAlphabetWidget(it) }
             }
         }
-
-        if (providerInfo.configure != null && onConfigureWidget != null) {
-            onConfigureWidget(widgetId, false, optionsBundle) { success ->
-                if (success) {
-                    onConfigSuccess()
-                } else {
-                    try { host?.deleteAppWidgetId(widgetId) } catch (_: Exception) {}
-                }
-            }
-        } else {
-            onConfigSuccess()
-        }
-    }
-
-    val bindWidgetLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK && pendingBindWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-            val provider = manager.getAppWidgetInfo(pendingBindWidgetId) ?: pendingBindProvider
-            if (provider != null) {
-                val options = createWidgetOptions(context)
-                checkConfigureAndAdd(pendingBindWidgetId, provider, options, pendingBindTarget)
-            }
-        } else {
-            if (pendingBindWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                try { host?.deleteAppWidgetId(pendingBindWidgetId) } catch (_: Exception) {}
-            }
-        }
-        pendingBindWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
-        pendingBindProvider = null
-    }
-
-    val onSelectWidgetFromPicker: (AppWidgetProviderInfo, WidgetPickTarget) -> Unit = { providerInfo, target ->
-        if (host != null) {
-            val newWidgetId = try {
-                host.allocateAppWidgetId()
-            } catch (_: Exception) {
-                AppWidgetManager.INVALID_APPWIDGET_ID
-            }
-
-            if (newWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                val options = createWidgetOptions(context)
-
-                val canBind = try {
-                    val profile = providerInfo.profile ?: android.os.Process.myUserHandle()
-                    manager.bindAppWidgetIdIfAllowed(newWidgetId, profile, providerInfo.provider, options)
-                } catch (_: Exception) {
-                    false
-                }
-
-                try {
-                    manager.updateAppWidgetOptions(newWidgetId, options)
-                } catch (_: Exception) {}
-
-                if (canBind) {
-                    val finalInfo = manager.getAppWidgetInfo(newWidgetId) ?: providerInfo
-                    checkConfigureAndAdd(newWidgetId, finalInfo, options, target)
-                } else {
-                    pendingBindWidgetId = newWidgetId
-                    pendingBindProvider = providerInfo
-                    pendingBindTarget = target
-                    try {
-                        val bindIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
-                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, newWidgetId)
-                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, providerInfo.provider)
-                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, providerInfo.profile ?: android.os.Process.myUserHandle())
-                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_OPTIONS, options)
-                        }
-                        bindWidgetLauncher.launch(bindIntent)
-                    } catch (_: Exception) {
-                        checkConfigureAndAdd(newWidgetId, providerInfo, options, target)
-                    }
-                }
-            }
-        }
-    }
+    )
 
     val widgetCompartment: @Composable (Modifier) -> Unit = { compartmentModifier ->
         SearchWidgetCompartment(
@@ -460,17 +388,5 @@ private fun SearchToggleBar(
                 style = MaterialTheme.typography.bodyLarge.copy(shadow = shadow)
             )
         }
-    }
-}
-
-private fun createWidgetOptions(context: Context): Bundle {
-    val displayDensity = context.resources.displayMetrics.density
-    val screenWidthDp = (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
-    val targetWidthDp = (screenWidthDp * 0.5f).toInt()
-    return Bundle().apply {
-        putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, targetWidthDp)
-        putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, targetWidthDp)
-        putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 140)
-        putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 300)
     }
 }

@@ -251,9 +251,7 @@ private fun MiniAppIconPreview(
         painter = painter,
         contentDescription = null,
         colorFilter = colorFilter,
-        modifier = Modifier
-            .size(sizeDp)
-            .clip(CircleShape),
+        modifier = Modifier.size(sizeDp),
         contentScale = ContentScale.Fit
     )
 }
@@ -911,9 +909,7 @@ private fun TagFolderAppItem(
                 painter = iconPainter,
                 contentDescription = app.label,
                 contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
+                modifier = Modifier.size(48.dp)
             )
 
             if (isEditMode) {

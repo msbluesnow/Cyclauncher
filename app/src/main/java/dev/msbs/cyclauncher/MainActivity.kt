@@ -860,10 +860,17 @@ class MainActivity : ComponentActivity() {
 
             val app = viewModel.apps.value.find { it.componentKey == componentKey }
             val userHandle = app?.userHandle ?: run {
-                val hashPart = componentKey.substringAfter('#', "").toIntOrNull()
-                if (hashPart != null) {
+                val profileIdPart = componentKey.substringAfter('#', "")
+                if (profileIdPart.isNotEmpty()) {
                     val um = getSystemService(Context.USER_SERVICE) as? android.os.UserManager
-                    um?.userProfiles?.find { it.hashCode() == hashPart } ?: android.os.Process.myUserHandle()
+                    val serialVal = profileIdPart.toLongOrNull()
+                    val bySerial = if (serialVal != null) {
+                        try { um?.getUserForSerialNumber(serialVal) } catch (_: Exception) { null }
+                    } else null
+                    val hashVal = profileIdPart.toIntOrNull()
+                    bySerial
+                        ?: (if (hashVal != null) um?.userProfiles?.find { it.hashCode() == hashVal } else null)
+                        ?: android.os.Process.myUserHandle()
                 } else {
                     android.os.Process.myUserHandle()
                 }
@@ -910,14 +917,14 @@ class MainActivity : ComponentActivity() {
                             packageManager.getLaunchIntentForPackage(packageName)?.let { intent ->
                                 startActivity(intent, optionsBundle)
                             } ?: run {
-                                Toast.makeText(this, "Could not open app", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this, getString(R.string.toast_open_app_failed), Toast.LENGTH_SHORT).show()
                             }
                         } catch (_: Exception) {
-                            Toast.makeText(this, "Could not open app", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, getString(R.string.toast_open_app_failed), Toast.LENGTH_SHORT).show()
                         }
                     }
                 } else {
-                    Toast.makeText(this, "Could not open profile app", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.toast_open_profile_app_failed), Toast.LENGTH_SHORT).show()
                 }
             }
         } else {
@@ -925,10 +932,10 @@ class MainActivity : ComponentActivity() {
                 packageManager.getLaunchIntentForPackage(componentKey)?.let { intent ->
                     startActivity(intent, optionsBundle)
                 } ?: run {
-                    Toast.makeText(this, "Could not open app", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.toast_open_app_failed), Toast.LENGTH_SHORT).show()
                 }
             } catch (_: Exception) {
-                Toast.makeText(this, "Could not open app", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.toast_open_app_failed), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -942,10 +949,10 @@ class MainActivity : ComponentActivity() {
                 }
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            Toast.makeText(this, "Opening uninstaller...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_opening_uninstaller), Toast.LENGTH_SHORT).show()
             startActivity(uninstallIntent)
         } catch (e: Exception) {
-            Toast.makeText(this, "Could not open uninstaller", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_uninstaller_failed), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -966,7 +973,7 @@ class MainActivity : ComponentActivity() {
             }
             startActivity(intent)
         } catch (e: Exception) {
-            Toast.makeText(this, "Could not open app info", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_open_app_info_failed), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -1168,8 +1175,8 @@ private fun AutoTagsConfirmDialog(
     onDismiss: () -> Unit
 ) {
     BaseLauncherConfirmDialog(
-        title = "Apply Auto Tags?",
-        confirmButtonText = "Apply",
+        title = stringResource(R.string.dialog_auto_tags_title),
+        confirmButtonText = stringResource(R.string.dialog_auto_tags_confirm),
         accentColor = accentColor,
         buttonTextColor = buttonTextColor,
         popupTheme = popupTheme,
@@ -1177,7 +1184,7 @@ private fun AutoTagsConfirmDialog(
         onDismiss = onDismiss
     ) {
         Text(
-            "${preview.matchedAppsCount} apps will be tagged into ${preview.tags.size} categories:",
+            stringResource(R.string.dialog_auto_tags_summary, preview.matchedAppsCount, preview.tags.size),
             color = popupTheme.contentColor.copy(alpha = 0.85f),
             fontSize = 14.sp
         )
@@ -1188,7 +1195,7 @@ private fun AutoTagsConfirmDialog(
         if (preview.unmatchedAppPackages.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "${preview.unmatchedAppPackages.size} apps not found on device",
+                stringResource(R.string.dialog_auto_tags_unmatched, preview.unmatchedAppPackages.size),
                 color = popupTheme.secondaryContentColor,
                 fontSize = 11.sp
             )
@@ -1205,9 +1212,17 @@ private fun TagsBackupConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val newTagsLabel = stringResource(R.string.dialog_backup_new_tags, preview.newTags.size)
+    val existingTagsLabel = stringResource(R.string.dialog_backup_existing_tags, preview.existingTagCount)
+    val assignmentsLabel = stringResource(R.string.dialog_backup_assignments, preview.assignmentCount)
+    val customLabelsLabel = stringResource(R.string.dialog_backup_custom_labels, preview.customLabels.size)
+    val favoritesLabel = stringResource(R.string.dialog_backup_favorites, preview.favorites.size)
+    val settingsLabel = stringResource(R.string.dialog_backup_settings, preview.settings.size)
+    val charMappingsLabel = stringResource(R.string.dialog_backup_char_mappings, preview.customCharMappings.size)
+
     BaseLauncherConfirmDialog(
-        title = "Import Backup / Tags?",
-        confirmButtonText = "Import",
+        title = stringResource(R.string.dialog_backup_import_title),
+        confirmButtonText = stringResource(R.string.dialog_backup_import_confirm),
         accentColor = accentColor,
         buttonTextColor = buttonTextColor,
         popupTheme = popupTheme,
@@ -1217,25 +1232,25 @@ private fun TagsBackupConfirmDialog(
         Text(
             buildString {
                 if (preview.newTags.isNotEmpty() || preview.existingTagCount > 0 || preview.assignmentCount > 0) {
-                    append("New tags to create: ${preview.newTags.size}")
-                    append("\nExisting tags kept: ${preview.existingTagCount}")
-                    append("\nTag assignments: ${preview.assignmentCount}")
+                    append(newTagsLabel)
+                    append("\n").append(existingTagsLabel)
+                    append("\n").append(assignmentsLabel)
                 }
                 if (preview.customLabels.isNotEmpty()) {
                     if (isNotEmpty()) append("\n")
-                    append("Custom labels to restore: ${preview.customLabels.size}")
+                    append(customLabelsLabel)
                 }
                 if (preview.favorites.isNotEmpty()) {
                     if (isNotEmpty()) append("\n")
-                    append("Favorites to restore: ${preview.favorites.size}")
+                    append(favoritesLabel)
                 }
                 if (preview.settings.isNotEmpty()) {
                     if (isNotEmpty()) append("\n")
-                    append("Settings to restore: ${preview.settings.size}")
+                    append(settingsLabel)
                 }
                 if (preview.customCharMappings.isNotEmpty()) {
                     if (isNotEmpty()) append("\n")
-                    append("Character mappings to restore: ${preview.customCharMappings.size}")
+                    append(charMappingsLabel)
                 }
             },
             color = popupTheme.contentColor.copy(alpha = 0.85f),
@@ -1249,7 +1264,7 @@ private fun TagsBackupConfirmDialog(
             if (preview.newTags.size > 12) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "… and ${preview.newTags.size - 12} more",
+                    stringResource(R.string.dialog_backup_more_tags, preview.newTags.size - 12),
                     color = popupTheme.secondaryContentColor,
                     fontSize = 11.sp
                 )

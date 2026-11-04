@@ -1,9 +1,13 @@
 package dev.msbs.cyclauncher.icons
 
 import android.content.Context
+import android.graphics.Matrix
 import android.graphics.Path
 import android.graphics.RectF
 import android.provider.Settings
+import androidx.compose.foundation.shape.GenericShape
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.asComposePath
 import androidx.core.graphics.PathParser
 
 /**
@@ -78,10 +82,24 @@ object IconShapeHelper {
         val cached = scaledPathCache.getOrPut(safeSize) {
             val basePath = getSystemPath(context)
             val scale = safeSize / 100f
-            val matrix = android.graphics.Matrix().apply { setScale(scale, scale) }
+            val matrix = Matrix().apply { setScale(scale, scale) }
             Path(basePath).apply { transform(matrix) }
         }
         return Path(cached)
+    }
+
+    /**
+     * Returns a Compose [Shape] matching the active system icon shape mask.
+     */
+    fun getComposeShape(context: Context): Shape {
+        val basePath = getSystemPath(context)
+        return GenericShape { size, _ ->
+            val matrix = Matrix().apply {
+                setScale(size.width / 100f, size.height / 100f)
+            }
+            val scaled = Path(basePath).apply { transform(matrix) }
+            addPath(scaled.asComposePath())
+        }
     }
 
     /**

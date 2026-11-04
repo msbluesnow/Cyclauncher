@@ -126,19 +126,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 
 /**
- * Calculates a native optimal height in DP for an AppWidget based on target cells or minHeight.
- */
-private fun calculateOptimalWidgetHeight(info: AppWidgetProviderInfo?, density: Float): Int {
-    if (info == null) return 150
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && info.targetCellHeight > 0) {
-        return (info.targetCellHeight * 74).coerceIn(70, 420)
-    }
-    val minHeightDp = if (info.minHeight > 0) (info.minHeight / density).toInt() else 140
-    val estimatedCells = kotlin.math.max(1, (minHeightDp + 15) / 65)
-    return (estimatedCells * 74).coerceIn(minHeightDp.coerceAtLeast(70), 420)
-}
-
-/**
  * HighlightScreen: Secondary launcher screen with:
  * - Transparent live wallpaper background
  * - Custom in-app Widget Picker sheet with app search, accordion grouping, and graphical previews
@@ -195,123 +182,28 @@ fun HighlightScreen(
     val manager = appWidgetManager ?: remember { AppWidgetManager.getInstance(context.applicationContext) }
 
     var showCustomWidgetPicker by remember { mutableStateOf(false) }
-    var pendingBindWidgetId by remember { mutableIntStateOf(AppWidgetManager.INVALID_APPWIDGET_ID) }
-    var pendingBindProvider by remember { mutableStateOf<AppWidgetProviderInfo?>(null) }
     var expandedSection by remember { mutableStateOf<HighlightSection?>(null) }
 
     // Today's Installs and Updates computed on background thread via LauncherViewModel (filtered for real user activity in last 24h)
     val todayActivity by viewModel.todayActivity.collectAsState()
     val (todayInstalls, todayUpdates) = todayActivity
 
-    // Helper: checks if configuration is required and launches configure activity via host or adds directly
-    val checkConfigureAndAdd: (Int, AppWidgetProviderInfo, Bundle?) -> Unit = { widgetId, providerInfo, optionsBundle ->
-        if (providerInfo.configure != null && onConfigureWidget != null) {
-            onConfigureWidget(widgetId, false, optionsBundle) { success ->
-                if (success) {
-                    val defaultHeight = calculateOptimalWidgetHeight(providerInfo, density.density)
-                    viewModel.addHighlightWidget(widgetId, defaultHeight, 1.0f)
-                } else {
-                    try {
-                        host.deleteAppWidgetId(widgetId)
-                    } catch (_: Exception) {}
-                }
-            }
-        } else {
-            val defaultHeight = calculateOptimalWidgetHeight(providerInfo, density.density)
+    val bindHighlightWidget = dev.msbs.cyclauncher.widget.rememberWidgetBindHandler<Unit>(
+        host = host,
+        manager = manager,
+        onConfigureWidget = onConfigureWidget,
+        optionsProvider = { ctx, provider ->
+            dev.msbs.cyclauncher.widget.WidgetBindHelper.createHighlightWidgetOptions(ctx, provider)
+        },
+        onWidgetBound = { widgetId, providerInfo, _ ->
+            val defaultHeight = dev.msbs.cyclauncher.widget.WidgetBindHelper.calculateOptimalWidgetHeight(providerInfo, density.density)
             viewModel.addHighlightWidget(widgetId, defaultHeight, 1.0f)
         }
-    }
+    )
 
-    // Activity result launcher for BIND_APPWIDGET permission dialog
-    val bindWidgetLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK && pendingBindWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-            val provider = manager.getAppWidgetInfo(pendingBindWidgetId) ?: pendingBindProvider
-            if (provider != null) {
-                val displayDensity = context.resources.displayMetrics.density
-                val optimalHeight = calculateOptimalWidgetHeight(provider, displayDensity)
-                val screenWidthDp = (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
-                val targetWidthDp = (screenWidthDp * 1.0f).toInt() - 24
-                val options = Bundle().apply {
-                    putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, targetWidthDp)
-                    putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, targetWidthDp)
-                    putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, optimalHeight)
-                    putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, optimalHeight)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        val sizes = arrayListOf(android.util.SizeF(targetWidthDp.toFloat(), optimalHeight.toFloat()))
-                        putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, sizes)
-                    }
-                }
-                checkConfigureAndAdd(pendingBindWidgetId, provider, options)
-            }
-        } else {
-            if (pendingBindWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                try {
-                    host.deleteAppWidgetId(pendingBindWidgetId)
-                } catch (_: Exception) {}
-            }
-        }
-        pendingBindWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
-        pendingBindProvider = null
-    }
-
-    // Callback when user taps a widget from the CustomWidgetPickerSheet
     val onSelectWidgetFromPicker: (AppWidgetProviderInfo) -> Unit = { providerInfo ->
         showCustomWidgetPicker = false
-        val newWidgetId = try {
-            host.allocateAppWidgetId()
-        } catch (_: Exception) {
-            AppWidgetManager.INVALID_APPWIDGET_ID
-        }
-
-        if (newWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-            val displayDensity = context.resources.displayMetrics.density
-            val optimalHeight = calculateOptimalWidgetHeight(providerInfo, displayDensity)
-            val screenWidthDp = (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
-            val targetWidthDp = (screenWidthDp * 1.0f).toInt() - 24
-
-            val options = Bundle().apply {
-                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, targetWidthDp)
-                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, targetWidthDp)
-                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, optimalHeight)
-                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, optimalHeight)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    val sizes = arrayListOf(android.util.SizeF(targetWidthDp.toFloat(), optimalHeight.toFloat()))
-                    putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, sizes)
-                }
-            }
-
-            val canBind = try {
-                val profile = providerInfo.profile ?: android.os.Process.myUserHandle()
-                manager.bindAppWidgetIdIfAllowed(newWidgetId, profile, providerInfo.provider, options)
-            } catch (_: Exception) {
-                false
-            }
-
-            try {
-                manager.updateAppWidgetOptions(newWidgetId, options)
-            } catch (_: Exception) {}
-
-            if (canBind) {
-                val finalInfo = manager.getAppWidgetInfo(newWidgetId) ?: providerInfo
-                checkConfigureAndAdd(newWidgetId, finalInfo, options)
-            } else {
-                pendingBindWidgetId = newWidgetId
-                pendingBindProvider = providerInfo
-                try {
-                    val bindIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
-                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, newWidgetId)
-                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, providerInfo.provider)
-                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, providerInfo.profile ?: android.os.Process.myUserHandle())
-                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_OPTIONS, options)
-                    }
-                    bindWidgetLauncher.launch(bindIntent)
-                } catch (_: Exception) {
-                    checkConfigureAndAdd(newWidgetId, providerInfo, options)
-                }
-            }
-        }
+        bindHighlightWidget(providerInfo, Unit)
     }
 
     BackHandler(onBack = onClose)
@@ -1317,9 +1209,7 @@ private fun RecentAppChip(
             Image(
                 painter = painter,
                 contentDescription = null,
-                modifier = Modifier
-                    .size(22.dp)
-                    .clip(CircleShape)
+                modifier = Modifier.size(22.dp)
             )
             if (hasTags) {
                 Icon(

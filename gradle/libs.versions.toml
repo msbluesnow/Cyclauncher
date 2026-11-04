@@ -6,7 +6,6 @@ composeBom = "2026.09.00"
 activityCompose = "1.13.0"
 coil = "3.6.3"
 freeDroidWarn = "V1.13"
-palette = "1.0.0"
 profileinstaller = "1.4.1"
 
 [libraries]
@@ -17,7 +16,6 @@ androidx-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
-androidx-palette = { group = "androidx.palette", name = "palette-ktx", version.ref = "palette" }
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 freedroidwarn = { group = "com.github.woheller69", name = "FreeDroidWarn", version.ref = "freeDroidWarn" }

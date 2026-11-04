@@ -378,6 +378,11 @@ fun AppsGrid(
 
         val iconSizeDp = dynamicSize.value.toInt()
         val painter = rememberAppIconPainter(app.iconKey, iconSizeDp)
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val iconPackVersion = dev.msbs.cyclauncher.ui.theme.LocalIconPackVersion.current
+        val iconShape = remember(context, iconPackVersion) {
+            dev.msbs.cyclauncher.icons.IconShapeHelper.getComposeShape(context)
+        }
 
         Image(
             painter = painter,
@@ -389,11 +394,10 @@ fun AppsGrid(
                     translationX = x
                     translationY = y
                 }
-                .clip(CircleShape)
                 .border(
                     width = 1.dp,
                     color = primaryTextColor.capsuleBorderColor(0.15f),
-                    shape = CircleShape
+                    shape = iconShape
                 )
                 .pointerInput(app.componentKey) {
                     detectTapGestures(

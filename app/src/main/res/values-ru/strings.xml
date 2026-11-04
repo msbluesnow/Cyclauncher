@@ -398,4 +398,26 @@
     <string name="toast_parse_tags_file_failed">Не удалось разобрать файл тегов: %1$s</string>
     <string name="toast_backup_exported">Резервная копия экспортирована (%1$d тегов, %2$d прилож.)</string>
     <string name="toast_exported_mappings">Экспортировано сопоставлений: %1$d</string>
+    <string name="toast_open_app_failed">Не удалось открыть приложение</string>
+    <string name="toast_open_profile_app_failed">Не удалось открыть приложение профиля</string>
+    <string name="toast_opening_uninstaller">Открытие удаления…</string>
+    <string name="toast_open_app_info_failed">Не удалось открыть сведения о приложении</string>
+    <string name="toast_private_space_no_store">В Частном пространстве не найден магазин. Установите магазин или используйте системные Настройки.</string>
+    <string name="toast_private_space_store_failed">Не удалось запустить магазин в Частном пространстве: %1$s</string>
+
+    <!-- Auto Tags & Backup Confirm Dialogs -->
+    <string name="dialog_auto_tags_title">Применить авто-теги?</string>
+    <string name="dialog_auto_tags_confirm">Применить</string>
+    <string name="dialog_auto_tags_summary">Приложений: %1$d, категорий: %2$d:</string>
+    <string name="dialog_auto_tags_unmatched">Не найдено на устройстве: %1$d прилож.</string>
+    <string name="dialog_backup_import_title">Импортировать резервную копию / теги?</string>
+    <string name="dialog_backup_import_confirm">Импортировать</string>
+    <string name="dialog_backup_new_tags">Новых тегов для создания: %1$d</string>
+    <string name="dialog_backup_existing_tags">Существующих тегов сохранено: %1$d</string>
+    <string name="dialog_backup_assignments">Назначений тегов: %1$d</string>
+    <string name="dialog_backup_custom_labels">Пользовательских ярлыков: %1$d</string>
+    <string name="dialog_backup_favorites">Избранных элементов: %1$d</string>
+    <string name="dialog_backup_settings">Настроек для восстановления: %1$d</string>
+    <string name="dialog_backup_char_mappings">Сопоставлений символов: %1$d</string>
+    <string name="dialog_backup_more_tags">… и ещё %1$d</string>
 </resources>

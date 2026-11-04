@@ -545,9 +545,7 @@ private fun AppWidgetAccordionCard(
                     Image(
                         painter = rememberAppIconPainter(group.iconKey, sizeDp = 28),
                         contentDescription = null,
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
+                        modifier = Modifier.size(28.dp)
                     )
 
                     Text(

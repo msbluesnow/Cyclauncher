@@ -110,9 +110,7 @@ fun AppActionMenu(
                     Image(
                         painter = iconPainter,
                         contentDescription = null,
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clip(CircleShape)
+                        modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
