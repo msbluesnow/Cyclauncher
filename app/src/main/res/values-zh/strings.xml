@@ -103,6 +103,9 @@
     <string name="widget_action_change">更换小部件</string>
     <string name="widget_action_reset_split">重置比例（50/50）</string>
     <string name="widget_action_remove">移除小部件</string>
+    <string name="widget_action_resize">调整大小</string>
+    <string name="widget_action_move">移动小部件</string>
+    <string name="widget_action_reset_layout">重置大小和位置</string>
     <string name="widget_action_options">小部件选项</string>
     <string name="widget_picker_title">小部件</string>
     <string name="widget_picker_search_placeholder">搜索应用或小部件…</string>

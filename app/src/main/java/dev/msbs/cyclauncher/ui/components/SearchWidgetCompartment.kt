@@ -6,9 +6,11 @@ import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.view.ViewGroup
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -16,9 +18,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.AspectRatio
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.OpenWith
 import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
@@ -30,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -37,6 +43,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.coerceAtMost
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -44,7 +52,9 @@ import androidx.compose.ui.res.stringResource
 import dev.msbs.cyclauncher.R
 import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.LauncherViewModel
+import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.widget.LauncherAppWidgetHostView
+import kotlin.math.roundToInt
 
 /**
  * Top compartment hosting two custom Android widgets side-by-side separated by a draggable divider.
@@ -461,13 +471,28 @@ fun SideSearchWidgetSlot(
     // Cache the host view across letter switches to prevent heavy IPC & RemoteViews re-inflation
     var cachedHostView by remember(widgetId) { mutableStateOf<LauncherAppWidgetHostView?>(null) }
 
+    val layout by viewModel.sideSearchWidgetLayout.collectAsState()
+    val buttonTextColor by viewModel.buttonTextColor.collectAsState()
+    val showShadows by viewModel.showShadows.collectAsState()
+    val shadowSettings = LocalShadowSettings.current
+
+    var showResize by remember { mutableStateOf(false) }
+    var isMoving by remember(widgetId) { mutableStateOf(false) }
+    // Live offset fractions while dragging; persisted on release
+    var liveOffsetX by remember { mutableStateOf<Float?>(null) }
+    var liveOffsetY by remember { mutableStateOf<Float?>(null) }
+
+    BackHandler(enabled = isMoving) { isMoving = false }
+
     val currentWidgetId = widgetId
 
-    BoxWithConstraints(modifier = modifier) {
+    BoxWithConstraints(
+        modifier = modifier.then(
+            if (isMoving) Modifier.pointerInput(Unit) { detectTapGestures { isMoving = false } } else Modifier
+        )
+    ) {
         val totalWidth = maxWidth
         val totalHeight = maxHeight
-        val slotWidthPx = with(density) { totalWidth.toPx() }
-        val slotHeightPx = with(density) { totalHeight.toPx() }
 
         if (currentWidgetId == null || widgetInfo == null) {
             // Empty placeholder card
@@ -502,10 +527,27 @@ fun SideSearchWidgetSlot(
                 }
             }
         } else {
+            val widgetWidth = totalWidth * layout.widthFraction
+            val widgetHeight = layout.heightDp?.dp?.coerceAtMost(totalHeight) ?: totalHeight
+            val freeWidthPx = with(density) { (totalWidth - widgetWidth).toPx() }.coerceAtLeast(0f)
+            val freeHeightPx = with(density) { (totalHeight - widgetHeight).toPx() }.coerceAtLeast(0f)
+            val offsetFractionX = liveOffsetX ?: layout.offsetX
+            val offsetFractionY = liveOffsetY ?: layout.offsetY
+
+            val currentFreeWidthPx by rememberUpdatedState(freeWidthPx)
+            val currentFreeHeightPx by rememberUpdatedState(freeHeightPx)
+            val currentLayout by rememberUpdatedState(layout)
+
             // Active embedded widget
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .offset {
+                        IntOffset(
+                            (freeWidthPx * offsetFractionX).roundToInt(),
+                            (freeHeightPx * offsetFractionY).roundToInt()
+                        )
+                    }
+                    .size(widgetWidth, widgetHeight)
                     .clip(RoundedCornerShape(12.dp))
             ) {
                 AndroidView(
@@ -528,32 +570,114 @@ fun SideSearchWidgetSlot(
                     modifier = Modifier.fillMaxSize(),
                     update = { view ->
                         try {
-                            val displayDensity = context.resources.displayMetrics.density
-                            val targetWidthDp = (slotWidthPx / displayDensity).toInt().coerceAtLeast(30)
-                            val targetHeightDp = (slotHeightPx / displayDensity).toInt().coerceAtLeast(30)
+                            val targetWidthDp = widgetWidth.value.toInt().coerceAtLeast(30)
+                            val targetHeightDp = widgetHeight.value.toInt().coerceAtLeast(30)
                             (view as? LauncherAppWidgetHostView)?.applyWidgetSize(targetWidthDp, targetHeightDp)
                         } catch (_: Throwable) {}
                     }
                 )
 
-                // Corner options button — positioned at the bottom on the hand-side edge
+                if (isMoving) {
+                    // Drag overlay: captures touches so the widget itself doesn't react while moving
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(accentColor.color.copy(alpha = 0.14f))
+                            .border(2.dp, accentColor.color, RoundedCornerShape(12.dp))
+                            .pointerInput(Unit) {
+                                detectDragGestures(
+                                    onDragStart = {
+                                        liveOffsetX = currentLayout.offsetX
+                                        liveOffsetY = currentLayout.offsetY
+                                    },
+                                    onDragEnd = {
+                                        viewModel.updateSideSearchWidgetOffset(
+                                            liveOffsetX ?: currentLayout.offsetX,
+                                            liveOffsetY ?: currentLayout.offsetY
+                                        )
+                                        liveOffsetX = null
+                                        liveOffsetY = null
+                                    },
+                                    onDragCancel = {
+                                        liveOffsetX = null
+                                        liveOffsetY = null
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        fun step(current: Float, delta: Float, free: Float): Float {
+                                            if (free <= 0f) return current
+                                            val next = (current + delta / free).coerceIn(0f, 1f)
+                                            val atEdge = next == 0f || next == 1f
+                                            val crossedCenter = (current - 0.5f) * (next - 0.5f) < 0f
+                                            if ((atEdge && next != current) || crossedCenter) {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            }
+                                            return next
+                                        }
+                                        liveOffsetX = step(liveOffsetX ?: currentLayout.offsetX, dragAmount.x, currentFreeWidthPx)
+                                        liveOffsetY = step(liveOffsetY ?: currentLayout.offsetY, dragAmount.y, currentFreeHeightPx)
+                                    }
+                                )
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.OpenWith,
+                            contentDescription = stringResource(R.string.widget_action_move),
+                            tint = accentColor.color,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+
+                // Corner button — options, or "done" while moving — at the bottom on the hand-side edge
                 Box(
                     modifier = Modifier
                         .align(if (handSide == HandSide.LEFT) Alignment.BottomStart else Alignment.BottomEnd)
                         .padding(6.dp)
-                        .size(24.dp)
+                        .size(if (isMoving) 32.dp else 24.dp)
                         .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.38f))
-                        .clickable { showOptions = true },
+                        .background(if (isMoving) accentColor.color else Color.Black.copy(alpha = 0.38f))
+                        .clickable {
+                            if (isMoving) {
+                                isMoving = false
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            } else {
+                                showOptions = true
+                            }
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.MoreVert,
-                        contentDescription = stringResource(R.string.widget_action_options),
-                        tint = Color.White.copy(alpha = 0.85f),
-                        modifier = Modifier.size(14.dp)
+                        imageVector = if (isMoving) Icons.Outlined.Check else Icons.Outlined.MoreVert,
+                        contentDescription = stringResource(if (isMoving) R.string.common_done else R.string.widget_action_options),
+                        tint = if (isMoving) buttonTextColor.color else Color.White.copy(alpha = 0.85f),
+                        modifier = Modifier.size(if (isMoving) 18.dp else 14.dp)
                     )
                 }
+            }
+
+            if (showResize) {
+                val maxHeightDp = totalHeight.value.toInt().coerceAtLeast(71)
+                WidgetResizeDialog(
+                    initialHeightDp = layout.heightDp ?: maxHeightDp,
+                    initialWidthFraction = layout.widthFraction,
+                    accentColor = accentColor,
+                    primaryTextColor = primaryTextColor,
+                    buttonTextColor = buttonTextColor,
+                    popupTheme = popupTheme,
+                    showShadows = showShadows,
+                    shadowSettings = shadowSettings,
+                    heightRange = 70..maxHeightDp,
+                    onDismiss = { showResize = false },
+                    onApply = { newHeight, newWidth ->
+                        // Choosing the full available height means "fill", so it adapts to the area
+                        viewModel.updateSideSearchWidgetSize(
+                            heightDp = newHeight.takeIf { it < maxHeightDp },
+                            widthFraction = newWidth
+                        )
+                    }
+                )
             }
         }
     }
@@ -591,49 +715,62 @@ fun SideSearchWidgetSlot(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    TextButton(
-                        onClick = {
-                            showOptions = false
-                            onPickWidget()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.textButtonColors(contentColor = popupTheme.contentColor)
+                    WidgetOptionButton(
+                        icon = Icons.Outlined.Edit,
+                        label = stringResource(R.string.widget_action_change),
+                        iconTint = accentColor.color,
+                        contentColor = popupTheme.contentColor
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Start
-                        ) {
-                            Icon(Icons.Outlined.Edit, contentDescription = null, tint = accentColor.color)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(stringResource(R.string.widget_action_change), fontSize = 15.sp)
-                        }
+                        showOptions = false
+                        onPickWidget()
                     }
 
-                    TextButton(
-                        onClick = {
-                            showOptions = false
-                            widgetId?.let { id ->
-                                try {
-                                    appWidgetHost?.deleteAppWidgetId(id)
-                                } catch (_: Exception) {}
-                            }
-                            cachedHostView = null
-                            viewModel.removeSideSearchWidget()
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFFF5252))
+                    WidgetOptionButton(
+                        icon = Icons.Outlined.AspectRatio,
+                        label = stringResource(R.string.widget_action_resize),
+                        iconTint = accentColor.color,
+                        contentColor = popupTheme.contentColor
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Start
-                        ) {
-                            Icon(Icons.Outlined.Delete, contentDescription = null, tint = Color(0xFFFF5252))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(stringResource(R.string.widget_action_remove), fontSize = 15.sp)
+                        showOptions = false
+                        showResize = true
+                    }
+
+                    WidgetOptionButton(
+                        icon = Icons.Outlined.OpenWith,
+                        label = stringResource(R.string.widget_action_move),
+                        iconTint = accentColor.color,
+                        contentColor = popupTheme.contentColor
+                    ) {
+                        showOptions = false
+                        isMoving = true
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
+
+                    WidgetOptionButton(
+                        icon = Icons.Outlined.RestartAlt,
+                        label = stringResource(R.string.widget_action_reset_layout),
+                        iconTint = accentColor.color,
+                        contentColor = popupTheme.contentColor
+                    ) {
+                        showOptions = false
+                        viewModel.resetSideSearchWidgetLayout()
+                    }
+
+                    WidgetOptionButton(
+                        icon = Icons.Outlined.Delete,
+                        label = stringResource(R.string.widget_action_remove),
+                        iconTint = Color(0xFFFF5252),
+                        contentColor = Color(0xFFFF5252)
+                    ) {
+                        showOptions = false
+                        widgetId?.let { id ->
+                            try {
+                                appWidgetHost?.deleteAppWidgetId(id)
+                            } catch (_: Exception) {}
                         }
+                        cachedHostView = null
+                        viewModel.removeSideSearchWidget()
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     }
                 }
             },
@@ -646,6 +783,31 @@ fun SideSearchWidgetSlot(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun WidgetOptionButton(
+    icon: ImageVector,
+    label: String,
+    iconTint: Color,
+    contentColor: Color,
+    onClick: () -> Unit
+) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.textButtonColors(contentColor = contentColor)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Icon(icon, contentDescription = null, tint = iconTint)
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(label, fontSize = 15.sp)
+        }
     }
 }
 

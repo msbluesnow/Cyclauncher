@@ -103,6 +103,9 @@
     <string name="widget_action_change">Widget Ändern</string>
     <string name="widget_action_reset_split">Aufteilung Zurücksetzen (50/50)</string>
     <string name="widget_action_remove">Widget Entfernen</string>
+    <string name="widget_action_resize">Widget Größe Ändern</string>
+    <string name="widget_action_move">Widget Verschieben</string>
+    <string name="widget_action_reset_layout">Größe &amp; Position Zurücksetzen</string>
     <string name="widget_action_options">Widget-Optionen</string>
     <string name="widget_picker_title">WIDGETS</string>
     <string name="widget_picker_search_placeholder">Apps oder Widgets suchen…</string>

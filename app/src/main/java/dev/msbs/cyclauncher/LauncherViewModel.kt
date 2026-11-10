@@ -63,6 +63,17 @@ data class SearchWidgetsConfig(
 )
 
 /**
+ * Size and position of the side search widget within its area.
+ * [heightDp] null means fill the available height; offsets are fractions (0..1) of the free space.
+ */
+data class SideSearchWidgetLayout(
+    val heightDp: Int? = null,
+    val widthFraction: Float = 1.0f,
+    val offsetX: Float = 0.5f,
+    val offsetY: Float = 0.5f
+)
+
+/**
  * Represents the user's preferred hand orientation for the launcher UI layout.
  */
 enum class HandSide { LEFT, RIGHT }
@@ -693,12 +704,56 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun setSideSearchWidget(widgetId: Int?) {
+        if (widgetId != _sideSearchWidgetId.value) resetSideSearchWidgetLayout()
         _sideSearchWidgetId.value = widgetId
         saveSideSearchWidgetId(widgetId)
     }
 
     fun removeSideSearchWidget() {
         setSideSearchWidget(null)
+    }
+
+    private val _sideSearchWidgetLayout = MutableStateFlow(loadSideSearchWidgetLayout())
+    val sideSearchWidgetLayout: StateFlow<SideSearchWidgetLayout> = _sideSearchWidgetLayout.asStateFlow()
+
+    private fun loadSideSearchWidgetLayout(): SideSearchWidgetLayout = SideSearchWidgetLayout(
+        heightDp = prefs.getNullableInt("side_search_widget_height"),
+        widthFraction = prefs.getFloat("side_search_widget_width_fraction", 1.0f).coerceIn(0.25f, 1.0f),
+        offsetX = prefs.getFloat("side_search_widget_offset_x", 0.5f).coerceIn(0f, 1f),
+        offsetY = prefs.getFloat("side_search_widget_offset_y", 0.5f).coerceIn(0f, 1f)
+    )
+
+    private fun saveSideSearchWidgetLayout(layout: SideSearchWidgetLayout) {
+        editPrefs {
+            putNullableInt("side_search_widget_height", layout.heightDp)
+            putFloat("side_search_widget_width_fraction", layout.widthFraction)
+            putFloat("side_search_widget_offset_x", layout.offsetX)
+            putFloat("side_search_widget_offset_y", layout.offsetY)
+        }
+    }
+
+    fun updateSideSearchWidgetSize(heightDp: Int?, widthFraction: Float) {
+        val updated = _sideSearchWidgetLayout.value.copy(
+            heightDp = heightDp,
+            widthFraction = widthFraction.coerceIn(0.25f, 1.0f)
+        )
+        _sideSearchWidgetLayout.value = updated
+        saveSideSearchWidgetLayout(updated)
+    }
+
+    fun updateSideSearchWidgetOffset(offsetX: Float, offsetY: Float) {
+        val updated = _sideSearchWidgetLayout.value.copy(
+            offsetX = offsetX.coerceIn(0f, 1f),
+            offsetY = offsetY.coerceIn(0f, 1f)
+        )
+        _sideSearchWidgetLayout.value = updated
+        saveSideSearchWidgetLayout(updated)
+    }
+
+    fun resetSideSearchWidgetLayout() {
+        val default = SideSearchWidgetLayout()
+        _sideSearchWidgetLayout.value = default
+        saveSideSearchWidgetLayout(default)
     }
 
     private fun loadSideAlphabetSlotMode(): SideAlphabetSlotMode {
@@ -892,6 +947,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _highlightWidgets.value = loadHighlightWidgets()
         _searchWidgetsConfig.value = loadSearchWidgetsConfig()
         _sideSearchWidgetId.value = loadSideSearchWidgetId()
+        _sideSearchWidgetLayout.value = loadSideSearchWidgetLayout()
         _sideAlphabetWidgetId.value = loadSideAlphabetWidgetId()
 
         val savedIconPack = prefs.getString("icon_pack_package", null)?.takeIf { it.isNotBlank() }
