@@ -104,6 +104,9 @@
     <string name="widget_action_change">ウィジェットを変更</string>
     <string name="widget_action_reset_split">分割をリセット (50/50)</string>
     <string name="widget_action_remove">ウィジェットを削除</string>
+    <string name="widget_action_resize">サイズを変更</string>
+    <string name="widget_action_move">ウィジェットを移動</string>
+    <string name="widget_action_reset_layout">サイズと位置をリセット</string>
     <string name="widget_action_options">ウィジェットのオプション</string>
     <string name="widget_picker_title">ウィジェット</string>
     <string name="widget_picker_search_placeholder">アプリまたはウィジェットを検索…</string>

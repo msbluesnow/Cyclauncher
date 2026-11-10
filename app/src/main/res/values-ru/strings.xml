@@ -101,6 +101,9 @@
     <string name="widget_action_change">Изменить виджет</string>
     <string name="widget_action_reset_split">Сбросить пропорции (50/50)</string>
     <string name="widget_action_remove">Удалить виджет</string>
+    <string name="widget_action_resize">Изменить размер</string>
+    <string name="widget_action_move">Переместить виджет</string>
+    <string name="widget_action_reset_layout">Сбросить размер и положение</string>
     <string name="widget_action_options">Параметры виджета</string>
     <string name="widget_picker_title">ВИДЖЕТЫ</string>
     <string name="widget_picker_search_placeholder">Поиск приложений или виджетов…</string>
