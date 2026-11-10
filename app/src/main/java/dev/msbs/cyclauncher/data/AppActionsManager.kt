@@ -953,30 +953,43 @@ class AppActionsManager(context: Context) {
                     } catch (_: Exception) {}
                     return@forEach
                 }
-                if (key == "custom_char_mappings") {
+                if (key in LauncherBackupManager.INTERNAL_PREF_KEYS) {
+                    return@forEach
+                }
+                if (key == "icon_pack_package" && !LauncherBackupManager.isValidPackageName(value)) {
                     return@forEach
                 }
                 val existingVal = existingPrefs[key]
                 when {
                     existingVal is Boolean -> {
-                        editor.putBoolean(key, value.toBoolean())
+                        value.lowercase().toBooleanStrictOrNull()?.let { editor.putBoolean(key, it) }
                     }
                     existingVal is Int -> {
-                        value.toIntOrNull()?.let { editor.putInt(key, it) } ?: editor.putString(key, value)
+                        value.toIntOrNull()?.let { editor.putInt(key, it) }
                     }
                     existingVal is Long -> {
-                        value.toLongOrNull()?.let { editor.putLong(key, it) } ?: editor.putString(key, value)
+                        value.toLongOrNull()?.let { editor.putLong(key, it) }
                     }
                     existingVal is Float -> {
-                        value.toFloatOrNull()?.let { editor.putFloat(key, it) } ?: editor.putString(key, value)
+                        value.toFloatOrNull()?.takeIf { it.isFinite() }?.let { editor.putFloat(key, it) }
                     }
                     value.equals("true", ignoreCase = true) -> editor.putBoolean(key, true)
                     value.equals("false", ignoreCase = true) -> editor.putBoolean(key, false)
-                    key.endsWith("_id") || key == "cached_colors_algo_version" -> {
-                        value.toIntOrNull()?.let { editor.putInt(key, it) } ?: editor.putString(key, value)
+                    key.endsWith("_id") ||
+                        key.endsWith("_height") ||
+                        key.endsWith("_step") ||
+                        key == "cached_colors_algo_version" -> {
+                        value.toIntOrNull()?.let { editor.putInt(key, it) }
                     }
-                    key.endsWith("_alpha") || key.contains("ratio") -> {
-                        value.toFloatOrNull()?.let { editor.putFloat(key, it) } ?: editor.putString(key, value)
+                    key.endsWith("_version") -> {
+                        value.toLongOrNull()?.let { editor.putLong(key, it) }
+                    }
+                    key.endsWith("_alpha") ||
+                        key.contains("ratio") ||
+                        key.endsWith("_fraction") ||
+                        key.endsWith("_offset_x") ||
+                        key.endsWith("_offset_y") -> {
+                        value.toFloatOrNull()?.takeIf { it.isFinite() }?.let { editor.putFloat(key, it) }
                     }
                     else -> {
                         editor.putString(key, value)

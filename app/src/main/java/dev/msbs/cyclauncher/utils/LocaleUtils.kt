@@ -77,8 +77,13 @@ object LocaleUtils {
     private const val PREF_APP_LANGUAGE = "pref_app_language"
 
     fun setAppLanguage(context: Context, languageCode: String) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putString(PREF_APP_LANGUAGE, languageCode).apply()
+        try {
+            val safeCtx = context.getSafeStorageContext()
+            val prefs = safeCtx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putString(PREF_APP_LANGUAGE, languageCode).apply()
+        } catch (_: Exception) {
+            // Ignore if storage is unavailable during early Direct Boot
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val localeManager = context.getSystemService(LocaleManager::class.java)
@@ -104,21 +109,28 @@ object LocaleUtils {
 
     fun getCurrentLanguageCode(context: Context): String {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val localeManager = context.getSystemService(LocaleManager::class.java)
-            val locales = localeManager?.applicationLocales
-            if (locales != null && !locales.isEmpty) {
-                val locale = locales[0] ?: return ""
-                val tag = locale.toLanguageTag()
-                val lang = locale.language ?: ""
-                return when {
-                    SUPPORTED_LANGUAGES.any { it.code.equals(tag, ignoreCase = true) } -> tag
-                    SUPPORTED_LANGUAGES.any { it.code.equals(lang, ignoreCase = true) } -> lang
-                    else -> lang
+            try {
+                val localeManager = context.getSystemService(LocaleManager::class.java)
+                val locales = localeManager?.applicationLocales
+                if (locales != null && !locales.isEmpty) {
+                    val locale = locales[0] ?: return ""
+                    val tag = locale.toLanguageTag()
+                    val lang = locale.language ?: ""
+                    return when {
+                        SUPPORTED_LANGUAGES.any { it.code.equals(tag, ignoreCase = true) } -> tag
+                        SUPPORTED_LANGUAGES.any { it.code.equals(lang, ignoreCase = true) } -> lang
+                        else -> lang
+                    }
                 }
-            }
+            } catch (_: Exception) {}
         }
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getString(PREF_APP_LANGUAGE, "") ?: ""
+        return try {
+            val safeCtx = context.getSafeStorageContext()
+            val prefs = safeCtx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.getString(PREF_APP_LANGUAGE, "") ?: ""
+        } catch (_: Exception) {
+            ""
+        }
     }
 
     fun wrapContext(base: Context): Context {

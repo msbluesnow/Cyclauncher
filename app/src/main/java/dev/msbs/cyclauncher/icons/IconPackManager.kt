@@ -25,8 +25,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 data class IconPackInfo(
     val packageName: String,
-    val name: String,
-    val icon: Drawable?
+    val name: String
 )
 
 /**
@@ -149,8 +148,7 @@ object IconPackManager {
                 val pkg = resolveInfo.activityInfo?.packageName ?: continue
                 if (pkg != context.packageName && discoveredPackages.add(pkg)) {
                     val name = resolveInfo.loadLabel(pm).toString()
-                    val icon = resolveInfo.loadIcon(pm)
-                    result.add(IconPackInfo(pkg, name, icon))
+                    result.add(IconPackInfo(pkg, name))
                 }
             }
         }
@@ -163,8 +161,7 @@ object IconPackManager {
                 val pkg = resolveInfo.activityInfo?.packageName ?: continue
                 if (pkg != context.packageName && discoveredPackages.add(pkg)) {
                     val name = resolveInfo.loadLabel(pm).toString()
-                    val icon = resolveInfo.loadIcon(pm)
-                    result.add(IconPackInfo(pkg, name, icon))
+                    result.add(IconPackInfo(pkg, name))
                 }
             }
         }
@@ -180,8 +177,7 @@ object IconPackManager {
                     pm.getApplicationInfo(systemPkg, 0)
                 }
                 val name = appInfo.loadLabel(pm).toString()
-                val icon = appInfo.loadIcon(pm)
-                result.add(IconPackInfo(systemPkg, name, icon))
+                result.add(IconPackInfo(systemPkg, name))
             } catch (_: Exception) {}
         }
 

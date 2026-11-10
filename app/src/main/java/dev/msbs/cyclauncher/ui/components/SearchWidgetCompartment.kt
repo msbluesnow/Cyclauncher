@@ -553,16 +553,17 @@ fun SideSearchWidgetSlot(
                 AndroidView(
                     factory = { ctx ->
                         try {
-                            cachedHostView ?: run {
+                            val view = cachedHostView ?: run {
                                 val host = appWidgetHost
-                                val view = (host?.createView(ctx, currentWidgetId, widgetInfo) as? LauncherAppWidgetHostView)
+                                val created = (host?.createView(ctx, currentWidgetId, widgetInfo) as? LauncherAppWidgetHostView)
                                     ?: LauncherAppWidgetHostView(ctx).apply {
                                         setAppWidget(currentWidgetId, widgetInfo)
                                     }
-                                (view.parent as? ViewGroup)?.removeView(view)
-                                cachedHostView = view
-                                view
+                                cachedHostView = created
+                                created
                             }
+                            (view.parent as? ViewGroup)?.removeView(view)
+                            view
                         } catch (_: Throwable) {
                             android.widget.FrameLayout(ctx)
                         }
@@ -570,20 +571,23 @@ fun SideSearchWidgetSlot(
                     modifier = Modifier.fillMaxSize(),
                     update = { view ->
                         try {
-                            val targetWidthDp = widgetWidth.value.toInt().coerceAtLeast(30)
-                            val targetHeightDp = widgetHeight.value.toInt().coerceAtLeast(30)
+                            val targetWidthDp = widgetWidth.value.roundToInt().coerceAtLeast(30)
+                            val targetHeightDp = widgetHeight.value.roundToInt().coerceAtLeast(30)
                             (view as? LauncherAppWidgetHostView)?.applyWidgetSize(targetWidthDp, targetHeightDp)
                         } catch (_: Throwable) {}
                     }
                 )
 
                 if (isMoving) {
-                    // Drag overlay: captures touches so the widget itself doesn't react while moving
+                    // Drag overlay: captures both taps and drags so the underlying AppWidgetHostView never receives touches while moving
                     Box(
                         modifier = Modifier
                             .matchParentSize()
                             .background(accentColor.color.copy(alpha = 0.14f))
                             .border(2.dp, accentColor.color, RoundedCornerShape(12.dp))
+                            .pointerInput(Unit) {
+                                detectTapGestures { isMoving = false }
+                            }
                             .pointerInput(Unit) {
                                 detectDragGestures(
                                     onDragStart = {
@@ -658,7 +662,7 @@ fun SideSearchWidgetSlot(
             }
 
             if (showResize) {
-                val maxHeightDp = totalHeight.value.toInt().coerceAtLeast(71)
+                val maxHeightDp = totalHeight.value.roundToInt().coerceAtLeast(71)
                 WidgetResizeDialog(
                     initialHeightDp = layout.heightDp ?: maxHeightDp,
                     initialWidthFraction = layout.widthFraction,
@@ -896,16 +900,17 @@ fun SideAlphabetWidgetSlot(
                 AndroidView(
                     factory = { ctx ->
                         try {
-                            cachedHostView ?: run {
+                            val view = cachedHostView ?: run {
                                 val host = appWidgetHost
-                                val view = (host?.createView(ctx, currentWidgetId, widgetInfo) as? LauncherAppWidgetHostView)
+                                val created = (host?.createView(ctx, currentWidgetId, widgetInfo) as? LauncherAppWidgetHostView)
                                     ?: LauncherAppWidgetHostView(ctx).apply {
                                         setAppWidget(currentWidgetId, widgetInfo)
                                     }
-                                (view.parent as? ViewGroup)?.removeView(view)
-                                cachedHostView = view
-                                view
+                                cachedHostView = created
+                                created
                             }
+                            (view.parent as? ViewGroup)?.removeView(view)
+                            view
                         } catch (_: Throwable) {
                             android.widget.FrameLayout(ctx)
                         }

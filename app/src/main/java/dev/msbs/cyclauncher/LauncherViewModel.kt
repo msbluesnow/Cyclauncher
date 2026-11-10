@@ -662,7 +662,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private fun loadSearchWidgetsConfig(): SearchWidgetsConfig = SearchWidgetsConfig(
         leftWidgetId = prefs.getNullableInt("search_widget_left_id"),
         rightWidgetId = prefs.getNullableInt("search_widget_right_id"),
-        splitRatio = prefs.getFloat("search_widget_split_ratio", 0.5f).coerceIn(0.15f, 0.85f)
+        splitRatio = prefs.safeGetFloat("search_widget_split_ratio", 0.5f).coerceIn(0.15f, 0.85f)
     )
 
     private fun saveSearchWidgetsConfig(config: SearchWidgetsConfig) {
@@ -713,14 +713,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         setSideSearchWidget(null)
     }
 
-    private val _sideSearchWidgetLayout = MutableStateFlow(loadSideSearchWidgetLayout())
+    private val _sideSearchWidgetLayout = MutableStateFlow(SideSearchWidgetLayout())
     val sideSearchWidgetLayout: StateFlow<SideSearchWidgetLayout> = _sideSearchWidgetLayout.asStateFlow()
 
     private fun loadSideSearchWidgetLayout(): SideSearchWidgetLayout = SideSearchWidgetLayout(
         heightDp = prefs.getNullableInt("side_search_widget_height"),
-        widthFraction = prefs.getFloat("side_search_widget_width_fraction", 1.0f).coerceIn(0.25f, 1.0f),
-        offsetX = prefs.getFloat("side_search_widget_offset_x", 0.5f).coerceIn(0f, 1f),
-        offsetY = prefs.getFloat("side_search_widget_offset_y", 0.5f).coerceIn(0f, 1f)
+        widthFraction = prefs.safeGetFloat("side_search_widget_width_fraction", 1.0f).coerceIn(0.25f, 1.0f),
+        offsetX = prefs.safeGetFloat("side_search_widget_offset_x", 0.5f).coerceIn(0f, 1f),
+        offsetY = prefs.safeGetFloat("side_search_widget_offset_y", 0.5f).coerceIn(0f, 1f)
     )
 
     private fun saveSideSearchWidgetLayout(layout: SideSearchWidgetLayout) {
@@ -757,12 +757,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun loadSideAlphabetSlotMode(): SideAlphabetSlotMode {
-        val raw = prefs.getString("side_alphabet_slot_mode", null)
+        val raw = prefs.safeGetString("side_alphabet_slot_mode", null)
         if (raw != null) {
             return try { SideAlphabetSlotMode.valueOf(raw) } catch (_: Exception) { SideAlphabetSlotMode.HISTORY }
         }
         if (prefs.contains("show_search_history")) {
-            return if (prefs.getBoolean("show_search_history", true)) SideAlphabetSlotMode.HISTORY else SideAlphabetSlotMode.DISABLED
+            return if (prefs.safeGetBoolean("show_search_history", true)) SideAlphabetSlotMode.HISTORY else SideAlphabetSlotMode.DISABLED
         }
         return SideAlphabetSlotMode.HISTORY
     }
@@ -867,13 +867,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     init {
         reloadSettings()
 
-        val isTutorialCompleted = prefs.getBoolean("is_tutorial_completed", false)
+        val isTutorialCompleted = prefs.safeGetBoolean("is_tutorial_completed", false)
         if (!isTutorialCompleted) {
             _showTutorial.value = true
             _tutorialStep.value = 0
         }
 
-        val savedIconPack = prefs.getString("icon_pack_package", null)?.takeIf { it.isNotBlank() }
+        val savedIconPack = prefs.safeGetString("icon_pack_package", null)?.takeIf { it.isNotBlank() }
         _selectedIconPack.value = savedIconPack
         viewModelScope.launch {
             _installedIconPacks.value = IconPackManager.getInstalledIconPacks(safeContext)
@@ -888,61 +888,61 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun reloadSettings() {
-        val savedHand = prefs.getString("hand_side", HandSide.LEFT.name) ?: HandSide.LEFT.name
+        val savedHand = prefs.safeGetString("hand_side", HandSide.LEFT.name) ?: HandSide.LEFT.name
         _handSide.value = try { HandSide.valueOf(savedHand) } catch (e: Exception) { HandSide.LEFT }
         _searchListAlignment.value = if (_handSide.value == HandSide.LEFT) TextAlign.Start else TextAlign.End
         
-        val savedColor = prefs.getString("accent_color", AccentColor.SKY.name) ?: AccentColor.SKY.name
+        val savedColor = prefs.safeGetString("accent_color", AccentColor.SKY.name) ?: AccentColor.SKY.name
         _accentColor.value = AccentColor.fromName(savedColor, null)
         
-        val savedTextColor = prefs.getString("primary_text_color", PrimaryTextColor.WHITE.name) ?: PrimaryTextColor.WHITE.name
+        val savedTextColor = prefs.safeGetString("primary_text_color", PrimaryTextColor.WHITE.name) ?: PrimaryTextColor.WHITE.name
         _primaryTextColor.value = PrimaryTextColor.fromName(savedTextColor)
 
-        val savedButtonTextColor = prefs.getString("button_text_color", PrimaryTextColor.BLACK.name) ?: PrimaryTextColor.BLACK.name
+        val savedButtonTextColor = prefs.safeGetString("button_text_color", PrimaryTextColor.BLACK.name) ?: PrimaryTextColor.BLACK.name
         _buttonTextColor.value = PrimaryTextColor.fromName(savedButtonTextColor)
 
-        val savedPopupTheme = prefs.getString("popup_theme", PopupTheme.DARK.name) ?: PopupTheme.DARK.name
+        val savedPopupTheme = prefs.safeGetString("popup_theme", PopupTheme.DARK.name) ?: PopupTheme.DARK.name
         _popupTheme.value = PopupTheme.fromName(savedPopupTheme)
         
         if (!prefs.contains("show_shadows")) {
             _showShadows.value = true 
         } else {
-            _showShadows.value = prefs.getBoolean("show_shadows", true)
+            _showShadows.value = prefs.safeGetBoolean("show_shadows", true)
         }
 
-        val savedShadowColor = prefs.getString("shadow_color", PrimaryTextColor.BLACK.name) ?: PrimaryTextColor.BLACK.name
+        val savedShadowColor = prefs.safeGetString("shadow_color", PrimaryTextColor.BLACK.name) ?: PrimaryTextColor.BLACK.name
         _shadowColor.value = PrimaryTextColor.fromName(savedShadowColor)
 
-        _hideStatusBar.value = prefs.getBoolean("hide_status_bar", false)
-        _showSearchWidgets.value = prefs.getBoolean("show_search_widgets", true)
-        _showSearchHistory.value = prefs.getBoolean("show_search_history", true)
-        _animationsEnabled.value = prefs.getBoolean("animations_enabled", true)
-        _marqueeEnabled.value = prefs.getBoolean("marquee_enabled", true)
-        _screenScrimAlpha.value = prefs.getFloat("screen_scrim_alpha", 0f).coerceIn(0f, 1f)
-        _capsuleAlpha.value = prefs.getFloat("capsule_alpha", 0f).coerceIn(0f, 1f)
+        _hideStatusBar.value = prefs.safeGetBoolean("hide_status_bar", false)
+        _showSearchWidgets.value = prefs.safeGetBoolean("show_search_widgets", true)
+        _showSearchHistory.value = prefs.safeGetBoolean("show_search_history", true)
+        _animationsEnabled.value = prefs.safeGetBoolean("animations_enabled", true)
+        _marqueeEnabled.value = prefs.safeGetBoolean("marquee_enabled", true)
+        _screenScrimAlpha.value = prefs.safeGetFloat("screen_scrim_alpha", 0f).coerceIn(0f, 1f)
+        _capsuleAlpha.value = prefs.safeGetFloat("capsule_alpha", 0f).coerceIn(0f, 1f)
         val defaultDark = _primaryTextColor.value != PrimaryTextColor.BLACK
-        _screenScrimIsDark.value = prefs.getBoolean("screen_scrim_is_dark", defaultDark)
-        _capsuleIsDark.value = prefs.getBoolean("capsule_is_dark", defaultDark)
-        _popupAlpha.value = prefs.getFloat("popup_alpha", 0.81f).coerceIn(0f, 1f)
-        _hapticFeedbackEnabled.value = prefs.getBoolean("haptic_feedback_enabled", true)
-        _monochromeHistory.value = prefs.getBoolean("monochrome_history", false)
-        _monochromeTags.value = prefs.getBoolean("monochrome_tags", false)
-        _showTagsArea.value = prefs.getBoolean("show_tags_area", true)
-        _showHistoryArea.value = prefs.getBoolean("show_history_area", true)
-        _showKeepAndroidOpenDays.value = prefs.getBoolean("show_keep_android_open_days", true)
+        _screenScrimIsDark.value = prefs.safeGetBoolean("screen_scrim_is_dark", defaultDark)
+        _capsuleIsDark.value = prefs.safeGetBoolean("capsule_is_dark", defaultDark)
+        _popupAlpha.value = prefs.safeGetFloat("popup_alpha", 0.81f).coerceIn(0f, 1f)
+        _hapticFeedbackEnabled.value = prefs.safeGetBoolean("haptic_feedback_enabled", true)
+        _monochromeHistory.value = prefs.safeGetBoolean("monochrome_history", false)
+        _monochromeTags.value = prefs.safeGetBoolean("monochrome_tags", false)
+        _showTagsArea.value = prefs.safeGetBoolean("show_tags_area", true)
+        _showHistoryArea.value = prefs.safeGetBoolean("show_history_area", true)
+        _showKeepAndroidOpenDays.value = prefs.safeGetBoolean("show_keep_android_open_days", true)
 
-        val savedSearchMethod = prefs.getString("search_method", SearchMethod.SIDE_ALPHABET.name) ?: SearchMethod.SIDE_ALPHABET.name
+        val savedSearchMethod = prefs.safeGetString("search_method", SearchMethod.SIDE_ALPHABET.name) ?: SearchMethod.SIDE_ALPHABET.name
         val initialMethod = try { SearchMethod.valueOf(savedSearchMethod) } catch (e: Exception) { SearchMethod.SIDE_ALPHABET }
         _searchMethod.value = initialMethod
         _isTextSearchMode.value = (initialMethod == SearchMethod.TEXT)
 
-        val savedLastAlphabet = prefs.getString("last_alphabet_search_method", SearchMethod.SIDE_ALPHABET.name) ?: SearchMethod.SIDE_ALPHABET.name
+        val savedLastAlphabet = prefs.safeGetString("last_alphabet_search_method", SearchMethod.SIDE_ALPHABET.name) ?: SearchMethod.SIDE_ALPHABET.name
         val initialLastAlphabet = try { SearchMethod.valueOf(savedLastAlphabet) } catch (e: Exception) { SearchMethod.SIDE_ALPHABET }
         lastAlphabetSearchMethod = if (initialLastAlphabet == SearchMethod.TEXT) SearchMethod.SIDE_ALPHABET else initialLastAlphabet
 
         _searchListAlignment.value = if (_handSide.value == HandSide.LEFT) TextAlign.End else TextAlign.Start
         _sideAlphabetSlotMode.value = loadSideAlphabetSlotMode()
-        _sideAlphabetButtonYRatio.value = prefs.getFloat("side_alphabet_button_y_ratio", 0.23f).coerceIn(0.05f, 0.85f)
+        _sideAlphabetButtonYRatio.value = prefs.safeGetFloat("side_alphabet_button_y_ratio", 0.23f).coerceIn(0.05f, 0.85f)
         _highlightSectionOrder.value = loadHighlightSectionOrder()
         _highlightWidgets.value = loadHighlightWidgets()
         _searchWidgetsConfig.value = loadSearchWidgetsConfig()
@@ -1777,8 +1777,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         try {
             val imageLoader = coil3.SingletonImageLoader.get(getApplication())
             imageLoader.memoryCache?.let { memoryCache ->
+                val slashPrefix = "appicon:$packageName/"
+                val colonPrefix = "appicon:$packageName:"
+                val hashPrefix = "appicon:$packageName#"
                 val keysToRemove = memoryCache.keys.filter { key ->
-                    key.toString().contains(packageName)
+                    val keyStr = key.toString()
+                    keyStr.startsWith(slashPrefix) ||
+                        keyStr.startsWith(colonPrefix) ||
+                        keyStr.startsWith(hashPrefix)
                 }
                 keysToRemove.forEach { memoryCache.remove(it) }
             }
@@ -2059,8 +2065,35 @@ fun orderTagApps(apps: List<AppInfo>, customOrder: List<String>?): List<AppInfo>
     return apps.sortedBy { orderMap[it.componentKey] ?: Int.MAX_VALUE }
 }
 
-private fun SharedPreferences.getNullableInt(key: String): Int? =
-    if (contains(key)) getInt(key, -1).takeIf { it != -1 } else null
+private fun SharedPreferences.getNullableInt(key: String): Int? {
+    if (!contains(key)) return null
+    val parsed = try {
+        getInt(key, -1)
+    } catch (_: ClassCastException) {
+        (all[key] as? String)?.toIntOrNull() ?: (all[key] as? Number)?.toInt() ?: -1
+    }
+    return parsed.takeIf { it != -1 }
+}
+
+private fun SharedPreferences.safeGetBoolean(key: String, default: Boolean): Boolean = try {
+    getBoolean(key, default)
+} catch (_: ClassCastException) {
+    (all[key] as? String)?.lowercase()?.toBooleanStrictOrNull() ?: default
+}
+
+private fun SharedPreferences.safeGetFloat(key: String, default: Float): Float = try {
+    getFloat(key, default)
+} catch (_: ClassCastException) {
+    (all[key] as? String)?.toFloatOrNull()?.takeIf { it.isFinite() }
+        ?: (all[key] as? Number)?.toFloat()?.takeIf { it.isFinite() }
+        ?: default
+}
+
+private fun SharedPreferences.safeGetString(key: String, default: String?): String? = try {
+    getString(key, default)
+} catch (_: ClassCastException) {
+    all[key]?.toString() ?: default
+}
 
 private fun SharedPreferences.Editor.putNullableInt(key: String, value: Int?) {
     if (value != null) putInt(key, value) else remove(key)

@@ -74,13 +74,26 @@ data class AppWidgetGroup(
     val widgets: List<AppWidgetProviderInfo>
 )
 
-private fun Drawable.toSafeBitmap(): Bitmap? {
+private fun Drawable.toSafeBitmap(maxDimensionPx: Int = 360): Bitmap? {
     return try {
         if (this is BitmapDrawable && this.bitmap != null) {
-            this.bitmap
+            val src = this.bitmap
+            val maxSrc = maxOf(src.width, src.height)
+            if (maxSrc <= maxDimensionPx || maxSrc <= 0) {
+                src
+            } else {
+                val scale = maxDimensionPx.toFloat() / maxSrc.toFloat()
+                val targetW = (src.width * scale).roundToInt().coerceAtLeast(1)
+                val targetH = (src.height * scale).roundToInt().coerceAtLeast(1)
+                Bitmap.createScaledBitmap(src, targetW, targetH, true)
+            }
         } else {
-            val width = if (intrinsicWidth > 0) intrinsicWidth.coerceAtMost(600) else 100
-            val height = if (intrinsicHeight > 0) intrinsicHeight.coerceAtMost(600) else 100
+            val rawW = if (intrinsicWidth > 0) intrinsicWidth else 100
+            val rawH = if (intrinsicHeight > 0) intrinsicHeight else 100
+            val maxRaw = maxOf(rawW, rawH)
+            val scale = if (maxRaw > maxDimensionPx) maxDimensionPx.toFloat() / maxRaw.toFloat() else 1f
+            val width = (rawW * scale).roundToInt().coerceAtLeast(1)
+            val height = (rawH * scale).roundToInt().coerceAtLeast(1)
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             setBounds(0, 0, canvas.width, canvas.height)
@@ -178,11 +191,6 @@ suspend fun discoverAppWidgetGroups(context: Context, apps: List<AppInfo>): List
                     minWidth = 180
                     minHeight = 110
                 }
-                try {
-                    val field = AppWidgetProviderInfo::class.java.getDeclaredField("providerInfo")
-                    field.isAccessible = true
-                    field.set(info, ri.activityInfo)
-                } catch (_: Throwable) {}
                 try {
                     ri.activityInfo.loadXmlMetaData(pm, AppWidgetManager.META_DATA_APPWIDGET_PROVIDER)?.use { parser ->
                         val res = pm.getResourcesForApplication(ri.activityInfo.applicationInfo)

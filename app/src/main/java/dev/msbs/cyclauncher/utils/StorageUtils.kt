@@ -15,8 +15,16 @@ fun Context.getSafeStorageContext(): Context {
         val targetPrefs = deviceProtectedContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
         if (!targetPrefs.contains("prefs_migrated_to_de")) {
             val moved = deviceProtectedContext.moveSharedPreferencesFrom(this, "launcher_prefs")
+            deviceProtectedContext.moveSharedPreferencesFrom(this, "cyclauncher_prefs")
             if (moved || targetPrefs.all.isNotEmpty()) {
                 targetPrefs.edit().putBoolean("prefs_migrated_to_de", true).apply()
+            }
+        }
+        val localePrefs = deviceProtectedContext.getSharedPreferences("cyclauncher_prefs", Context.MODE_PRIVATE)
+        if (!localePrefs.contains("prefs_migrated_to_de")) {
+            val movedLocale = deviceProtectedContext.moveSharedPreferencesFrom(this, "cyclauncher_prefs")
+            if (movedLocale || localePrefs.all.isNotEmpty()) {
+                localePrefs.edit().putBoolean("prefs_migrated_to_de", true).apply()
             }
         }
     } catch (_: Exception) {

@@ -25,6 +25,7 @@ import dev.msbs.cyclauncher.ui.theme.LocalPopupAlpha
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.ShadowSettings
+import kotlin.math.roundToInt
 
 /**
  * Modal dialog allowing real-time adjustment of widget height and width.
@@ -43,8 +44,10 @@ fun WidgetResizeDialog(
     heightRange: IntRange = 70..420,
     onApply: (heightDp: Int, widthFraction: Float) -> Unit
 ) {
-    var heightDp by remember { mutableIntStateOf(initialHeightDp.coerceIn(heightRange)) }
-    var widthFraction by remember { mutableFloatStateOf(initialWidthFraction) }
+    var heightDp by remember(initialHeightDp, heightRange) {
+        mutableIntStateOf(initialHeightDp.coerceIn(heightRange))
+    }
+    var widthFraction by remember(initialWidthFraction) { mutableFloatStateOf(initialWidthFraction) }
     val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
     val popupAlpha = LocalPopupAlpha.current
 
@@ -77,7 +80,7 @@ fun WidgetResizeDialog(
                         style = TextStyle(shadow = shadow)
                     )
                     Text(
-                        text = "${heightDp}dp • ${(widthFraction * 100).toInt()}%",
+                        text = "${heightDp}dp • ${(widthFraction * 100).roundToInt()}%",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         color = popupTheme.secondaryContentColor,
@@ -97,8 +100,8 @@ fun WidgetResizeDialog(
                         style = TextStyle(shadow = shadow)
                     )
                     Slider(
-                        value = heightDp.toFloat(),
-                        onValueChange = { heightDp = it.toInt() },
+                        value = heightDp.coerceIn(heightRange).toFloat(),
+                        onValueChange = { heightDp = it.roundToInt().coerceIn(heightRange) },
                         valueRange = heightRange.first.toFloat()..heightRange.last.toFloat(),
                         steps = ((heightRange.last - heightRange.first) / 10 - 1).coerceAtLeast(0),
                         colors = SliderDefaults.colors(

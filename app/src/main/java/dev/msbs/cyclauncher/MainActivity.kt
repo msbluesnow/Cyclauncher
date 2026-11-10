@@ -124,9 +124,6 @@ class MainActivity : ComponentActivity() {
                 "com.samsung.android.theme.SAMSUNG_THEME_CHANGED" -> {
                     viewModel.invalidateAllIconCaches()
                 }
-                else -> {
-                    viewModel.refreshApps()
-                }
             }
         }
     }
@@ -210,7 +207,7 @@ class MainActivity : ComponentActivity() {
             this,
             systemReceiver,
             systemFilter,
-            androidx.core.content.ContextCompat.RECEIVER_EXPORTED
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
         )
         
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {

@@ -17,6 +17,7 @@ import dev.msbs.cyclauncher.ui.components.KeepAndroidOpenDialog
 import dev.msbs.cyclauncher.ui.components.ScreenTopBar
 import dev.msbs.cyclauncher.ui.components.ShadowedIcon
 import dev.msbs.cyclauncher.ui.components.TouchMarqueeText
+import dev.msbs.cyclauncher.ui.components.rememberAppIconPainter
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import dev.msbs.cyclauncher.utils.LocaleUtils
 import dev.msbs.cyclauncher.R
@@ -28,10 +29,12 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -1527,9 +1530,11 @@ private fun MappingAndIconPackSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
-                if (activePack?.icon != null) {
-                    DrawableIcon(
-                        drawable = activePack.icon,
+                if (activePack != null) {
+                    Image(
+                        painter = rememberAppIconPainter(activePack.packageName, 20),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
                         modifier = Modifier.size(20.dp).clip(CircleShape)
                     )
                 } else {
@@ -3332,7 +3337,12 @@ private fun IconPackSelectionDialog(
                                     .clip(CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                DrawableIcon(drawable = pack.icon, modifier = Modifier.size(36.dp))
+                                Image(
+                                    painter = rememberAppIconPainter(pack.packageName, 36),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.size(36.dp)
+                                )
                             }
                             Column {
                                 TouchMarqueeText(
@@ -3378,25 +3388,6 @@ private fun IconPackSelectionDialog(
         containerColor = popupTheme.solidBackgroundColor,
         textContentColor = popupTheme.contentColor,
         shape = dialogShape
-    )
-}
-
-@Composable
-private fun DrawableIcon(drawable: android.graphics.drawable.Drawable?, modifier: Modifier = Modifier) {
-    if (drawable == null) return
-    val imageBitmap: ImageBitmap = remember(drawable) {
-        val w = drawable.intrinsicWidth.takeIf { it > 0 } ?: 96
-        val h = drawable.intrinsicHeight.takeIf { it > 0 } ?: 96
-        val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
-        val canvas = android.graphics.Canvas(bmp)
-        drawable.setBounds(0, 0, w, h)
-        drawable.draw(canvas)
-        bmp.asImageBitmap()
-    }
-    androidx.compose.foundation.Image(
-        bitmap = imageBitmap,
-        contentDescription = null,
-        modifier = modifier
     )
 }
 
