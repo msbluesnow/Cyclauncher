@@ -74,6 +74,18 @@ data class SideSearchWidgetLayout(
 )
 
 /**
+ * Configuration for dual widget slots (top and bottom) in side areas.
+ * When only one widget is configured, it occupies the entire height.
+ * When both are configured, they share the height according to [splitRatio].
+ */
+data class SideDualWidgetConfig(
+    val topWidgetId: Int? = null,
+    val bottomWidgetId: Int? = null,
+    val splitRatio: Float = 0.5f,
+    val layout: SideSearchWidgetLayout = SideSearchWidgetLayout()
+)
+
+/**
  * Represents the user's preferred hand orientation for the launcher UI layout.
  */
 enum class HandSide { LEFT, RIGHT }
@@ -159,7 +171,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _sideAlphabetSlotMode = MutableStateFlow(loadSideAlphabetSlotMode())
     val sideAlphabetSlotMode: StateFlow<SideAlphabetSlotMode> = _sideAlphabetSlotMode.asStateFlow()
 
-    private val _sideAlphabetWidgetId = MutableStateFlow<Int?>(loadSideAlphabetWidgetId())
+    private val _sideAlphabetWidgetsConfig = MutableStateFlow(loadSideAlphabetWidgetsConfig())
+    val sideAlphabetWidgetsConfig: StateFlow<SideDualWidgetConfig> = _sideAlphabetWidgetsConfig.asStateFlow()
+
+    private val _sideAlphabetWidgetId = MutableStateFlow<Int?>(_sideAlphabetWidgetsConfig.value.topWidgetId ?: _sideAlphabetWidgetsConfig.value.bottomWidgetId)
     val sideAlphabetWidgetId: StateFlow<Int?> = _sideAlphabetWidgetId.asStateFlow()
 
     private val _animationsEnabled = MutableStateFlow(true)
@@ -694,66 +709,139 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         setSearchWidget(isLeft, null)
     }
 
-    private val _sideSearchWidgetId = MutableStateFlow<Int?>(loadSideSearchWidgetId())
+    private val _sideSearchWidgetsConfig = MutableStateFlow(loadSideSearchWidgetsConfig())
+    val sideSearchWidgetsConfig: StateFlow<SideDualWidgetConfig> = _sideSearchWidgetsConfig.asStateFlow()
+
+    private val _sideSearchWidgetId = MutableStateFlow<Int?>(_sideSearchWidgetsConfig.value.topWidgetId ?: _sideSearchWidgetsConfig.value.bottomWidgetId)
     val sideSearchWidgetId: StateFlow<Int?> = _sideSearchWidgetId.asStateFlow()
 
-    private fun loadSideSearchWidgetId(): Int? = prefs.getNullableInt("side_search_widget_id")
-
-    private fun saveSideSearchWidgetId(id: Int?) {
-        editPrefs { putNullableInt("side_search_widget_id", id) }
-    }
-
-    fun setSideSearchWidget(widgetId: Int?) {
-        if (widgetId != _sideSearchWidgetId.value) resetSideSearchWidgetLayout()
-        _sideSearchWidgetId.value = widgetId
-        saveSideSearchWidgetId(widgetId)
-    }
-
-    fun removeSideSearchWidget() {
-        setSideSearchWidget(null)
-    }
-
-    private val _sideSearchWidgetLayout = MutableStateFlow(SideSearchWidgetLayout())
+    private val _sideSearchWidgetLayout = MutableStateFlow(_sideSearchWidgetsConfig.value.layout)
     val sideSearchWidgetLayout: StateFlow<SideSearchWidgetLayout> = _sideSearchWidgetLayout.asStateFlow()
 
-    private fun loadSideSearchWidgetLayout(): SideSearchWidgetLayout = SideSearchWidgetLayout(
-        heightDp = prefs.getNullableInt("side_search_widget_height"),
-        widthFraction = prefs.safeGetFloat("side_search_widget_width_fraction", 1.0f).coerceIn(0.25f, 1.0f),
-        offsetX = prefs.safeGetFloat("side_search_widget_offset_x", 0.5f).coerceIn(0f, 1f),
-        offsetY = prefs.safeGetFloat("side_search_widget_offset_y", 0.5f).coerceIn(0f, 1f)
-    )
+    private fun loadSideSearchWidgetsConfig(): SideDualWidgetConfig {
+        val topId = prefs.getNullableInt("side_search_widget_top_id") ?: prefs.getNullableInt("side_search_widget_id")
+        val bottomId = prefs.getNullableInt("side_search_widget_bottom_id")
+        val splitRatio = prefs.safeGetFloat("side_search_widget_split_ratio", 0.5f).coerceIn(0.15f, 0.85f)
+        val layout = SideSearchWidgetLayout(
+            heightDp = prefs.getNullableInt("side_search_widget_height"),
+            widthFraction = prefs.safeGetFloat("side_search_widget_width_fraction", 1.0f).coerceIn(0.25f, 1.0f),
+            offsetX = prefs.safeGetFloat("side_search_widget_offset_x", 0.5f).coerceIn(0f, 1f),
+            offsetY = prefs.safeGetFloat("side_search_widget_offset_y", 0.5f).coerceIn(0f, 1f)
+        )
+        return SideDualWidgetConfig(
+            topWidgetId = topId,
+            bottomWidgetId = bottomId,
+            splitRatio = splitRatio,
+            layout = layout
+        )
+    }
 
-    private fun saveSideSearchWidgetLayout(layout: SideSearchWidgetLayout) {
+    private fun saveSideSearchWidgetsConfig(config: SideDualWidgetConfig) {
         editPrefs {
-            putNullableInt("side_search_widget_height", layout.heightDp)
-            putFloat("side_search_widget_width_fraction", layout.widthFraction)
-            putFloat("side_search_widget_offset_x", layout.offsetX)
-            putFloat("side_search_widget_offset_y", layout.offsetY)
+            putNullableInt("side_search_widget_top_id", config.topWidgetId)
+            putNullableInt("side_search_widget_id", config.topWidgetId ?: config.bottomWidgetId)
+            putNullableInt("side_search_widget_bottom_id", config.bottomWidgetId)
+            putFloat("side_search_widget_split_ratio", config.splitRatio)
+            putNullableInt("side_search_widget_height", config.layout.heightDp)
+            putFloat("side_search_widget_width_fraction", config.layout.widthFraction)
+            putFloat("side_search_widget_offset_x", config.layout.offsetX)
+            putFloat("side_search_widget_offset_y", config.layout.offsetY)
         }
     }
 
+    fun setSideSearchWidget(isTop: Boolean, widgetId: Int?) {
+        val current = _sideSearchWidgetsConfig.value
+        val updated = if (isTop) {
+            current.copy(topWidgetId = widgetId)
+        } else {
+            if (current.topWidgetId == null) {
+                current.copy(topWidgetId = widgetId)
+            } else {
+                current.copy(bottomWidgetId = widgetId)
+            }
+        }
+        _sideSearchWidgetsConfig.value = updated
+        _sideSearchWidgetId.value = updated.topWidgetId ?: updated.bottomWidgetId
+        saveSideSearchWidgetsConfig(updated)
+    }
+
+    fun setSideSearchWidget(widgetId: Int?) {
+        setSideSearchWidget(true, widgetId)
+    }
+
+    fun removeSideSearchWidget(isTop: Boolean) {
+        val current = _sideSearchWidgetsConfig.value
+        val updated = if (isTop) {
+            current.copy(topWidgetId = current.bottomWidgetId, bottomWidgetId = null, splitRatio = 0.5f)
+        } else {
+            current.copy(bottomWidgetId = null, splitRatio = 0.5f)
+        }
+        _sideSearchWidgetsConfig.value = updated
+        _sideSearchWidgetId.value = updated.topWidgetId ?: updated.bottomWidgetId
+        saveSideSearchWidgetsConfig(updated)
+    }
+
+    fun removeSideSearchWidget() {
+        val current = _sideSearchWidgetsConfig.value
+        val updated = current.copy(topWidgetId = null, bottomWidgetId = null, splitRatio = 0.5f)
+        _sideSearchWidgetsConfig.value = updated
+        _sideSearchWidgetId.value = null
+        saveSideSearchWidgetsConfig(updated)
+    }
+
+    fun updateSideSearchWidgetSplitRatio(ratio: Float) {
+        val clamped = ratio.coerceIn(0.15f, 0.85f)
+        val updated = _sideSearchWidgetsConfig.value.copy(splitRatio = clamped)
+        _sideSearchWidgetsConfig.value = updated
+        saveSideSearchWidgetsConfig(updated)
+    }
+
+    fun swapSideSearchWidgets() {
+        val current = _sideSearchWidgetsConfig.value
+        val updated = current.copy(
+            topWidgetId = current.bottomWidgetId,
+            bottomWidgetId = current.topWidgetId,
+            splitRatio = (1f - current.splitRatio).coerceIn(0.15f, 0.85f)
+        )
+        _sideSearchWidgetsConfig.value = updated
+        _sideSearchWidgetId.value = updated.topWidgetId ?: updated.bottomWidgetId
+        saveSideSearchWidgetsConfig(updated)
+    }
+
     fun updateSideSearchWidgetSize(heightDp: Int?, widthFraction: Float) {
-        val updated = _sideSearchWidgetLayout.value.copy(
+        val current = _sideSearchWidgetsConfig.value
+        val updatedLayout = current.layout.copy(
             heightDp = heightDp,
             widthFraction = widthFraction.coerceIn(0.25f, 1.0f)
         )
-        _sideSearchWidgetLayout.value = updated
-        saveSideSearchWidgetLayout(updated)
+        val updated = current.copy(layout = updatedLayout)
+        _sideSearchWidgetsConfig.value = updated
+        _sideSearchWidgetLayout.value = updatedLayout
+        saveSideSearchWidgetsConfig(updated)
     }
 
     fun updateSideSearchWidgetOffset(offsetX: Float, offsetY: Float) {
-        val updated = _sideSearchWidgetLayout.value.copy(
+        val current = _sideSearchWidgetsConfig.value
+        val updatedLayout = current.layout.copy(
             offsetX = offsetX.coerceIn(0f, 1f),
             offsetY = offsetY.coerceIn(0f, 1f)
         )
-        _sideSearchWidgetLayout.value = updated
-        saveSideSearchWidgetLayout(updated)
+        val updated = current.copy(layout = updatedLayout)
+        _sideSearchWidgetsConfig.value = updated
+        _sideSearchWidgetLayout.value = updatedLayout
+        saveSideSearchWidgetsConfig(updated)
     }
 
     fun resetSideSearchWidgetLayout() {
-        val default = SideSearchWidgetLayout()
-        _sideSearchWidgetLayout.value = default
-        saveSideSearchWidgetLayout(default)
+        val current = _sideSearchWidgetsConfig.value
+        val defaultLayout = SideSearchWidgetLayout()
+        val updated = current.copy(
+            splitRatio = 0.5f,
+            layout = defaultLayout
+        )
+        _sideSearchWidgetsConfig.value = updated
+        _sideSearchWidgetLayout.value = defaultLayout
+        saveSideSearchWidgetsConfig(updated)
     }
 
     private fun loadSideAlphabetSlotMode(): SideAlphabetSlotMode {
@@ -776,19 +864,127 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    private fun loadSideAlphabetWidgetId(): Int? = prefs.getNullableInt("side_alphabet_widget_id")
+    private fun loadSideAlphabetWidgetsConfig(): SideDualWidgetConfig {
+        val topId = prefs.getNullableInt("side_alphabet_widget_top_id") ?: prefs.getNullableInt("side_alphabet_widget_id")
+        val bottomId = prefs.getNullableInt("side_alphabet_widget_bottom_id")
+        val splitRatio = prefs.safeGetFloat("side_alphabet_widget_split_ratio", 0.5f).coerceIn(0.15f, 0.85f)
+        val layout = SideSearchWidgetLayout(
+            heightDp = prefs.getNullableInt("side_alphabet_widget_height"),
+            widthFraction = prefs.safeGetFloat("side_alphabet_widget_width_fraction", 1.0f).coerceIn(0.25f, 1.0f),
+            offsetX = prefs.safeGetFloat("side_alphabet_widget_offset_x", 0.5f).coerceIn(0f, 1f),
+            offsetY = prefs.safeGetFloat("side_alphabet_widget_offset_y", 0.5f).coerceIn(0f, 1f)
+        )
+        return SideDualWidgetConfig(
+            topWidgetId = topId,
+            bottomWidgetId = bottomId,
+            splitRatio = splitRatio,
+            layout = layout
+        )
+    }
 
-    private fun saveSideAlphabetWidgetId(id: Int?) {
-        editPrefs { putNullableInt("side_alphabet_widget_id", id) }
+    private fun saveSideAlphabetWidgetsConfig(config: SideDualWidgetConfig) {
+        editPrefs {
+            putNullableInt("side_alphabet_widget_top_id", config.topWidgetId)
+            putNullableInt("side_alphabet_widget_id", config.topWidgetId ?: config.bottomWidgetId)
+            putNullableInt("side_alphabet_widget_bottom_id", config.bottomWidgetId)
+            putFloat("side_alphabet_widget_split_ratio", config.splitRatio)
+            putNullableInt("side_alphabet_widget_height", config.layout.heightDp)
+            putFloat("side_alphabet_widget_width_fraction", config.layout.widthFraction)
+            putFloat("side_alphabet_widget_offset_x", config.layout.offsetX)
+            putFloat("side_alphabet_widget_offset_y", config.layout.offsetY)
+        }
+    }
+
+    fun setSideAlphabetWidget(isTop: Boolean, widgetId: Int?) {
+        val current = _sideAlphabetWidgetsConfig.value
+        val updated = if (isTop) {
+            current.copy(topWidgetId = widgetId)
+        } else {
+            if (current.topWidgetId == null) {
+                current.copy(topWidgetId = widgetId)
+            } else {
+                current.copy(bottomWidgetId = widgetId)
+            }
+        }
+        _sideAlphabetWidgetsConfig.value = updated
+        _sideAlphabetWidgetId.value = updated.topWidgetId ?: updated.bottomWidgetId
+        saveSideAlphabetWidgetsConfig(updated)
     }
 
     fun setSideAlphabetWidget(widgetId: Int?) {
-        _sideAlphabetWidgetId.value = widgetId
-        saveSideAlphabetWidgetId(widgetId)
+        setSideAlphabetWidget(true, widgetId)
+    }
+
+    fun removeSideAlphabetWidget(isTop: Boolean) {
+        val current = _sideAlphabetWidgetsConfig.value
+        val updated = if (isTop) {
+            current.copy(topWidgetId = current.bottomWidgetId, bottomWidgetId = null, splitRatio = 0.5f)
+        } else {
+            current.copy(bottomWidgetId = null, splitRatio = 0.5f)
+        }
+        _sideAlphabetWidgetsConfig.value = updated
+        _sideAlphabetWidgetId.value = updated.topWidgetId ?: updated.bottomWidgetId
+        saveSideAlphabetWidgetsConfig(updated)
     }
 
     fun removeSideAlphabetWidget() {
-        setSideAlphabetWidget(null)
+        val current = _sideAlphabetWidgetsConfig.value
+        val updated = current.copy(topWidgetId = null, bottomWidgetId = null, splitRatio = 0.5f)
+        _sideAlphabetWidgetsConfig.value = updated
+        _sideAlphabetWidgetId.value = null
+        saveSideAlphabetWidgetsConfig(updated)
+    }
+
+    fun updateSideAlphabetWidgetSplitRatio(ratio: Float) {
+        val clamped = ratio.coerceIn(0.15f, 0.85f)
+        val updated = _sideAlphabetWidgetsConfig.value.copy(splitRatio = clamped)
+        _sideAlphabetWidgetsConfig.value = updated
+        saveSideAlphabetWidgetsConfig(updated)
+    }
+
+    fun swapSideAlphabetWidgets() {
+        val current = _sideAlphabetWidgetsConfig.value
+        val updated = current.copy(
+            topWidgetId = current.bottomWidgetId,
+            bottomWidgetId = current.topWidgetId,
+            splitRatio = (1f - current.splitRatio).coerceIn(0.15f, 0.85f)
+        )
+        _sideAlphabetWidgetsConfig.value = updated
+        _sideAlphabetWidgetId.value = updated.topWidgetId ?: updated.bottomWidgetId
+        saveSideAlphabetWidgetsConfig(updated)
+    }
+
+    fun updateSideAlphabetWidgetSize(heightDp: Int?, widthFraction: Float) {
+        val current = _sideAlphabetWidgetsConfig.value
+        val updatedLayout = current.layout.copy(
+            heightDp = heightDp,
+            widthFraction = widthFraction.coerceIn(0.25f, 1.0f)
+        )
+        val updated = current.copy(layout = updatedLayout)
+        _sideAlphabetWidgetsConfig.value = updated
+        saveSideAlphabetWidgetsConfig(updated)
+    }
+
+    fun updateSideAlphabetWidgetOffset(offsetX: Float, offsetY: Float) {
+        val current = _sideAlphabetWidgetsConfig.value
+        val updatedLayout = current.layout.copy(
+            offsetX = offsetX.coerceIn(0f, 1f),
+            offsetY = offsetY.coerceIn(0f, 1f)
+        )
+        val updated = current.copy(layout = updatedLayout)
+        _sideAlphabetWidgetsConfig.value = updated
+        saveSideAlphabetWidgetsConfig(updated)
+    }
+
+    fun resetSideAlphabetWidgetLayout() {
+        val current = _sideAlphabetWidgetsConfig.value
+        val defaultLayout = SideSearchWidgetLayout()
+        val updated = current.copy(
+            splitRatio = 0.5f,
+            layout = defaultLayout
+        )
+        _sideAlphabetWidgetsConfig.value = updated
+        saveSideAlphabetWidgetsConfig(updated)
     }
 
     private val tagToAppsFlow: StateFlow<Map<String, List<AppInfo>>> = combine(
@@ -946,9 +1142,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _highlightSectionOrder.value = loadHighlightSectionOrder()
         _highlightWidgets.value = loadHighlightWidgets()
         _searchWidgetsConfig.value = loadSearchWidgetsConfig()
-        _sideSearchWidgetId.value = loadSideSearchWidgetId()
-        _sideSearchWidgetLayout.value = loadSideSearchWidgetLayout()
-        _sideAlphabetWidgetId.value = loadSideAlphabetWidgetId()
+        _sideSearchWidgetsConfig.value = loadSideSearchWidgetsConfig()
+        _sideSearchWidgetId.value = _sideSearchWidgetsConfig.value.topWidgetId ?: _sideSearchWidgetsConfig.value.bottomWidgetId
+        _sideSearchWidgetLayout.value = _sideSearchWidgetsConfig.value.layout
+        _sideAlphabetWidgetsConfig.value = loadSideAlphabetWidgetsConfig()
+        _sideAlphabetWidgetId.value = _sideAlphabetWidgetsConfig.value.topWidgetId ?: _sideAlphabetWidgetsConfig.value.bottomWidgetId
 
         val savedIconPack = prefs.getString("icon_pack_package", null)?.takeIf { it.isNotBlank() }
         if (savedIconPack != _selectedIconPack.value) {

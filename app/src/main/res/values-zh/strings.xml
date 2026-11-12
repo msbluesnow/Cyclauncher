@@ -99,8 +99,12 @@
     <string name="widget_title">小部件</string>
     <string name="widget_left_title">左侧小部件</string>
     <string name="widget_right_title">右侧小部件</string>
+    <string name="widget_top_title">顶部小部件</string>
+    <string name="widget_bottom_title">底部小部件</string>
     <string name="widget_action_add">添加小部件</string>
+    <string name="widget_action_add_second">添加第二个小部件</string>
     <string name="widget_action_change">更换小部件</string>
+    <string name="widget_action_swap">交换位置</string>
     <string name="widget_action_reset_split">重置比例（50/50）</string>
     <string name="widget_action_remove">移除小部件</string>
     <string name="widget_action_resize">调整大小</string>

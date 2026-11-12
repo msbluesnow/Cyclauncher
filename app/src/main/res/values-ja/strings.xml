@@ -100,8 +100,12 @@
     <string name="widget_title">ウィジェット</string>
     <string name="widget_left_title">左ウィジェット</string>
     <string name="widget_right_title">右ウィジェット</string>
+    <string name="widget_top_title">上部ウィジェット</string>
+    <string name="widget_bottom_title">下部ウィジェット</string>
     <string name="widget_action_add">ウィジェットを追加</string>
+    <string name="widget_action_add_second">2つ目のウィジェットを追加</string>
     <string name="widget_action_change">ウィジェットを変更</string>
+    <string name="widget_action_swap">位置を入れ替え</string>
     <string name="widget_action_reset_split">分割をリセット (50/50)</string>
     <string name="widget_action_remove">ウィジェットを削除</string>
     <string name="widget_action_resize">サイズを変更</string>

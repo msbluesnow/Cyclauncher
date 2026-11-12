@@ -12,6 +12,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.OpenWith
 import androidx.compose.material.icons.outlined.RestartAlt
+import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -52,6 +54,11 @@ import androidx.compose.ui.res.stringResource
 import dev.msbs.cyclauncher.R
 import dev.msbs.cyclauncher.HandSide
 import dev.msbs.cyclauncher.LauncherViewModel
+import dev.msbs.cyclauncher.SideDualWidgetConfig
+import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
+import dev.msbs.cyclauncher.ui.theme.PopupTheme
+import dev.msbs.cyclauncher.ui.theme.ShadowSettings
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.widget.LauncherAppWidgetHostView
 import kotlin.math.roundToInt
@@ -431,17 +438,28 @@ private fun SingleWidgetSlot(
 }
 
 /**
- * Single widget slot component used in SideAlphabetSearchLayout.
- * When empty, shows "+ Add Widget" card.
- * When populated, shows the embedded LauncherAppWidgetHostView with an options button.
- * Remembers cached host view for instant re-attachment without IPC / RemoteViews re-inflation.
+ * Unified slot component hosting up to two custom Android widgets arranged vertically.
+ * Allows independent/split ratio adjustment, drag-to-reorder, drag-to-move, resizing,
+ * adding a second widget, swapping positions, and removing individual widgets.
  */
 @Composable
-fun SideSearchWidgetSlot(
-    viewModel: LauncherViewModel,
+fun SideDualWidgetSlot(
+    config: SideDualWidgetConfig,
     appWidgetHost: AppWidgetHost?,
     appWidgetManager: AppWidgetManager?,
-    onPickWidget: () -> Unit,
+    onPickWidget: (isTop: Boolean) -> Unit,
+    onUpdateSplitRatio: (Float) -> Unit,
+    onSwapWidgets: () -> Unit,
+    onUpdateSize: (heightDp: Int?, widthFraction: Float) -> Unit,
+    onUpdateOffset: (offsetX: Float, offsetY: Float) -> Unit,
+    onResetLayout: () -> Unit,
+    onRemoveWidget: (isTop: Boolean) -> Unit,
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    buttonTextColor: PrimaryTextColor,
+    popupTheme: PopupTheme,
+    showShadows: Boolean,
+    shadowSettings: ShadowSettings,
     handSide: HandSide = HandSide.RIGHT,
     modifier: Modifier = Modifier
 ) {
@@ -449,42 +467,40 @@ fun SideSearchWidgetSlot(
     val density = LocalDensity.current
     val haptic = LocalHapticFeedback.current
 
-    val widgetId by viewModel.sideSearchWidgetId.collectAsState()
-    val accentColor by viewModel.accentColor.collectAsState()
-    val primaryTextColor by viewModel.primaryTextColor.collectAsState()
-    val popupTheme by viewModel.popupTheme.collectAsState()
-
-    var showOptions by remember { mutableStateOf(false) }
-
     val manager = appWidgetManager ?: remember { AppWidgetManager.getInstance(context.applicationContext) }
 
-    val widgetInfo = remember(widgetId) {
-        widgetId?.let {
-            try {
-                manager.getAppWidgetInfo(it)
-            } catch (_: Exception) {
-                null
-            }
-        }
-    }
+    val topWidgetId = config.topWidgetId
+    val bottomWidgetId = config.bottomWidgetId
+    val hasTop = topWidgetId != null
+    val hasBottom = bottomWidgetId != null
+    val isDual = hasTop && hasBottom
+    val hasAny = hasTop || hasBottom
 
-    // Cache the host view across letter switches to prevent heavy IPC & RemoteViews re-inflation
-    var cachedHostView by remember(widgetId) { mutableStateOf<LauncherAppWidgetHostView?>(null) }
-
-    val layout by viewModel.sideSearchWidgetLayout.collectAsState()
-    val buttonTextColor by viewModel.buttonTextColor.collectAsState()
-    val showShadows by viewModel.showShadows.collectAsState()
-    val shadowSettings = LocalShadowSettings.current
-
+    var slotForOptions by remember { mutableStateOf<Boolean?>(null) }
     var showResize by remember { mutableStateOf(false) }
-    var isMoving by remember(widgetId) { mutableStateOf(false) }
-    // Live offset fractions while dragging; persisted on release
+    var isMoving by remember(config.topWidgetId, config.bottomWidgetId) { mutableStateOf(false) }
+
     var liveOffsetX by remember { mutableStateOf<Float?>(null) }
     var liveOffsetY by remember { mutableStateOf<Float?>(null) }
 
     BackHandler(enabled = isMoving) { isMoving = false }
 
-    val currentWidgetId = widgetId
+    val layout = config.layout
+    val currentLayout by rememberUpdatedState(layout)
+
+    var cachedTopHostView by remember(topWidgetId) { mutableStateOf<LauncherAppWidgetHostView?>(null) }
+    var cachedBottomHostView by remember(bottomWidgetId) { mutableStateOf<LauncherAppWidgetHostView?>(null) }
+
+    val topInfo = remember(topWidgetId) {
+        topWidgetId?.let {
+            try { manager.getAppWidgetInfo(it) } catch (_: Exception) { null }
+        }
+    }
+    val bottomInfo = remember(bottomWidgetId) {
+        bottomWidgetId?.let {
+            try { manager.getAppWidgetInfo(it) } catch (_: Exception) { null }
+        }
+    }
 
     BoxWithConstraints(
         modifier = modifier.then(
@@ -494,7 +510,7 @@ fun SideSearchWidgetSlot(
         val totalWidth = maxWidth
         val totalHeight = maxHeight
 
-        if (currentWidgetId == null || widgetInfo == null) {
+        if (!hasAny || (hasTop && topInfo == null && !hasBottom) || (hasBottom && bottomInfo == null && !hasTop)) {
             // Empty placeholder card
             Box(
                 modifier = Modifier
@@ -502,7 +518,7 @@ fun SideSearchWidgetSlot(
                     .clip(RoundedCornerShape(12.dp))
                     .background(primaryTextColor.capsuleColor(0.08f))
                     .border(1.dp, primaryTextColor.capsuleBorderColor(0.12f), RoundedCornerShape(12.dp))
-                    .clickable(onClick = onPickWidget),
+                    .clickable { onPickWidget(true) },
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -536,9 +552,7 @@ fun SideSearchWidgetSlot(
 
             val currentFreeWidthPx by rememberUpdatedState(freeWidthPx)
             val currentFreeHeightPx by rememberUpdatedState(freeHeightPx)
-            val currentLayout by rememberUpdatedState(layout)
 
-            // Active embedded widget
             Box(
                 modifier = Modifier
                     .offset {
@@ -550,36 +564,242 @@ fun SideSearchWidgetSlot(
                     .size(widgetWidth, widgetHeight)
                     .clip(RoundedCornerShape(12.dp))
             ) {
-                AndroidView(
-                    factory = { ctx ->
-                        try {
-                            val view = cachedHostView ?: run {
-                                val host = appWidgetHost
-                                val created = (host?.createView(ctx, currentWidgetId, widgetInfo) as? LauncherAppWidgetHostView)
-                                    ?: LauncherAppWidgetHostView(ctx).apply {
-                                        setAppWidget(currentWidgetId, widgetInfo)
-                                    }
-                                cachedHostView = created
-                                created
-                            }
-                            (view.parent as? ViewGroup)?.removeView(view)
-                            view
-                        } catch (_: Throwable) {
-                            android.widget.FrameLayout(ctx)
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                    update = { view ->
-                        try {
-                            val targetWidthDp = widgetWidth.value.roundToInt().coerceAtLeast(30)
-                            val targetHeightDp = widgetHeight.value.roundToInt().coerceAtLeast(30)
-                            (view as? LauncherAppWidgetHostView)?.applyWidgetSize(targetWidthDp, targetHeightDp)
-                        } catch (_: Throwable) {}
-                    }
-                )
+                if (isDual && topInfo != null && bottomInfo != null) {
+                    val dividerHeight = 16.dp
+                    val availableHeight = (widgetHeight - dividerHeight).coerceAtLeast(0.dp)
+                    val availableHeightPx = with(density) { availableHeight.toPx() }
 
+                    var localRatio by remember(config.splitRatio) { mutableFloatStateOf(config.splitRatio) }
+                    var isDraggingDivider by remember { mutableStateOf(false) }
+
+                    LaunchedEffect(config.splitRatio) {
+                        localRatio = config.splitRatio
+                    }
+
+                    val minHeightPx = with(density) { 40.dp.toPx() }
+                    val minRatio = if (availableHeightPx > 0f) (minHeightPx / availableHeightPx).coerceIn(0.12f, 0.40f) else 0.15f
+                    val maxRatio = 1f - minRatio
+
+                    val topHeight = availableHeight * localRatio
+                    val bottomHeight = (availableHeight - topHeight).coerceAtLeast(0.dp)
+
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Top Widget Slot
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(topHeight)
+                                .clip(RoundedCornerShape(12.dp))
+                        ) {
+                            SingleEmbeddedWidgetView(
+                                widgetId = topWidgetId,
+                                widgetInfo = topInfo,
+                                appWidgetHost = appWidgetHost,
+                                cachedHostView = cachedTopHostView,
+                                onCacheView = { cachedTopHostView = it },
+                                targetWidthDp = widgetWidth.value.roundToInt().coerceAtLeast(30),
+                                targetHeightDp = topHeight.value.roundToInt().coerceAtLeast(30)
+                            )
+
+                            if (!isMoving) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(if (handSide == HandSide.LEFT) Alignment.BottomStart else Alignment.BottomEnd)
+                                        .padding(6.dp)
+                                        .size(24.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Black.copy(alpha = 0.38f))
+                                        .clickable { slotForOptions = true },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.MoreVert,
+                                        contentDescription = stringResource(R.string.widget_action_options),
+                                        tint = Color.White.copy(alpha = 0.85f),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Draggable Divider Between Top and Bottom Widgets
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(dividerHeight)
+                                .pointerInput(availableHeightPx) {
+                                    detectTapGestures(
+                                        onDoubleTap = {
+                                            localRatio = 0.5f
+                                            onUpdateSplitRatio(0.5f)
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        }
+                                    )
+                                }
+                                .pointerInput(availableHeightPx) {
+                                    detectVerticalDragGestures(
+                                        onDragStart = { isDraggingDivider = true },
+                                        onDragEnd = {
+                                            isDraggingDivider = false
+                                            onUpdateSplitRatio(localRatio)
+                                        },
+                                        onDragCancel = {
+                                            isDraggingDivider = false
+                                            onUpdateSplitRatio(localRatio)
+                                        },
+                                        onVerticalDrag = { change, dragAmount ->
+                                            change.consume()
+                                            if (availableHeightPx > 0f) {
+                                                val deltaRatio = dragAmount / availableHeightPx
+                                                val oldRatio = localRatio
+                                                val newRatio = (oldRatio + deltaRatio).coerceIn(minRatio, maxRatio)
+                                                if ((oldRatio < 0.50f && newRatio >= 0.50f) || (oldRatio > 0.50f && newRatio <= 0.50f)) {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                }
+                                                localRatio = newRatio
+                                            }
+                                        }
+                                    )
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(38.dp)
+                                    .height(3.5.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(
+                                        if (isDraggingDivider) accentColor.color.copy(alpha = 0.85f)
+                                        else primaryTextColor.color.copy(alpha = 0.35f)
+                                    )
+                            )
+                        }
+
+                        // Bottom Widget Slot
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(bottomHeight)
+                                .clip(RoundedCornerShape(12.dp))
+                        ) {
+                            SingleEmbeddedWidgetView(
+                                widgetId = bottomWidgetId,
+                                widgetInfo = bottomInfo,
+                                appWidgetHost = appWidgetHost,
+                                cachedHostView = cachedBottomHostView,
+                                onCacheView = { cachedBottomHostView = it },
+                                targetWidthDp = widgetWidth.value.roundToInt().coerceAtLeast(30),
+                                targetHeightDp = bottomHeight.value.roundToInt().coerceAtLeast(30)
+                            )
+
+                            if (!isMoving) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(if (handSide == HandSide.LEFT) Alignment.BottomStart else Alignment.BottomEnd)
+                                        .padding(6.dp)
+                                        .size(24.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Black.copy(alpha = 0.38f))
+                                        .clickable { slotForOptions = false },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.MoreVert,
+                                        contentDescription = stringResource(R.string.widget_action_options),
+                                        tint = Color.White.copy(alpha = 0.85f),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (isDraggingDivider) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .pointerInput(Unit) {
+                                    detectTapGestures { /* absorb touches */ }
+                                }
+                        )
+                    }
+                } else {
+                    // Exactly ONE widget active: occupies full height
+                    val isTopActive = topWidgetId != null && topInfo != null
+                    val activeId = topWidgetId ?: bottomWidgetId ?: return@BoxWithConstraints
+                    val activeInfo = topInfo ?: bottomInfo ?: return@BoxWithConstraints
+                    val activeCachedView = if (isTopActive) cachedTopHostView else cachedBottomHostView
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(12.dp))
+                    ) {
+                        SingleEmbeddedWidgetView(
+                            widgetId = activeId,
+                            widgetInfo = activeInfo,
+                            appWidgetHost = appWidgetHost,
+                            cachedHostView = activeCachedView,
+                            onCacheView = {
+                                if (isTopActive) cachedTopHostView = it else cachedBottomHostView = it
+                            },
+                            targetWidthDp = widgetWidth.value.roundToInt().coerceAtLeast(30),
+                            targetHeightDp = widgetHeight.value.roundToInt().coerceAtLeast(30)
+                        )
+
+                        if (!isMoving) {
+                            Row(
+                                modifier = Modifier
+                                    .align(if (handSide == HandSide.LEFT) Alignment.BottomStart else Alignment.BottomEnd)
+                                    .padding(6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Direct "+" button to add second widget
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Black.copy(alpha = 0.45f))
+                                        .clickable { onPickWidget(!isTopActive) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Add,
+                                        contentDescription = stringResource(R.string.widget_action_add_second),
+                                        tint = accentColor.color.copy(alpha = 0.9f),
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                }
+
+                                // 3-dots Options button
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Black.copy(alpha = 0.38f))
+                                        .clickable { slotForOptions = isTopActive },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.MoreVert,
+                                        contentDescription = stringResource(R.string.widget_action_options),
+                                        tint = Color.White.copy(alpha = 0.85f),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Drag/Move overlay
                 if (isMoving) {
-                    // Drag overlay: captures both taps and drags so the underlying AppWidgetHostView never receives touches while moving
+                    var accumulatedDragY by remember { mutableFloatStateOf(0f) }
+
                     Box(
                         modifier = Modifier
                             .matchParentSize()
@@ -593,21 +813,34 @@ fun SideSearchWidgetSlot(
                                     onDragStart = {
                                         liveOffsetX = currentLayout.offsetX
                                         liveOffsetY = currentLayout.offsetY
+                                        accumulatedDragY = 0f
                                     },
                                     onDragEnd = {
-                                        viewModel.updateSideSearchWidgetOffset(
+                                        onUpdateOffset(
                                             liveOffsetX ?: currentLayout.offsetX,
                                             liveOffsetY ?: currentLayout.offsetY
                                         )
                                         liveOffsetX = null
                                         liveOffsetY = null
+                                        accumulatedDragY = 0f
                                     },
                                     onDragCancel = {
                                         liveOffsetX = null
                                         liveOffsetY = null
+                                        accumulatedDragY = 0f
                                     },
                                     onDrag = { change, dragAmount ->
                                         change.consume()
+                                        if (isDual) {
+                                            accumulatedDragY += dragAmount.y
+                                            val swapThreshold = with(density) { 55.dp.toPx() }
+                                            if (accumulatedDragY > swapThreshold || accumulatedDragY < -swapThreshold) {
+                                                onSwapWidgets()
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                accumulatedDragY = 0f
+                                            }
+                                        }
+
                                         fun step(current: Float, delta: Float, free: Float): Float {
                                             if (free <= 0f) return current
                                             val next = (current + delta / free).coerceIn(0f, 1f)
@@ -618,8 +851,13 @@ fun SideSearchWidgetSlot(
                                             }
                                             return next
                                         }
-                                        liveOffsetX = step(liveOffsetX ?: currentLayout.offsetX, dragAmount.x, currentFreeWidthPx)
-                                        liveOffsetY = step(liveOffsetY ?: currentLayout.offsetY, dragAmount.y, currentFreeHeightPx)
+
+                                        if (currentFreeWidthPx > 0f) {
+                                            liveOffsetX = step(liveOffsetX ?: currentLayout.offsetX, dragAmount.x, currentFreeWidthPx)
+                                        }
+                                        if (currentFreeHeightPx > 0f) {
+                                            liveOffsetY = step(liveOffsetY ?: currentLayout.offsetY, dragAmount.y, currentFreeHeightPx)
+                                        }
                                     }
                                 )
                             },
@@ -632,32 +870,27 @@ fun SideSearchWidgetSlot(
                             modifier = Modifier.size(32.dp)
                         )
                     }
-                }
 
-                // Corner button — options, or "done" while moving — at the bottom on the hand-side edge
-                Box(
-                    modifier = Modifier
-                        .align(if (handSide == HandSide.LEFT) Alignment.BottomStart else Alignment.BottomEnd)
-                        .padding(6.dp)
-                        .size(if (isMoving) 32.dp else 24.dp)
-                        .clip(CircleShape)
-                        .background(if (isMoving) accentColor.color else Color.Black.copy(alpha = 0.38f))
-                        .clickable {
-                            if (isMoving) {
+                    Box(
+                        modifier = Modifier
+                            .align(if (handSide == HandSide.LEFT) Alignment.BottomStart else Alignment.BottomEnd)
+                            .padding(6.dp)
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(accentColor.color)
+                            .clickable {
                                 isMoving = false
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            } else {
-                                showOptions = true
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (isMoving) Icons.Outlined.Check else Icons.Outlined.MoreVert,
-                        contentDescription = stringResource(if (isMoving) R.string.common_done else R.string.widget_action_options),
-                        tint = if (isMoving) buttonTextColor.color else Color.White.copy(alpha = 0.85f),
-                        modifier = Modifier.size(if (isMoving) 18.dp else 14.dp)
-                    )
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Check,
+                            contentDescription = stringResource(R.string.common_done),
+                            tint = buttonTextColor.color,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
 
@@ -675,10 +908,9 @@ fun SideSearchWidgetSlot(
                     heightRange = 70..maxHeightDp,
                     onDismiss = { showResize = false },
                     onApply = { newHeight, newWidth ->
-                        // Choosing the full available height means "fill", so it adapts to the area
-                        viewModel.updateSideSearchWidgetSize(
-                            heightDp = newHeight.takeIf { it < maxHeightDp },
-                            widthFraction = newWidth
+                        onUpdateSize(
+                            newHeight.takeIf { it < maxHeightDp },
+                            newWidth
                         )
                     }
                 )
@@ -686,10 +918,15 @@ fun SideSearchWidgetSlot(
         }
     }
 
-    if (showOptions) {
-        val defaultTitle = stringResource(R.string.widget_title)
-        val customLabel = remember(widgetId) {
-            widgetId?.let { id ->
+    slotForOptions?.let { isTop ->
+        val targetWidgetId = if (isTop) topWidgetId else bottomWidgetId
+        val defaultTitle = if (isDual) {
+            if (isTop) stringResource(R.string.widget_top_title) else stringResource(R.string.widget_bottom_title)
+        } else {
+            stringResource(R.string.widget_title)
+        }
+        val customLabel = remember(targetWidgetId) {
+            targetWidgetId?.let { id ->
                 try {
                     manager.getAppWidgetInfo(id)?.loadLabel(context.packageManager)
                 } catch (_: Exception) {
@@ -701,7 +938,7 @@ fun SideSearchWidgetSlot(
         val dialogShape = RoundedCornerShape(20.dp)
 
         AlertDialog(
-            onDismissRequest = { showOptions = false },
+            onDismissRequest = { slotForOptions = null },
             modifier = Modifier.border(1.dp, popupTheme.borderColor, dialogShape),
             tonalElevation = 0.dp,
             containerColor = popupTheme.backgroundColor,
@@ -725,8 +962,42 @@ fun SideSearchWidgetSlot(
                         iconTint = accentColor.color,
                         contentColor = popupTheme.contentColor
                     ) {
-                        showOptions = false
-                        onPickWidget()
+                        slotForOptions = null
+                        onPickWidget(isTop)
+                    }
+
+                    if (!isDual) {
+                        WidgetOptionButton(
+                            icon = Icons.Outlined.Add,
+                            label = stringResource(R.string.widget_action_add_second),
+                            iconTint = accentColor.color,
+                            contentColor = popupTheme.contentColor
+                        ) {
+                            slotForOptions = null
+                            onPickWidget(!isTop)
+                        }
+                    } else {
+                        WidgetOptionButton(
+                            icon = Icons.Outlined.SwapVert,
+                            label = stringResource(R.string.widget_action_swap),
+                            iconTint = accentColor.color,
+                            contentColor = popupTheme.contentColor
+                        ) {
+                            slotForOptions = null
+                            onSwapWidgets()
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
+
+                        WidgetOptionButton(
+                            icon = Icons.Outlined.RestartAlt,
+                            label = stringResource(R.string.widget_action_reset_split),
+                            iconTint = accentColor.color,
+                            contentColor = popupTheme.contentColor
+                        ) {
+                            slotForOptions = null
+                            onUpdateSplitRatio(0.5f)
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
                     }
 
                     WidgetOptionButton(
@@ -735,7 +1006,7 @@ fun SideSearchWidgetSlot(
                         iconTint = accentColor.color,
                         contentColor = popupTheme.contentColor
                     ) {
-                        showOptions = false
+                        slotForOptions = null
                         showResize = true
                     }
 
@@ -745,7 +1016,7 @@ fun SideSearchWidgetSlot(
                         iconTint = accentColor.color,
                         contentColor = popupTheme.contentColor
                     ) {
-                        showOptions = false
+                        slotForOptions = null
                         isMoving = true
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     }
@@ -756,8 +1027,8 @@ fun SideSearchWidgetSlot(
                         iconTint = accentColor.color,
                         contentColor = popupTheme.contentColor
                     ) {
-                        showOptions = false
-                        viewModel.resetSideSearchWidgetLayout()
+                        slotForOptions = null
+                        onResetLayout()
                     }
 
                     WidgetOptionButton(
@@ -766,21 +1037,15 @@ fun SideSearchWidgetSlot(
                         iconTint = Color(0xFFFF5252),
                         contentColor = Color(0xFFFF5252)
                     ) {
-                        showOptions = false
-                        widgetId?.let { id ->
-                            try {
-                                appWidgetHost?.deleteAppWidgetId(id)
-                            } catch (_: Exception) {}
-                        }
-                        cachedHostView = null
-                        viewModel.removeSideSearchWidget()
+                        slotForOptions = null
+                        onRemoveWidget(isTop)
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     }
                 }
             },
             confirmButton = {
                 TextButton(
-                    onClick = { showOptions = false },
+                    onClick = { slotForOptions = null },
                     colors = ButtonDefaults.textButtonColors(contentColor = popupTheme.contentColor)
                 ) {
                     Text(stringResource(R.string.common_close))
@@ -789,6 +1054,109 @@ fun SideSearchWidgetSlot(
         )
     }
 }
+
+@Composable
+private fun SingleEmbeddedWidgetView(
+    widgetId: Int,
+    widgetInfo: android.appwidget.AppWidgetProviderInfo,
+    appWidgetHost: AppWidgetHost?,
+    cachedHostView: LauncherAppWidgetHostView?,
+    onCacheView: (LauncherAppWidgetHostView) -> Unit,
+    targetWidthDp: Int,
+    targetHeightDp: Int
+) {
+    AndroidView(
+        factory = { ctx ->
+            try {
+                val view = cachedHostView ?: run {
+                    val host = appWidgetHost
+                    val created = (host?.createView(ctx, widgetId, widgetInfo) as? LauncherAppWidgetHostView)
+                        ?: LauncherAppWidgetHostView(ctx).apply {
+                            setAppWidget(widgetId, widgetInfo)
+                        }
+                    onCacheView(created)
+                    created
+                }
+                (view.parent as? ViewGroup)?.removeView(view)
+                view
+            } catch (_: Throwable) {
+                android.widget.FrameLayout(ctx)
+            }
+        },
+        modifier = Modifier.fillMaxSize(),
+        update = { view ->
+            try {
+                (view as? LauncherAppWidgetHostView)?.applyWidgetSize(
+                    targetWidthDp.coerceAtLeast(30),
+                    targetHeightDp.coerceAtLeast(30)
+                )
+            } catch (_: Throwable) {}
+        }
+    )
+}
+
+/**
+ * Side Search Widget field component supporting up to two widgets arranged vertically.
+ */
+@Composable
+fun SideSearchWidgetSlot(
+    viewModel: LauncherViewModel,
+    appWidgetHost: AppWidgetHost?,
+    appWidgetManager: AppWidgetManager?,
+    onPickWidget: (isTop: Boolean) -> Unit,
+    handSide: HandSide = HandSide.RIGHT,
+    modifier: Modifier = Modifier
+) {
+    val config by viewModel.sideSearchWidgetsConfig.collectAsState()
+    val accentColor by viewModel.accentColor.collectAsState()
+    val primaryTextColor by viewModel.primaryTextColor.collectAsState()
+    val buttonTextColor by viewModel.buttonTextColor.collectAsState()
+    val popupTheme by viewModel.popupTheme.collectAsState()
+    val showShadows by viewModel.showShadows.collectAsState()
+    val shadowSettings = LocalShadowSettings.current
+
+    SideDualWidgetSlot(
+        config = config,
+        appWidgetHost = appWidgetHost,
+        appWidgetManager = appWidgetManager,
+        onPickWidget = onPickWidget,
+        onUpdateSplitRatio = { viewModel.updateSideSearchWidgetSplitRatio(it) },
+        onSwapWidgets = { viewModel.swapSideSearchWidgets() },
+        onUpdateSize = { h, w -> viewModel.updateSideSearchWidgetSize(h, w) },
+        onUpdateOffset = { x, y -> viewModel.updateSideSearchWidgetOffset(x, y) },
+        onResetLayout = { viewModel.resetSideSearchWidgetLayout() },
+        onRemoveWidget = { isTop ->
+            val id = if (isTop) config.topWidgetId else config.bottomWidgetId
+            id?.let { try { appWidgetHost?.deleteAppWidgetId(it) } catch (_: Exception) {} }
+            viewModel.removeSideSearchWidget(isTop)
+        },
+        accentColor = accentColor,
+        primaryTextColor = primaryTextColor,
+        buttonTextColor = buttonTextColor,
+        popupTheme = popupTheme,
+        showShadows = showShadows,
+        shadowSettings = shadowSettings,
+        handSide = handSide,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun SideSearchWidgetSlot(
+    viewModel: LauncherViewModel,
+    appWidgetHost: AppWidgetHost?,
+    appWidgetManager: AppWidgetManager?,
+    onPickWidget: () -> Unit,
+    handSide: HandSide = HandSide.RIGHT,
+    modifier: Modifier = Modifier
+) = SideSearchWidgetSlot(
+    viewModel = viewModel,
+    appWidgetHost = appWidgetHost,
+    appWidgetManager = appWidgetManager,
+    onPickWidget = { _ -> onPickWidget() },
+    handSide = handSide,
+    modifier = modifier
+)
 
 @Composable
 private fun WidgetOptionButton(
@@ -816,8 +1184,52 @@ private fun WidgetOptionButton(
 }
 
 /**
- * Embedded widget slot displayed above the alphabet grid in the side search layout.
+ * Side Alphabet Widget slot component displayed above the alphabet grid (in place of search history),
+ * supporting up to two widgets arranged vertically with identical mechanics.
  */
+@Composable
+fun SideAlphabetWidgetSlot(
+    viewModel: LauncherViewModel,
+    appWidgetHost: AppWidgetHost?,
+    appWidgetManager: AppWidgetManager?,
+    onPickWidget: (isTop: Boolean) -> Unit,
+    handSide: HandSide = HandSide.RIGHT,
+    modifier: Modifier = Modifier
+) {
+    val config by viewModel.sideAlphabetWidgetsConfig.collectAsState()
+    val accentColor by viewModel.accentColor.collectAsState()
+    val primaryTextColor by viewModel.primaryTextColor.collectAsState()
+    val buttonTextColor by viewModel.buttonTextColor.collectAsState()
+    val popupTheme by viewModel.popupTheme.collectAsState()
+    val showShadows by viewModel.showShadows.collectAsState()
+    val shadowSettings = LocalShadowSettings.current
+
+    SideDualWidgetSlot(
+        config = config,
+        appWidgetHost = appWidgetHost,
+        appWidgetManager = appWidgetManager,
+        onPickWidget = onPickWidget,
+        onUpdateSplitRatio = { viewModel.updateSideAlphabetWidgetSplitRatio(it) },
+        onSwapWidgets = { viewModel.swapSideAlphabetWidgets() },
+        onUpdateSize = { h, w -> viewModel.updateSideAlphabetWidgetSize(h, w) },
+        onUpdateOffset = { x, y -> viewModel.updateSideAlphabetWidgetOffset(x, y) },
+        onResetLayout = { viewModel.resetSideAlphabetWidgetLayout() },
+        onRemoveWidget = { isTop ->
+            val id = if (isTop) config.topWidgetId else config.bottomWidgetId
+            id?.let { try { appWidgetHost?.deleteAppWidgetId(it) } catch (_: Exception) {} }
+            viewModel.removeSideAlphabetWidget(isTop)
+        },
+        accentColor = accentColor,
+        primaryTextColor = primaryTextColor,
+        buttonTextColor = buttonTextColor,
+        popupTheme = popupTheme,
+        showShadows = showShadows,
+        shadowSettings = shadowSettings,
+        handSide = handSide,
+        modifier = modifier
+    )
+}
+
 @Composable
 fun SideAlphabetWidgetSlot(
     viewModel: LauncherViewModel,
@@ -826,215 +1238,11 @@ fun SideAlphabetWidgetSlot(
     onPickWidget: () -> Unit,
     handSide: HandSide = HandSide.RIGHT,
     modifier: Modifier = Modifier
-) {
-    val context = LocalContext.current
-    val density = LocalDensity.current
-    val haptic = LocalHapticFeedback.current
-
-    val widgetId by viewModel.sideAlphabetWidgetId.collectAsState()
-    val accentColor by viewModel.accentColor.collectAsState()
-    val primaryTextColor by viewModel.primaryTextColor.collectAsState()
-    val popupTheme by viewModel.popupTheme.collectAsState()
-
-    var showOptions by remember { mutableStateOf(false) }
-
-    val manager = appWidgetManager ?: remember { AppWidgetManager.getInstance(context.applicationContext) }
-
-    val widgetInfo = remember(widgetId) {
-        widgetId?.let {
-            try {
-                manager.getAppWidgetInfo(it)
-            } catch (_: Exception) {
-                null
-            }
-        }
-    }
-
-    var cachedHostView by remember(widgetId) { mutableStateOf<LauncherAppWidgetHostView?>(null) }
-
-    val currentWidgetId = widgetId
-
-    BoxWithConstraints(modifier = modifier) {
-        val totalWidth = maxWidth
-        val totalHeight = maxHeight
-        val slotWidthPx = with(density) { totalWidth.toPx() }
-        val slotHeightPx = with(density) { totalHeight.toPx() }
-
-        if (currentWidgetId == null || widgetInfo == null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(primaryTextColor.capsuleColor(0.08f))
-                    .border(1.dp, primaryTextColor.capsuleBorderColor(0.12f), RoundedCornerShape(12.dp))
-                    .clickable(onClick = onPickWidget),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Add,
-                        contentDescription = stringResource(R.string.widget_action_add),
-                        tint = accentColor.color.copy(alpha = 0.8f),
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = stringResource(R.string.widget_action_add),
-                        color = primaryTextColor.color.copy(alpha = 0.6f),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(12.dp))
-            ) {
-                AndroidView(
-                    factory = { ctx ->
-                        try {
-                            val view = cachedHostView ?: run {
-                                val host = appWidgetHost
-                                val created = (host?.createView(ctx, currentWidgetId, widgetInfo) as? LauncherAppWidgetHostView)
-                                    ?: LauncherAppWidgetHostView(ctx).apply {
-                                        setAppWidget(currentWidgetId, widgetInfo)
-                                    }
-                                cachedHostView = created
-                                created
-                            }
-                            (view.parent as? ViewGroup)?.removeView(view)
-                            view
-                        } catch (_: Throwable) {
-                            android.widget.FrameLayout(ctx)
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                    update = { view ->
-                        try {
-                            val displayDensity = context.resources.displayMetrics.density
-                            val targetWidthDp = (slotWidthPx / displayDensity).toInt().coerceAtLeast(30)
-                            val targetHeightDp = (slotHeightPx / displayDensity).toInt().coerceAtLeast(30)
-                            (view as? LauncherAppWidgetHostView)?.applyWidgetSize(targetWidthDp, targetHeightDp)
-                        } catch (_: Throwable) {}
-                    }
-                )
-
-                // Options button — bottom, hand-side edge
-                Box(
-                    modifier = Modifier
-                        .align(if (handSide == HandSide.LEFT) Alignment.BottomStart else Alignment.BottomEnd)
-                        .padding(6.dp)
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.38f))
-                        .clickable { showOptions = true },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.MoreVert,
-                        contentDescription = stringResource(R.string.widget_action_options),
-                        tint = Color.White.copy(alpha = 0.85f),
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-            }
-        }
-    }
-
-    if (showOptions) {
-        val defaultTitle = stringResource(R.string.widget_title)
-        val customLabel = remember(widgetId) {
-            widgetId?.let { id ->
-                try {
-                    manager.getAppWidgetInfo(id)?.loadLabel(context.packageManager)
-                } catch (_: Exception) {
-                    null
-                }
-            }
-        }
-        val widgetLabel = customLabel ?: defaultTitle
-        val dialogShape = RoundedCornerShape(20.dp)
-
-        AlertDialog(
-            onDismissRequest = { showOptions = false },
-            modifier = Modifier.border(1.dp, popupTheme.borderColor, dialogShape),
-            tonalElevation = 0.dp,
-            containerColor = popupTheme.backgroundColor,
-            shape = dialogShape,
-            title = {
-                Text(
-                    text = widgetLabel,
-                    color = accentColor.color,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    TextButton(
-                        onClick = {
-                            showOptions = false
-                            onPickWidget()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.textButtonColors(contentColor = popupTheme.contentColor)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Start
-                        ) {
-                            Icon(Icons.Outlined.Edit, contentDescription = null, tint = accentColor.color)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(stringResource(R.string.widget_action_change), fontSize = 15.sp)
-                        }
-                    }
-
-                    TextButton(
-                        onClick = {
-                            showOptions = false
-                            widgetId?.let { id ->
-                                try {
-                                    appWidgetHost?.deleteAppWidgetId(id)
-                                } catch (_: Exception) {}
-                            }
-                            cachedHostView = null
-                            viewModel.removeSideAlphabetWidget()
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFFF5252))
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Start
-                        ) {
-                            Icon(Icons.Outlined.Delete, contentDescription = null, tint = Color(0xFFFF5252))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(stringResource(R.string.widget_action_remove), fontSize = 15.sp)
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { showOptions = false },
-                    colors = ButtonDefaults.textButtonColors(contentColor = popupTheme.contentColor)
-                ) {
-                    Text(stringResource(R.string.common_close))
-                }
-            }
-        )
-    }
-}
+) = SideAlphabetWidgetSlot(
+    viewModel = viewModel,
+    appWidgetHost = appWidgetHost,
+    appWidgetManager = appWidgetManager,
+    onPickWidget = { _ -> onPickWidget() },
+    handSide = handSide,
+    modifier = modifier
+)

@@ -52,8 +52,10 @@ import dev.msbs.cyclauncher.ui.components.SearchWidgetCompartment
 enum class WidgetPickTarget {
     WHEEL_LEFT,
     WHEEL_RIGHT,
-    SIDE_SEARCH,
-    SIDE_ALPHABET_WIDGET
+    SIDE_SEARCH_TOP,
+    SIDE_SEARCH_BOTTOM,
+    SIDE_ALPHABET_TOP,
+    SIDE_ALPHABET_BOTTOM
 }
 
 /**
@@ -109,11 +111,15 @@ fun SearchScreen(
                 }
                 updateAction(widgetId)
             }
+            val sideSearchConfig = viewModel.sideSearchWidgetsConfig.value
+            val sideAlphabetConfig = viewModel.sideAlphabetWidgetsConfig.value
             when (target) {
                 WidgetPickTarget.WHEEL_LEFT -> replaceWidget(searchWidgetsConfig.leftWidgetId) { viewModel.setSearchWidget(true, it) }
                 WidgetPickTarget.WHEEL_RIGHT -> replaceWidget(searchWidgetsConfig.rightWidgetId) { viewModel.setSearchWidget(false, it) }
-                WidgetPickTarget.SIDE_SEARCH -> replaceWidget(viewModel.sideSearchWidgetId.value) { viewModel.setSideSearchWidget(it) }
-                WidgetPickTarget.SIDE_ALPHABET_WIDGET -> replaceWidget(viewModel.sideAlphabetWidgetId.value) { viewModel.setSideAlphabetWidget(it) }
+                WidgetPickTarget.SIDE_SEARCH_TOP -> replaceWidget(sideSearchConfig.topWidgetId) { viewModel.setSideSearchWidget(true, it) }
+                WidgetPickTarget.SIDE_SEARCH_BOTTOM -> replaceWidget(sideSearchConfig.bottomWidgetId) { viewModel.setSideSearchWidget(false, it) }
+                WidgetPickTarget.SIDE_ALPHABET_TOP -> replaceWidget(sideAlphabetConfig.topWidgetId) { viewModel.setSideAlphabetWidget(true, it) }
+                WidgetPickTarget.SIDE_ALPHABET_BOTTOM -> replaceWidget(sideAlphabetConfig.bottomWidgetId) { viewModel.setSideAlphabetWidget(false, it) }
             }
         }
     )
@@ -148,8 +154,12 @@ fun SearchScreen(
                 handSide = handSide,
                 appWidgetHost = host,
                 appWidgetManager = manager,
-                onPickSideWidget = { widgetPickTarget = WidgetPickTarget.SIDE_SEARCH },
-                onPickSideAlphabetWidget = { widgetPickTarget = WidgetPickTarget.SIDE_ALPHABET_WIDGET },
+                onPickSideWidget = { isTop ->
+                    widgetPickTarget = if (isTop) WidgetPickTarget.SIDE_SEARCH_TOP else WidgetPickTarget.SIDE_SEARCH_BOTTOM
+                },
+                onPickSideAlphabetWidget = { isTop ->
+                    widgetPickTarget = if (isTop) WidgetPickTarget.SIDE_ALPHABET_TOP else WidgetPickTarget.SIDE_ALPHABET_BOTTOM
+                },
                 onAppClick = onSearchAppClick,
                 onAppLongClick = onAppLongClick
             )

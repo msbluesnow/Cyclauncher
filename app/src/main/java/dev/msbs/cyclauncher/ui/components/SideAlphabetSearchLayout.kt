@@ -72,8 +72,8 @@ fun SideAlphabetSearchLayout(
     handSide: HandSide,
     appWidgetHost: AppWidgetHost? = null,
     appWidgetManager: AppWidgetManager? = null,
-    onPickSideWidget: () -> Unit = {},
-    onPickSideAlphabetWidget: () -> Unit = {},
+    onPickSideWidget: (isTop: Boolean) -> Unit = {},
+    onPickSideAlphabetWidget: (isTop: Boolean) -> Unit = {},
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit
 ) {
@@ -84,6 +84,7 @@ fun SideAlphabetSearchLayout(
     val showSearchHistory by viewModel.showSearchHistory.collectAsState()
     val sideAlphabetSlotMode by viewModel.sideAlphabetSlotMode.collectAsState()
     val sideAlphabetWidgetId by viewModel.sideAlphabetWidgetId.collectAsState()
+    val sideAlphabetConfig by viewModel.sideAlphabetWidgetsConfig.collectAsState()
     val showSearchWidgets by viewModel.showSearchWidgets.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
@@ -491,7 +492,7 @@ fun SideAlphabetSearchLayout(
             isHistoryPaused = isHistoryPaused,
             slotMode = sideAlphabetSlotMode,
             isHistoryEditMode = isHistoryEditMode,
-            hasWidget = sideAlphabetWidgetId != null,
+            hasWidget = sideAlphabetConfig.topWidgetId != null || sideAlphabetConfig.bottomWidgetId != null,
             accentColor = accentColor,
             primaryTextColor = primaryTextColor,
             popupTheme = popupTheme,
@@ -510,7 +511,8 @@ fun SideAlphabetSearchLayout(
             },
             onOpenWidgetAction = {
                 quickPaletteOverlayState = null
-                onPickSideAlphabetWidget()
+                val targetIsTop = sideAlphabetConfig.topWidgetId == null || sideAlphabetConfig.bottomWidgetId != null
+                onPickSideAlphabetWidget(targetIsTop)
             },
             onDismiss = {
                 quickPaletteOverlayState = null

@@ -99,8 +99,12 @@
     <string name="widget_title">Widget</string>
     <string name="widget_left_title">Widget Izquierdo</string>
     <string name="widget_right_title">Widget Derecho</string>
+    <string name="widget_top_title">Widget Superior</string>
+    <string name="widget_bottom_title">Widget Inferior</string>
     <string name="widget_action_add">Añadir Widget</string>
+    <string name="widget_action_add_second">Añadir Segundo Widget</string>
     <string name="widget_action_change">Cambiar Widget</string>
+    <string name="widget_action_swap">Intercambiar Posiciones</string>
     <string name="widget_action_reset_split">Restablecer División (50/50)</string>
     <string name="widget_action_remove">Quitar Widget</string>
     <string name="widget_action_resize">Cambiar Tamaño</string>

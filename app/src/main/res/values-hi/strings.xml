@@ -100,8 +100,12 @@
     <string name="widget_title">विजेट</string>
     <string name="widget_left_title">बायां विजेट</string>
     <string name="widget_right_title">दायां विजेट</string>
+    <string name="widget_top_title">शीर्ष विजेट</string>
+    <string name="widget_bottom_title">निचला विजेट</string>
     <string name="widget_action_add">विजेट जोड़ें</string>
+    <string name="widget_action_add_second">दूसरा विजेट जोड़ें</string>
     <string name="widget_action_change">विजेट बदलें</string>
+    <string name="widget_action_swap">स्थान बदलें</string>
     <string name="widget_action_reset_split">विभाजन रीसेट करें (50/50)</string>
     <string name="widget_action_remove">विजेट हटाएं</string>
     <string name="widget_action_resize">आकार बदलें</string>
