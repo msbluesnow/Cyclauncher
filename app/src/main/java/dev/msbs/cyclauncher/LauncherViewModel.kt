@@ -1148,7 +1148,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _sideAlphabetWidgetsConfig.value = loadSideAlphabetWidgetsConfig()
         _sideAlphabetWidgetId.value = _sideAlphabetWidgetsConfig.value.topWidgetId ?: _sideAlphabetWidgetsConfig.value.bottomWidgetId
 
-        val savedIconPack = prefs.getString("icon_pack_package", null)?.takeIf { it.isNotBlank() }
+        val savedIconPack = prefs.safeGetString("icon_pack_package", null)?.takeIf { it.isNotBlank() }
         if (savedIconPack != _selectedIconPack.value) {
             _selectedIconPack.value = savedIconPack
             viewModelScope.launch {
@@ -2250,6 +2250,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 }
             } catch (_: Exception) {}
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        prefsExecutor.shutdown()
+        actionsManager.shutdown()
     }
 }
 

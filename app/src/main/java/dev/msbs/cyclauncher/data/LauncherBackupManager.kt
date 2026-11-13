@@ -551,7 +551,14 @@ class LauncherBackupManager(
                 val obj = array.optJSONObject(i) ?: continue
                 val pkg = obj.optString("package").ifEmpty { obj.optString("packageName") }.trim()
                 val component = obj.optString("component").ifEmpty { obj.optString("componentKey") }.trim()
-                val label = obj.optString("label").ifEmpty { obj.optString("name") }.trim().take(MAX_LABEL_LENGTH)
+                val explicitCustomLabel = obj.optString("customLabel").ifEmpty { obj.optString("custom_label") }.trim().take(MAX_LABEL_LENGTH)
+                val hasTagFields = obj.has("tags") || obj.has("categories") || obj.has("tag") || obj.has("tagName") || obj.has("category")
+                val fallbackLabel = if (explicitCustomLabel.isEmpty() && !hasTagFields) {
+                    obj.optString("label").ifEmpty { obj.optString("name") }.trim().take(MAX_LABEL_LENGTH)
+                } else {
+                    ""
+                }
+                val customLabel = explicitCustomLabel.ifEmpty { fallbackLabel }
                 val colorHex = obj.optString("color").trim()
                 val color = if (colorHex.isNotEmpty()) parseHexColor(colorHex) else Color.Unspecified
                 val isFav = extractIsFavorite(obj)
@@ -588,16 +595,16 @@ class LauncherBackupManager(
                     }
                 }
 
-                if (label.isNotEmpty()) {
+                if (customLabel.isNotEmpty()) {
                     val key = component.ifEmpty { pkg }
                     if (key.isNotEmpty()) {
-                        parsedCustomLabels[key] = label
+                        parsedCustomLabels[key] = customLabel
                     }
                 }
 
                 if (isFav) {
                     val key = component.ifEmpty { pkg }
-                    if (key.isNotEmpty()) {
+                    if (key.isNotEmpty() && !parsedFavorites.contains(key)) {
                         parsedFavorites.add(key)
                     }
                 }
@@ -703,13 +710,15 @@ class LauncherBackupManager(
                     val item = appsArray.optJSONObject(i) ?: continue
                     val pkg = item.optString("package").ifEmpty { item.optString("packageName") }.trim()
                     val component = item.optString("component").ifEmpty { item.optString("componentKey") }.trim()
-                    val label = item.optString("label").ifEmpty { item.optString("name") }.trim().take(MAX_LABEL_LENGTH)
-                    val isFav = extractIsFavorite(item)
                     val key = component.ifEmpty { pkg }
-                    if (label.isNotEmpty() && key.isNotEmpty()) {
-                        parsedCustomLabels[key] = label
+                    if (key.isEmpty()) continue
+                    if (customLabelsObj == null && !parsedCustomLabels.containsKey(key)) {
+                        val customLabel = item.optString("customLabel").ifEmpty { item.optString("custom_label") }.trim().take(MAX_LABEL_LENGTH)
+                        if (customLabel.isNotEmpty()) {
+                            parsedCustomLabels[key] = customLabel
+                        }
                     }
-                    if (isFav && key.isNotEmpty()) {
+                    if (favoritesArray == null && !parsedFavorites.contains(key) && extractIsFavorite(item)) {
                         parsedFavorites.add(key)
                     }
                 }

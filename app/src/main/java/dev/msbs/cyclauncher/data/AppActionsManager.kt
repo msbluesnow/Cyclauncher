@@ -33,6 +33,11 @@ class AppActionsManager(context: Context) {
     private val storageExecutor = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "AppActionsStorageThread").apply { isDaemon = true }
     }
+
+    /** Shuts down the background persistence executor when the owner ViewModel is cleared. */
+    fun shutdown() {
+        storageExecutor.shutdown()
+    }
     private val mainHandler = Handler(Looper.getMainLooper())
     private var currentToast: Toast? = null
 
@@ -448,6 +453,18 @@ class AppActionsManager(context: Context) {
 
     fun toggleTagForApp(componentKey: String, tagId: String) {
         val current = _appTags.value.toMutableMap()
+        if (!componentKey.contains('#') && componentKey.contains('/')) {
+            val pkg = componentKey.substringBefore('/')
+            val pkgTags = current.remove(pkg)
+            if (pkgTags != null) {
+                val merged = LinkedHashSet<String>()
+                current[componentKey]?.let { merged.addAll(it) }
+                merged.addAll(pkgTags)
+                if (merged.isNotEmpty()) {
+                    current[componentKey] = merged.toList()
+                }
+            }
+        }
         val list = current[componentKey]?.toMutableList() ?: mutableListOf()
         val wasAssigned = list.contains(tagId)
         if (wasAssigned) {
@@ -455,7 +472,11 @@ class AppActionsManager(context: Context) {
         } else {
             list.add(tagId)
         }
-        current[componentKey] = list
+        if (list.isEmpty()) {
+            current.remove(componentKey)
+        } else {
+            current[componentKey] = list
+        }
         _appTags.value = current
         saveAppTags(current)
 

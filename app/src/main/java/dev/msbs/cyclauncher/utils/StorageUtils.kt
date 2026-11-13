@@ -1,6 +1,10 @@
 package dev.msbs.cyclauncher.utils
 
 import android.content.Context
+import android.os.UserManager
+
+@Volatile
+private var deMigrationVerified = false
 
 /**
  * Returns a device-protected storage context for Direct Boot compatibility.
@@ -11,21 +15,23 @@ fun Context.getSafeStorageContext(): Context {
         return this
     }
     val deviceProtectedContext = this.createDeviceProtectedStorageContext()
+    if (deMigrationVerified) {
+        return deviceProtectedContext
+    }
     try {
-        val targetPrefs = deviceProtectedContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
-        if (!targetPrefs.contains("prefs_migrated_to_de")) {
-            val moved = deviceProtectedContext.moveSharedPreferencesFrom(this, "launcher_prefs")
-            deviceProtectedContext.moveSharedPreferencesFrom(this, "cyclauncher_prefs")
-            if (moved || targetPrefs.all.isNotEmpty()) {
-                targetPrefs.edit().putBoolean("prefs_migrated_to_de", true).apply()
-            }
+        val initialPrefs = deviceProtectedContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+        if (initialPrefs.getBoolean("prefs_migrated_to_de", false)) {
+            deMigrationVerified = true
+            return deviceProtectedContext
         }
+        val movedLauncher = deviceProtectedContext.moveSharedPreferencesFrom(this, "launcher_prefs")
+        val movedLocale = deviceProtectedContext.moveSharedPreferencesFrom(this, "cyclauncher_prefs")
+        val prefs = deviceProtectedContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
         val localePrefs = deviceProtectedContext.getSharedPreferences("cyclauncher_prefs", Context.MODE_PRIVATE)
-        if (!localePrefs.contains("prefs_migrated_to_de")) {
-            val movedLocale = deviceProtectedContext.moveSharedPreferencesFrom(this, "cyclauncher_prefs")
-            if (movedLocale || localePrefs.all.isNotEmpty()) {
-                localePrefs.edit().putBoolean("prefs_migrated_to_de", true).apply()
-            }
+        val isUnlocked = (getSystemService(Context.USER_SERVICE) as? UserManager)?.isUserUnlocked == true
+        if (movedLauncher || movedLocale || prefs.all.isNotEmpty() || localePrefs.all.isNotEmpty() || isUnlocked) {
+            prefs.edit().putBoolean("prefs_migrated_to_de", true).apply()
+            deMigrationVerified = true
         }
     } catch (_: Exception) {
         // Credential-protected storage may be locked during Direct Boot
