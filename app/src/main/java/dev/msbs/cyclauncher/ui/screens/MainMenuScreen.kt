@@ -438,7 +438,6 @@ fun MainMenuScreen(
                         }
                     },
                     onEndSwipeDownOverlay = { target ->
-                        android.util.Log.d("Cyclauncher", "onEndSwipeDownOverlay target=$target")
                         swipeDownOverlayState = null
                         when (target) {
                             SwipeDownTarget.NOTIFICATIONS -> currentOnSwipeDown()
@@ -750,177 +749,129 @@ private fun HistorySection(
         }
     }
 
+    val sectionHorizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
+
+    @Composable
+    fun ColumnScope.TagsBlock(hasHistoryArea: Boolean = true) {
+        TagsContentBlock(
+            gridState = tagGridState,
+            popularTags = popularTags,
+            handSide = handSide,
+            primaryTextColor = primaryTextColor,
+            showShadows = showShadows,
+            accentColor = accentColor,
+            monochromeTags = monochromeTags,
+            isReorderMode = isTagFolderReorderMode,
+            setReorderMode = setTagFolderReorderMode,
+            onReorderTag = onReorderTag,
+            onTagSectionIconClick = onTagSectionIconClick,
+            onSettingsClick = currentOnSettingsClick,
+            onTagFolderClick = onTagFolderClick,
+            onTagFolderLongClick = onTagFolderLongClick,
+            showHistoryArea = hasHistoryArea
+        )
+    }
+
+    @Composable
+    fun ColumnScope.HistoryBlock() {
+        HistoryContentBlock(
+            listState = listState,
+            history = history,
+            recentlyUpdatedApps = recentlyUpdatedApps,
+            handSide = handSide,
+            primaryTextColor = primaryTextColor,
+            showShadows = showShadows,
+            accentColor = accentColor,
+            colorFilter = colorFilter,
+            isHistoryPaused = isHistoryPaused,
+            isHistoryEditMode = isHistoryEditMode,
+            setHistoryEditMode = setHistoryEditMode,
+            onRemoveFromHistory = onRemoveFromHistory,
+            onHistoryIconClick = onHistoryIconClick,
+            onSettingsClick = currentOnSettingsClick,
+            onAppClick = onAppClick,
+            onAppLongClick = onAppLongClick
+        )
+    }
+
     Column(
         modifier = modifier.fillMaxHeight(),
         verticalArrangement = Arrangement.SpaceBetween,
-        horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
+        horizontalAlignment = sectionHorizontalAlignment
     ) {
-        if (!showTagsArea && !showHistoryArea) {
-            // Nothing to display in this section.
-        } else if (!showHistoryArea) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Bottom,
-                horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
-            ) {
-                TagsContentBlock(
-                    gridState = tagGridState,
-                    popularTags = popularTags,
-                    handSide = handSide,
-                    primaryTextColor = primaryTextColor,
-                    showShadows = showShadows,
-                    accentColor = accentColor,
-                    monochromeTags = monochromeTags,
-                    isReorderMode = isTagFolderReorderMode,
-                    setReorderMode = setTagFolderReorderMode,
-                    onReorderTag = onReorderTag,
-                    onTagSectionIconClick = onTagSectionIconClick,
-                    onSettingsClick = currentOnSettingsClick,
-                    onTagFolderClick = onTagFolderClick,
-                    onTagFolderLongClick = onTagFolderLongClick,
-                    showHistoryArea = false
-                )
+        when {
+            !showTagsArea && !showHistoryArea -> Unit
+            !showHistoryArea -> {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Bottom,
+                    horizontalAlignment = sectionHorizontalAlignment
+                ) {
+                    TagsBlock(hasHistoryArea = false)
+                }
             }
-        } else if (!showTagsArea) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Bottom,
-                horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
-            ) {
-                HistoryContentBlock(
-                    listState = listState,
-                    history = history,
-                    recentlyUpdatedApps = recentlyUpdatedApps,
-                    handSide = handSide,
-                    primaryTextColor = primaryTextColor,
-                    showShadows = showShadows,
-                    accentColor = accentColor,
-                    colorFilter = colorFilter,
-                    isHistoryPaused = isHistoryPaused,
-                    isHistoryEditMode = isHistoryEditMode,
-                    setHistoryEditMode = setHistoryEditMode,
-                    onRemoveFromHistory = onRemoveFromHistory,
-                    onHistoryIconClick = onHistoryIconClick,
-                    onSettingsClick = currentOnSettingsClick,
-                    onAppClick = onAppClick,
-                    onAppLongClick = onAppLongClick
-                )
+            !showTagsArea -> {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Bottom,
+                    horizontalAlignment = sectionHorizontalAlignment
+                ) {
+                    HistoryBlock()
+                }
             }
-        } else if (isHistoryShiftedUp) {
-            Column(
-                modifier = Modifier
-                    .fillMaxHeight(0.5f)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.Top,
-                horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
-            ) {
-                HistoryContentBlock(
-                    listState = listState,
-                    history = history,
-                    recentlyUpdatedApps = recentlyUpdatedApps,
-                    handSide = handSide,
-                    primaryTextColor = primaryTextColor,
-                    showShadows = showShadows,
-                    accentColor = accentColor,
-                    colorFilter = colorFilter,
-                    isHistoryPaused = isHistoryPaused,
-                    isHistoryEditMode = isHistoryEditMode,
-                    setHistoryEditMode = setHistoryEditMode,
-                    onRemoveFromHistory = onRemoveFromHistory,
-                    onHistoryIconClick = onHistoryIconClick,
-                    onSettingsClick = currentOnSettingsClick,
-                    onAppClick = onAppClick,
-                    onAppLongClick = onAppLongClick
-                )
-            }
+            isHistoryShiftedUp -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxHeight(0.5f)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.Top,
+                    horizontalAlignment = sectionHorizontalAlignment
+                ) {
+                    HistoryBlock()
+                }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight()
-                    .sectionBottomGestures(
-                        isAtEdge = { tagGridState.firstVisibleItemIndex == 0 && tagGridState.firstVisibleItemScrollOffset == 0 },
-                        isEditMode = isHistoryEditMode || isTagFolderReorderMode,
-                        touchSlop = viewConfiguration.touchSlop,
-                        onSwipeUp = { isHistoryShiftedUp = false }
-                    ),
-                verticalArrangement = Arrangement.Bottom,
-                horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
-            ) {
-                TagsContentBlock(
-                    gridState = tagGridState,
-                    popularTags = popularTags,
-                    handSide = handSide,
-                    primaryTextColor = primaryTextColor,
-                    showShadows = showShadows,
-                    accentColor = accentColor,
-                    monochromeTags = monochromeTags,
-                    isReorderMode = isTagFolderReorderMode,
-                    setReorderMode = setTagFolderReorderMode,
-                    onReorderTag = onReorderTag,
-                    onTagSectionIconClick = onTagSectionIconClick,
-                    onSettingsClick = currentOnSettingsClick,
-                    onTagFolderClick = onTagFolderClick,
-                    onTagFolderLongClick = onTagFolderLongClick
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight()
+                        .sectionBottomGestures(
+                            isAtEdge = { tagGridState.firstVisibleItemIndex == 0 && tagGridState.firstVisibleItemScrollOffset == 0 },
+                            isEditMode = isHistoryEditMode || isTagFolderReorderMode,
+                            touchSlop = viewConfiguration.touchSlop,
+                            onSwipeUp = { isHistoryShiftedUp = false }
+                        ),
+                    verticalArrangement = Arrangement.Bottom,
+                    horizontalAlignment = sectionHorizontalAlignment
+                ) {
+                    TagsBlock()
+                }
             }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxHeight(0.5f)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.Top,
-                horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
-            ) {
-                TagsContentBlock(
-                    gridState = tagGridState,
-                    popularTags = popularTags,
-                    handSide = handSide,
-                    primaryTextColor = primaryTextColor,
-                    showShadows = showShadows,
-                    accentColor = accentColor,
-                    monochromeTags = monochromeTags,
-                    isReorderMode = isTagFolderReorderMode,
-                    setReorderMode = setTagFolderReorderMode,
-                    onReorderTag = onReorderTag,
-                    onTagSectionIconClick = onTagSectionIconClick,
-                    onSettingsClick = currentOnSettingsClick,
-                    onTagFolderClick = onTagFolderClick,
-                    onTagFolderLongClick = onTagFolderLongClick
-                )
-            }
+            else -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxHeight(0.5f)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.Top,
+                    horizontalAlignment = sectionHorizontalAlignment
+                ) {
+                    TagsBlock()
+                }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth()
-                    .sectionBottomGestures(
-                        isAtEdge = { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 },
-                        isEditMode = isHistoryEditMode || isTagFolderReorderMode,
-                        touchSlop = viewConfiguration.touchSlop,
-                        onSwipeUp = { isHistoryShiftedUp = true }
-                    ),
-                verticalArrangement = Arrangement.Bottom,
-                horizontalAlignment = if (handSide == HandSide.RIGHT) Alignment.End else Alignment.Start
-            ) {
-                HistoryContentBlock(
-                    listState = listState,
-                    history = history,
-                    recentlyUpdatedApps = recentlyUpdatedApps,
-                    handSide = handSide,
-                    primaryTextColor = primaryTextColor,
-                    showShadows = showShadows,
-                    accentColor = accentColor,
-                    colorFilter = colorFilter,
-                    isHistoryPaused = isHistoryPaused,
-                    isHistoryEditMode = isHistoryEditMode,
-                    setHistoryEditMode = setHistoryEditMode,
-                    onRemoveFromHistory = onRemoveFromHistory,
-                    onHistoryIconClick = onHistoryIconClick,
-                    onSettingsClick = currentOnSettingsClick,
-                    onAppClick = onAppClick,
-                    onAppLongClick = onAppLongClick
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth()
+                        .sectionBottomGestures(
+                            isAtEdge = { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 },
+                            isEditMode = isHistoryEditMode || isTagFolderReorderMode,
+                            touchSlop = viewConfiguration.touchSlop,
+                            onSwipeUp = { isHistoryShiftedUp = true }
+                        ),
+                    verticalArrangement = Arrangement.Bottom,
+                    horizontalAlignment = sectionHorizontalAlignment
+                ) {
+                    HistoryBlock()
+                }
             }
         }
     }

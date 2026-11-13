@@ -184,6 +184,117 @@ fun SideAlphabetSearchLayout(
                         end = if (handSide == HandSide.RIGHT) swapIconWidth else 0.dp
                     )
             ) {
+                @Composable
+                fun AlphabetStripColumn(horizontalAlignment: Alignment.Horizontal) {
+                    Column(
+                        modifier = Modifier
+                            .width(fixedAlphabetWidth)
+                            .fillMaxHeight(),
+                        verticalArrangement = Arrangement.Bottom,
+                        horizontalAlignment = horizontalAlignment
+                    ) {
+                        when (sideAlphabetSlotMode) {
+                            SideAlphabetSlotMode.HISTORY -> {
+                                if (historyApps.isNotEmpty() || isHistoryEditMode) {
+                                    SideSearchHistoryBlock(
+                                        history = historyApps,
+                                        accentColor = accentColor,
+                                        primaryTextColor = primaryTextColor,
+                                        showShadows = showShadows,
+                                        viewModel = viewModel,
+                                        isEditMode = isHistoryEditMode,
+                                        colorFilter = historyColorFilter,
+                                        onAppClick = onAppClick,
+                                        onAppLongClick = onAppLongClick,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxWidth()
+                                            .padding(bottom = 2.dp)
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                            SideAlphabetSlotMode.WIDGET -> {
+                                SideAlphabetWidgetSlot(
+                                    viewModel = viewModel,
+                                    appWidgetHost = appWidgetHost,
+                                    appWidgetManager = appWidgetManager,
+                                    onPickWidget = onPickSideAlphabetWidget,
+                                    handSide = handSide,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth()
+                                        .padding(bottom = 6.dp)
+                                )
+                            }
+                            SideAlphabetSlotMode.DISABLED -> {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+
+                        SideAlphabetColorTriggerBar(
+                            selectedColor = selectedColor,
+                            slotMode = sideAlphabetSlotMode,
+                            isHistoryPaused = isHistoryPaused,
+                            isHistoryEditMode = isHistoryEditMode,
+                            accentColor = accentColor,
+                            primaryTextColor = primaryTextColor,
+                            showShadows = showShadows,
+                            shadowSettings = shadowSettings,
+                            onClick = { anchor ->
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                quickPaletteOverlayState = QuickPaletteOverlayState(
+                                    anchorPosition = anchor,
+                                    handSide = handSide
+                                )
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 2.dp, end = 2.dp, bottom = 2.dp)
+                        )
+
+                        SideAlphabetGrid(
+                            alphabet = alphabet,
+                            selectedLetter = selectedLetter,
+                            accentColor = accentColor,
+                            primaryTextColor = primaryTextColor,
+                            showShadows = showShadows,
+                            onLetterSelected = currentOnLetterSelected,
+                            maxGridHeight = totalHeight * 0.50f
+                        )
+                    }
+                }
+
+                @Composable
+                fun SearchContentPane(paneModifier: Modifier) {
+                    Box(modifier = paneModifier) {
+                        if (selectedLetter == null && selectedColor == null) {
+                            if (showSearchWidgets) {
+                                SideSearchWidgetSlot(
+                                    viewModel = viewModel,
+                                    appWidgetHost = appWidgetHost,
+                                    appWidgetManager = appWidgetManager,
+                                    onPickWidget = onPickSideWidget,
+                                    handSide = handSide,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 4.dp, vertical = 6.dp)
+                                )
+                            }
+                        } else {
+                            SideAppListContent(
+                                apps = filteredApps,
+                                handSide = handSide,
+                                primaryTextColor = primaryTextColor,
+                                showShadows = showShadows,
+                                onAppClick = onAppClick,
+                                onAppLongClick = onAppLongClick
+                            )
+                        }
+                    }
+                }
+
                 Row(
                     modifier = Modifier
                         .weight(1f)
@@ -191,223 +302,19 @@ fun SideAlphabetSearchLayout(
                     verticalAlignment = Alignment.Bottom
                 ) {
                     if (effectiveLettersOnLeft) {
-                        Column(
-                            modifier = Modifier
-                                .width(fixedAlphabetWidth)
-                                .fillMaxHeight(),
-                            verticalArrangement = Arrangement.Bottom,
-                            horizontalAlignment = Alignment.Start
-                        ) {
-                            when (sideAlphabetSlotMode) {
-                                SideAlphabetSlotMode.HISTORY -> {
-                                    if (historyApps.isNotEmpty() || isHistoryEditMode) {
-                                        SideSearchHistoryBlock(
-                                            history = historyApps,
-                                            accentColor = accentColor,
-                                            primaryTextColor = primaryTextColor,
-                                            showShadows = showShadows,
-                                            viewModel = viewModel,
-                                            isEditMode = isHistoryEditMode,
-                                            colorFilter = historyColorFilter,
-                                            onAppClick = onAppClick,
-                                            onAppLongClick = onAppLongClick,
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .fillMaxWidth()
-                                                .padding(bottom = 2.dp)
-                                        )
-                                    } else {
-                                        Spacer(modifier = Modifier.weight(1f))
-                                    }
-                                }
-                                SideAlphabetSlotMode.WIDGET -> {
-                                    SideAlphabetWidgetSlot(
-                                        viewModel = viewModel,
-                                        appWidgetHost = appWidgetHost,
-                                        appWidgetManager = appWidgetManager,
-                                        onPickWidget = onPickSideAlphabetWidget,
-                                        handSide = handSide,
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .fillMaxWidth()
-                                            .padding(bottom = 6.dp)
-                                    )
-                                }
-                                SideAlphabetSlotMode.DISABLED -> {
-                                    Spacer(modifier = Modifier.weight(1f))
-                                }
-                            }
-
-                            SideAlphabetColorTriggerBar(
-                                selectedColor = selectedColor,
-                                slotMode = sideAlphabetSlotMode,
-                                isHistoryPaused = isHistoryPaused,
-                                isHistoryEditMode = isHistoryEditMode,
-                                accentColor = accentColor,
-                                primaryTextColor = primaryTextColor,
-                                showShadows = showShadows,
-                                shadowSettings = shadowSettings,
-                                onClick = { anchor ->
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    quickPaletteOverlayState = QuickPaletteOverlayState(
-                                        anchorPosition = anchor,
-                                        handSide = handSide
-                                    )
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(start = 2.dp, end = 2.dp, bottom = 2.dp)
-                            )
-
-                            SideAlphabetGrid(
-                                alphabet = alphabet,
-                                selectedLetter = selectedLetter,
-                                accentColor = accentColor,
-                                primaryTextColor = primaryTextColor,
-                                showShadows = showShadows,
-                                onLetterSelected = currentOnLetterSelected,
-                                maxGridHeight = totalHeight * 0.50f
-                            )
-                        }
-
-                        Box(
-                            modifier = Modifier
+                        AlphabetStripColumn(Alignment.Start)
+                        SearchContentPane(
+                            paneModifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
-                        ) {
-                            if (selectedLetter == null && selectedColor == null) {
-                                if (showSearchWidgets) {
-                                    SideSearchWidgetSlot(
-                                        viewModel = viewModel,
-                                        appWidgetHost = appWidgetHost,
-                                        appWidgetManager = appWidgetManager,
-                                        onPickWidget = onPickSideWidget,
-                                        handSide = handSide,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(horizontal = 4.dp, vertical = 6.dp)
-                                    )
-                                }
-                            } else {
-                                SideAppListContent(
-                                    apps = filteredApps,
-                                    handSide = handSide,
-                                    primaryTextColor = primaryTextColor,
-                                    showShadows = showShadows,
-                                    onAppClick = onAppClick,
-                                    onAppLongClick = onAppLongClick
-                                )
-                            }
-                        }
+                        )
                     } else {
-                        Box(
-                            modifier = Modifier
+                        SearchContentPane(
+                            paneModifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
-                        ) {
-                            if (selectedLetter == null && selectedColor == null) {
-                                if (showSearchWidgets) {
-                                    SideSearchWidgetSlot(
-                                        viewModel = viewModel,
-                                        appWidgetHost = appWidgetHost,
-                                        appWidgetManager = appWidgetManager,
-                                        onPickWidget = onPickSideWidget,
-                                        handSide = handSide,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(horizontal = 4.dp, vertical = 6.dp)
-                                    )
-                                }
-                            } else {
-                                SideAppListContent(
-                                    apps = filteredApps,
-                                    handSide = handSide,
-                                    primaryTextColor = primaryTextColor,
-                                    showShadows = showShadows,
-                                    onAppClick = onAppClick,
-                                    onAppLongClick = onAppLongClick
-                                )
-                            }
-                        }
-
-                        Column(
-                            modifier = Modifier
-                                .width(fixedAlphabetWidth)
-                                .fillMaxHeight(),
-                            verticalArrangement = Arrangement.Bottom,
-                            horizontalAlignment = Alignment.End
-                        ) {
-                            when (sideAlphabetSlotMode) {
-                                SideAlphabetSlotMode.HISTORY -> {
-                                    if (historyApps.isNotEmpty() || isHistoryEditMode) {
-                                        SideSearchHistoryBlock(
-                                            history = historyApps,
-                                            accentColor = accentColor,
-                                            primaryTextColor = primaryTextColor,
-                                            showShadows = showShadows,
-                                            viewModel = viewModel,
-                                            isEditMode = isHistoryEditMode,
-                                            colorFilter = historyColorFilter,
-                                            onAppClick = onAppClick,
-                                            onAppLongClick = onAppLongClick,
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .fillMaxWidth()
-                                                .padding(bottom = 2.dp)
-                                        )
-                                    } else {
-                                        Spacer(modifier = Modifier.weight(1f))
-                                    }
-                                }
-                                SideAlphabetSlotMode.WIDGET -> {
-                                    SideAlphabetWidgetSlot(
-                                        viewModel = viewModel,
-                                        appWidgetHost = appWidgetHost,
-                                        appWidgetManager = appWidgetManager,
-                                        onPickWidget = onPickSideAlphabetWidget,
-                                        handSide = handSide,
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .fillMaxWidth()
-                                            .padding(bottom = 6.dp)
-                                    )
-                                }
-                                SideAlphabetSlotMode.DISABLED -> {
-                                    Spacer(modifier = Modifier.weight(1f))
-                                }
-                            }
-
-                            SideAlphabetColorTriggerBar(
-                                selectedColor = selectedColor,
-                                slotMode = sideAlphabetSlotMode,
-                                isHistoryPaused = isHistoryPaused,
-                                isHistoryEditMode = isHistoryEditMode,
-                                accentColor = accentColor,
-                                primaryTextColor = primaryTextColor,
-                                showShadows = showShadows,
-                                shadowSettings = shadowSettings,
-                                onClick = { anchor ->
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    quickPaletteOverlayState = QuickPaletteOverlayState(
-                                        anchorPosition = anchor,
-                                        handSide = handSide
-                                    )
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(start = 2.dp, end = 2.dp, bottom = 2.dp)
-                            )
-
-                            SideAlphabetGrid(
-                                alphabet = alphabet,
-                                selectedLetter = selectedLetter,
-                                accentColor = accentColor,
-                                primaryTextColor = primaryTextColor,
-                                showShadows = showShadows,
-                                onLetterSelected = currentOnLetterSelected,
-                                maxGridHeight = totalHeight * 0.50f
-                            )
-                        }
+                        )
+                        AlphabetStripColumn(Alignment.End)
                     }
                 }
 

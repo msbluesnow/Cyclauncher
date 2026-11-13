@@ -43,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -267,134 +268,106 @@ fun QuickPaletteOverlay(
                     )
 
                     if (slotMode == SideAlphabetSlotMode.HISTORY) {
-                        // History Action Card
-                        val histBgBrush = remember(accentColor.color, popupTheme) {
-                            Brush.verticalGradient(
-                                listOf(
-                                    if (popupTheme == PopupTheme.LIGHT) Color.Black.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.06f),
-                                    if (popupTheme == PopupTheme.LIGHT) Color.Black.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.09f)
-                                )
-                            )
-                        }
-
-                        val histBorder = remember(popupTheme.borderColor) {
-                            BorderStroke(1.dp, popupTheme.borderColor.copy(alpha = 0.6f))
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(58.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(histBgBrush)
-                                .border(histBorder, RoundedCornerShape(14.dp))
-                                .clickable {
-                                    onOpenHistoryMenu(Offset(cardLeftX + cardWidthPx / 2f, cardTopY + cardHeightPx))
-                                }
-                                .padding(horizontal = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(accentColor.color.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = if (isHistoryEditMode) Icons.Outlined.Check
-                                        else if (isHistoryPaused) Icons.Outlined.HistoryToggleOff
-                                        else Icons.Outlined.History,
-                                    contentDescription = stringResource(R.string.history_menu_title),
-                                    tint = accentColor.color,
-                                    modifier = Modifier.size(24.dp)
-                                )
+                        QuickPaletteActionCard(
+                            icon = if (isHistoryEditMode) Icons.Outlined.Check
+                                else if (isHistoryPaused) Icons.Outlined.HistoryToggleOff
+                                else Icons.Outlined.History,
+                            iconDescription = stringResource(R.string.history_menu_title),
+                            title = if (isHistoryEditMode) stringResource(R.string.history_menu_done_edit)
+                                else stringResource(R.string.history_menu_title),
+                            subtitle = if (isHistoryEditMode) stringResource(R.string.history_menu_done_edit)
+                                else if (isHistoryPaused) stringResource(R.string.history_menu_paused)
+                                else stringResource(R.string.side_overlay_history_desc),
+                            accentColor = accentColor,
+                            popupTheme = popupTheme,
+                            textColor = textColor,
+                            onClick = {
+                                onOpenHistoryMenu(Offset(cardLeftX + cardWidthPx / 2f, cardTopY + cardHeightPx))
                             }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                TouchMarqueeText(
-                                    text = if (isHistoryEditMode) stringResource(R.string.history_menu_done_edit)
-                                           else stringResource(R.string.history_menu_title),
-                                    color = textColor,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.5.sp
-                                )
-                                TouchMarqueeText(
-                                    text = if (isHistoryEditMode) stringResource(R.string.history_menu_done_edit)
-                                           else if (isHistoryPaused) stringResource(R.string.history_menu_paused)
-                                           else stringResource(R.string.side_overlay_history_desc),
-                                    color = textColor.copy(alpha = 0.70f),
-                                    fontSize = 11.sp
-                                )
-                            }
-                        }
+                        )
                     } else if (slotMode == SideAlphabetSlotMode.WIDGET) {
-                        // Widget Action Card
-                        val widgetBgBrush = remember(accentColor.color, popupTheme) {
-                            Brush.verticalGradient(
-                                listOf(
-                                    if (popupTheme == PopupTheme.LIGHT) Color.Black.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.06f),
-                                    if (popupTheme == PopupTheme.LIGHT) Color.Black.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.09f)
-                                )
-                            )
-                        }
-
-                        val widgetBorder = remember(popupTheme.borderColor) {
-                            BorderStroke(1.dp, popupTheme.borderColor.copy(alpha = 0.6f))
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(58.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(widgetBgBrush)
-                                .border(widgetBorder, RoundedCornerShape(14.dp))
-                                .clickable {
-                                    onOpenWidgetAction()
-                                }
-                                .padding(horizontal = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(accentColor.color.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Widgets,
-                                    contentDescription = stringResource(R.string.widget_title),
-                                    tint = accentColor.color,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                TouchMarqueeText(
-                                    text = stringResource(R.string.widget_title),
-                                    color = textColor,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.5.sp
-                                )
-                                TouchMarqueeText(
-                                    text = if (hasWidget) stringResource(R.string.widget_action_options)
-                                           else stringResource(R.string.widget_action_add),
-                                    color = textColor.copy(alpha = 0.70f),
-                                    fontSize = 11.sp
-                                )
-                            }
-                        }
+                        QuickPaletteActionCard(
+                            icon = Icons.Outlined.Widgets,
+                            iconDescription = stringResource(R.string.widget_title),
+                            title = stringResource(R.string.widget_title),
+                            subtitle = if (hasWidget) stringResource(R.string.widget_action_options)
+                                else stringResource(R.string.widget_action_add),
+                            accentColor = accentColor,
+                            popupTheme = popupTheme,
+                            textColor = textColor,
+                            onClick = onOpenWidgetAction
+                        )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun QuickPaletteActionCard(
+    icon: ImageVector,
+    iconDescription: String,
+    title: String,
+    subtitle: String,
+    accentColor: AccentColor,
+    popupTheme: PopupTheme,
+    textColor: Color,
+    onClick: () -> Unit
+) {
+    val bgBrush = remember(accentColor.color, popupTheme) {
+        val topAlpha = if (popupTheme == PopupTheme.LIGHT) 0.05f else 0.06f
+        val bottomAlpha = if (popupTheme == PopupTheme.LIGHT) 0.08f else 0.09f
+        val base = if (popupTheme == PopupTheme.LIGHT) Color.Black else Color.White
+        Brush.verticalGradient(
+            listOf(base.copy(alpha = topAlpha), base.copy(alpha = bottomAlpha))
+        )
+    }
+    val border = remember(popupTheme.borderColor) {
+        BorderStroke(1.dp, popupTheme.borderColor.copy(alpha = 0.6f))
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(58.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(bgBrush)
+            .border(border, RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(accentColor.color.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = iconDescription,
+                tint = accentColor.color,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Center
+        ) {
+            TouchMarqueeText(
+                text = title,
+                color = textColor,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.5.sp
+            )
+            TouchMarqueeText(
+                text = subtitle,
+                color = textColor.copy(alpha = 0.70f),
+                fontSize = 11.sp
+            )
         }
     }
 }
@@ -512,41 +485,13 @@ fun SideAlphabetColorTriggerBar(
                     modifier = Modifier.size(26.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (selectedColor != null) {
-                        val tileShape = remember { RoundedCornerShape(6.dp) }
-                        val contrastColor = remember(selectedColor) { getBucketContrastColor(selectedColor) }
-                        Box(
-                            modifier = Modifier
-                                .size(20.dp)
-                                .clip(tileShape)
-                                .then(
-                                    when (selectedColor) {
-                                        AppColorBucket.MULTICOLOR -> Modifier.background(Brush.linearGradient(MULTICOLOR_GRADIENT))
-                                        AppColorBucket.MONOCHROME -> Modifier.background(Brush.linearGradient(MONOCHROME_GRADIENT))
-                                        else -> Modifier.background(selectedColor.displayColor)
-                                    }
-                                )
-                                .border(1.5.dp, contrastColor.copy(alpha = 0.9f), tileShape)
-                        )
-                    } else {
-                        val paletteIcon = Icons.Outlined.Palette
-                        if (showShadows) {
-                            Icon(
-                                imageVector = paletteIcon,
-                                contentDescription = null,
-                                tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
-                                modifier = Modifier
-                                    .size(22.dp)
-                                    .offset(1.dp, 1.dp)
-                            )
-                        }
-                        Icon(
-                            imageVector = paletteIcon,
-                            contentDescription = stringResource(R.string.side_overlay_colors_title),
-                            tint = accentColor.color,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
+                    ColorFilterStatusBadge(
+                        selectedColor = selectedColor,
+                        accentColor = accentColor,
+                        primaryTextColor = primaryTextColor,
+                        showShadows = showShadows,
+                        shadowSettings = shadowSettings
+                    )
                 }
             }
         } else {
@@ -562,41 +507,13 @@ fun SideAlphabetColorTriggerBar(
                         .fillMaxHeight(),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (selectedColor != null) {
-                        val tileShape = remember { RoundedCornerShape(6.dp) }
-                        val contrastColor = remember(selectedColor) { getBucketContrastColor(selectedColor) }
-                        Box(
-                            modifier = Modifier
-                                .size(20.dp)
-                                .clip(tileShape)
-                                .then(
-                                    when (selectedColor) {
-                                        AppColorBucket.MULTICOLOR -> Modifier.background(Brush.linearGradient(MULTICOLOR_GRADIENT))
-                                        AppColorBucket.MONOCHROME -> Modifier.background(Brush.linearGradient(MONOCHROME_GRADIENT))
-                                        else -> Modifier.background(selectedColor.displayColor)
-                                    }
-                                )
-                                .border(1.5.dp, contrastColor.copy(alpha = 0.9f), tileShape)
-                        )
-                    } else {
-                        val paletteIcon = Icons.Outlined.Palette
-                        if (showShadows) {
-                            Icon(
-                                imageVector = paletteIcon,
-                                contentDescription = null,
-                                tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
-                                modifier = Modifier
-                                    .size(22.dp)
-                                    .offset(1.dp, 1.dp)
-                            )
-                        }
-                        Icon(
-                            imageVector = paletteIcon,
-                            contentDescription = stringResource(R.string.side_overlay_colors_title),
-                            tint = accentColor.color,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
+                    ColorFilterStatusBadge(
+                        selectedColor = selectedColor,
+                        accentColor = accentColor,
+                        primaryTextColor = primaryTextColor,
+                        showShadows = showShadows,
+                        shadowSettings = shadowSettings
+                    )
                 }
 
                 // Subtle vertical separator
@@ -663,3 +580,48 @@ fun SideAlphabetColorTriggerBar(
     }
 }
 
+
+@Composable
+private fun ColorFilterStatusBadge(
+    selectedColor: AppColorBucket?,
+    accentColor: AccentColor,
+    primaryTextColor: PrimaryTextColor,
+    showShadows: Boolean,
+    shadowSettings: ShadowSettings
+) {
+    if (selectedColor != null) {
+        val tileShape = remember { RoundedCornerShape(6.dp) }
+        val contrastColor = remember(selectedColor) { getBucketContrastColor(selectedColor) }
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .clip(tileShape)
+                .then(
+                    when (selectedColor) {
+                        AppColorBucket.MULTICOLOR -> Modifier.background(Brush.linearGradient(MULTICOLOR_GRADIENT))
+                        AppColorBucket.MONOCHROME -> Modifier.background(Brush.linearGradient(MONOCHROME_GRADIENT))
+                        else -> Modifier.background(selectedColor.displayColor)
+                    }
+                )
+                .border(1.5.dp, contrastColor.copy(alpha = 0.9f), tileShape)
+        )
+    } else {
+        val paletteIcon = Icons.Outlined.Palette
+        if (showShadows) {
+            Icon(
+                imageVector = paletteIcon,
+                contentDescription = null,
+                tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride),
+                modifier = Modifier
+                    .size(22.dp)
+                    .offset(1.dp, 1.dp)
+            )
+        }
+        Icon(
+            imageVector = paletteIcon,
+            contentDescription = stringResource(R.string.side_overlay_colors_title),
+            tint = accentColor.color,
+            modifier = Modifier.size(22.dp)
+        )
+    }
+}

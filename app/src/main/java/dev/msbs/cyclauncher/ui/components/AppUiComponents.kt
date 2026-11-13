@@ -64,7 +64,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -77,6 +79,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.rememberAsyncImagePainter
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import kotlin.math.roundToInt
 
 /**
  * Single-line text component with marquee animation that automatically restarts upon touch begin (ACTION_DOWN).
@@ -456,9 +459,39 @@ private class ItemPositionRef {
 }
 
 /**
+ * Computes a screen-clamped [IntOffset] for anchor-based popups so they never overflow display bounds.
+ */
+@Composable
+fun rememberClampedPopupOffset(
+    offset: Offset,
+    menuWidth: Dp,
+    menuHeight: Dp,
+    edgePadding: Dp = 16.dp
+): IntOffset {
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    return remember(offset, menuWidth, menuHeight, edgePadding, configuration.screenWidthDp, configuration.screenHeightDp, density) {
+        with(density) {
+            val screenWidthPx = configuration.screenWidthDp.dp.toPx()
+            val screenHeightPx = configuration.screenHeightDp.dp.toPx()
+            val menuWidthPx = menuWidth.toPx()
+            val menuHeightPx = menuHeight.toPx()
+            val borderPx = edgePadding.toPx()
+
+            val maxX = (screenWidthPx - menuWidthPx - borderPx).coerceAtLeast(borderPx)
+            val maxY = (screenHeightPx - menuHeightPx - borderPx).coerceAtLeast(borderPx)
+            IntOffset(
+                offset.x.coerceIn(borderPx, maxX).roundToInt(),
+                offset.y.coerceIn(borderPx, maxY).roundToInt()
+            )
+        }
+    }
+}
+
+/**
  * Attaches root position tracking and tap/long-press gestures to an app item composable.
  */
-fun Modifier.appItemGestures(
+internal fun Modifier.appItemGestures(
     key: Any?,
     onClick: () -> Unit,
     onLongClick: (Offset) -> Unit = {}

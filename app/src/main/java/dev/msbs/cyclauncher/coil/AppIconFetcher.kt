@@ -226,27 +226,7 @@ internal class AppIconFetcher private constructor(
         // Fast path for primary personal profile: load high-density launcher asset via PackageManager
         if (targetUser == myUser) {
             val component = android.content.ComponentName(pkg, activity)
-            try {
-                val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    pm.getActivityInfo(component, PackageManager.ComponentInfoFlags.of(0L))
-                } else {
-                    @Suppress("DEPRECATION")
-                    pm.getActivityInfo(component, 0)
-                }
-                val iconRes = info.iconResource.takeIf { it != 0 } ?: info.applicationInfo.icon
-                if (iconRes != 0) {
-                    try {
-                        val res = pm.getResourcesForApplication(info.applicationInfo)
-                        val dr = res.getDrawableForDensity(iconRes, iconDpi, null)
-                        if (dr != null) return dr
-                    } catch (_: Exception) {}
-                }
-                return info.loadIcon(pm)
-            } catch (_: Exception) {
-                try {
-                    return pm.getActivityIcon(component)
-                } catch (_: Exception) {}
-            }
+            loadActivityDrawable(pm, component, iconDpi)?.let { return it }
         }
 
         // Secondary profiles (Work Profile / Private Space): resolve badged icon via LauncherApps using preferred density
@@ -262,7 +242,16 @@ internal class AppIconFetcher private constructor(
         }
 
         val component = android.content.ComponentName(pkg, activity)
-        val drawable = try {
+        val drawable = loadActivityDrawable(pm, component, iconDpi) ?: pm.defaultActivityIcon
+        return pm.getUserBadgedIcon(drawable, targetUser)
+    }
+
+    private fun loadActivityDrawable(
+        pm: PackageManager,
+        component: android.content.ComponentName,
+        iconDpi: Int
+    ): Drawable? {
+        try {
             val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 pm.getActivityInfo(component, PackageManager.ComponentInfoFlags.of(0L))
             } else {
@@ -274,22 +263,17 @@ internal class AppIconFetcher private constructor(
                 try {
                     val res = pm.getResourcesForApplication(info.applicationInfo)
                     val dr = res.getDrawableForDensity(iconRes, iconDpi, null)
-                    dr ?: info.loadIcon(pm)
-                } catch (_: Exception) {
-                    info.loadIcon(pm)
-                }
-            } else {
-                info.loadIcon(pm)
+                    if (dr != null) return dr
+                } catch (_: Exception) {}
             }
+            return info.loadIcon(pm)
         } catch (_: Exception) {
-            try {
+            return try {
                 pm.getActivityIcon(component)
             } catch (_: Exception) {
-                pm.defaultActivityIcon
+                null
             }
         }
-
-        return pm.getUserBadgedIcon(drawable, targetUser)
     }
 
     class Factory(private val context: Context) : Fetcher.Factory<Any> {

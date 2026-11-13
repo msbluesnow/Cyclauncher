@@ -41,18 +41,14 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import dev.msbs.cyclauncher.R
-import kotlin.math.roundToInt
 
 /**
  * Context action menu for an application item (favorites, tags, rename, info, uninstall).
@@ -71,29 +67,16 @@ fun AppActionMenu(
     accentColor: AccentColor = AccentColor.SKY,
     popupTheme: PopupTheme = PopupTheme.DARK
 ) {
-    val configuration = LocalConfiguration.current
-    val density = LocalDensity.current
-
-    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
-    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
-
     val menuWidth = 240.dp
-    val menuWidthPx = with(density) { menuWidth.toPx() }
-
     val itemsCount = 5
-    val menuHeightPx = with(density) { (60 + itemsCount * 48).dp.toPx() }
-    val borderPadding = with(density) { 16.dp.toPx() }
-
-    var x = offset.x
-    var y = offset.y
-
-    if (x + menuWidthPx > screenWidthPx) x = screenWidthPx - menuWidthPx - borderPadding
-    if (x < borderPadding) x = borderPadding
-    if (y + menuHeightPx > screenHeightPx) y = screenHeightPx - menuHeightPx - borderPadding
-    if (y < borderPadding) y = borderPadding
+    val popupOffset = rememberClampedPopupOffset(
+        offset = offset,
+        menuWidth = menuWidth,
+        menuHeight = (60 + itemsCount * 48).dp
+    )
 
     Popup(
-        offset = IntOffset(x.roundToInt(), y.roundToInt()),
+        offset = popupOffset,
         onDismissRequest = onDismiss,
         properties = PopupProperties(focusable = true)
     ) {
@@ -208,29 +191,16 @@ fun HistoryActionMenu(
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     popupTheme: PopupTheme = PopupTheme.DARK
 ) {
-    val configuration = LocalConfiguration.current
-    val density = LocalDensity.current
-
-    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
-    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
-
     val menuWidth = 250.dp
-    val menuWidthPx = with(density) { menuWidth.toPx() }
-
     val itemsCount = if (hasHistoryItems && onClearHistory != null) 3 else 2
-    val menuHeightPx = with(density) { (60 + itemsCount * 48).dp.toPx() }
-    val borderPadding = with(density) { 16.dp.toPx() }
-
-    var x = offset.x
-    var y = offset.y
-
-    if (x + menuWidthPx > screenWidthPx) x = screenWidthPx - menuWidthPx - borderPadding
-    if (x < borderPadding) x = borderPadding
-    if (y + menuHeightPx > screenHeightPx) y = screenHeightPx - menuHeightPx - borderPadding
-    if (y < borderPadding) y = borderPadding
+    val popupOffset = rememberClampedPopupOffset(
+        offset = offset,
+        menuWidth = menuWidth,
+        menuHeight = (60 + itemsCount * 48).dp
+    )
 
     Popup(
-        offset = IntOffset(x.roundToInt(), y.roundToInt()),
+        offset = popupOffset,
         onDismissRequest = onDismiss,
         properties = PopupProperties(focusable = true)
     ) {

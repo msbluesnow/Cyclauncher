@@ -66,7 +66,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -280,29 +279,18 @@ fun TagFolderPopup(
     accentColor: AccentColor = AccentColor.SKY,
     popupTheme: PopupTheme = PopupTheme.DARK
 ) {
-    val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val haptic = LocalHapticFeedback.current
     val animationsEnabled = LocalAnimationsEnabled.current
 
     val popupWidth = 260.dp
-    val popupWidthPx = with(density) { popupWidth.toPx() }
-
     val rows = if (apps.isEmpty()) 1 else ((apps.size + 2) / 3).coerceIn(1, 4)
     val estimatedHeight = if (apps.isEmpty()) 110.dp else (76 + rows * 80).dp
-    val popupHeightPx = with(density) { estimatedHeight.toPx() }
-    val borderPadding = with(density) { 16.dp.toPx() }
-
-    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
-    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
-
-    var x = offset.x
-    var y = offset.y
-
-    if (x + popupWidthPx > screenWidthPx - borderPadding) x = screenWidthPx - popupWidthPx - borderPadding
-    if (x < borderPadding) x = borderPadding
-    if (y + popupHeightPx > screenHeightPx - borderPadding) y = screenHeightPx - popupHeightPx - borderPadding
-    if (y < borderPadding) y = borderPadding
+    val popupOffset = rememberClampedPopupOffset(
+        offset = offset,
+        menuWidth = popupWidth,
+        menuHeight = estimatedHeight
+    )
 
     // Reorder drag tracking states
     var draggingKey by remember { mutableStateOf<String?>(null) }
@@ -326,7 +314,7 @@ fun TagFolderPopup(
     }
 
     Popup(
-        offset = IntOffset(x.roundToInt(), y.roundToInt()),
+        offset = popupOffset,
         onDismissRequest = onDismiss,
         properties = PopupProperties(focusable = true)
     ) {
@@ -698,7 +686,10 @@ fun TagFolderPopup(
                                         onLongClick = { appOffset ->
                                             if (!isEditMode) {
                                                 onDismiss()
-                                                onAppLongClick(app, Offset(x, y) + appOffset)
+                                                onAppLongClick(
+                                                    app,
+                                                    Offset(popupOffset.x.toFloat(), popupOffset.y.toFloat()) + appOffset
+                                                )
                                             }
                                         },
                                         onRemoveAppFromTag = onRemoveAppFromTag,
@@ -1041,29 +1032,16 @@ fun TagFolderActionMenu(
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     popupTheme: PopupTheme = PopupTheme.DARK
 ) {
-    val configuration = LocalConfiguration.current
-    val density = LocalDensity.current
-
-    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
-    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
-
     val menuWidth = 240.dp
-    val menuWidthPx = with(density) { menuWidth.toPx() }
-
     val itemsCount = 4
-    val menuHeightPx = with(density) { (60 + itemsCount * 48).dp.toPx() }
-    val borderPadding = with(density) { 16.dp.toPx() }
-
-    var x = offset.x
-    var y = offset.y
-
-    if (x + menuWidthPx > screenWidthPx) x = screenWidthPx - menuWidthPx - borderPadding
-    if (x < borderPadding) x = borderPadding
-    if (y + menuHeightPx > screenHeightPx) y = screenHeightPx - menuHeightPx - borderPadding
-    if (y < borderPadding) y = borderPadding
+    val popupOffset = rememberClampedPopupOffset(
+        offset = offset,
+        menuWidth = menuWidth,
+        menuHeight = (60 + itemsCount * 48).dp
+    )
 
     Popup(
-        offset = IntOffset(x.roundToInt(), y.roundToInt()),
+        offset = popupOffset,
         onDismissRequest = onDismiss,
         properties = PopupProperties(focusable = true)
     ) {
@@ -1293,29 +1271,16 @@ fun TagSectionActionMenu(
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     popupTheme: PopupTheme = PopupTheme.DARK
 ) {
-    val configuration = LocalConfiguration.current
-    val density = LocalDensity.current
-
-    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
-    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
-
     val menuWidth = 240.dp
-    val menuWidthPx = with(density) { menuWidth.toPx() }
-
     val itemsCount = 2
-    val menuHeightPx = with(density) { (60 + itemsCount * 48).dp.toPx() }
-    val borderPadding = with(density) { 16.dp.toPx() }
-
-    var x = offset.x
-    var y = offset.y
-
-    if (x + menuWidthPx > screenWidthPx) x = screenWidthPx - menuWidthPx - borderPadding
-    if (x < borderPadding) x = borderPadding
-    if (y + menuHeightPx > screenHeightPx) y = screenHeightPx - menuHeightPx - borderPadding
-    if (y < borderPadding) y = borderPadding
+    val popupOffset = rememberClampedPopupOffset(
+        offset = offset,
+        menuWidth = menuWidth,
+        menuHeight = (60 + itemsCount * 48).dp
+    )
 
     Popup(
-        offset = IntOffset(x.roundToInt(), y.roundToInt()),
+        offset = popupOffset,
         onDismissRequest = onDismiss,
         properties = PopupProperties(focusable = true)
     ) {
@@ -1419,28 +1384,15 @@ fun TagSortPopup(
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     popupTheme: PopupTheme = PopupTheme.DARK
 ) {
-    val configuration = LocalConfiguration.current
-    val density = LocalDensity.current
-
-    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
-    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
-
     val menuWidth = 260.dp
-    val menuWidthPx = with(density) { menuWidth.toPx() }
-
-    val menuHeightPx = with(density) { 170.dp.toPx() }
-    val borderPadding = with(density) { 16.dp.toPx() }
-
-    var x = offset.x
-    var y = offset.y
-
-    if (x + menuWidthPx > screenWidthPx) x = screenWidthPx - menuWidthPx - borderPadding
-    if (x < borderPadding) x = borderPadding
-    if (y + menuHeightPx > screenHeightPx) y = screenHeightPx - menuHeightPx - borderPadding
-    if (y < borderPadding) y = borderPadding
+    val popupOffset = rememberClampedPopupOffset(
+        offset = offset,
+        menuWidth = menuWidth,
+        menuHeight = 170.dp
+    )
 
     Popup(
-        offset = IntOffset(x.roundToInt(), y.roundToInt()),
+        offset = popupOffset,
         onDismissRequest = onDismiss,
         properties = PopupProperties(focusable = true)
     ) {

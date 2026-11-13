@@ -250,69 +250,42 @@ fun SearchWidgetCompartment(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    TextButton(
-                        onClick = {
-                            slotForOptions = null
-                            onPickWidget(isLeft)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.textButtonColors(contentColor = popupTheme.contentColor)
+                    WidgetOptionButton(
+                        icon = Icons.Outlined.Edit,
+                        label = stringResource(R.string.widget_action_change),
+                        iconTint = accentColor.color,
+                        contentColor = popupTheme.contentColor
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Start
-                        ) {
-                            Icon(Icons.Outlined.Edit, contentDescription = null, tint = accentColor.color)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(stringResource(R.string.widget_action_change), fontSize = 15.sp)
-                        }
+                        slotForOptions = null
+                        onPickWidget(isLeft)
                     }
 
-                    TextButton(
-                        onClick = {
-                            slotForOptions = null
-                            localRatio = 0.5f
-                            viewModel.updateSearchWidgetSplitRatio(0.5f)
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.textButtonColors(contentColor = popupTheme.contentColor)
+                    WidgetOptionButton(
+                        icon = Icons.Outlined.RestartAlt,
+                        label = stringResource(R.string.widget_action_reset_split),
+                        iconTint = accentColor.color,
+                        contentColor = popupTheme.contentColor
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Start
-                        ) {
-                            Icon(Icons.Outlined.RestartAlt, contentDescription = null, tint = accentColor.color)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(stringResource(R.string.widget_action_reset_split), fontSize = 15.sp)
-                        }
+                        slotForOptions = null
+                        localRatio = 0.5f
+                        viewModel.updateSearchWidgetSplitRatio(0.5f)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     }
 
-                    TextButton(
-                        onClick = {
-                            slotForOptions = null
-                            targetWidgetId?.let { id ->
-                                try {
-                                    appWidgetHost?.deleteAppWidgetId(id)
-                                } catch (_: Exception) {}
-                            }
-                            viewModel.removeSearchWidget(isLeft)
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFFF5252))
+                    WidgetOptionButton(
+                        icon = Icons.Outlined.Delete,
+                        label = stringResource(R.string.widget_action_remove),
+                        iconTint = Color(0xFFFF5252),
+                        contentColor = Color(0xFFFF5252)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Start
-                        ) {
-                            Icon(Icons.Outlined.Delete, contentDescription = null, tint = Color(0xFFFF5252))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(stringResource(R.string.widget_action_remove), fontSize = 15.sp)
+                        slotForOptions = null
+                        targetWidgetId?.let { id ->
+                            try {
+                                appWidgetHost?.deleteAppWidgetId(id)
+                            } catch (_: Exception) {}
                         }
+                        viewModel.removeSearchWidget(isLeft)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     }
                 }
             },
@@ -392,41 +365,25 @@ private fun SingleWidgetSlot(
             }
         }
     } else {
+        val displayDensity = context.resources.displayMetrics.density
+        val targetWidthDp = (slotWidthPx / displayDensity).toInt().coerceAtLeast(30)
+        val targetHeightDp = (slotHeightPx / displayDensity).toInt().coerceAtLeast(30)
+
         // Active Embedded AppWidgetHostView
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(12.dp))
         ) {
-            AndroidView(
-                factory = { ctx ->
-                    try {
-                        val view = cachedHostView ?: run {
-                            val host = appWidgetHost
-                            val newView = (host?.createView(ctx, widgetId, widgetInfo) as? LauncherAppWidgetHostView)
-                                ?: LauncherAppWidgetHostView(ctx).apply {
-                                    setAppWidget(widgetId, widgetInfo)
-                                }
-                            cachedHostView = newView
-                            newView
-                        }
-                        (view.parent as? ViewGroup)?.removeView(view)
-                        view
-                    } catch (_: Throwable) {
-                        android.widget.FrameLayout(ctx)
-                    }
-                },
-                modifier = Modifier.fillMaxSize(),
-                update = { view ->
-                    if (!isResizing && slotWidthPx > 0f && slotHeightPx > 0f) {
-                        try {
-                            val displayDensity = context.resources.displayMetrics.density
-                            val targetWidthDp = (slotWidthPx / displayDensity).toInt().coerceAtLeast(30)
-                            val targetHeightDp = (slotHeightPx / displayDensity).toInt().coerceAtLeast(30)
-                            (view as? LauncherAppWidgetHostView)?.applyWidgetSize(targetWidthDp, targetHeightDp)
-                        } catch (_: Throwable) {}
-                    }
-                }
+            SingleEmbeddedWidgetView(
+                widgetId = widgetId,
+                widgetInfo = widgetInfo,
+                appWidgetHost = appWidgetHost,
+                cachedHostView = cachedHostView,
+                onCacheView = { cachedHostView = it },
+                targetWidthDp = targetWidthDp,
+                targetHeightDp = targetHeightDp,
+                isResizing = isResizing || slotWidthPx <= 0f || slotHeightPx <= 0f
             )
 
             // Discreet options button overlay in the upper corner
