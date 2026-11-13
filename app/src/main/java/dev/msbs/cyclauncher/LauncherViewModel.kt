@@ -1136,7 +1136,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val initialLastAlphabet = try { SearchMethod.valueOf(savedLastAlphabet) } catch (e: Exception) { SearchMethod.SIDE_ALPHABET }
         lastAlphabetSearchMethod = if (initialLastAlphabet == SearchMethod.TEXT) SearchMethod.SIDE_ALPHABET else initialLastAlphabet
 
-        _searchListAlignment.value = if (_handSide.value == HandSide.LEFT) TextAlign.End else TextAlign.Start
         _sideAlphabetSlotMode.value = loadSideAlphabetSlotMode()
         _sideAlphabetButtonYRatio.value = prefs.safeGetFloat("side_alphabet_button_y_ratio", 0.23f).coerceIn(0.05f, 0.85f)
         _highlightSectionOrder.value = loadHighlightSectionOrder()

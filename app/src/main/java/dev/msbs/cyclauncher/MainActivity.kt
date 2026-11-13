@@ -1115,7 +1115,7 @@ private fun BaseLauncherConfirmDialog(
     title: String,
     confirmButtonText: String,
     accentColor: AccentColor,
-    buttonTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    buttonTextColor: PrimaryTextColor = PrimaryTextColor.BLACK,
     popupTheme: PopupTheme = PopupTheme.DARK,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
@@ -1166,7 +1166,7 @@ private fun BaseLauncherConfirmDialog(
 private fun AutoTagsConfirmDialog(
     preview: AutoTagsPreview,
     accentColor: AccentColor,
-    buttonTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    buttonTextColor: PrimaryTextColor = PrimaryTextColor.BLACK,
     popupTheme: PopupTheme = PopupTheme.DARK,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
@@ -1204,7 +1204,7 @@ private fun AutoTagsConfirmDialog(
 private fun TagsBackupConfirmDialog(
     preview: TagsBackupPreview,
     accentColor: AccentColor,
-    buttonTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    buttonTextColor: PrimaryTextColor = PrimaryTextColor.BLACK,
     popupTheme: PopupTheme = PopupTheme.DARK,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit

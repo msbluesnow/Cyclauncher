@@ -506,11 +506,11 @@ fun CharacterMappingScreen(
                         val arabicPreset = mapOf(
                             "ا" to 'A', "أ" to 'A', "إ" to 'A', "آ" to 'A',
                             "ب" to 'B', "ت" to 'T', "ث" to 'T', "ج" to 'J',
-                            "ح" to 'H', "х" to 'K', "د" to 'D', "ذ" to 'D',
-                            "р" to 'R', "ز" to 'Z', "с" to 'S', "ш" to 'S',
+                            "ح" to 'H', "خ" to 'K', "د" to 'D', "ذ" to 'D',
+                            "ر" to 'R', "ز" to 'Z', "س" to 'S', "ش" to 'S',
                             "ص" to 'S', "ض" to 'D', "ط" to 'T', "ظ" to 'Z',
                             "ع" to 'A', "غ" to 'G', "ف" to 'F', "ق" to 'Q',
-                            "ك" to 'K', "л" to 'L', "м" to 'M', "н" to 'N',
+                            "ك" to 'K', "ل" to 'L', "م" to 'M', "ن" to 'N',
                             "ه" to 'H', "و" to 'W', "ي" to 'Y', "ى" to 'Y'
                         )
                         viewModel.addCharMappings(arabicPreset)

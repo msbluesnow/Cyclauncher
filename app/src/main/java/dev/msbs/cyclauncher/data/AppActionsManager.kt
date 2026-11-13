@@ -806,12 +806,14 @@ class AppActionsManager(context: Context) {
         if (favoritesToImport.isEmpty()) return
         val current = _favorites.value.toMutableList()
         favoritesToImport.forEach { favKey ->
+            if (current.size >= 13) return@forEach
             if (!current.contains(favKey)) {
                 current.add(favKey)
             }
         }
-        _favorites.value = current
-        saveList("favorites", current)
+        val capped = current.distinct().take(13)
+        _favorites.value = capped
+        saveList("favorites", capped)
     }
 
     fun applyAppLabels(map: Map<String, String>) {
@@ -939,9 +941,10 @@ class AppActionsManager(context: Context) {
                     }
                 }
             }
-            if (resolvedFavorites.isNotEmpty()) {
-                _favorites.value = resolvedFavorites
-                saveList("favorites", resolvedFavorites)
+            val cappedFavorites = resolvedFavorites.distinct().take(13)
+            if (cappedFavorites.isNotEmpty()) {
+                _favorites.value = cappedFavorites
+                saveList("favorites", cappedFavorites)
             }
         }
 

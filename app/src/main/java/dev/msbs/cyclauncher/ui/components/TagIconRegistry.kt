@@ -215,13 +215,32 @@ object TagIconRegistry {
 
     private val ICON_MAP: Map<String, ImageVector> = ALL_ICONS.associate { it.key to it.icon }
 
+    private val ALIAS_ICONS: Map<String, ImageVector> = mapOf(
+        "photo" to Icons.Outlined.Image,
+        "photos" to Icons.Outlined.Image,
+        "gallery" to Icons.Outlined.Image,
+        "news" to Icons.Outlined.RssFeed,
+        "weather" to Icons.Outlined.WbSunny,
+        "cloud" to Icons.Outlined.WbCloudy,
+        "bank" to Icons.Outlined.AccountBalance,
+        "finance" to Icons.Outlined.Payments,
+        "music" to Icons.Outlined.MusicNote,
+        "video" to Icons.Outlined.PlayCircle,
+        "mail" to Icons.Outlined.Email,
+        "email" to Icons.Outlined.Email,
+        "browser" to Icons.Outlined.Language,
+        "maps" to Icons.Outlined.Map,
+        "tools" to Icons.Outlined.Build,
+        "health" to Icons.Outlined.HealthAndSafety
+    )
+
     /**
      * Resolves an [ImageVector] for a given icon key (e.g. "icon:games" or "games").
      */
     fun getVectorIcon(key: String?): ImageVector? {
         if (key == null) return null
         val cleanKey = key.removePrefix("icon:").lowercase().trim()
-        return ICON_MAP[cleanKey]
+        return ICON_MAP[cleanKey] ?: ALIAS_ICONS[cleanKey]
     }
 
     /**
@@ -229,7 +248,8 @@ object TagIconRegistry {
      */
     fun isVectorIcon(value: String?): Boolean {
         if (value == null) return false
-        return value.startsWith("icon:") || ICON_MAP.containsKey(value.lowercase().trim())
+        val cleanKey = value.removePrefix("icon:").lowercase().trim()
+        return value.startsWith("icon:", ignoreCase = true) || ICON_MAP.containsKey(cleanKey) || ALIAS_ICONS.containsKey(cleanKey)
     }
 
     /**

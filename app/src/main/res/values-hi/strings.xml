@@ -408,4 +408,26 @@
     <string name="toast_parse_tags_file_failed">टैग फ़ाइल पार्स करने में विफल: %1$s</string>
     <string name="toast_backup_exported">बैकअप निर्यात किया गया (%1$d टैग, %2$d ऐप्स)</string>
     <string name="toast_exported_mappings">%1$d मैपिंग निर्यात की गईं</string>
+    <string name="toast_open_app_failed">ऐप नहीं खोला जा सका</string>
+    <string name="toast_open_profile_app_failed">प्रोफ़ाइल ऐप नहीं खोला जा सका</string>
+    <string name="toast_opening_uninstaller">अनइंस्टॉलर खोला जा रहा है…</string>
+    <string name="toast_open_app_info_failed">ऐप जानकारी नहीं खोली जा सकी</string>
+    <string name="toast_private_space_no_store">निजी स्थान में कोई स्टोर नहीं मिला। कोई स्टोर इंस्टॉल करें या सिस्टम सेटिंग्स का उपयोग करें।</string>
+    <string name="toast_private_space_store_failed">निजी स्थान में ऐप स्टोर लॉन्च नहीं किया जा सका: %1$s</string>
+
+    <!-- Auto Tags & Backup Confirm Dialogs -->
+    <string name="dialog_auto_tags_title">ऑटो टैग लागू करें?</string>
+    <string name="dialog_auto_tags_confirm">लागू करें</string>
+    <string name="dialog_auto_tags_summary">%1$d ऐप्स को %2$d श्रेणियों में टैग किया जाएगा:</string>
+    <string name="dialog_auto_tags_unmatched">डिवाइस पर %1$d ऐप्स नहीं मिले</string>
+    <string name="dialog_backup_import_title">बैकअप / टैग आयात करें?</string>
+    <string name="dialog_backup_import_confirm">आयात करें</string>
+    <string name="dialog_backup_new_tags">बनाए जाने वाले नए टैग: %1$d</string>
+    <string name="dialog_backup_existing_tags">मौजूदा टैग रखे गए: %1$d</string>
+    <string name="dialog_backup_assignments">टैग असाइनमेंट: %1$d</string>
+    <string name="dialog_backup_custom_labels">पुनर्स्थापित करने के लिए कस्टम लेबल: %1$d</string>
+    <string name="dialog_backup_favorites">पुनर्स्थापित करने के लिए पसंदीदा: %1$d</string>
+    <string name="dialog_backup_settings">पुनर्स्थापित करने के लिए सेटिंग्स: %1$d</string>
+    <string name="dialog_backup_char_mappings">पुनर्स्थापित करने के लिए अक्षर मैपिंग: %1$d</string>
+    <string name="dialog_backup_more_tags">… और %1$d अधिक</string>
 </resources>

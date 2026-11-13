@@ -293,7 +293,7 @@ private enum class ExportFormat { JSON, TXT }
 @Composable
 private fun ExportFormatDialog(
     accentColor: AccentColor,
-    buttonTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    buttonTextColor: PrimaryTextColor = PrimaryTextColor.BLACK,
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
     popupTheme: PopupTheme = PopupTheme.DARK,
     onDismiss: () -> Unit,
@@ -408,7 +408,7 @@ TASK:
 1. Group all apps into 10-15 clean, meaningful, concise categories/tags (e.g. "Social", "Messengers", "Games", "Productivity", "Media", "Finance", "Tools", "Shopping", "Navigation", "System", "News", "Health", etc.).
 2. Assign each category a distinct, aesthetic HEX color code (format: "#RRGGBB").
 3. Assign each category an appropriate vector icon key from the list below (preferred for clean auto-tinting) OR an emoji.
-   Available Vector Icon keys: "icon:games", "icon:chat", "icon:music", "icon:video", "icon:web", "icon:shop", "icon:money", "icon:work", "icon:book", "icon:tools", "icon:settings", "icon:star", "icon:heart", "icon:bolt", "icon:home", "icon:lock", "icon:palette", "icon:coffee", "icon:fitness", "icon:cloud", "icon:terminal", "icon:phone", "icon:mail", "icon:idea", "icon:map", "icon:alarm", "icon:folder", "icon:shield", "icon:calendar", "icon:photo", "icon:news", "icon:weather".
+   Available Vector Icon keys: "icon:games", "icon:chat", "icon:music", "icon:video", "icon:web", "icon:shop", "icon:money", "icon:work", "icon:book", "icon:tools", "icon:settings", "icon:star", "icon:heart", "icon:bolt", "icon:home", "icon:lock", "icon:palette", "icon:coffee", "icon:fitness", "icon:cloud", "icon:terminal", "icon:phone", "icon:mail", "icon:idea", "icon:map", "icon:alarm", "icon:folder", "icon:shield", "icon:calendar", "icon:image", "icon:rss_feed", "icon:wb_sunny".
 4. Output the result strictly as a valid JSON file (a JSON array of objects).
 
 SCHEMA FOR EACH OBJECT:

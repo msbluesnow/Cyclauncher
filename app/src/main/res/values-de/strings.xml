@@ -407,4 +407,26 @@
     <string name="toast_parse_tags_file_failed">Tag-Datei konnte nicht verarbeitet werden: %1$s</string>
     <string name="toast_backup_exported">Sicherung exportiert (%1$d Tags, %2$d Apps)</string>
     <string name="toast_exported_mappings">%1$d Zuordnungen exportiert</string>
+    <string name="toast_open_app_failed">App konnte nicht geöffnet werden</string>
+    <string name="toast_open_profile_app_failed">Profil-App konnte nicht geöffnet werden</string>
+    <string name="toast_opening_uninstaller">Deinstallationsprogramm wird geöffnet…</string>
+    <string name="toast_open_app_info_failed">App-Info konnte nicht geöffnet werden</string>
+    <string name="toast_private_space_no_store">Kein Store im Privaten Bereich gefunden. Store installieren oder Systemeinstellungen nutzen.</string>
+    <string name="toast_private_space_store_failed">App-Store im Privaten Bereich kann nicht gestartet werden: %1$s</string>
+
+    <!-- Auto Tags & Backup Confirm Dialogs -->
+    <string name="dialog_auto_tags_title">Auto-Tags anwenden?</string>
+    <string name="dialog_auto_tags_confirm">Anwenden</string>
+    <string name="dialog_auto_tags_summary">%1$d Apps werden in %2$d Kategorien getaggt:</string>
+    <string name="dialog_auto_tags_unmatched">%1$d Apps nicht auf dem Gerät gefunden</string>
+    <string name="dialog_backup_import_title">Sicherung / Tags importieren?</string>
+    <string name="dialog_backup_import_confirm">Importieren</string>
+    <string name="dialog_backup_new_tags">Neue Tags zu erstellen: %1$d</string>
+    <string name="dialog_backup_existing_tags">Vorhandene Tags beibehalten: %1$d</string>
+    <string name="dialog_backup_assignments">Tag-Zuordnungen: %1$d</string>
+    <string name="dialog_backup_custom_labels">Benutzerdefinierte Namen wiederherstellen: %1$d</string>
+    <string name="dialog_backup_favorites">Favoriten wiederherstellen: %1$d</string>
+    <string name="dialog_backup_settings">Einstellungen wiederherstellen: %1$d</string>
+    <string name="dialog_backup_char_mappings">Zeichenzuordnungen wiederherstellen: %1$d</string>
+    <string name="dialog_backup_more_tags">… und %1$d weitere</string>
 </resources>

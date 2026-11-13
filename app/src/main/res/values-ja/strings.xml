@@ -408,4 +408,26 @@
     <string name="toast_parse_tags_file_failed">タグファイルの解析に失敗しました：%1$s</string>
     <string name="toast_backup_exported">バックアップをエクスポートしました（タグ：%1$d件、アプリ：%2$d件）</string>
     <string name="toast_exported_mappings">%1$d件のマッピングをエクスポートしました</string>
+    <string name="toast_open_app_failed">アプリを開けませんでした</string>
+    <string name="toast_open_profile_app_failed">プロファイルアプリを開けませんでした</string>
+    <string name="toast_opening_uninstaller">アンインストーラーを開いています…</string>
+    <string name="toast_open_app_info_failed">アプリ情報を開けませんでした</string>
+    <string name="toast_private_space_no_store">プライベートスペース内にストアが見つかりません。ストアをインストールするか、システム設定をご利用ください。</string>
+    <string name="toast_private_space_store_failed">プライベートスペースのアプリストアを起動できません：%1$s</string>
+
+    <!-- Auto Tags & Backup Confirm Dialogs -->
+    <string name="dialog_auto_tags_title">自動タグを適用しますか？</string>
+    <string name="dialog_auto_tags_confirm">適用</string>
+    <string name="dialog_auto_tags_summary">%1$d個のアプリを%2$d個のカテゴリーに分類します：</string>
+    <string name="dialog_auto_tags_unmatched">端末に見つからなかったアプリ：%1$d個</string>
+    <string name="dialog_backup_import_title">バックアップ／タグをインポートしますか？</string>
+    <string name="dialog_backup_import_confirm">インポート</string>
+    <string name="dialog_backup_new_tags">新規作成されるタグ：%1$d件</string>
+    <string name="dialog_backup_existing_tags">保持される既存タグ：%1$d件</string>
+    <string name="dialog_backup_assignments">タグ割り当て：%1$d件</string>
+    <string name="dialog_backup_custom_labels">復元するカスタムラベル：%1$d件</string>
+    <string name="dialog_backup_favorites">復元するお気に入り：%1$d件</string>
+    <string name="dialog_backup_settings">復元する設定：%1$d件</string>
+    <string name="dialog_backup_char_mappings">復元する文字マッピング：%1$d件</string>
+    <string name="dialog_backup_more_tags">… 他%1$d件</string>
 </resources>

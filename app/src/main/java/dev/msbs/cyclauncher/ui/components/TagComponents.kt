@@ -139,8 +139,9 @@ fun TagFolderItem(
                 .padding(4.dp),
             contentAlignment = Alignment.Center
         ) {
-            val hasCustomIcon = !tag.emoji.isNullOrBlank()
             val vectorIcon = TagIconRegistry.getVectorIcon(tag.emoji)
+            val emojiSymbol = tag.emoji?.trim()?.takeIf { it.isNotEmpty() && !it.startsWith("icon:", ignoreCase = true) }
+            val hasCustomIcon = vectorIcon != null || emojiSymbol != null
 
             // Layer 1: App icons in background (dimmed if custom icon is active, or full opacity if default)
             if (previewApps.isNotEmpty()) {
@@ -165,9 +166,9 @@ fun TagFolderItem(
                     tint = effectiveTagColor,
                     modifier = Modifier.size(28.dp)
                 )
-            } else if (!tag.emoji.isNullOrBlank()) {
+            } else if (emojiSymbol != null) {
                 Text(
-                    text = tag.emoji,
+                    text = emojiSymbol,
                     fontSize = 26.sp,
                     textAlign = TextAlign.Center
                 )
@@ -351,6 +352,7 @@ fun TagFolderPopup(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         val vectorIcon = TagIconRegistry.getVectorIcon(tag.emoji)
+                        val emojiSymbol = tag.emoji?.trim()?.takeIf { it.isNotEmpty() && !it.startsWith("icon:", ignoreCase = true) }
                         if (vectorIcon != null) {
                             Icon(
                                 imageVector = vectorIcon,
@@ -359,9 +361,9 @@ fun TagFolderPopup(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                        } else if (!tag.emoji.isNullOrBlank()) {
+                        } else if (emojiSymbol != null) {
                             Text(
-                                text = tag.emoji,
+                                text = emojiSymbol,
                                 fontSize = 18.sp
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -980,8 +982,9 @@ fun TagFolderIcon(
             .padding(3.dp),
         contentAlignment = Alignment.Center
     ) {
-        val hasCustomIcon = !tag.emoji.isNullOrBlank()
         val vectorIcon = TagIconRegistry.getVectorIcon(tag.emoji)
+        val emojiSymbol = tag.emoji?.trim()?.takeIf { it.isNotEmpty() && !it.startsWith("icon:", ignoreCase = true) }
+        val hasCustomIcon = vectorIcon != null || emojiSymbol != null
 
         // Layer 1: App icons in background (dimmed if custom icon is active, or full opacity if default)
         if (previewApps.isNotEmpty()) {
@@ -1006,9 +1009,9 @@ fun TagFolderIcon(
                 tint = effectiveTagColor,
                 modifier = Modifier.size((size * 0.58f).dp)
             )
-        } else if (!tag.emoji.isNullOrBlank()) {
+        } else if (emojiSymbol != null) {
             Text(
-                text = tag.emoji,
+                text = emojiSymbol,
                 fontSize = (size * 0.55f).sp,
                 textAlign = TextAlign.Center
             )
@@ -1078,6 +1081,7 @@ fun TagFolderActionMenu(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     val vectorIcon = TagIconRegistry.getVectorIcon(tag.emoji)
+                    val emojiSymbol = tag.emoji?.trim()?.takeIf { it.isNotEmpty() && !it.startsWith("icon:", ignoreCase = true) }
                     if (vectorIcon != null) {
                         Icon(
                             imageVector = vectorIcon,
@@ -1086,9 +1090,9 @@ fun TagFolderActionMenu(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                    } else if (!tag.emoji.isNullOrBlank()) {
+                    } else if (emojiSymbol != null) {
                         Text(
-                            text = tag.emoji,
+                            text = emojiSymbol,
                             fontSize = 14.sp
                         )
                         Spacer(modifier = Modifier.width(8.dp))

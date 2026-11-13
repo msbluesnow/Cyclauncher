@@ -354,7 +354,7 @@ fun TagSelectionDialog(
     onDeleteTag: (String) -> Unit,
     onDismiss: () -> Unit,
     accentColor: AccentColor = AccentColor.SKY,
-    buttonTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    buttonTextColor: PrimaryTextColor = PrimaryTextColor.BLACK,
     popupTheme: PopupTheme = PopupTheme.DARK
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -402,6 +402,7 @@ fun TagSelectionDialog(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     val vectorIcon = TagIconRegistry.getVectorIcon(tag.emoji)
+                                    val emojiSymbol = tag.emoji?.trim()?.takeIf { it.isNotEmpty() && !it.startsWith("icon:", ignoreCase = true) }
                                     if (vectorIcon != null) {
                                         Icon(
                                             imageVector = vectorIcon,
@@ -410,9 +411,9 @@ fun TagSelectionDialog(
                                             modifier = Modifier.size(15.dp)
                                         )
                                         Spacer(modifier = Modifier.width(5.dp))
-                                    } else if (!tag.emoji.isNullOrBlank()) {
+                                    } else if (emojiSymbol != null) {
                                         Text(
-                                            text = tag.emoji,
+                                            text = emojiSymbol,
                                             fontSize = 13.sp
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
@@ -617,7 +618,7 @@ fun TagEditDialog(
     onConfirm: (String, Color, String?) -> Unit,
     onDelete: (() -> Unit)? = null,
     accentColor: AccentColor,
-    buttonTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    buttonTextColor: PrimaryTextColor = PrimaryTextColor.BLACK,
     popupTheme: PopupTheme = PopupTheme.DARK
 ) {
     val quickSwatches = remember {
@@ -664,6 +665,9 @@ fun TagEditDialog(
     }
 
     val previewVectorIcon = remember(emojiText) { TagIconRegistry.getVectorIcon(emojiText) }
+    val previewEmojiText = remember(emojiText) {
+        emojiText.trim().takeIf { it.isNotEmpty() && !it.startsWith("icon:", ignoreCase = true) }
+    }
     val dialogShape = RoundedCornerShape(20.dp)
 
     AlertDialog(
@@ -707,9 +711,9 @@ fun TagEditDialog(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                        } else if (emojiText.isNotBlank()) {
+                        } else if (previewEmojiText != null) {
                             Text(
-                                text = emojiText.trim(),
+                                text = previewEmojiText,
                                 fontSize = 18.sp
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -746,9 +750,9 @@ fun TagEditDialog(
                                 tint = selectedColor,
                                 modifier = Modifier.size(14.dp)
                             )
-                        } else if (emojiText.isNotBlank()) {
+                        } else if (previewEmojiText != null) {
                             Text(
-                                text = emojiText.trim(),
+                                text = previewEmojiText,
                                 fontSize = 13.sp
                             )
                         } else {
@@ -798,9 +802,9 @@ fun TagEditDialog(
                                 tint = selectedColor,
                                 modifier = Modifier.size(24.dp)
                             )
-                        } else if (emojiText.isNotBlank()) {
+                        } else if (previewEmojiText != null) {
                             Text(
-                                text = emojiText.trim(),
+                                text = previewEmojiText,
                                 fontSize = 22.sp
                             )
                         } else {
@@ -1597,7 +1601,7 @@ fun RenameDialog(
     accentColor: AccentColor,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
-    buttonTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
+    buttonTextColor: PrimaryTextColor = PrimaryTextColor.BLACK,
     popupTheme: PopupTheme = PopupTheme.DARK
 ) {
     var text by remember { mutableStateOf(initialValue) }

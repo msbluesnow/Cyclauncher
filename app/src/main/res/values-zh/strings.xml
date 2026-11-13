@@ -407,4 +407,26 @@
     <string name="toast_parse_tags_file_failed">解析标签文件失败：%1$s</string>
     <string name="toast_backup_exported">备份已导出（%1$d 个标签，%2$d 个应用）</string>
     <string name="toast_exported_mappings">已导出 %1$d 条映射规则</string>
+    <string name="toast_open_app_failed">无法打开应用</string>
+    <string name="toast_open_profile_app_failed">无法打开工作/隐私资料应用</string>
+    <string name="toast_opening_uninstaller">正在打开卸载程序…</string>
+    <string name="toast_open_app_info_failed">无法打开应用信息</string>
+    <string name="toast_private_space_no_store">私密空间中未找到应用商店。请安装应用商店或使用系统设置。</string>
+    <string name="toast_private_space_store_failed">无法启动私密空间中的应用商店：%1$s</string>
+
+    <!-- Auto Tags & Backup Confirm Dialogs -->
+    <string name="dialog_auto_tags_title">应用自动标签？</string>
+    <string name="dialog_auto_tags_confirm">应用</string>
+    <string name="dialog_auto_tags_summary">将 %1$d 个应用分类到 %2$d 个标签中：</string>
+    <string name="dialog_auto_tags_unmatched">设备上未找到 %1$d 个应用</string>
+    <string name="dialog_backup_import_title">导入备份/标签？</string>
+    <string name="dialog_backup_import_confirm">导入</string>
+    <string name="dialog_backup_new_tags">将创建的新标签：%1$d</string>
+    <string name="dialog_backup_existing_tags">保留的现有标签：%1$d</string>
+    <string name="dialog_backup_assignments">标签关联：%1$d</string>
+    <string name="dialog_backup_custom_labels">将恢复的自定义名称：%1$d</string>
+    <string name="dialog_backup_favorites">将恢复的收藏：%1$d</string>
+    <string name="dialog_backup_settings">将恢复的设置：%1$d</string>
+    <string name="dialog_backup_char_mappings">将恢复的字符映射：%1$d</string>
+    <string name="dialog_backup_more_tags">… 还有 %1$d 个</string>
 </resources>

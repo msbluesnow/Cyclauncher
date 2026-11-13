@@ -407,4 +407,26 @@
     <string name="toast_parse_tags_file_failed">Error al procesar archivo de etiquetas: %1$s</string>
     <string name="toast_backup_exported">Copia de seguridad exportada (%1$d etiquetas, %2$d apps)</string>
     <string name="toast_exported_mappings">Exportados %1$d mapeos</string>
+    <string name="toast_open_app_failed">No se pudo abrir la aplicación</string>
+    <string name="toast_open_profile_app_failed">No se pudo abrir la aplicación de perfil</string>
+    <string name="toast_opening_uninstaller">Abriendo desinstalador…</string>
+    <string name="toast_open_app_info_failed">No se pudo abrir la información de la aplicación</string>
+    <string name="toast_private_space_no_store">No se encontró tienda en el Espacio Privado. Instala una tienda o usa los Ajustes del sistema.</string>
+    <string name="toast_private_space_store_failed">No se puede abrir la tienda de aplicaciones en el Espacio Privado: %1$s</string>
+
+    <!-- Auto Tags & Backup Confirm Dialogs -->
+    <string name="dialog_auto_tags_title">¿Aplicar etiquetas automáticas?</string>
+    <string name="dialog_auto_tags_confirm">Aplicar</string>
+    <string name="dialog_auto_tags_summary">Se etiquetarán %1$d aplicaciones en %2$d categorías:</string>
+    <string name="dialog_auto_tags_unmatched">%1$d aplicaciones no encontradas en el dispositivo</string>
+    <string name="dialog_backup_import_title">¿Importar copia / etiquetas?</string>
+    <string name="dialog_backup_import_confirm">Importar</string>
+    <string name="dialog_backup_new_tags">Nuevas etiquetas a crear: %1$d</string>
+    <string name="dialog_backup_existing_tags">Etiquetas existentes conservadas: %1$d</string>
+    <string name="dialog_backup_assignments">Asignaciones de etiquetas: %1$d</string>
+    <string name="dialog_backup_custom_labels">Nombres personalizados a restaurar: %1$d</string>
+    <string name="dialog_backup_favorites">Favoritos a restaurar: %1$d</string>
+    <string name="dialog_backup_settings">Ajustes a restaurar: %1$d</string>
+    <string name="dialog_backup_char_mappings">Mapeos de caracteres a restaurar: %1$d</string>
+    <string name="dialog_backup_more_tags">… y %1$d más</string>
 </resources>
