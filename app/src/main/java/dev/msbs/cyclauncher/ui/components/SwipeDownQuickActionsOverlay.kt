@@ -254,23 +254,23 @@ private fun ActionTargetCard(
     shape: RoundedCornerShape,
     modifier: Modifier = Modifier
 ) {
-    val textColor = if (popupTheme == PopupTheme.LIGHT) Color.Black else Color.White
+    val textColor = popupTheme.contentColor
+    val secondaryTextColor = popupTheme.secondaryContentColor
 
     val popupBg = popupTheme.backgroundColor
-    val popupSolidBg = popupTheme.solidBackgroundColor
-    val backgroundBrush = remember(isSelected, accentColor.color, popupBg, popupSolidBg) {
+    val backgroundBrush = remember(isSelected, accentColor.color, popupBg) {
         if (isSelected) {
             Brush.verticalGradient(
                 colors = listOf(
                     accentColor.color.copy(alpha = 0.35f),
-                    popupSolidBg.copy(alpha = 0.95f)
+                    popupBg
                 )
             )
         } else {
             Brush.verticalGradient(
                 colors = listOf(
-                    popupBg.copy(alpha = 0.88f),
-                    popupSolidBg.copy(alpha = 0.92f)
+                    popupBg.copy(alpha = (popupBg.alpha * 0.92f).coerceIn(0f, 1f)),
+                    popupBg
                 )
             )
         }
@@ -284,10 +284,9 @@ private fun ActionTargetCard(
         }
     }
 
-    val iconBgColor = remember(isSelected, accentColor.color, popupTheme) {
+    val iconBgColor = remember(isSelected, accentColor.color, textColor) {
         if (isSelected) accentColor.color.copy(alpha = 0.25f)
-        else if (popupTheme == PopupTheme.LIGHT) Color.Black.copy(alpha = 0.06f)
-        else Color.White.copy(alpha = 0.08f)
+        else textColor.copy(alpha = 0.08f)
     }
 
     val iconTint = remember(isSelected, accentColor.color, textColor) {
@@ -335,7 +334,7 @@ private fun ActionTargetCard(
 
             TouchMarqueeText(
                 text = subtitle,
-                color = textColor.copy(alpha = 0.8f),
+                color = secondaryTextColor,
                 fontSize = 11.5.sp,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center

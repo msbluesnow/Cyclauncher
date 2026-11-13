@@ -127,7 +127,7 @@ fun SearchWidgetCompartment(
                     slotWidthPx = with(density) { leftWidth.toPx() },
                     slotHeightPx = slotHeightPx,
                     accentColor = accentColor.color,
-                    primaryTextColor = primaryTextColor.color,
+                    primaryTextColor = primaryTextColor,
                     isResizing = isDraggingDivider,
                     onPick = { onPickWidget(true) },
                     onOptions = { slotForOptions = true }
@@ -206,7 +206,7 @@ fun SearchWidgetCompartment(
                     slotWidthPx = with(density) { rightWidth.toPx() },
                     slotHeightPx = slotHeightPx,
                     accentColor = accentColor.color,
-                    primaryTextColor = primaryTextColor.color,
+                    primaryTextColor = primaryTextColor,
                     isResizing = isDraggingDivider,
                     onPick = { onPickWidget(false) },
                     onOptions = { slotForOptions = false }
@@ -313,7 +313,7 @@ private fun SingleWidgetSlot(
     slotWidthPx: Float,
     slotHeightPx: Float,
     accentColor: Color,
-    primaryTextColor: Color,
+    primaryTextColor: PrimaryTextColor,
     isResizing: Boolean = false,
     onPick: () -> Unit,
     onOptions: () -> Unit
@@ -337,8 +337,8 @@ private fun SingleWidgetSlot(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(12.dp))
-                .background(dev.msbs.cyclauncher.ui.theme.capsuleFill(primaryTextColor, 0.05f))
-                .border(1.dp, primaryTextColor.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                .background(primaryTextColor.capsuleColor(0.08f))
+                .border(1.dp, primaryTextColor.capsuleBorderColor(0.12f), RoundedCornerShape(12.dp))
                 .clickable(onClick = onPick),
             contentAlignment = Alignment.Center
         ) {
@@ -356,7 +356,7 @@ private fun SingleWidgetSlot(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = stringResource(R.string.widget_action_add),
-                    color = primaryTextColor.copy(alpha = 0.6f),
+                    color = primaryTextColor.color.copy(alpha = 0.6f),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     textAlign = TextAlign.Center,

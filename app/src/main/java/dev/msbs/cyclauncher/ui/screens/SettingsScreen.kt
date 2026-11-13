@@ -1857,7 +1857,7 @@ private fun ThemeAndColorsSection(
                     colors = SliderDefaults.colors(
                         thumbColor = accentColor.color,
                         activeTrackColor = accentColor.color,
-                        inactiveTrackColor = popupTheme.contentColor.copy(alpha = 0.15f)
+                        inactiveTrackColor = primaryTextColor.color.copy(alpha = 0.18f)
                     )
                 )
             }

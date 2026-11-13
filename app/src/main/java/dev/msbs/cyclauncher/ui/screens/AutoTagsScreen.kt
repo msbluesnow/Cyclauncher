@@ -381,8 +381,7 @@ private fun StepHeader(
                 text = stepNumber.toString(),
                 color = buttonTextColor.color,
                 fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                style = TextStyle(shadow = shadow)
+                fontWeight = FontWeight.Bold
             )
         }
         Spacer(modifier = Modifier.width(12.dp))

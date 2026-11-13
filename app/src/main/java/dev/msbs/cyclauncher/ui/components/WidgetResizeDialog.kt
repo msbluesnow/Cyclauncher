@@ -13,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -48,7 +47,6 @@ fun WidgetResizeDialog(
         mutableIntStateOf(initialHeightDp.coerceIn(heightRange))
     }
     var widthFraction by remember(initialWidthFraction) { mutableFloatStateOf(initialWidthFraction) }
-    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
     val popupAlpha = LocalPopupAlpha.current
 
     Dialog(onDismissRequest = onDismiss) {
@@ -76,15 +74,13 @@ fun WidgetResizeDialog(
                         text = stringResource(R.string.highlight_resize_title),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = accentColor.color,
-                        style = TextStyle(shadow = shadow)
+                        color = accentColor.color
                     )
                     Text(
                         text = "${heightDp}dp • ${(widthFraction * 100).roundToInt()}%",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = popupTheme.secondaryContentColor,
-                        style = TextStyle(shadow = shadow)
+                        color = popupTheme.secondaryContentColor
                     )
                 }
 
@@ -96,8 +92,7 @@ fun WidgetResizeDialog(
                         text = stringResource(R.string.highlight_resize_height, heightDp),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = popupTheme.contentColor,
-                        style = TextStyle(shadow = shadow)
+                        color = popupTheme.contentColor
                     )
                     Slider(
                         value = heightDp.coerceIn(heightRange).toFloat(),
@@ -144,7 +139,6 @@ fun WidgetResizeDialog(
                                         fontSize = 10.5.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                         color = if (isSelected) accentColor.color else popupTheme.contentColor,
-                                        style = TextStyle(shadow = shadow),
                                         textAlign = TextAlign.Center,
                                         interactionSource = interactionSource
                                     )
@@ -162,8 +156,7 @@ fun WidgetResizeDialog(
                         text = stringResource(R.string.highlight_resize_width),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = popupTheme.contentColor,
-                        style = TextStyle(shadow = shadow)
+                        color = popupTheme.contentColor
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -196,7 +189,6 @@ fun WidgetResizeDialog(
                                         fontSize = 11.5.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                         color = if (isSelected) accentColor.color else popupTheme.contentColor,
-                                        style = TextStyle(shadow = shadow),
                                         textAlign = TextAlign.Center,
                                         interactionSource = interactionSource
                                     )

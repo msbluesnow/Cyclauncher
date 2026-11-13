@@ -715,22 +715,12 @@ fun CharacterMappingScreen(
                                                 },
                                                 modifier = Modifier.size(24.dp)
                                             ) {
-                                                Box(contentAlignment = Alignment.Center) {
-                                                    if (showShadows) {
-                                                        Icon(
-                                                            imageVector = Icons.Outlined.Close,
-                                                            contentDescription = null,
-                                                            tint = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.25f),
-                                                            modifier = Modifier.size(14.dp).offset(1.dp, 1.dp)
-                                                        )
-                                                    }
-                                                    Icon(
-                                                        imageVector = Icons.Outlined.Close,
-                                                        contentDescription = stringResource(R.string.common_delete),
-                                                        tint = Color.Red.copy(alpha = 0.8f),
-                                                        modifier = Modifier.size(14.dp)
-                                                    )
-                                                }
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Close,
+                                                    contentDescription = stringResource(R.string.common_delete),
+                                                    tint = Color.Red.copy(alpha = 0.8f),
+                                                    modifier = Modifier.size(14.dp)
+                                                )
                                             }
                                         }
                                     }

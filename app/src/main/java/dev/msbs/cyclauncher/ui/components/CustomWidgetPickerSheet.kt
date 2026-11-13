@@ -3,9 +3,9 @@ package dev.msbs.cyclauncher.ui.components
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
-import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
+import dev.msbs.cyclauncher.ui.theme.LocalPopupTheme
+import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
-import dev.msbs.cyclauncher.ui.theme.ShadowSettings
 
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
@@ -288,10 +288,9 @@ fun CustomWidgetPickerSheet(
     onSelectWidget: (AppWidgetProviderInfo) -> Unit
 ) {
     val context = LocalContext.current
-    val shadowSettings = LocalShadowSettings.current
+    val popupTheme = LocalPopupTheme.current
     val animationsEnabled = LocalAnimationsEnabled.current
     val density = LocalDensity.current
-    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
 
     var searchQuery by remember { mutableStateOf("") }
 
@@ -346,7 +345,7 @@ fun CustomWidgetPickerSheet(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.72f))
+                .background(Color.Black.copy(alpha = 0.55f))
                 .clickable(onClick = onDismiss),
             contentAlignment = Alignment.BottomCenter
         ) {
@@ -358,9 +357,9 @@ fun CustomWidgetPickerSheet(
                     .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = primaryTextColor.getShadowColor(shadowSettings.shadowColorOverride).copy(alpha = 0.97f)
+                    containerColor = popupTheme.solidBackgroundColor
                 ),
-                border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = 0.15f))
+                border = BorderStroke(1.dp, popupTheme.borderColor)
             ) {
                 Column(
                     modifier = Modifier
@@ -378,22 +377,18 @@ fun CustomWidgetPickerSheet(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            ShadowedIcon(
+                            Icon(
                                 imageVector = Icons.Outlined.Widgets,
                                 contentDescription = null,
                                 tint = accentColor.color,
-                                modifier = Modifier.size(20.dp),
-                                showShadows = showShadows,
-                                primaryTextColor = primaryTextColor,
-                                shadowSettings = shadowSettings
+                                modifier = Modifier.size(20.dp)
                             )
                             Text(
                                 text = stringResource(R.string.widget_picker_title),
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp,
-                                color = accentColor.color,
-                                style = TextStyle(shadow = shadow)
+                                color = accentColor.color
                             )
                         }
 
@@ -401,14 +396,11 @@ fun CustomWidgetPickerSheet(
                             onClick = onDismiss,
                             modifier = Modifier.size(32.dp)
                         ) {
-                            ShadowedIcon(
+                            Icon(
                                 imageVector = Icons.Outlined.Close,
                                 contentDescription = stringResource(R.string.widget_picker_close),
-                                tint = primaryTextColor.color.copy(alpha = 0.7f),
-                                modifier = Modifier.size(20.dp),
-                                showShadows = showShadows,
-                                primaryTextColor = primaryTextColor,
-                                shadowSettings = shadowSettings
+                                tint = popupTheme.secondaryContentColor,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -420,20 +412,17 @@ fun CustomWidgetPickerSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
-                            .background(primaryTextColor.color.copy(alpha = 0.08f))
-                            .border(1.dp, primaryTextColor.color.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                            .background(popupTheme.contentColor.copy(alpha = 0.08f))
+                            .border(1.dp, popupTheme.borderColor, RoundedCornerShape(14.dp))
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        ShadowedIcon(
+                        Icon(
                             imageVector = Icons.Outlined.Search,
                             contentDescription = null,
-                            tint = primaryTextColor.color.copy(alpha = 0.6f),
-                            modifier = Modifier.size(18.dp),
-                            showShadows = showShadows,
-                            primaryTextColor = primaryTextColor,
-                            shadowSettings = shadowSettings
+                            tint = popupTheme.secondaryContentColor,
+                            modifier = Modifier.size(18.dp)
                         )
 
                         BasicTextField(
@@ -442,7 +431,7 @@ fun CustomWidgetPickerSheet(
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                             textStyle = TextStyle(
-                                color = primaryTextColor.color,
+                                color = popupTheme.contentColor,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium
                             ),
@@ -451,7 +440,7 @@ fun CustomWidgetPickerSheet(
                                 if (searchQuery.isEmpty()) {
                                     Text(
                                         text = stringResource(R.string.widget_picker_search_placeholder),
-                                        color = primaryTextColor.color.copy(alpha = 0.45f),
+                                        color = popupTheme.secondaryContentColor,
                                         fontSize = 14.sp
                                     )
                                 }
@@ -463,7 +452,7 @@ fun CustomWidgetPickerSheet(
                             Icon(
                                 imageVector = Icons.Outlined.Close,
                                 contentDescription = stringResource(R.string.widget_picker_clear_search),
-                                tint = primaryTextColor.color.copy(alpha = 0.6f),
+                                tint = popupTheme.secondaryContentColor,
                                 modifier = Modifier
                                     .size(18.dp)
                                     .clickable { searchQuery = "" }
@@ -496,9 +485,8 @@ fun CustomWidgetPickerSheet(
                         ) {
                             Text(
                                 text = if (searchQuery.isEmpty()) stringResource(R.string.widget_picker_no_widgets) else stringResource(R.string.widget_picker_no_matching_apps),
-                                color = primaryTextColor.color.copy(alpha = 0.6f),
-                                fontSize = 13.5.sp,
-                                style = TextStyle(shadow = shadow)
+                                color = popupTheme.secondaryContentColor,
+                                fontSize = 13.5.sp
                             )
                         }
                     } else {
@@ -514,9 +502,7 @@ fun CustomWidgetPickerSheet(
                                     group = group,
                                     initiallyExpanded = filteredGroups.size <= 3 || searchQuery.isNotBlank(),
                                     accentColor = accentColor,
-                                    primaryTextColor = primaryTextColor,
-                                    showShadows = showShadows,
-                                    shadowSettings = shadowSettings,
+                                    popupTheme = popupTheme,
                                     animationsEnabled = animationsEnabled,
                                     onSelectWidget = onSelectWidget
                                 )
@@ -537,20 +523,17 @@ private fun AppWidgetAccordionCard(
     group: AppWidgetGroup,
     initiallyExpanded: Boolean,
     accentColor: AccentColor,
-    primaryTextColor: PrimaryTextColor,
-    showShadows: Boolean,
-    shadowSettings: ShadowSettings,
+    popupTheme: PopupTheme,
     animationsEnabled: Boolean,
     onSelectWidget: (AppWidgetProviderInfo) -> Unit
 ) {
     var isExpanded by remember(initiallyExpanded) { mutableStateOf(initiallyExpanded) }
-    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.05f)),
-        border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = if (showShadows) 0.20f else 0.10f))
+        colors = CardDefaults.cardColors(containerColor = popupTheme.contentColor.copy(alpha = 0.06f)),
+        border = BorderStroke(1.dp, popupTheme.borderColor)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // App Header Row (Clickable to toggle expansion)
@@ -577,10 +560,9 @@ private fun AppWidgetAccordionCard(
                         text = group.appLabel,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = primaryTextColor.color,
+                        color = popupTheme.contentColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        style = TextStyle(shadow = shadow),
                         modifier = Modifier.weight(1f, fill = false)
                     )
 
@@ -595,20 +577,16 @@ private fun AppWidgetAccordionCard(
                             text = "${group.widgets.size}",
                             color = accentColor.color,
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            style = TextStyle(shadow = shadow)
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                ShadowedIcon(
+                Icon(
                     imageVector = if (isExpanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
                     contentDescription = if (isExpanded) stringResource(R.string.widget_picker_collapse) else stringResource(R.string.widget_picker_expand),
-                    tint = primaryTextColor.color.copy(alpha = 0.7f),
-                    modifier = Modifier.size(20.dp),
-                    showShadows = showShadows,
-                    primaryTextColor = primaryTextColor,
-                    shadowSettings = shadowSettings
+                    tint = popupTheme.secondaryContentColor,
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
@@ -629,9 +607,7 @@ private fun AppWidgetAccordionCard(
                         SingleWidgetPreviewCard(
                             widgetEntry = widgetEntry,
                             accentColor = accentColor,
-                            primaryTextColor = primaryTextColor,
-                            showShadows = showShadows,
-                            shadowSettings = shadowSettings,
+                            popupTheme = popupTheme,
                             onClick = { onSelectWidget(widgetEntry.providerInfo) }
                         )
                     }
@@ -648,15 +624,12 @@ private fun AppWidgetAccordionCard(
 private fun SingleWidgetPreviewCard(
     widgetEntry: WidgetEntryUi,
     accentColor: AccentColor,
-    primaryTextColor: PrimaryTextColor,
-    showShadows: Boolean,
-    shadowSettings: ShadowSettings,
+    popupTheme: PopupTheme,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
     val pm = context.packageManager
     val density = LocalDensity.current
-    val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
     val widgetInfo = widgetEntry.providerInfo
     val label = widgetEntry.label
 
@@ -694,8 +667,8 @@ private fun SingleWidgetPreviewCard(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = primaryTextColor.color.copy(alpha = 0.04f)),
-        border = BorderStroke(1.dp, primaryTextColor.color.copy(alpha = 0.12f))
+        colors = CardDefaults.cardColors(containerColor = popupTheme.contentColor.copy(alpha = 0.04f)),
+        border = BorderStroke(1.dp, popupTheme.dividerColor)
     ) {
         Column(
             modifier = Modifier
@@ -713,25 +686,23 @@ private fun SingleWidgetPreviewCard(
                     text = label,
                     fontSize = 12.5.sp,
                     fontWeight = FontWeight.Medium,
-                    color = primaryTextColor.color,
+                    color = popupTheme.contentColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    style = TextStyle(shadow = shadow),
                     modifier = Modifier.weight(1f)
                 )
 
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
-                        .background(primaryTextColor.color.copy(alpha = 0.10f))
+                        .background(popupTheme.dividerColor)
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
                         text = spanLabel,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = primaryTextColor.color.copy(alpha = 0.8f),
-                        style = TextStyle(shadow = shadow)
+                        color = popupTheme.secondaryContentColor
                     )
                 }
             }
@@ -742,7 +713,7 @@ private fun SingleWidgetPreviewCard(
                     .fillMaxWidth()
                     .heightIn(min = 60.dp, max = 130.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(primaryTextColor.color.copy(alpha = 0.03f))
+                    .background(popupTheme.contentColor.copy(alpha = 0.03f))
                     .padding(6.dp),
                 contentAlignment = Alignment.Center
             ) {

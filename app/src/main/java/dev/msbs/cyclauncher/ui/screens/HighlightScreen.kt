@@ -7,6 +7,7 @@ import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.model.HighlightSection
 import dev.msbs.cyclauncher.ui.components.CustomWidgetPickerSheet
+import dev.msbs.cyclauncher.ui.components.appItemGestures
 import dev.msbs.cyclauncher.ui.components.rememberAppIconPainter
 import dev.msbs.cyclauncher.ui.components.ScreenTopBar
 import dev.msbs.cyclauncher.ui.components.ShadowedIcon
@@ -71,7 +72,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -108,8 +108,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -289,7 +288,9 @@ fun HighlightScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Compact Highlight Section Squares Dock (Accordion Layout)
+                val configuration = LocalConfiguration.current
                 val sections = remember(
+                    configuration,
                     apps.size,
                     untaggedApps.size,
                     todayUpdates.size,
@@ -1186,22 +1187,15 @@ private fun RecentAppChip(
     onClick: () -> Unit,
     onLongClick: (Offset) -> Unit = {}
 ) {
-    val painter = rememberAppIconPainter(app.componentKey, 24)
+    val painter = rememberAppIconPainter(app.iconKey, 24)
     val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
-    var touchPosition by remember { mutableStateOf(Offset.Zero) }
 
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
             .background(primaryTextColor.capsuleColor(0.08f))
             .border(1.dp, primaryTextColor.color.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-            .onGloballyPositioned { touchPosition = it.positionInRoot() }
-            .pointerInput(app.componentKey) {
-                detectTapGestures(
-                    onTap = { onClick() },
-                    onLongPress = { offset -> onLongClick(touchPosition + offset) }
-                )
-            }
+            .appItemGestures(app.componentKey, onClick, onLongClick)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1937,7 +1931,9 @@ private fun HighlightPrivateSpaceContent(
                     fontSize = 14,
                     accentColor = accentColor,
                     onClick = { onAppClick(app.componentKey) },
-                    onLongClick = { offset -> onAppLongClick(app, offset) }
+                    onLongClick = { offset -> onAppLongClick(app, offset) },
+                    primaryTextColor = primaryTextColor,
+                    showShadows = showShadows
                 )
             }
         }
