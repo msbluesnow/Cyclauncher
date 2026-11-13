@@ -8,6 +8,10 @@ import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -1499,43 +1503,53 @@ fun AllTagVectorIconsDialog(
                         )
                     }
                 } else {
-                    FlowRow(
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(minSize = 42.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
-                            .verticalScroll(rememberScrollState()),
+                            .heightIn(max = 340.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        filteredIcons.forEach { item ->
-                            val formattedKey = TagIconRegistry.formatKey(item.key)
-                            val isSelected = selectedKey == formattedKey || selectedKey == item.key
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(
-                                        if (isSelected) accentColor.color.copy(alpha = 0.25f) else popupTheme.contentColor.copy(
-                                            alpha = 0.04f
-                                        )
+                        if (searchQuery.isEmpty() && selectedCategoryIndex == 0) {
+                            TagIconRegistry.CATEGORIES.forEach { category ->
+                                item(
+                                    key = "cat_${category.title}",
+                                    span = { GridItemSpan(maxLineSpan) }
+                                ) {
+                                    Text(
+                                        text = category.title,
+                                        fontSize = 11.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = popupTheme.secondaryContentColor,
+                                        modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
                                     )
-                                    .border(
-                                        width = if (isSelected) 1.5.dp else 0.5.dp,
-                                        color = if (isSelected) accentColor.color else popupTheme.contentColor.copy(
-                                            alpha = 0.15f
-                                        ),
-                                        shape = RoundedCornerShape(10.dp)
+                                }
+                                items(
+                                    items = category.icons,
+                                    key = { "${category.title}_${it.key}" }
+                                ) { item ->
+                                    TagVectorIconTile(
+                                        item = item,
+                                        selectedKey = selectedKey,
+                                        accentColor = accentColor,
+                                        popupTheme = popupTheme,
+                                        onSelectIcon = onSelectIcon
                                     )
-                                    .clickable {
-                                        onSelectIcon(formattedKey)
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = item.icon,
-                                    contentDescription = item.name,
-                                    tint = if (isSelected) accentColor.color else popupTheme.contentColor.copy(alpha = 0.85f),
-                                    modifier = Modifier.size(22.dp)
+                                }
+                            }
+                        } else {
+                            items(
+                                items = filteredIcons,
+                                key = { it.key }
+                            ) { item ->
+                                TagVectorIconTile(
+                                    item = item,
+                                    selectedKey = selectedKey,
+                                    accentColor = accentColor,
+                                    popupTheme = popupTheme,
+                                    onSelectIcon = onSelectIcon
                                 )
                             }
                         }
@@ -1556,6 +1570,46 @@ fun AllTagVectorIconsDialog(
         textContentColor = popupTheme.contentColor,
         shape = dialogShape
     )
+}
+
+@Composable
+private fun TagVectorIconTile(
+    item: TagVectorIcon,
+    selectedKey: String,
+    accentColor: AccentColor,
+    popupTheme: PopupTheme,
+    onSelectIcon: (String) -> Unit
+) {
+    val formattedKey = TagIconRegistry.formatKey(item.key)
+    val isSelected = selectedKey == formattedKey || selectedKey == item.key
+    Box(
+        modifier = Modifier
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(10.dp))
+            .background(
+                if (isSelected) accentColor.color.copy(alpha = 0.25f) else popupTheme.contentColor.copy(
+                    alpha = 0.04f
+                )
+            )
+            .border(
+                width = if (isSelected) 1.5.dp else 0.5.dp,
+                color = if (isSelected) accentColor.color else popupTheme.contentColor.copy(
+                    alpha = 0.15f
+                ),
+                shape = RoundedCornerShape(10.dp)
+            )
+            .clickable {
+                onSelectIcon(formattedKey)
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = item.icon,
+            contentDescription = item.name,
+            tint = if (isSelected) accentColor.color else popupTheme.contentColor.copy(alpha = 0.85f),
+            modifier = Modifier.size(22.dp)
+        )
+    }
 }
 
 @Composable

@@ -79,11 +79,16 @@ class LauncherAppWidgetHostView(context: Context) : AppWidgetHostView(context) {
     private var lastAppliedWidthDp: Int = -1
     private var lastAppliedHeightDp: Int = -1
 
+    override fun setAppWidget(appWidgetId: Int, info: AppWidgetProviderInfo?) {
+        super.setAppWidget(appWidgetId, info)
+        lastAppliedWidthDp = -1
+        lastAppliedHeightDp = -1
+    }
+
     /**
-     * Updates widget size options both on the host view and with AppWidgetManager
-     * so provider layouts re-measure and adapt responsively to user dimensions.
+     * Updates widget size options on the host view so provider layouts re-measure
+     * and adapt responsively to user dimensions without duplicate Binder IPC.
      */
-    @Suppress("DEPRECATION")
     fun applyWidgetSize(widthDp: Int, heightDp: Int) {
         val safeWidth = widthDp.coerceAtLeast(40)
         val safeHeight = heightDp.coerceAtLeast(40)
@@ -99,21 +104,25 @@ class LauncherAppWidgetHostView(context: Context) : AppWidgetHostView(context) {
             putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, safeWidth)
             putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, safeHeight)
             putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, safeHeight)
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val sizes = arrayListOf(
-                    SizeF(safeWidth.toFloat(), safeHeight.toFloat())
-                )
-                putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, sizes)
-            }
         }
 
         try {
-            updateAppWidgetSize(options, safeWidth, safeHeight, safeWidth, safeHeight)
-        } catch (_: Exception) {}
-
-        try {
-            AppWidgetManager.getInstance(context).updateAppWidgetOptions(appWidgetId, options)
-        } catch (_: Exception) {}
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                updateAppWidgetSize(options, listOf(SizeF(safeWidth.toFloat(), safeHeight.toFloat())))
+            } else {
+                @Suppress("DEPRECATION")
+                updateAppWidgetSize(options, safeWidth, safeHeight, safeWidth, safeHeight)
+            }
+        } catch (_: Exception) {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    options.putParcelableArrayList(
+                        AppWidgetManager.OPTION_APPWIDGET_SIZES,
+                        arrayListOf(SizeF(safeWidth.toFloat(), safeHeight.toFloat()))
+                    )
+                }
+                AppWidgetManager.getInstance(context).updateAppWidgetOptions(appWidgetId, options)
+            } catch (_: Exception) {}
+        }
     }
 }

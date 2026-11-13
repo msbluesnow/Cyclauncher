@@ -366,6 +366,12 @@ fun AppsGrid(
     val availableHeight = innerBottomY - innerTopY
     val startYPx = innerTopY + (availableHeight - totalBlockHeightPx) / 2f
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val iconPackVersion = dev.msbs.cyclauncher.ui.theme.LocalIconPackVersion.current
+    val iconShape = remember(context, iconPackVersion) {
+        dev.msbs.cyclauncher.icons.IconShapeHelper.getComposeShape(context)
+    }
+
     displayApps.forEachIndexed { index, app ->
         val row = index / maxCols
         val col = index % maxCols
@@ -378,11 +384,6 @@ fun AppsGrid(
 
         val iconSizeDp = dynamicSize.value.toInt()
         val painter = rememberAppIconPainter(app.iconKey, iconSizeDp)
-        val context = androidx.compose.ui.platform.LocalContext.current
-        val iconPackVersion = dev.msbs.cyclauncher.ui.theme.LocalIconPackVersion.current
-        val iconShape = remember(context, iconPackVersion) {
-            dev.msbs.cyclauncher.icons.IconShapeHelper.getComposeShape(context)
-        }
 
         Image(
             painter = painter,

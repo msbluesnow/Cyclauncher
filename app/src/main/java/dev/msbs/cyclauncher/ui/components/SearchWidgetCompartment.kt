@@ -84,8 +84,15 @@ fun SearchWidgetCompartment(
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
     val popupTheme by viewModel.popupTheme.collectAsState()
 
-    var localRatio by remember(config.splitRatio) { mutableFloatStateOf(config.splitRatio) }
     var isDraggingDivider by remember { mutableStateOf(false) }
+    var localRatio by remember { mutableFloatStateOf(config.splitRatio.coerceIn(0.15f, 0.85f)) }
+
+    LaunchedEffect(config.splitRatio) {
+        if (!isDraggingDivider) {
+            localRatio = config.splitRatio.coerceIn(0.15f, 0.85f)
+        }
+    }
+
     var slotForOptions by remember { mutableStateOf<Boolean?>(null) }
 
     val manager = appWidgetManager ?: remember { AppWidgetManager.getInstance(context.applicationContext) }
@@ -99,6 +106,7 @@ fun SearchWidgetCompartment(
         val rightWidth = (availableWidth - leftWidth).coerceAtLeast(0.dp)
 
         val totalAvailableWidthPx = with(density) { availableWidth.toPx() }
+        val currentTotalAvailableWidthPx by rememberUpdatedState(totalAvailableWidthPx)
         val slotHeightPx = with(density) { totalHeight.toPx() }
 
         Row(
@@ -120,6 +128,7 @@ fun SearchWidgetCompartment(
                     slotHeightPx = slotHeightPx,
                     accentColor = accentColor.color,
                     primaryTextColor = primaryTextColor.color,
+                    isResizing = isDraggingDivider,
                     onPick = { onPickWidget(true) },
                     onOptions = { slotForOptions = true }
                 )
@@ -130,7 +139,7 @@ fun SearchWidgetCompartment(
                 modifier = Modifier
                     .width(dividerWidth)
                     .fillMaxHeight()
-                    .pointerInput(totalAvailableWidthPx) {
+                    .pointerInput(Unit) {
                         detectTapGestures(
                             onDoubleTap = {
                                 localRatio = 0.5f
@@ -139,7 +148,7 @@ fun SearchWidgetCompartment(
                             }
                         )
                     }
-                    .pointerInput(totalAvailableWidthPx) {
+                    .pointerInput(Unit) {
                         detectHorizontalDragGestures(
                             onDragStart = { isDraggingDivider = true },
                             onDragEnd = {
@@ -152,8 +161,9 @@ fun SearchWidgetCompartment(
                             },
                             onHorizontalDrag = { change, dragAmount ->
                                 change.consume()
-                                if (totalAvailableWidthPx > 0f) {
-                                    val deltaRatio = dragAmount / totalAvailableWidthPx
+                                val availWidthPx = currentTotalAvailableWidthPx
+                                if (availWidthPx > 0f) {
+                                    val deltaRatio = dragAmount / availWidthPx
                                     val oldRatio = localRatio
                                     val newRatio = (oldRatio + deltaRatio).coerceIn(0.15f, 0.85f)
                                     // Subtle tactile click when passing through the balanced 50/50 point
@@ -197,6 +207,7 @@ fun SearchWidgetCompartment(
                     slotHeightPx = slotHeightPx,
                     accentColor = accentColor.color,
                     primaryTextColor = primaryTextColor.color,
+                    isResizing = isDraggingDivider,
                     onPick = { onPickWidget(false) },
                     onOptions = { slotForOptions = false }
                 )
@@ -330,6 +341,7 @@ private fun SingleWidgetSlot(
     slotHeightPx: Float,
     accentColor: Color,
     primaryTextColor: Color,
+    isResizing: Boolean = false,
     onPick: () -> Unit,
     onOptions: () -> Unit
 ) {
@@ -406,12 +418,14 @@ private fun SingleWidgetSlot(
                 },
                 modifier = Modifier.fillMaxSize(),
                 update = { view ->
-                    try {
-                        val displayDensity = context.resources.displayMetrics.density
-                        val targetWidthDp = (slotWidthPx / displayDensity).toInt().coerceAtLeast(30)
-                        val targetHeightDp = (slotHeightPx / displayDensity).toInt().coerceAtLeast(30)
-                        (view as? LauncherAppWidgetHostView)?.applyWidgetSize(targetWidthDp, targetHeightDp)
-                    } catch (_: Throwable) {}
+                    if (!isResizing && slotWidthPx > 0f && slotHeightPx > 0f) {
+                        try {
+                            val displayDensity = context.resources.displayMetrics.density
+                            val targetWidthDp = (slotWidthPx / displayDensity).toInt().coerceAtLeast(30)
+                            val targetHeightDp = (slotHeightPx / displayDensity).toInt().coerceAtLeast(30)
+                            (view as? LauncherAppWidgetHostView)?.applyWidgetSize(targetWidthDp, targetHeightDp)
+                        } catch (_: Throwable) {}
+                    }
                 }
             )
 
@@ -479,6 +493,15 @@ fun SideDualWidgetSlot(
     var slotForOptions by remember { mutableStateOf<Boolean?>(null) }
     var showResize by remember { mutableStateOf(false) }
     var isMoving by remember(config.topWidgetId, config.bottomWidgetId) { mutableStateOf(false) }
+
+    var localRatio by remember { mutableFloatStateOf(config.splitRatio) }
+    var isDraggingDivider by remember { mutableStateOf(false) }
+
+    LaunchedEffect(config.splitRatio) {
+        if (!isDraggingDivider) {
+            localRatio = config.splitRatio
+        }
+    }
 
     var liveOffsetX by remember { mutableStateOf<Float?>(null) }
     var liveOffsetY by remember { mutableStateOf<Float?>(null) }
@@ -569,16 +592,13 @@ fun SideDualWidgetSlot(
                     val availableHeight = (widgetHeight - dividerHeight).coerceAtLeast(0.dp)
                     val availableHeightPx = with(density) { availableHeight.toPx() }
 
-                    var localRatio by remember(config.splitRatio) { mutableFloatStateOf(config.splitRatio) }
-                    var isDraggingDivider by remember { mutableStateOf(false) }
-
-                    LaunchedEffect(config.splitRatio) {
-                        localRatio = config.splitRatio
-                    }
-
                     val minHeightPx = with(density) { 40.dp.toPx() }
                     val minRatio = if (availableHeightPx > 0f) (minHeightPx / availableHeightPx).coerceIn(0.12f, 0.40f) else 0.15f
                     val maxRatio = 1f - minRatio
+
+                    val currentAvailableHeightPx by rememberUpdatedState(availableHeightPx)
+                    val currentMinRatio by rememberUpdatedState(minRatio)
+                    val currentMaxRatio by rememberUpdatedState(maxRatio)
 
                     val topHeight = availableHeight * localRatio
                     val bottomHeight = (availableHeight - topHeight).coerceAtLeast(0.dp)
@@ -601,7 +621,8 @@ fun SideDualWidgetSlot(
                                 cachedHostView = cachedTopHostView,
                                 onCacheView = { cachedTopHostView = it },
                                 targetWidthDp = widgetWidth.value.roundToInt().coerceAtLeast(30),
-                                targetHeightDp = topHeight.value.roundToInt().coerceAtLeast(30)
+                                targetHeightDp = topHeight.value.roundToInt().coerceAtLeast(30),
+                                isResizing = isDraggingDivider
                             )
 
                             if (!isMoving) {
@@ -630,7 +651,7 @@ fun SideDualWidgetSlot(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(dividerHeight)
-                                .pointerInput(availableHeightPx) {
+                                .pointerInput(Unit) {
                                     detectTapGestures(
                                         onDoubleTap = {
                                             localRatio = 0.5f
@@ -639,7 +660,7 @@ fun SideDualWidgetSlot(
                                         }
                                     )
                                 }
-                                .pointerInput(availableHeightPx) {
+                                .pointerInput(Unit) {
                                     detectVerticalDragGestures(
                                         onDragStart = { isDraggingDivider = true },
                                         onDragEnd = {
@@ -652,14 +673,15 @@ fun SideDualWidgetSlot(
                                         },
                                         onVerticalDrag = { change, dragAmount ->
                                             change.consume()
-                                            if (availableHeightPx > 0f) {
-                                                val deltaRatio = dragAmount / availableHeightPx
+                                            val totalH = currentAvailableHeightPx
+                                            if (totalH > 0f) {
+                                                val deltaRatio = dragAmount / totalH
                                                 val oldRatio = localRatio
-                                                val newRatio = (oldRatio + deltaRatio).coerceIn(minRatio, maxRatio)
-                                                if ((oldRatio < 0.50f && newRatio >= 0.50f) || (oldRatio > 0.50f && newRatio <= 0.50f)) {
+                                                val targetRatio = (oldRatio + deltaRatio).coerceIn(currentMinRatio, currentMaxRatio)
+                                                if ((oldRatio < 0.50f && targetRatio >= 0.50f) || (oldRatio > 0.50f && targetRatio <= 0.50f)) {
                                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                 }
-                                                localRatio = newRatio
+                                                localRatio = targetRatio
                                             }
                                         }
                                     )
@@ -692,7 +714,8 @@ fun SideDualWidgetSlot(
                                 cachedHostView = cachedBottomHostView,
                                 onCacheView = { cachedBottomHostView = it },
                                 targetWidthDp = widgetWidth.value.roundToInt().coerceAtLeast(30),
-                                targetHeightDp = bottomHeight.value.roundToInt().coerceAtLeast(30)
+                                targetHeightDp = bottomHeight.value.roundToInt().coerceAtLeast(30),
+                                isResizing = isDraggingDivider
                             )
 
                             if (!isMoving) {
@@ -715,16 +738,6 @@ fun SideDualWidgetSlot(
                                 }
                             }
                         }
-                    }
-
-                    if (isDraggingDivider) {
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .pointerInput(Unit) {
-                                    detectTapGestures { /* absorb touches */ }
-                                }
-                        )
                     }
                 } else {
                     // Exactly ONE widget active: occupies full height
@@ -987,17 +1000,6 @@ fun SideDualWidgetSlot(
                             onSwapWidgets()
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         }
-
-                        WidgetOptionButton(
-                            icon = Icons.Outlined.RestartAlt,
-                            label = stringResource(R.string.widget_action_reset_split),
-                            iconTint = accentColor.color,
-                            contentColor = popupTheme.contentColor
-                        ) {
-                            slotForOptions = null
-                            onUpdateSplitRatio(0.5f)
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        }
                     }
 
                     WidgetOptionButton(
@@ -1010,15 +1012,17 @@ fun SideDualWidgetSlot(
                         showResize = true
                     }
 
-                    WidgetOptionButton(
-                        icon = Icons.Outlined.OpenWith,
-                        label = stringResource(R.string.widget_action_move),
-                        iconTint = accentColor.color,
-                        contentColor = popupTheme.contentColor
-                    ) {
-                        slotForOptions = null
-                        isMoving = true
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    if (!isDual) {
+                        WidgetOptionButton(
+                            icon = Icons.Outlined.OpenWith,
+                            label = stringResource(R.string.widget_action_move),
+                            iconTint = accentColor.color,
+                            contentColor = popupTheme.contentColor
+                        ) {
+                            slotForOptions = null
+                            isMoving = true
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
                     }
 
                     WidgetOptionButton(
@@ -1028,7 +1032,9 @@ fun SideDualWidgetSlot(
                         contentColor = popupTheme.contentColor
                     ) {
                         slotForOptions = null
+                        localRatio = 0.5f
                         onResetLayout()
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     }
 
                     WidgetOptionButton(
@@ -1063,7 +1069,8 @@ private fun SingleEmbeddedWidgetView(
     cachedHostView: LauncherAppWidgetHostView?,
     onCacheView: (LauncherAppWidgetHostView) -> Unit,
     targetWidthDp: Int,
-    targetHeightDp: Int
+    targetHeightDp: Int,
+    isResizing: Boolean = false
 ) {
     AndroidView(
         factory = { ctx ->
@@ -1085,12 +1092,14 @@ private fun SingleEmbeddedWidgetView(
         },
         modifier = Modifier.fillMaxSize(),
         update = { view ->
-            try {
-                (view as? LauncherAppWidgetHostView)?.applyWidgetSize(
-                    targetWidthDp.coerceAtLeast(30),
-                    targetHeightDp.coerceAtLeast(30)
-                )
-            } catch (_: Throwable) {}
+            if (!isResizing) {
+                try {
+                    (view as? LauncherAppWidgetHostView)?.applyWidgetSize(
+                        targetWidthDp.coerceAtLeast(30),
+                        targetHeightDp.coerceAtLeast(30)
+                    )
+                } catch (_: Throwable) {}
+            }
         }
     )
 }

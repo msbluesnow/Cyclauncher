@@ -3,12 +3,10 @@ package dev.msbs.cyclauncher.ui.components
 import dev.msbs.cyclauncher.ui.theme.AccentColor
 import dev.msbs.cyclauncher.ui.theme.PopupTheme
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
-import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.R
 import androidx.compose.ui.res.stringResource
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -78,23 +76,6 @@ fun KeepAndroidOpenBanner(
     val daysRemaining = remember { calculateKeepAndroidOpenDays() }
     val shadowSettings = LocalShadowSettings.current
     val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
-    val animationsEnabled = LocalAnimationsEnabled.current
-
-    val pulseScale = if (animationsEnabled) {
-        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-        val scale by infiniteTransition.animateFloat(
-            initialValue = 0.98f,
-            targetValue = 1.02f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1800, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "pulseScale"
-        )
-        scale
-    } else {
-        1.0f
-    }
 
     Box(
         modifier = modifier

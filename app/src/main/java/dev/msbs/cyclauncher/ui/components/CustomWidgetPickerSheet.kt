@@ -67,11 +67,20 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
+@Immutable
+data class WidgetEntryUi(
+    val providerInfo: AppWidgetProviderInfo,
+    val label: String,
+    val labelLower: String
+)
+
+@Immutable
 data class AppWidgetGroup(
     val packageName: String,
     val appLabel: String,
+    val appLabelLower: String,
     val iconKey: String,
-    val widgets: List<AppWidgetProviderInfo>
+    val widgets: List<WidgetEntryUi>
 )
 
 private fun Drawable.toSafeBitmap(maxDimensionPx: Int = 360): Bitmap? {
@@ -232,20 +241,27 @@ suspend fun discoverAppWidgetGroups(context: Context, apps: List<AppInfo>): List
         }
     } catch (_: Exception) {}
 
-    // 4. Group by package and create AppWidgetGroup
+    // 4. Group by package and create AppWidgetGroup with pre-resolved labels on Dispatchers.IO
     val appsByPackage = apps.associateBy { it.packageName }
     providers
         .distinctBy { it.provider.flattenToString() }
         .groupBy { it.provider.packageName }
         .map { (packageName, widgetList) ->
             val knownApp = appsByPackage[packageName]
-            val firstWidget = widgetList.firstOrNull()
+            val resolvedWidgets = widgetList.map { info ->
+                val widgetLabel = info.safeLabel(pm)
+                WidgetEntryUi(
+                    providerInfo = info,
+                    label = widgetLabel,
+                    labelLower = widgetLabel.lowercase()
+                )
+            }.sortedBy { it.labelLower }
 
             val appLabel = knownApp?.label ?: try {
                 val appInfo = pm.getApplicationInfo(packageName, 0)
                 pm.getApplicationLabel(appInfo).toString()
             } catch (_: Exception) {
-                firstWidget?.safeLabel(pm)?.takeIf { it.isNotBlank() } ?: packageName
+                resolvedWidgets.firstOrNull()?.label?.takeIf { it.isNotBlank() } ?: packageName
             }
 
             val iconKey = knownApp?.iconKey ?: packageName
@@ -253,11 +269,12 @@ suspend fun discoverAppWidgetGroups(context: Context, apps: List<AppInfo>): List
             AppWidgetGroup(
                 packageName = packageName,
                 appLabel = appLabel,
+                appLabelLower = appLabel.lowercase(),
                 iconKey = iconKey,
-                widgets = widgetList.sortedBy { it.safeLabel(pm).lowercase() }
+                widgets = resolvedWidgets
             )
         }
-        .sortedBy { it.appLabel.lowercase() }
+        .sortedBy { it.appLabelLower }
 }
 
 @Composable
@@ -297,8 +314,8 @@ fun CustomWidgetPickerSheet(
         } else {
             val query = searchQuery.trim().lowercase()
             allGroups.filter { group ->
-                group.appLabel.lowercase().contains(query) ||
-                    group.widgets.any { it.safeLabel(context.packageManager).lowercase().contains(query) }
+                group.appLabelLower.contains(query) ||
+                    group.widgets.any { it.labelLower.contains(query) }
             }
         }
     }
@@ -608,14 +625,14 @@ private fun AppWidgetAccordionCard(
                         .padding(bottom = 10.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    for (widgetInfo in group.widgets) {
+                    for (widgetEntry in group.widgets) {
                         SingleWidgetPreviewCard(
-                            widgetInfo = widgetInfo,
+                            widgetEntry = widgetEntry,
                             accentColor = accentColor,
                             primaryTextColor = primaryTextColor,
                             showShadows = showShadows,
                             shadowSettings = shadowSettings,
-                            onClick = { onSelectWidget(widgetInfo) }
+                            onClick = { onSelectWidget(widgetEntry.providerInfo) }
                         )
                     }
                 }
@@ -629,7 +646,7 @@ private fun AppWidgetAccordionCard(
  */
 @Composable
 private fun SingleWidgetPreviewCard(
-    widgetInfo: AppWidgetProviderInfo,
+    widgetEntry: WidgetEntryUi,
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
@@ -640,10 +657,8 @@ private fun SingleWidgetPreviewCard(
     val pm = context.packageManager
     val density = LocalDensity.current
     val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
-
-    val label = remember(widgetInfo) {
-        widgetInfo.safeLabel(pm)
-    }
+    val widgetInfo = widgetEntry.providerInfo
+    val label = widgetEntry.label
 
     val previewBitmap by produceState<ImageBitmap?>(initialValue = null, widgetInfo) {
         value = withContext(Dispatchers.IO) {
