@@ -27,7 +27,7 @@
 Cyclauncher is **not just yet another bicycle**. Built entirely with **Jetpack Compose**, it is designed from the ground up for comfortable one-handed navigation and instant app access. Daily workflows are streamlined through an ergonomic side alphabet grid, an alternative rectangular alphabet wheel with inertia physics, chromatic icon color search, interactive tag folders, adaptive Hue Angle Shift theming, and an expandable widget hub.
 
 > [!TIP]
-> **Stable Release (v1.0.0)**: Cyclauncher has reached its first official stable release milestone (**v1.0.0**, Build 28)! Download the signed release APK directly from [GitHub Releases](https://github.com/msbluesnow/Cyclauncher/releases/tag/v1.0.0) or install via [F-Droid](https://f-droid.org/packages/dev.msbs.cyclauncher/).
+> **Latest Release (v1.1.0)**: Cyclauncher **v1.1.0** (Build 29) is out! Download the signed release APK directly from [GitHub Releases](https://github.com/msbluesnow/Cyclauncher/releases/tag/v1.1.0) or install via [F-Droid](https://f-droid.org/packages/dev.msbs.cyclauncher/).
 
 ## 📽️ Demo Showcases
 
@@ -85,6 +85,7 @@ Thank you to everyone who has contributed to Cyclauncher!
 * [@alanpoulain](https://github.com/alanpoulain):
   * PR [#6](https://github.com/msbluesnow/Cyclauncher/pull/6) — Adaptive background dimming and capsule contrast controls.
   * PR [#7](https://github.com/msbluesnow/Cyclauncher/pull/7) — Main screen visibility controls for popular tags and history areas with adaptive full-height layout redistribution.
+  * PR [#8](https://github.com/msbluesnow/Cyclauncher/pull/8) — Resize and move support for the side search widget.
 
 <a href="https://github.com/msbluesnow/Cyclauncher/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=msbluesnow/Cyclauncher" alt="Contributors" />
@@ -146,6 +147,7 @@ A continuous, unified timeline of completed milestones and planned updates.
 <kbd>&nbsp;✓&nbsp;</kbd> <b>Multi-Language Localization</b> — Native translation support for English, Spanish, German, Russian, Chinese (Simplified), Hindi, and Japanese.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>R8 Code Shrinking & Baseline Profiles</b> — Sub-2.5MB APK size and instant AOT cold starts.<br>
 <kbd>&nbsp;✓&nbsp;</kbd> <b>v1.0.0 Stable Release Milestone</b> — Hardened memory stability, concurrency, full backup/restore, and ergonomic one-handed workflows.<br>
+<kbd>&nbsp;✓&nbsp;</kbd> <b>v1.1.0 Dual Search Widgets &amp; Visual Polish</b> — Dual side-search widgets with drag split, swap, resize, and move controls, updated branding, and unified popup contrast.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>Tag Map</i> — Interactive tag map showing connections between applications and implementing quick tag-based navigation.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>App Shortcuts</i> — Quick-launch actions like dialing specific contacts or opening deep-linked settings.<br>
 <kbd>&nbsp;&nbsp;&nbsp;</kbd> <i>3D Hex Search Grid</i> — Immersive 3D application navigation styled as a rotatable hexagonal prism.<br>

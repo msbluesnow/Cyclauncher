@@ -1,0 +1,7 @@
+Dual side-search widgets, updated branding, and stability polish.
+- Dual search and alphabet widgets with drag split, swap, resize, and move.
+- Updated launcher logo, adaptive icons, and store assets.
+- Extracted backup and widget binding managers with safer concurrency.
+- Faster cold-start IPC, widget filtering, and icon dialog virtualization.
+- Fixed backup labels, tag toggles, and 7-language translations.
+- Unified popup contrast and capsule styling.
