@@ -12,7 +12,11 @@ import android.graphics.drawable.Drawable
 import android.os.Build
 import android.provider.Settings
 import androidx.core.content.res.ResourcesCompat
+import dev.msbs.cyclauncher.utils.isUserUnlockedSafe
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import org.xmlpull.v1.XmlPullParser
@@ -54,15 +58,23 @@ object IconPackManager {
         "com.teslacoilsw.launcher.THEME"
     )
 
-    @Volatile
-    var activePackageName: String? = null
-        private set
+    private class IconPackState(
+        val packageName: String? = null,
+        val resources: Resources? = null,
+        val componentToDrawable: Map<String, String> = emptyMap(),
+        val packageToDrawable: Map<String, String> = emptyMap(),
+        val drawableToResId: ConcurrentHashMap<String, Int> = ConcurrentHashMap(),
+        val loadedWhileUnlocked: Boolean = true
+    )
+
+    private val loadMutex = Mutex()
+    private val stateLock = Any()
 
     @Volatile
-    private var activeResources: Resources? = null
-    private val componentToDrawableMap = ConcurrentHashMap<String, String>()
-    private val packageToDrawableMap = ConcurrentHashMap<String, String>()
-    private val drawableToResIdMap = ConcurrentHashMap<String, Int>()
+    private var state: IconPackState = IconPackState()
+
+    val activePackageName: String?
+        get() = state.packageName
 
     /**
      * Attempts to auto-detect the active icon pack package configured in the system / custom ROM settings.
@@ -197,16 +209,16 @@ object IconPackManager {
      * Releases active icon pack resources and mappings from memory.
      */
     fun unload() {
-        activePackageName = null
-        activeResources = null
-        componentToDrawableMap.clear()
-        packageToDrawableMap.clear()
-        drawableToResIdMap.clear()
+        synchronized(stateLock) {
+            state = IconPackState()
+        }
     }
 
     fun onPackageRemoved(packageName: String) {
-        if (activePackageName == packageName) {
-            unload()
+        synchronized(stateLock) {
+            if (state.packageName == packageName) {
+                state = IconPackState()
+            }
         }
     }
 
@@ -260,55 +272,68 @@ object IconPackManager {
         packageName: String?,
         forceReload: Boolean = false
     ) = withContext(Dispatchers.IO) {
-        val targetPackage = if (!packageName.isNullOrBlank()) {
-            packageName
-        } else {
-            getSystemIconPackPackage(context)
-        }
-
-        if (targetPackage.isNullOrBlank()) {
-            unload()
-            return@withContext
-        }
-
-        if (!forceReload && targetPackage == activePackageName && activeResources != null && componentToDrawableMap.isNotEmpty()) {
-            return@withContext
-        }
-
-        try {
-            val pm = context.packageManager
-            val res = pm.getResourcesForApplication(targetPackage)
-            val installedPackages = getInstalledPackages(context)
-            val capacity = if (installedPackages.isNotEmpty()) installedPackages.size * 2 else 2048
-            val compMap = HashMap<String, String>(capacity)
-            val pkgMap = HashMap<String, String>(capacity / 2)
-
-            // Try opening appfilter.xml from assets or res/xml, filtered by installed packages
-            var parsed = parseXmlFromAssets(res, compMap, pkgMap, installedPackages, "appfilter.xml")
-            if (!parsed) {
-                parsed = parseXmlFromRes(res, targetPackage, compMap, pkgMap, installedPackages, "appfilter")
-            }
-            if (!parsed) {
-                parsed = parseXmlFromRes(res, targetPackage, compMap, pkgMap, installedPackages, "theme_resources")
-            }
-            if (!parsed) {
-                parsed = parseXmlFromRes(res, targetPackage, compMap, pkgMap, installedPackages, "iconpack")
-            }
-            if (!parsed) {
-                parseXmlFromAssets(res, compMap, pkgMap, installedPackages, "iconpack.xml")
+        loadMutex.withLock {
+            val targetPackage = if (!packageName.isNullOrBlank()) {
+                packageName
+            } else {
+                getSystemIconPackPackage(context)
             }
 
-            activePackageName = null
-            activeResources = null
-            drawableToResIdMap.clear()
-            componentToDrawableMap.clear()
-            componentToDrawableMap.putAll(compMap)
-            packageToDrawableMap.clear()
-            packageToDrawableMap.putAll(pkgMap)
-            activeResources = res
-            activePackageName = targetPackage
-        } catch (_: Exception) {
-            unload()
+            if (targetPackage.isNullOrBlank()) {
+                unload()
+                return@withLock
+            }
+
+            val isUnlocked = context.isUserUnlockedSafe()
+            val current = state
+            if (!forceReload &&
+                targetPackage == current.packageName &&
+                current.resources != null &&
+                current.componentToDrawable.isNotEmpty() &&
+                (current.loadedWhileUnlocked || !isUnlocked)
+            ) {
+                return@withLock
+            }
+
+            try {
+                val pm = context.packageManager
+                val res = pm.getResourcesForApplication(targetPackage)
+                // Avoid filtering out regular (non-Direct-Boot) packages while user storage is locked
+                val installedPackages = if (isUnlocked) getInstalledPackages(context) else emptySet()
+                val capacity = if (installedPackages.isNotEmpty()) installedPackages.size * 2 else 2048
+                val compMap = HashMap<String, String>(capacity)
+                val pkgMap = HashMap<String, String>(capacity / 2)
+
+                // Try opening appfilter.xml from assets or res/xml, filtered by installed packages
+                var parsed = parseXmlFromAssets(res, compMap, pkgMap, installedPackages, "appfilter.xml")
+                if (!parsed) {
+                    parsed = parseXmlFromRes(res, targetPackage, compMap, pkgMap, installedPackages, "appfilter")
+                }
+                if (!parsed) {
+                    parsed = parseXmlFromRes(res, targetPackage, compMap, pkgMap, installedPackages, "theme_resources")
+                }
+                if (!parsed) {
+                    parsed = parseXmlFromRes(res, targetPackage, compMap, pkgMap, installedPackages, "iconpack")
+                }
+                if (!parsed) {
+                    parseXmlFromAssets(res, compMap, pkgMap, installedPackages, "iconpack.xml")
+                }
+
+                val newState = IconPackState(
+                    packageName = targetPackage,
+                    resources = res,
+                    componentToDrawable = compMap,
+                    packageToDrawable = pkgMap,
+                    loadedWhileUnlocked = isUnlocked
+                )
+                synchronized(stateLock) {
+                    state = newState
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                unload()
+            }
         }
     }
 
@@ -316,9 +341,24 @@ object IconPackManager {
      * Purges entries belonging to an uninstalled package from mapping caches.
      */
     fun onAppRemoved(packageName: String) {
-        packageToDrawableMap.remove(packageName)
-        val prefix = "$packageName/"
-        componentToDrawableMap.keys.removeIf { it.startsWith(prefix) }
+        synchronized(stateLock) {
+            val current = state
+            if (current.packageName == null) return
+            val prefix = "$packageName/"
+            val hasPkg = current.packageToDrawable.containsKey(packageName)
+            val hasComp = current.componentToDrawable.keys.any { it.startsWith(prefix) }
+            if (!hasPkg && !hasComp) return
+            val newComp = current.componentToDrawable.filterKeys { !it.startsWith(prefix) }
+            val newPkg = current.packageToDrawable - packageName
+            state = IconPackState(
+                packageName = current.packageName,
+                resources = current.resources,
+                componentToDrawable = newComp,
+                packageToDrawable = newPkg,
+                drawableToResId = current.drawableToResId,
+                loadedWhileUnlocked = current.loadedWhileUnlocked
+            )
+        }
     }
 
     private fun parseXmlFromAssets(
@@ -417,15 +457,16 @@ object IconPackManager {
      * Returns null if no icon pack is active or no mapping exists.
      */
     fun getIcon(componentKey: String): Drawable? {
-        val res = activeResources ?: return null
-        val pkgName = activePackageName ?: return null
+        val snapshot = state
+        val res = snapshot.resources ?: return null
+        val pkgName = snapshot.packageName ?: return null
 
         val baseKey = componentKey.substringBefore('#')
-        val drawableName = componentToDrawableMap[baseKey]
-            ?: packageToDrawableMap[baseKey.substringBefore('/')]
+        val drawableName = snapshot.componentToDrawable[baseKey]
+            ?: snapshot.packageToDrawable[baseKey.substringBefore('/')]
             ?: return null
 
-        val resId = drawableToResIdMap.getOrPut(drawableName) {
+        val resId = snapshot.drawableToResId.getOrPut(drawableName) {
             res.getIdentifier(drawableName, "drawable", pkgName)
         }
         if (resId == 0) return null

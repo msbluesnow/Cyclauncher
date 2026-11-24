@@ -38,6 +38,7 @@ class LauncherBackupManager(
         const val MAX_LABEL_LENGTH = 256
         const val MAX_TAG_NAME_LENGTH = 128
         const val MAX_SYMBOL_LENGTH = 32
+        const val DEFAULT_MAX_IMPORT_BYTES = 4 * 1024 * 1024L
         private val PACKAGE_NAME_REGEX = Regex("^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z0-9_]+)+$")
 
         fun isValidPackageName(value: String): Boolean {
@@ -69,22 +70,22 @@ class LauncherBackupManager(
             os.writer(Charsets.UTF_8).use { writer ->
                 writer.write(content)
                 writer.flush()
-            }
-            os.flush()
-            try {
-                (os as? FileOutputStream)?.fd?.sync()
-            } catch (_: Exception) {
-                // Ignore sync error if unsupported by document provider
+                os.flush()
+                try {
+                    (os as? FileOutputStream)?.fd?.sync()
+                } catch (_: Exception) {
+                    // Ignore sync error if unsupported by document provider
+                }
             }
         }
     }
 
     /**
      * Reads a UTF-8 string from a content [uri], handling UTF-8 BOM if present.
-     * Enforces a maximum size limit ([maxBytes], default 10MB) to prevent OutOfMemoryError
+     * Enforces a maximum size limit ([maxBytes], default 4MB) to prevent OutOfMemoryError
      * if an unexpected or malicious large file (e.g. video, binary archive) is selected.
      */
-    fun readStringFromUri(uri: Uri, maxBytes: Long = 10 * 1024 * 1024L): String {
+    fun readStringFromUri(uri: Uri, maxBytes: Long = DEFAULT_MAX_IMPORT_BYTES): String {
         try {
             context.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
@@ -158,7 +159,7 @@ class LauncherBackupManager(
                 val rawKey = keys.next()
                 val key = rawKey.trim().take(MAX_SYMBOL_LENGTH)
                 if (key.isEmpty() || key == "version") continue
-                val value = mappingsJson.optString(rawKey).trim()
+                val value = mappingsJson.safeOptString(rawKey).trim()
                 if (value.isNotEmpty()) {
                     parsed[key] = value[0].uppercaseChar()
                 }
@@ -167,8 +168,8 @@ class LauncherBackupManager(
             val array = JSONArray(trimmed)
             for (i in 0 until array.length()) {
                 val obj = array.optJSONObject(i) ?: continue
-                val symbol = obj.optString("symbol").ifEmpty { obj.optString("char") }.ifEmpty { obj.optString("from") }.trim().take(MAX_SYMBOL_LENGTH)
-                val target = obj.optString("target").ifEmpty { obj.optString("letter") }.ifEmpty { obj.optString("to") }.trim()
+                val symbol = obj.safeOptString("symbol").ifEmpty { obj.safeOptString("char") }.ifEmpty { obj.safeOptString("from") }.trim().take(MAX_SYMBOL_LENGTH)
+                val target = obj.safeOptString("target").ifEmpty { obj.safeOptString("letter") }.ifEmpty { obj.safeOptString("to") }.trim()
                 if (symbol.isNotEmpty() && target.isNotEmpty()) {
                     parsed[symbol] = target[0].uppercaseChar()
                 }
@@ -270,7 +271,7 @@ class LauncherBackupManager(
 
             if (favoritesArray != null) {
                 for (i in 0 until favoritesArray.length()) {
-                    val favKey = favoritesArray.optString(i).trim()
+                    val favKey = favoritesArray.safeOptString(i).trim()
                     if (favKey.isNotEmpty()) {
                         importedFavorites.add(favKey)
                     }
@@ -285,7 +286,7 @@ class LauncherBackupManager(
             } else {
                 val targetObj = nestedObj ?: root
                 targetObj.keys().forEach { key ->
-                    val label = targetObj.optString(key).trim().take(MAX_LABEL_LENGTH)
+                    val label = targetObj.safeOptString(key).trim().take(MAX_LABEL_LENGTH)
                     if (label.isNotEmpty()) {
                         if (key.contains("/")) {
                             importedLabels[key] = label
@@ -343,9 +344,9 @@ class LauncherBackupManager(
         importedLabels: MutableMap<String, String>,
         importedFavorites: MutableList<String>
     ) {
-        val pkg = item.optString("package").ifEmpty { item.optString("packageName").ifEmpty { item.optString("app") } }.trim()
-        val component = item.optString("component").ifEmpty { item.optString("componentKey") }.trim()
-        val label = item.optString("label").ifEmpty { item.optString("name").ifEmpty { item.optString("customLabel") } }.trim().take(MAX_LABEL_LENGTH)
+        val pkg = item.safeOptString("package").ifEmpty { item.safeOptString("packageName").ifEmpty { item.safeOptString("app") } }.trim()
+        val component = item.safeOptString("component").ifEmpty { item.safeOptString("componentKey") }.trim()
+        val label = item.safeOptString("label").ifEmpty { item.safeOptString("name").ifEmpty { item.safeOptString("customLabel") } }.trim().take(MAX_LABEL_LENGTH)
         val isFav = extractIsFavorite(item)
 
         if (label.isNotEmpty()) {
@@ -530,6 +531,9 @@ class LauncherBackupManager(
     fun parseTagsBackup(uri: Uri, existingTags: List<Tag>): TagsBackupPreview {
         val raw = readStringFromUri(uri)
         val trimmed = cleanJsonString(raw)
+        if (!trimmed.startsWith("[") && !trimmed.startsWith("{")) {
+            throw IllegalArgumentException("Invalid JSON format")
+        }
 
         val existingNames = existingTags.map { it.name.lowercase().trim() }.toMutableSet()
         val tagsToCreate = mutableListOf<TagsBackupPreview.TagInfo>()
@@ -549,27 +553,29 @@ class LauncherBackupManager(
 
             for (i in 0 until array.length()) {
                 val obj = array.optJSONObject(i) ?: continue
-                val pkg = obj.optString("package").ifEmpty { obj.optString("packageName") }.trim()
-                val component = obj.optString("component").ifEmpty { obj.optString("componentKey") }.trim()
-                val explicitCustomLabel = obj.optString("customLabel").ifEmpty { obj.optString("custom_label") }.trim().take(MAX_LABEL_LENGTH)
+                val pkg = obj.safeOptString("package").ifEmpty { obj.safeOptString("packageName") }.trim()
+                val component = obj.safeOptString("component").ifEmpty { obj.safeOptString("componentKey") }.trim()
+                val explicitCustomLabel = obj.safeOptString("customLabel").ifEmpty { obj.safeOptString("custom_label") }.trim().take(MAX_LABEL_LENGTH)
                 val hasTagFields = obj.has("tags") || obj.has("categories") || obj.has("tag") || obj.has("tagName") || obj.has("category")
                 val fallbackLabel = if (explicitCustomLabel.isEmpty() && !hasTagFields) {
-                    obj.optString("label").ifEmpty { obj.optString("name") }.trim().take(MAX_LABEL_LENGTH)
+                    obj.safeOptString("label").ifEmpty { obj.safeOptString("name") }.trim().take(MAX_LABEL_LENGTH)
                 } else {
                     ""
                 }
                 val customLabel = explicitCustomLabel.ifEmpty { fallbackLabel }
-                val colorHex = obj.optString("color").trim()
+                val colorHex = obj.safeOptString("color").trim()
                 val color = if (colorHex.isNotEmpty()) parseHexColor(colorHex) else Color.Unspecified
                 val isFav = extractIsFavorite(obj)
-                val iconVal = (obj.optString("icon").ifEmpty { obj.optString("emoji") }).trim().take(MAX_SYMBOL_LENGTH).takeIf { it.isNotEmpty() }
+                val iconVal = (obj.safeOptString("icon").ifEmpty { obj.safeOptString("emoji") }).trim().take(MAX_SYMBOL_LENGTH).takeIf { it.isNotEmpty() }
 
                 val tagNames = mutableListOf<String>()
-                val singleTag = obj.optString("tag").ifEmpty { obj.optString("tagName") }.trim().take(MAX_TAG_NAME_LENGTH)
+                val singleTag = obj.safeOptString("tag").ifEmpty { obj.safeOptString("tagName") }.ifEmpty { obj.safeOptString("category") }.trim().take(MAX_TAG_NAME_LENGTH)
                 if (singleTag.isNotEmpty()) tagNames.add(singleTag)
-                obj.optJSONArray("tags")?.let { tagsArr ->
+                (obj.optJSONArray("tags") ?: obj.optJSONArray("categories"))?.let { tagsArr ->
                     for (j in 0 until tagsArr.length()) {
-                        tagsArr.optString(j).trim().take(MAX_TAG_NAME_LENGTH).takeIf { it.isNotEmpty() }?.let { tagNames.add(it) }
+                        tagsArr.safeOptString(j).trim().take(MAX_TAG_NAME_LENGTH).takeIf { it.isNotEmpty() }?.let {
+                            if (it !in tagNames) tagNames.add(it)
+                        }
                     }
                 }
 
@@ -631,13 +637,13 @@ class LauncherBackupManager(
                 while (keys.hasNext()) {
                     val rawKey = keys.next()
                     val k = rawKey.trim().take(MAX_SYMBOL_LENGTH)
-                    val v = charMappingsObj.optString(rawKey).trim()
+                    val v = charMappingsObj.safeOptString(rawKey).trim()
                     if (k.isNotEmpty() && v.isNotEmpty()) {
                         parsedCharMappings[k] = v[0].uppercaseChar()
                     }
                 }
             } else if (settingsObj != null && settingsObj.has("custom_char_mappings")) {
-                val rawMappings = settingsObj.optString("custom_char_mappings", "").trim()
+                val rawMappings = settingsObj.safeOptString("custom_char_mappings").trim()
                 if (rawMappings.startsWith("{")) {
                     try {
                         val json = JSONObject(rawMappings)
@@ -645,7 +651,7 @@ class LauncherBackupManager(
                         while (keys.hasNext()) {
                             val rawKey = keys.next()
                             val k = rawKey.trim().take(MAX_SYMBOL_LENGTH)
-                            val v = json.optString(rawKey).trim()
+                            val v = json.safeOptString(rawKey).trim()
                             if (k.isNotEmpty() && v.isNotEmpty()) {
                                 parsedCharMappings[k] = v[0].uppercaseChar()
                             }
@@ -658,7 +664,7 @@ class LauncherBackupManager(
                 val keys = customLabelsObj.keys()
                 while (keys.hasNext()) {
                     val key = keys.next()
-                    val label = customLabelsObj.optString(key).trim().take(MAX_LABEL_LENGTH)
+                    val label = customLabelsObj.safeOptString(key).trim().take(MAX_LABEL_LENGTH)
                     if (label.isNotEmpty()) {
                         parsedCustomLabels[key] = label
                     }
@@ -667,7 +673,7 @@ class LauncherBackupManager(
 
             if (favoritesArray != null) {
                 for (i in 0 until favoritesArray.length()) {
-                    val favKey = favoritesArray.optString(i).trim()
+                    val favKey = favoritesArray.safeOptString(i).trim()
                     if (favKey.isNotEmpty()) {
                         parsedFavorites.add(favKey)
                     }
@@ -683,7 +689,7 @@ class LauncherBackupManager(
                     if (tagName.isNotEmpty() && arr != null) {
                         val orderList = mutableListOf<String>()
                         for (idx in 0 until arr.length()) {
-                            val k = arr.optString(idx).trim()
+                            val k = arr.safeOptString(idx).trim()
                             if (k.isNotEmpty()) orderList.add(k)
                         }
                         if (orderList.isNotEmpty()) {
@@ -698,7 +704,7 @@ class LauncherBackupManager(
                 while (keys.hasNext()) {
                     val k = keys.next().trim()
                     if (k.isEmpty() || k in INTERNAL_PREF_KEYS) continue
-                    val v = settingsObj.optString(k).trim()
+                    val v = settingsObj.safeOptString(k).trim()
                     if (v.isEmpty()) continue
                     if (k == "icon_pack_package" && !isValidPackageName(v)) continue
                     parsedSettings[k] = v
@@ -708,12 +714,12 @@ class LauncherBackupManager(
             if (appsArray != null) {
                 for (i in 0 until appsArray.length()) {
                     val item = appsArray.optJSONObject(i) ?: continue
-                    val pkg = item.optString("package").ifEmpty { item.optString("packageName") }.trim()
-                    val component = item.optString("component").ifEmpty { item.optString("componentKey") }.trim()
+                    val pkg = item.safeOptString("package").ifEmpty { item.safeOptString("packageName") }.trim()
+                    val component = item.safeOptString("component").ifEmpty { item.safeOptString("componentKey") }.trim()
                     val key = component.ifEmpty { pkg }
                     if (key.isEmpty()) continue
                     if (customLabelsObj == null && !parsedCustomLabels.containsKey(key)) {
-                        val customLabel = item.optString("customLabel").ifEmpty { item.optString("custom_label") }.trim().take(MAX_LABEL_LENGTH)
+                        val customLabel = item.safeOptString("customLabel").ifEmpty { item.safeOptString("custom_label") }.trim().take(MAX_LABEL_LENGTH)
                         if (customLabel.isNotEmpty()) {
                             parsedCustomLabels[key] = customLabel
                         }
@@ -728,10 +734,10 @@ class LauncherBackupManager(
                 tagsArray?.let { array ->
                     for (i in 0 until array.length()) {
                         val obj = array.optJSONObject(i) ?: continue
-                        val oldId = obj.optString("id").trim().takeIf { it.isNotEmpty() }
-                        val name = obj.optString("name").trim().take(MAX_TAG_NAME_LENGTH)
-                        val colorHex = obj.optString("color").trim()
-                        val emoji = (if (obj.has("emoji")) obj.optString("emoji", "") else if (obj.has("icon")) obj.optString("icon", "") else "").trim().take(MAX_SYMBOL_LENGTH).takeIf { it.isNotBlank() }
+                        val oldId = obj.safeOptString("id").trim().takeIf { it.isNotEmpty() }
+                        val name = obj.safeOptString("name").trim().take(MAX_TAG_NAME_LENGTH)
+                        val colorHex = obj.safeOptString("color").trim()
+                        val emoji = obj.safeOptString("emoji").ifEmpty { obj.safeOptString("icon") }.trim().take(MAX_SYMBOL_LENGTH).takeIf { it.isNotBlank() }
                         if (name.isEmpty()) continue
                         val lower = name.lowercase().trim()
                         if (lower !in existingNames && lower !in createdNamesSet) {
@@ -748,10 +754,10 @@ class LauncherBackupManager(
                         val names = mutableListOf<String>()
                         if (arr != null) {
                             for (idx in 0 until arr.length()) {
-                                arr.optString(idx).trim().take(MAX_TAG_NAME_LENGTH).takeIf { it.isNotBlank() }?.let { names.add(it) }
+                                arr.safeOptString(idx).trim().take(MAX_TAG_NAME_LENGTH).takeIf { it.isNotBlank() }?.let { names.add(it) }
                             }
                         } else {
-                            obj.optString(componentKey).trim().take(MAX_TAG_NAME_LENGTH).takeIf { it.isNotBlank() }?.let { names.add(it) }
+                            obj.safeOptString(componentKey).trim().take(MAX_TAG_NAME_LENGTH).takeIf { it.isNotBlank() }?.let { names.add(it) }
                         }
                         if (names.isNotEmpty()) {
                             assignments.add(TagsBackupPreview.AssignmentInfo(componentKey, names))
@@ -764,19 +770,17 @@ class LauncherBackupManager(
                     if (rawTagName in setOf("custom_labels", "labels", "favorites", "apps", "version", "tag_app_orders", "settings")) return@forEach
                     val tagName = rawTagName.trim().take(MAX_TAG_NAME_LENGTH)
                     if (tagName.isEmpty()) return@forEach
+                    val arr = root.optJSONArray(rawTagName) ?: return@forEach
                     val lower = tagName.lowercase().trim()
                     if (lower !in existingNames && lower !in createdNamesSet) {
                         tagsToCreate.add(TagsBackupPreview.TagInfo(name = tagName, color = generateTagColor(tagName)))
                         createdNamesSet.add(lower)
                     }
-                    val arr = root.optJSONArray(rawTagName)
-                    if (arr != null) {
-                        for (idx in 0 until arr.length()) {
-                            val pkg = arr.optString(idx).trim()
-                            if (pkg.isNotEmpty()) {
-                                packageToTagNames.getOrPut(pkg) { mutableListOf() }.apply {
-                                    if (!contains(tagName)) add(tagName)
-                                }
+                    for (idx in 0 until arr.length()) {
+                        val pkg = arr.safeOptString(idx).trim()
+                        if (pkg.isNotEmpty()) {
+                            packageToTagNames.getOrPut(pkg) { mutableListOf() }.apply {
+                                if (!contains(tagName)) add(tagName)
                             }
                         }
                     }
@@ -785,6 +789,17 @@ class LauncherBackupManager(
                     assignments.add(TagsBackupPreview.AssignmentInfo(pkg, names))
                 }
             }
+        }
+
+        if (tagsToCreate.isEmpty() &&
+            assignments.isEmpty() &&
+            parsedCustomLabels.isEmpty() &&
+            parsedFavorites.isEmpty() &&
+            parsedTagAppOrders.isEmpty() &&
+            parsedSettings.isEmpty() &&
+            parsedCharMappings.isEmpty()
+        ) {
+            throw IllegalArgumentException("No valid backup data found in file")
         }
 
         return TagsBackupPreview(
@@ -806,22 +821,70 @@ class LauncherBackupManager(
     fun parseAutoTags(uri: Uri, apps: List<AppInfo>): AutoTagsPreview {
         val jsonString = readStringFromUri(uri)
         val trimmed = cleanJsonString(jsonString)
+        if (!trimmed.startsWith("[") && !trimmed.startsWith("{")) {
+            throw IllegalArgumentException("Invalid JSON format")
+        }
 
-        val uniqueTags = mutableMapOf<String, Color>()
-        val packageToTag = mutableMapOf<String, String>()
+        val uniqueTags = LinkedHashMap<String, Color>()
+        val uniqueTagIcons = mutableMapOf<String, String>()
+        val componentKeyToTags = mutableMapOf<String, MutableList<String>>()
+        val packageToTags = mutableMapOf<String, MutableList<String>>()
+
+        fun recordTag(tagName: String, color: Color?, icon: String?) {
+            if (!uniqueTags.containsKey(tagName)) {
+                uniqueTags[tagName] = color ?: generateTagColor(tagName)
+            } else if (color != null && color != Color.Unspecified) {
+                uniqueTags[tagName] = color
+            }
+            if (!icon.isNullOrBlank() && !uniqueTagIcons.containsKey(tagName)) {
+                uniqueTagIcons[tagName] = icon
+            }
+        }
+
+        fun recordAssignment(targetKey: String, tagName: String) {
+            val map = if (targetKey.contains("/")) componentKeyToTags else packageToTags
+            val list = map.getOrPut(targetKey) { mutableListOf() }
+            if (tagName !in list) {
+                list.add(tagName)
+            }
+        }
 
         if (trimmed.startsWith("[")) {
             val array = JSONArray(trimmed)
             for (i in 0 until array.length()) {
                 val obj = array.optJSONObject(i) ?: continue
-                val pkg = obj.optString("package").ifEmpty { obj.optString("packageName") }.trim()
-                val tagName = obj.optString("tag").ifEmpty { obj.optString("name") }.trim().take(MAX_TAG_NAME_LENGTH)
-                val colorHex = obj.optString("color").trim()
-                val color = if (colorHex.isNotEmpty()) parseHexColor(colorHex) else generateTagColor(tagName)
+                val pkg = obj.safeOptString("package").ifEmpty { obj.safeOptString("packageName") }.trim()
+                val component = obj.safeOptString("component").ifEmpty { obj.safeOptString("componentKey") }.trim()
+                val targetKey = component.ifEmpty { pkg }
+                if (targetKey.isEmpty()) continue
 
-                if (tagName.isNotEmpty() && pkg.isNotEmpty()) {
-                    uniqueTags[tagName] = color
-                    packageToTag[pkg] = tagName
+                val colorHex = obj.safeOptString("color").trim()
+                val color = if (colorHex.isNotEmpty()) parseHexColor(colorHex) else null
+                val icon = obj.safeOptString("icon").ifEmpty { obj.safeOptString("emoji") }.trim().take(MAX_SYMBOL_LENGTH).takeIf { it.isNotEmpty() }
+
+                val tagNames = mutableListOf<String>()
+                val singleTag = obj.safeOptString("tag")
+                    .ifEmpty { obj.safeOptString("tagName") }
+                    .ifEmpty { obj.safeOptString("category") }
+                    .trim().take(MAX_TAG_NAME_LENGTH)
+                if (singleTag.isNotEmpty()) tagNames.add(singleTag)
+
+                (obj.optJSONArray("tags") ?: obj.optJSONArray("categories"))?.let { tagsArr ->
+                    for (j in 0 until tagsArr.length()) {
+                        tagsArr.safeOptString(j).trim().take(MAX_TAG_NAME_LENGTH).takeIf { it.isNotEmpty() }?.let {
+                            if (it !in tagNames) tagNames.add(it)
+                        }
+                    }
+                }
+
+                if (tagNames.isEmpty()) {
+                    val fallbackName = obj.safeOptString("name").trim().take(MAX_TAG_NAME_LENGTH)
+                    if (fallbackName.isNotEmpty()) tagNames.add(fallbackName)
+                }
+
+                for (tagName in tagNames) {
+                    recordTag(tagName, color, icon)
+                    recordAssignment(targetKey, tagName)
                 }
             }
         } else if (trimmed.startsWith("{")) {
@@ -832,65 +895,104 @@ class LauncherBackupManager(
             if (tagsArray != null) {
                 for (i in 0 until tagsArray.length()) {
                     val obj = tagsArray.optJSONObject(i) ?: continue
-                    val name = obj.optString("name").trim().take(MAX_TAG_NAME_LENGTH)
-                    val colorHex = obj.optString("color").trim()
+                    val name = obj.safeOptString("name").trim().take(MAX_TAG_NAME_LENGTH)
+                    val colorHex = obj.safeOptString("color").trim()
+                    val color = if (colorHex.isNotEmpty()) parseHexColor(colorHex) else null
+                    val icon = obj.safeOptString("icon").ifEmpty { obj.safeOptString("emoji") }.trim().take(MAX_SYMBOL_LENGTH).takeIf { it.isNotEmpty() }
                     if (name.isNotEmpty()) {
-                        uniqueTags[name] = if (colorHex.isNotEmpty()) parseHexColor(colorHex) else generateTagColor(name)
+                        recordTag(name, color, icon)
                     }
                 }
             }
 
             if (assignmentsObj != null) {
                 assignmentsObj.keys().forEach { key ->
+                    val trimmedKey = key.trim()
+                    if (trimmedKey.isEmpty()) return@forEach
                     val arr = assignmentsObj.optJSONArray(key)
-                    val firstTag = (if (arr != null && arr.length() > 0) arr.optString(0) else assignmentsObj.optString(key)).trim().take(MAX_TAG_NAME_LENGTH)
-                    if (firstTag.isNotBlank()) {
-                        val pkg = key.split("/").first()
-                        packageToTag[pkg] = firstTag
-                        if (!uniqueTags.containsKey(firstTag)) {
-                            uniqueTags[firstTag] = generateTagColor(firstTag)
-                        }
-                    }
-                }
-            } else {
-                root.keys().forEach { rawTagName ->
-                    val tagName = rawTagName.trim().take(MAX_TAG_NAME_LENGTH)
-                    if (tagName.isEmpty()) return@forEach
-                    val color = generateTagColor(tagName)
-                    uniqueTags[tagName] = color
-                    val arr = root.optJSONArray(rawTagName)
                     if (arr != null) {
-                        for (i in 0 until arr.length()) {
-                            val pkg = arr.optString(i).trim()
-                            if (pkg.isNotEmpty()) {
-                                packageToTag[pkg] = tagName
+                        for (j in 0 until arr.length()) {
+                            val tagName = arr.safeOptString(j).trim().take(MAX_TAG_NAME_LENGTH)
+                            if (tagName.isNotEmpty()) {
+                                recordTag(tagName, null, null)
+                                recordAssignment(trimmedKey, tagName)
                             }
                         }
+                    } else {
+                        val tagName = assignmentsObj.safeOptString(key).trim().take(MAX_TAG_NAME_LENGTH)
+                        if (tagName.isNotEmpty()) {
+                            recordTag(tagName, null, null)
+                            recordAssignment(trimmedKey, tagName)
+                        }
+                    }
+                }
+            } else if (tagsArray == null) {
+                val skipMetaKeys = setOf(
+                    "custom_labels", "labels", "favorites", "apps", "version",
+                    "tag_app_orders", "settings", "custom_char_mappings", "mappings"
+                )
+                root.keys().forEach { rawTagName ->
+                    if (rawTagName in skipMetaKeys) return@forEach
+                    val tagName = rawTagName.trim().take(MAX_TAG_NAME_LENGTH)
+                    if (tagName.isEmpty()) return@forEach
+                    val arr = root.optJSONArray(rawTagName) ?: return@forEach
+                    recordTag(tagName, null, null)
+                    for (i in 0 until arr.length()) {
+                        val targetKey = arr.safeOptString(i).trim()
+                        if (targetKey.isNotEmpty()) {
+                            recordAssignment(targetKey, tagName)
+                        }
                     }
                 }
             }
         }
 
-        val componentTagMap = mutableMapOf<String, String>()
-        val matchedPackages = mutableSetOf<String>()
+        if (uniqueTags.isEmpty()) {
+            throw IllegalArgumentException("No valid tags found in file")
+        }
+
+        val componentTagsMap = mutableMapOf<String, List<String>>()
+        val matchedKeys = mutableSetOf<String>()
         apps.forEach { app ->
-            if (app.packageName in packageToTag) {
-                val componentKey = app.componentKey
-                componentTagMap[componentKey] = packageToTag[app.packageName]!!
-                matchedPackages.add(app.packageName)
+            val resolved = mutableListOf<String>()
+            componentKeyToTags[app.componentKey]?.let { tagsForComp ->
+                matchedKeys.add(app.componentKey)
+                tagsForComp.forEach { if (it !in resolved) resolved.add(it) }
+            }
+            if (resolved.isEmpty()) {
+                packageToTags[app.packageName]?.let { tagsForPkg ->
+                    matchedKeys.add(app.packageName)
+                    tagsForPkg.forEach { if (it !in resolved) resolved.add(it) }
+                }
+            }
+            if (resolved.isNotEmpty()) {
+                componentTagsMap[app.componentKey] = resolved
             }
         }
 
-        val unmatchedPackages = packageToTag.keys.filter { it !in matchedPackages }
+        val unmatchedPackages = (componentKeyToTags.keys + packageToTags.keys).filter { it !in matchedKeys }
 
         return AutoTagsPreview(
             tags = uniqueTags.map { (name, color) ->
-                AutoTagsPreview.AutoTagInfo(name = name, color = color)
+                AutoTagsPreview.AutoTagInfo(
+                    name = name,
+                    color = color,
+                    emoji = uniqueTagIcons[name]
+                )
             },
-            matchedAppsCount = componentTagMap.size,
+            matchedAppsCount = componentTagsMap.size,
             unmatchedAppPackages = unmatchedPackages,
-            componentTagMap = componentTagMap
+            componentTagMap = componentTagsMap.mapValues { it.value.first() },
+            componentTagsMap = componentTagsMap
         )
+    }
+
+    private fun JSONObject.safeOptString(key: String): String {
+        return if (isNull(key)) "" else optString(key, "")
+    }
+
+    private fun JSONArray.safeOptString(index: Int): String {
+        return if (isNull(index)) "" else optString(index, "")
     }
 
     private fun extractIsFavorite(obj: JSONObject): Boolean {
@@ -955,14 +1057,16 @@ data class AutoTagsPreview(
     val tags: List<AutoTagInfo>,
     val matchedAppsCount: Int,
     val unmatchedAppPackages: List<String>,
-    val componentTagMap: Map<String, String> // componentKey -> tagName
+    val componentTagMap: Map<String, String>, // componentKey -> primary tagName (backwards-compatible)
+    val componentTagsMap: Map<String, List<String>> = componentTagMap.mapValues { listOf(it.value) }
 ) {
     /**
-     * Holds name and color information for an auto tag recommendation.
+     * Holds name, color, and optional icon/emoji information for an auto tag recommendation.
      */
     data class AutoTagInfo(
         val name: String,
-        val color: Color
+        val color: Color,
+        val emoji: String? = null
     )
 }
 

@@ -10,7 +10,10 @@ import dev.msbs.cyclauncher.model.AppColorBucket
 import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.utils.AppColorExtractor
 import dev.msbs.cyclauncher.utils.getSafeStorageContext
+import dev.msbs.cyclauncher.utils.isUserUnlockedSafe
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -18,6 +21,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
@@ -27,25 +31,28 @@ import org.json.JSONObject
 class AppColorManager(context: Context) {
     private val appContext = context.getSafeStorageContext()
     private val prefs: SharedPreferences = appContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+    private val stateLock = Any()
 
     companion object {
         private const val CURRENT_ALGO_VERSION = 5
     }
 
-    private val _appColors = MutableStateFlow<Map<String, AppColorBucket>>(loadCachedColors())
-    val appColors: StateFlow<Map<String, AppColorBucket>> = _appColors
-
     private var lastIndexedIconPackVersion: Long = prefs.getLong("cached_colors_icon_pack_version", -1L)
     private var indexingJob: Job? = null
+
+    private val _appColors = MutableStateFlow<Map<String, AppColorBucket>>(loadCachedColors())
+    val appColors: StateFlow<Map<String, AppColorBucket>> = _appColors
 
     private fun loadCachedColors(): Map<String, AppColorBucket> {
         val savedAlgoVersion = prefs.getInt("cached_colors_algo_version", 0)
         if (savedAlgoVersion < CURRENT_ALGO_VERSION) {
-            prefs.edit()
-                .remove("app_icon_colors")
-                .remove("cached_colors_icon_pack_version")
-                .putInt("cached_colors_algo_version", CURRENT_ALGO_VERSION)
-                .apply()
+            if (appContext.isUserUnlockedSafe()) {
+                prefs.edit()
+                    .remove("app_icon_colors")
+                    .remove("cached_colors_icon_pack_version")
+                    .putInt("cached_colors_algo_version", CURRENT_ALGO_VERSION)
+                    .apply()
+            }
             lastIndexedIconPackVersion = -1L
             return emptyMap()
         }
@@ -57,7 +64,7 @@ class AppColorManager(context: Context) {
             val keys = json.keys()
             while (keys.hasNext()) {
                 val key = keys.next()
-                val bucketName = json.optString(key).takeIf { it.isNotEmpty() }
+                val bucketName = if (json.isNull(key)) null else json.optString(key).takeIf { it.isNotEmpty() }
                 val bucket = AppColorBucket.fromNameOrNull(bucketName)
                 if (bucket != null) {
                     result[key] = bucket
@@ -68,6 +75,7 @@ class AppColorManager(context: Context) {
     }
 
     private fun saveCachedColors(colors: Map<String, AppColorBucket>, iconPackVersion: Long) {
+        if (!appContext.isUserUnlockedSafe()) return
         try {
             val json = JSONObject()
             for ((k, v) in colors) {
@@ -82,58 +90,96 @@ class AppColorManager(context: Context) {
     }
 
     /**
-     * Asynchronously indexes colors for the given apps without blocking the UI.
+     * Reloads persisted icon color cache from preferences (e.g. after Direct Boot CE->DE migration).
      */
-    fun indexApps(scope: CoroutineScope, apps: List<AppInfo>, iconPackVersion: Long) {
-        indexingJob?.cancel()
-        indexingJob = scope.launch(Dispatchers.Default) {
-            val isIconPackChanged = iconPackVersion != lastIndexedIconPackVersion
-            val currentMap = if (isIconPackChanged) {
-                mutableMapOf<String, AppColorBucket>()
-            } else {
-                _appColors.value.toMutableMap()
-            }
+    fun reloadFromPrefs() {
+        synchronized(stateLock) {
+            indexingJob?.cancel()
+            indexingJob = null
+            lastIndexedIconPackVersion = prefs.getLong("cached_colors_icon_pack_version", -1L)
+            _appColors.value = loadCachedColors()
+        }
+    }
 
-            val activeKeys = apps.mapTo(HashSet(apps.size * 2)) { it.componentKey }
-            val staleRemoved = if (!isIconPackChanged && apps.isNotEmpty()) {
-                currentMap.keys.removeAll { it !in activeKeys }
-            } else {
-                false
-            }
-
-            val pm = appContext.packageManager
-            var hasNewItems = false
-
-            val missingApps = apps.filter { !currentMap.containsKey(it.componentKey) }
-            if (missingApps.isNotEmpty()) {
-                val indexingDispatcher = Dispatchers.IO.limitedParallelism(3)
-                val chunks = missingApps.chunked(16)
-                for (chunk in chunks) {
-                    val chunkResults = coroutineScope {
-                        chunk.map { app ->
-                            async(indexingDispatcher) {
-                                val drawable = resolveAppIcon(pm, app.componentKey, app.packageName, app.activityName, app.userHandle)
-                                if (drawable != null) {
-                                    val bucket = AppColorExtractor.extractColorBucket(drawable)
-                                    Pair(app.componentKey, bucket)
-                                } else null
-                            }
-                        }.awaitAll().filterNotNull()
+    /**
+     * Asynchronously indexes colors for the given apps without blocking the UI.
+     * Set [pruneMissing] to false when indexing a subset (e.g. a single unlocked profile)
+     * so colors cached for other profiles are preserved.
+     */
+    fun indexApps(
+        scope: CoroutineScope,
+        apps: List<AppInfo>,
+        iconPackVersion: Long,
+        pruneMissing: Boolean = true
+    ) {
+        if (apps.isEmpty()) return
+        val jobToStart: Job
+        synchronized(stateLock) {
+            indexingJob?.cancel()
+            val newJob = scope.launch(Dispatchers.Default, start = CoroutineStart.LAZY) {
+                val (isIconPackChanged, baseMap) = synchronized(stateLock) {
+                    val changed = iconPackVersion != lastIndexedIconPackVersion
+                    val map = if (changed) {
+                        mutableMapOf()
+                    } else {
+                        _appColors.value.toMutableMap()
                     }
+                    changed to map
+                }
 
-                    for ((compKey, bucket) in chunkResults) {
-                        currentMap[compKey] = bucket
-                        hasNewItems = true
+                val activeKeys = apps.mapTo(HashSet(apps.size * 2)) { it.componentKey }
+                val staleRemoved = if (pruneMissing && !isIconPackChanged && apps.isNotEmpty()) {
+                    baseMap.keys.removeAll { it !in activeKeys }
+                } else {
+                    false
+                }
+
+                val pm = appContext.packageManager
+                val newlyExtracted = mutableMapOf<String, AppColorBucket>()
+
+                val missingApps = apps.filter { !baseMap.containsKey(it.componentKey) }
+                if (missingApps.isNotEmpty()) {
+                    val indexingDispatcher = Dispatchers.IO.limitedParallelism(3)
+                    val chunks = missingApps.chunked(16)
+                    for (chunk in chunks) {
+                        if (!isActive) return@launch
+                        val chunkResults = coroutineScope {
+                            chunk.map { app ->
+                                async(indexingDispatcher) {
+                                    val drawable = resolveAppIcon(pm, app.componentKey, app.packageName, app.activityName, app.userHandle)
+                                    if (drawable != null) {
+                                        val bucket = AppColorExtractor.extractColorBucket(drawable)
+                                        Pair(app.componentKey, bucket)
+                                    } else null
+                                }
+                            }.awaitAll().filterNotNull()
+                        }
+
+                        for ((compKey, bucket) in chunkResults) {
+                            baseMap[compKey] = bucket
+                            newlyExtracted[compKey] = bucket
+                        }
+                    }
+                }
+
+                if (newlyExtracted.isNotEmpty() || isIconPackChanged || staleRemoved) {
+                    synchronized(stateLock) {
+                        if (!isActive || indexingJob !== coroutineContext[Job]) return@launch
+                        val finalMap = if (!pruneMissing && !isIconPackChanged) {
+                            _appColors.value.toMutableMap().apply { putAll(newlyExtracted) }
+                        } else {
+                            baseMap
+                        }
+                        lastIndexedIconPackVersion = iconPackVersion
+                        _appColors.value = finalMap
+                        saveCachedColors(finalMap, iconPackVersion)
                     }
                 }
             }
-
-            if (hasNewItems || isIconPackChanged || staleRemoved) {
-                lastIndexedIconPackVersion = iconPackVersion
-                _appColors.value = currentMap
-                saveCachedColors(currentMap, iconPackVersion)
-            }
+            indexingJob = newJob
+            jobToStart = newJob
         }
+        jobToStart.start()
     }
 
     private fun resolveAppIcon(
@@ -145,7 +191,9 @@ class AppColorManager(context: Context) {
     ): Drawable? {
         val iconPackDrawable: Drawable? = try {
             IconPackManager.getIcon(compKey)
-        } catch (_: Exception) {
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Throwable) {
             null
         }
         if (iconPackDrawable != null) return iconPackDrawable
@@ -158,6 +206,8 @@ class AppColorManager(context: Context) {
                 if (info != null) {
                     return info.getIcon(appContext.resources.displayMetrics.densityDpi)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Throwable) {}
         }
 
@@ -165,7 +215,9 @@ class AppColorManager(context: Context) {
             val component = android.content.ComponentName(pkg, activity)
             try {
                 pm.getActivityIcon(component)
-            } catch (_: Exception) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Throwable) {
                 val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     pm.getActivityInfo(component, PackageManager.ComponentInfoFlags.of(0L))
                 } else {
@@ -174,18 +226,32 @@ class AppColorManager(context: Context) {
                 }
                 info.loadIcon(pm)
             }
-        } catch (_: Exception) {
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Throwable) {
             try {
                 pm.getApplicationIcon(pkg)
-            } catch (_: Exception) {
-                pm.defaultActivityIcon
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Throwable) {
+                try {
+                    pm.defaultActivityIcon
+                } catch (_: Throwable) {
+                    null
+                }
             }
         }
     }
 
     fun invalidateCache() {
-        lastIndexedIconPackVersion = -1
-        _appColors.value = emptyMap()
-        prefs.edit().remove("app_icon_colors").remove("cached_colors_icon_pack_version").apply()
+        synchronized(stateLock) {
+            indexingJob?.cancel()
+            indexingJob = null
+            lastIndexedIconPackVersion = -1L
+            _appColors.value = emptyMap()
+            if (appContext.isUserUnlockedSafe()) {
+                prefs.edit().remove("app_icon_colors").remove("cached_colors_icon_pack_version").apply()
+            }
+        }
     }
 }

@@ -43,6 +43,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -112,7 +114,9 @@ class MainActivity : ComponentActivity() {
                         viewModel.refreshApps()
                     }
                 }
-                Intent.ACTION_USER_UNLOCKED,
+                Intent.ACTION_USER_UNLOCKED -> {
+                    viewModel.onUserUnlocked(application)
+                }
                 Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE,
                 Intent.ACTION_EXTERNAL_APPLICATIONS_UNAVAILABLE,
                 "android.intent.action.PROFILE_ACCESSIBLE",
@@ -178,6 +182,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 override fun onPackagesUnavailable(packageNames: Array<out String>, user: android.os.UserHandle, replacing: Boolean) {
+                    if (replacing) return
                     if (user != android.os.Process.myUserHandle()) {
                         viewModel.onProfileAvailabilityChanged(user, isAvailable = false)
                     } else {
@@ -297,6 +302,8 @@ class MainActivity : ComponentActivity() {
                         showRenameDialogFor = null
                         showTagDialogFor = null
                         tagToEditForDialog = null
+                        viewModel.dismissAutoTagsPreview()
+                        viewModel.dismissTagsBackupPreview()
                     }
 
                     LaunchedEffect(Unit) {
@@ -659,7 +666,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
-        clearPendingProfileLaunch()
+        if (pendingProfileLaunchComponent != null) {
+            pendingProfileLaunchWasPaused = true
+        }
         hideStatusBarRetryRunnable?.let {
             window.decorView.removeCallbacks(it)
             hideStatusBarRetryRunnable = null
@@ -678,6 +687,7 @@ class MainActivity : ComponentActivity() {
     private var pendingProfileLaunchUser: android.os.UserHandle? = null
     private var pendingProfileLaunchTimeMs: Long = 0L
     private var pendingProfileLaunchRetried: Boolean = false
+    private var pendingProfileLaunchWasPaused: Boolean = false
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private var retryLaunchRunnable: Runnable? = null
 
@@ -688,6 +698,7 @@ class MainActivity : ComponentActivity() {
         pendingProfileLaunchUser = null
         pendingProfileLaunchTimeMs = 0L
         pendingProfileLaunchRetried = false
+        pendingProfileLaunchWasPaused = false
     }
 
     private fun executeProfileLaunchRetry() {
@@ -750,9 +761,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (pendingProfileLaunchComponent != null && !pendingProfileLaunchRetried) {
+        viewModel.onUserUnlockedIfNeeded(application)
+        if (pendingProfileLaunchComponent != null && pendingProfileLaunchWasPaused && !pendingProfileLaunchRetried) {
             val elapsed = android.os.SystemClock.elapsedRealtime() - pendingProfileLaunchTimeMs
-            if (elapsed in 0L..600L) {
+            val targetUser = pendingProfileLaunchUser
+            val userManager = getSystemService(Context.USER_SERVICE) as? android.os.UserManager
+            val isStillQuiet = targetUser != null && try {
+                userManager?.isQuietModeEnabled(targetUser) == true
+            } catch (_: Throwable) {
+                false
+            }
+            if (elapsed in 0L..600L && !isStillQuiet) {
                 pendingProfileLaunchRetried = true
                 retryLaunchRunnable?.let { mainHandler.removeCallbacks(it) }
                 val runnable = Runnable { executeProfileLaunchRetry() }
@@ -881,16 +900,7 @@ class MainActivity : ComponentActivity() {
                         pendingProfileLaunchUser = userHandle
                         pendingProfileLaunchTimeMs = android.os.SystemClock.elapsedRealtime()
                         pendingProfileLaunchRetried = false
-                        val fallbackRunnable = Runnable {
-                            if (!pendingProfileLaunchRetried &&
-                                lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
-                            ) {
-                                pendingProfileLaunchRetried = true
-                                executeProfileLaunchRetry()
-                            }
-                        }
-                        retryLaunchRunnable = fallbackRunnable
-                        mainHandler.postDelayed(fallbackRunnable, 250L)
+                        pendingProfileLaunchWasPaused = false
                     }
                     launcherApps.startMainActivity(componentName, userHandle, null, optionsBundle)
                     true
@@ -1027,7 +1037,7 @@ class MainActivity : ComponentActivity() {
             val service = cachedStatusBarService ?: getSystemService("statusbar")
             val method = cachedExpandSettingsMethod
                 ?: Class.forName("android.app.StatusBarManager").getMethod("expandSettingsPanel")
-            if (method.parameterCount == 0) {
+            if (method.parameterTypes.isEmpty()) {
                 method.invoke(service)
             } else {
                 method.invoke(service, null as String?)
@@ -1186,8 +1196,15 @@ private fun AutoTagsConfirmDialog(
             fontSize = 14.sp
         )
         Spacer(modifier = Modifier.height(12.dp))
-        preview.tags.forEach { tagInfo ->
-            TagPreviewItemRow(color = tagInfo.color, name = tagInfo.name, contentColor = popupTheme.contentColor)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 260.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            preview.tags.forEach { tagInfo ->
+                TagPreviewItemRow(color = tagInfo.color, name = tagInfo.name, contentColor = popupTheme.contentColor)
+            }
         }
         if (preview.unmatchedAppPackages.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -1255,8 +1272,15 @@ private fun TagsBackupConfirmDialog(
         )
         if (preview.newTags.isNotEmpty()) {
             Spacer(modifier = Modifier.height(12.dp))
-            preview.newTags.take(12).forEach { tagInfo ->
-                TagPreviewItemRow(color = tagInfo.color, name = tagInfo.name, contentColor = popupTheme.contentColor)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 220.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                preview.newTags.take(12).forEach { tagInfo ->
+                    TagPreviewItemRow(color = tagInfo.color, name = tagInfo.name, contentColor = popupTheme.contentColor)
+                }
             }
             if (preview.newTags.size > 12) {
                 Spacer(modifier = Modifier.height(4.dp))

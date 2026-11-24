@@ -5,6 +5,7 @@ import dev.msbs.cyclauncher.model.AppInfo
 import dev.msbs.cyclauncher.model.Tag
 import dev.msbs.cyclauncher.utils.LocaleUtils
 import dev.msbs.cyclauncher.utils.getSafeStorageContext
+import dev.msbs.cyclauncher.utils.isUserUnlockedSafe
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -185,10 +186,28 @@ class AppActionsManager(context: Context) {
         }
         val initial = _history.value.filter { !_recentlyUpdated.value.contains(it) }
         if (initial.isNotEmpty()) {
-            saveList("search_history", initial)
+            if (context.isUserUnlockedSafe()) {
+                saveList("search_history", initial)
+            }
             return initial
         }
         return emptyList()
+    }
+
+    /**
+     * Reloads all persisted user action state from SharedPreferences (e.g. after Direct Boot CE->DE migration).
+     */
+    fun reloadFromPrefs() {
+        _favorites.value = loadList("favorites").take(13)
+        _history.value = loadList("history")
+        _customLabels.value = loadMap("custom_labels")
+        _tags.value = loadTags()
+        _appTags.value = loadAppTags()
+        _tagAppOrders.value = loadTagAppOrders()
+        _customCharMappings.value = loadCustomCharMappings()
+        _isHistoryPaused.value = prefs.getBoolean("is_history_paused", false)
+        _recentlyUpdated.value = loadRecentlyUpdated()
+        _searchHistory.value = loadSearchHistory()
     }
 
     fun removeFromSearchHistory(componentKey: String) {
@@ -762,7 +781,7 @@ class AppActionsManager(context: Context) {
         backupManager.writeStringToUri(uri, content)
     }
 
-    fun readStringFromUri(uri: Uri, maxBytes: Long = 10 * 1024 * 1024L): String {
+    fun readStringFromUri(uri: Uri, maxBytes: Long = LauncherBackupManager.DEFAULT_MAX_IMPORT_BYTES): String {
         return backupManager.readStringFromUri(uri, maxBytes)
     }
 
@@ -1064,7 +1083,8 @@ class AppActionsManager(context: Context) {
                 val newTag = Tag(
                     id = UUID.randomUUID().toString(),
                     name = autoTag.name,
-                    color = autoTag.color
+                    color = autoTag.color,
+                    emoji = autoTag.emoji
                 )
                 currentTags.add(newTag)
                 tagNameToId[lower] = newTag.id
@@ -1075,13 +1095,17 @@ class AppActionsManager(context: Context) {
 
         val currentAppTags = _appTags.value.toMutableMap()
 
-        preview.componentTagMap.forEach { (componentKey, tagName) ->
-            val tagId = tagNameToId[tagName.lowercase().trim()]
-            if (tagId != null) {
-                val list = currentAppTags[componentKey]?.toMutableList() ?: mutableListOf()
-                if (tagId !in list) {
+        preview.componentTagsMap.forEach { (componentKey, tagNames) ->
+            val list = currentAppTags[componentKey]?.toMutableList() ?: mutableListOf()
+            var changed = false
+            tagNames.forEach { tagName ->
+                val tagId = tagNameToId[tagName.lowercase().trim()]
+                if (tagId != null && tagId !in list) {
                     list.add(tagId)
+                    changed = true
                 }
+            }
+            if (changed) {
                 currentAppTags[componentKey] = list
             }
         }

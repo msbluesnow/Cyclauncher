@@ -4,6 +4,7 @@ import dev.msbs.cyclauncher.data.AppActionsManager
 import dev.msbs.cyclauncher.data.AppColorManager
 import dev.msbs.cyclauncher.model.AppColorBucket
 import dev.msbs.cyclauncher.utils.getSafeStorageContext
+import dev.msbs.cyclauncher.utils.isUserUnlockedSafe
 import dev.msbs.cyclauncher.data.AutoTagsPreview
 import dev.msbs.cyclauncher.data.TagsBackupPreview
 import dev.msbs.cyclauncher.model.AppInfo
@@ -37,12 +38,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.isActive
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 import kotlin.math.roundToInt
 
 /** Preference key for hand side preference */
@@ -257,14 +261,81 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _privateSpaceUser = MutableStateFlow<UserHandle?>(null)
     val privateSpaceUser: StateFlow<UserHandle?> = _privateSpaceUser
 
+    private var iconPackLoadJob: Job? = null
+    private var privateLoadJob: Job? = null
+    private val workLoadJobs = mutableMapOf<UserHandle, Job>()
+    private val profileJobsLock = Any()
+
+    private val unlockLock = Any()
+    private val startedWhileLocked = !application.isUserUnlockedSafe()
+    private var userUnlockedHandled = false
+
+    fun onUserUnlockedIfNeeded(application: Application = getApplication()) {
+        if (startedWhileLocked && !userUnlockedHandled && application.isUserUnlockedSafe()) {
+            onUserUnlocked(application)
+        }
+    }
+
+    private fun computeIconPackColorVersion(packageName: String?): Long {
+        val effectivePkg = packageName?.takeIf { it.isNotBlank() }
+            ?: IconPackManager.activePackageName
+            ?: return 0L
+        val updateTime = try {
+            safeContext.packageManager.getPackageInfoCompat(effectivePkg)?.lastUpdateTime ?: 0L
+        } catch (_: Throwable) {
+            0L
+        }
+        var hash = 1125899906842597L
+        for (ch in effectivePkg) {
+            hash = 31L * hash + ch.code
+        }
+        hash = 31L * hash + updateTime
+        return if (hash == -1L || hash == 0L) 1L else hash
+    }
+
+    /**
+     * Atomically handles Direct Boot unlock (ACTION_USER_UNLOCKED):
+     * retries CE->DE migration, reloads persisted user data/colors/settings,
+     * reloads the active icon pack with full package visibility, clears Coil cache,
+     * and forces a full app list refresh.
+     */
+    fun onUserUnlocked(application: Application = getApplication()) {
+        if (!application.isUserUnlockedSafe()) return
+        synchronized(unlockLock) {
+            if (userUnlockedHandled) return
+            userUnlockedHandled = true
+        }
+        iconPackLoadJob?.cancel()
+        iconPackLoadJob = viewModelScope.launch(Dispatchers.IO) {
+            application.getSafeStorageContext()
+            actionsManager.reloadFromPrefs()
+            appColorManager.reloadFromPrefs()
+            withContext(Dispatchers.Main) {
+                reloadSettingsInternal(reloadIconPack = false)
+            }
+            val savedIconPack = prefs.safeGetString("icon_pack_package", null)?.takeIf { it.isNotBlank() }
+            _selectedIconPack.value = savedIconPack
+            _installedIconPacks.value = IconPackManager.getInstalledIconPacks(safeContext)
+            IconPackManager.loadIconPack(safeContext, savedIconPack, forceReload = true)
+            try {
+                val imageLoader = coil3.SingletonImageLoader.get(application)
+                imageLoader.memoryCache?.clear()
+            } catch (_: Exception) {}
+            _iconPackVersion.value = _iconPackVersion.value + 1L
+            refreshApps(force = true)
+        }
+    }
+
     fun lockPrivateSpace() {
         val user = _privateSpaceUser.value ?: return
         val userManager = safeContext.getSystemService(Context.USER_SERVICE) as? UserManager
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                userManager?.requestQuietModeEnabled(true, user)
+                val requested = userManager?.requestQuietModeEnabled(true, user) ?: false
+                if (requested) {
+                    onProfileAvailabilityChanged(user, isAvailable = false)
+                }
             }
-            onProfileAvailabilityChanged(user, isAvailable = false)
         } catch (_: Throwable) {}
     }
 
@@ -283,18 +354,32 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun onProfileAvailabilityChanged(user: UserHandle, isAvailable: Boolean) {
         val profileType = ProfileType.fromUserHandle(safeContext, user)
+        val userManager = safeContext.getSystemService(Context.USER_SERVICE) as? UserManager
+        val effectiveAvailable = if (userManager != null) {
+            try {
+                !userManager.isQuietModeEnabled(user)
+            } catch (_: Throwable) {
+                isAvailable
+            }
+        } else {
+            isAvailable
+        }
+
         if (profileType == ProfileType.PRIVATE) {
             _privateSpaceUser.value = user
-            _isPrivateSpaceLocked.value = !isAvailable
-            if (!isAvailable) {
+            _isPrivateSpaceLocked.value = !effectiveAvailable
+            if (!effectiveAvailable) {
+                synchronized(profileJobsLock) {
+                    privateLoadJob?.cancel()
+                    privateLoadJob = null
+                }
                 synchronized(cacheLock) {
                     privateAppsCache = emptyList()
                 }
                 updateCombinedApps()
                 try {
                     val imageLoader = coil3.SingletonImageLoader.get(getApplication())
-                    val um = safeContext.getSystemService(Context.USER_SERVICE) as? UserManager
-                    val serial = try { um?.getSerialNumberForUser(user) ?: -1L } catch (_: Exception) { -1L }
+                    val serial = try { userManager?.getSerialNumberForUser(user) ?: -1L } catch (_: Exception) { -1L }
                     val suffixes = mutableListOf(user.hashCode().toString())
                     if (serial >= 0L) {
                         suffixes.add(serial.toString())
@@ -302,31 +387,54 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     dev.msbs.cyclauncher.coil.AppIconFetcher.evictProfileIcons(imageLoader, suffixes)
                 } catch (_: Exception) {}
             } else {
-                viewModelScope.launch(Dispatchers.IO) {
-                    val loaded = loadAppsForProfile(user, ProfileType.PRIVATE)
-                    synchronized(cacheLock) {
-                        privateAppsCache = loaded
+                synchronized(profileJobsLock) {
+                    privateLoadJob?.cancel()
+                    privateLoadJob = viewModelScope.launch(Dispatchers.IO) {
+                        val loaded = loadAppsForProfile(user, ProfileType.PRIVATE)
+                        if (!isActive || _isPrivateSpaceLocked.value) return@launch
+                        synchronized(cacheLock) {
+                            privateAppsCache = loaded
+                        }
+                        updateCombinedApps()
+                        val keysToPrewarm = loaded.map { it.componentKey }
+                        prewarmIcons(keysToPrewarm)
+                        appColorManager.indexApps(
+                            scope = viewModelScope,
+                            apps = loaded,
+                            iconPackVersion = computeIconPackColorVersion(_selectedIconPack.value),
+                            pruneMissing = false
+                        )
                     }
-                    updateCombinedApps()
-                    val keysToPrewarm = loaded.map { it.componentKey }
-                    prewarmIcons(keysToPrewarm)
-                    appColorManager.indexApps(viewModelScope, loaded, _iconPackVersion.value)
                 }
             }
         } else if (profileType == ProfileType.WORK) {
-            if (!isAvailable) {
+            if (!effectiveAvailable) {
+                synchronized(profileJobsLock) {
+                    workLoadJobs.remove(user)?.cancel()
+                }
                 synchronized(cacheLock) {
-                    workAppsCache = emptyList()
+                    workAppsCache.remove(user)
                 }
                 updateCombinedApps()
             } else {
-                viewModelScope.launch(Dispatchers.IO) {
-                    val loaded = loadAppsForProfile(user, ProfileType.WORK)
-                    synchronized(cacheLock) {
-                        workAppsCache = loaded
+                synchronized(profileJobsLock) {
+                    workLoadJobs[user]?.cancel()
+                    workLoadJobs[user] = viewModelScope.launch(Dispatchers.IO) {
+                        val loaded = loadAppsForProfile(user, ProfileType.WORK)
+                        if (!isActive) return@launch
+                        val stillQuiet = try { userManager?.isQuietModeEnabled(user) == true } catch (_: Throwable) { false }
+                        if (stillQuiet) return@launch
+                        synchronized(cacheLock) {
+                            workAppsCache[user] = loaded
+                        }
+                        updateCombinedApps()
+                        appColorManager.indexApps(
+                            scope = viewModelScope,
+                            apps = loaded,
+                            iconPackVersion = computeIconPackColorVersion(_selectedIconPack.value),
+                            pruneMissing = false
+                        )
                     }
-                    updateCombinedApps()
-                    appColorManager.indexApps(viewModelScope, loaded, _iconPackVersion.value)
                 }
             }
         }
@@ -358,58 +466,84 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun installAppInPrivateSpace(packageName: String? = null) {
         val user = _privateSpaceUser.value ?: return
-        val launcherApps = safeContext.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? LauncherApps ?: return
-        val pm = safeContext.packageManager
+        viewModelScope.launch(Dispatchers.IO) {
+            val launcherApps = safeContext.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? LauncherApps ?: return@launch
+            val pm = safeContext.packageManager
 
-        try {
-            val privateApps = launcherApps.getActivityList(null, user)
-            val privateMarketApp = privateApps.firstOrNull { info ->
-                val pkg = info.componentName.packageName.lowercase()
-                pkg.contains("vending") || pkg.contains("fdroid") || pkg.contains("aurora") ||
+            try {
+                val privateApps = launcherApps.getActivityList(null, user)
+                val privateMarketApp = privateApps.firstOrNull { info ->
+                    val pkg = info.componentName.packageName.lowercase(Locale.ROOT)
+                    pkg.contains("vending") || pkg.contains("fdroid") || pkg.contains("aurora") ||
                         pkg.contains("store") || pkg.contains("market") || pkg.contains("appgallery")
-            }
+                }
 
-            if (!packageName.isNullOrBlank()) {
-                val detailIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName")).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                if (privateMarketApp != null) {
-                    detailIntent.setPackage(privateMarketApp.componentName.packageName)
-                    safeContext.startActivity(detailIntent)
-                } else {
-                    launcherApps.startMainActivity(
-                        ComponentName("com.android.vending", "com.google.android.finsky.main.MainActivity"),
-                        user,
-                        null,
-                        null
-                    )
-                }
-            } else if (privateMarketApp != null) {
-                launcherApps.startMainActivity(privateMarketApp.componentName, user, null, null)
-            } else {
-                val marketIntent = Intent(Intent.ACTION_MAIN).apply {
-                    addCategory(Intent.CATEGORY_APP_MARKET)
-                }
-                val resolvedList = pm.queryIntentActivities(marketIntent, 0)
-                var launched = false
-                for (res in resolvedList) {
-                    val comp = ComponentName(res.activityInfo.packageName, res.activityInfo.name)
-                    try {
-                        launcherApps.startMainActivity(comp, user, null, null)
-                        launched = true
-                        break
-                    } catch (_: Exception) {}
-                }
-                if (!launched) {
-                    val settingsIntent = Intent(android.provider.Settings.ACTION_SETTINGS).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                if (!packageName.isNullOrBlank()) {
+                    var launchedDetail = false
+                    if (Build.VERSION.SDK_INT >= 35) {
+                        try {
+                            val marketSender = launcherApps.getAppMarketActivityIntent(packageName, user)
+                            if (marketSender != null) {
+                                marketSender.sendIntent(safeContext, 0, null, null, null)
+                                launchedDetail = true
+                            }
+                        } catch (_: Throwable) {}
                     }
-                    safeContext.startActivity(settingsIntent)
-                    showToastRes(R.string.toast_private_space_no_store)
+                    if (!launchedDetail) {
+                        if (privateMarketApp != null) {
+                            launcherApps.startMainActivity(privateMarketApp.componentName, user, null, null)
+                        } else {
+                            launcherApps.startMainActivity(
+                                ComponentName("com.android.vending", "com.google.android.finsky.main.MainActivity"),
+                                user,
+                                null,
+                                null
+                            )
+                        }
+                    }
+                } else if (privateMarketApp != null) {
+                    launcherApps.startMainActivity(privateMarketApp.componentName, user, null, null)
+                } else {
+                    var launched = false
+                    if (Build.VERSION.SDK_INT >= 35) {
+                        try {
+                            val marketSender = launcherApps.getAppMarketActivityIntent(null, user)
+                            if (marketSender != null) {
+                                marketSender.sendIntent(safeContext, 0, null, null, null)
+                                launched = true
+                            }
+                        } catch (_: Throwable) {}
+                    }
+                    if (!launched) {
+                        val marketIntent = Intent(Intent.ACTION_MAIN).apply {
+                            addCategory(Intent.CATEGORY_APP_MARKET)
+                        }
+                        val resolvedList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            pm.queryIntentActivities(marketIntent, PackageManager.ResolveInfoFlags.of(0L))
+                        } else {
+                            @Suppress("DEPRECATION")
+                            pm.queryIntentActivities(marketIntent, 0)
+                        }
+                        for (res in resolvedList) {
+                            val comp = ComponentName(res.activityInfo.packageName, res.activityInfo.name)
+                            try {
+                                launcherApps.startMainActivity(comp, user, null, null)
+                                launched = true
+                                break
+                            } catch (_: Exception) {}
+                        }
+                    }
+                    if (!launched) {
+                        val settingsIntent = Intent(android.provider.Settings.ACTION_SETTINGS).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        safeContext.startActivity(settingsIntent)
+                        showToastRes(R.string.toast_private_space_no_store)
+                    }
                 }
+            } catch (e: Exception) {
+                showToastRes(R.string.toast_private_space_store_failed, e.message ?: "")
             }
-        } catch (e: Exception) {
-            showToastRes(R.string.toast_private_space_store_failed, e.message ?: "")
         }
     }
 
@@ -420,6 +554,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val historyScrollToBottomTrigger: StateFlow<Long> = _historyScrollToBottomTrigger
 
     fun requestReset() {
+        _autoTagsPreview.value = null
+        _tagsBackupPreview.value = null
         if (_isTextSearchMode.value) {
             _isTextSearchMode.value = false
             _searchText.value = ""
@@ -1000,7 +1136,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val tutorialStep: StateFlow<Int> = _tutorialStep
 
     init {
-        reloadSettings()
+        reloadSettingsInternal(reloadIconPack = false)
 
         val isTutorialCompleted = prefs.safeGetBoolean("is_tutorial_completed", false)
         if (!isTutorialCompleted) {
@@ -1010,10 +1146,20 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
         val savedIconPack = prefs.safeGetString("icon_pack_package", null)?.takeIf { it.isNotBlank() }
         _selectedIconPack.value = savedIconPack
-        viewModelScope.launch {
+        iconPackLoadJob = viewModelScope.launch {
             _installedIconPacks.value = IconPackManager.getInstalledIconPacks(safeContext)
             IconPackManager.loadIconPack(safeContext, savedIconPack)
-            _iconPackVersion.value = System.currentTimeMillis()
+            if (IconPackManager.activePackageName != null) {
+                try {
+                    val imageLoader = coil3.SingletonImageLoader.get(getApplication())
+                    imageLoader.memoryCache?.clear()
+                } catch (_: Exception) {}
+                _iconPackVersion.value = _iconPackVersion.value + 1L
+                val currentApps = _apps.value
+                if (currentApps.isNotEmpty() && safeContext.isUserUnlockedSafe()) {
+                    appColorManager.indexApps(viewModelScope, currentApps, computeIconPackColorVersion(savedIconPack))
+                }
+            }
         }
 
         loadInstalledApps()
@@ -1023,6 +1169,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun reloadSettings() {
+        reloadSettingsInternal(reloadIconPack = true)
+    }
+
+    private fun reloadSettingsInternal(reloadIconPack: Boolean) {
         val savedHand = prefs.safeGetString("hand_side", HandSide.LEFT.name) ?: HandSide.LEFT.name
         _handSide.value = try { HandSide.valueOf(savedHand) } catch (e: Exception) { HandSide.LEFT }
         _searchListAlignment.value = if (_handSide.value == HandSide.LEFT) TextAlign.Start else TextAlign.End
@@ -1087,13 +1237,21 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _sideAlphabetWidgetId.value = _sideAlphabetWidgetsConfig.value.topWidgetId ?: _sideAlphabetWidgetsConfig.value.bottomWidgetId
 
         val savedIconPack = prefs.safeGetString("icon_pack_package", null)?.takeIf { it.isNotBlank() }
-        if (savedIconPack != _selectedIconPack.value) {
+        if (reloadIconPack && savedIconPack != _selectedIconPack.value) {
             _selectedIconPack.value = savedIconPack
-            viewModelScope.launch {
+            iconPackLoadJob?.cancel()
+            iconPackLoadJob = viewModelScope.launch {
                 _installedIconPacks.value = IconPackManager.getInstalledIconPacks(safeContext)
                 IconPackManager.loadIconPack(safeContext, savedIconPack, forceReload = true)
-                _iconPackVersion.value = System.currentTimeMillis()
-                appColorManager.indexApps(viewModelScope, _apps.value, _iconPackVersion.value)
+                try {
+                    val imageLoader = coil3.SingletonImageLoader.get(getApplication())
+                    imageLoader.memoryCache?.clear()
+                } catch (_: Exception) {}
+                _iconPackVersion.value = _iconPackVersion.value + 1L
+                val currentApps = _apps.value
+                if (currentApps.isNotEmpty() && safeContext.isUserUnlockedSafe()) {
+                    appColorManager.indexApps(viewModelScope, currentApps, computeIconPackColorVersion(savedIconPack))
+                }
             }
         }
         invalidateWidgetGroupsCache()
@@ -1326,14 +1484,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             if (newPackage != null) putString("icon_pack_package", newPackage)
             else remove("icon_pack_package")
         }
-        viewModelScope.launch {
+        iconPackLoadJob?.cancel()
+        iconPackLoadJob = viewModelScope.launch {
             IconPackManager.loadIconPack(safeContext, newPackage)
             try {
                 val imageLoader = coil3.SingletonImageLoader.get(getApplication())
                 imageLoader.memoryCache?.clear()
             } catch (_: Exception) {}
-            _iconPackVersion.value = System.currentTimeMillis()
-            appColorManager.indexApps(viewModelScope, _apps.value, _iconPackVersion.value)
+            _iconPackVersion.value = _iconPackVersion.value + 1L
+            val currentApps = _apps.value
+            if (currentApps.isNotEmpty()) {
+                appColorManager.indexApps(viewModelScope, currentApps, computeIconPackColorVersion(newPackage))
+            }
         }
     }
 
@@ -1459,7 +1621,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun updateDefaultLauncherStatus(onResult: ((Boolean) -> Unit)? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             val isDefault = checkIsDefaultLauncher(getApplication())
-            editPrefs { putBoolean("is_default_launcher", isDefault) }
+            if (safeContext.isUserUnlockedSafe()) {
+                editPrefs { putBoolean("is_default_launcher", isDefault) }
+            }
             if (_isDefaultLauncher.value != isDefault) {
                 _isDefaultLauncher.value = isDefault
             }
@@ -1685,7 +1849,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             actionsManager.applyTagsBackup(preview, apps.value)
             reloadSettings()
             refreshDynamicWallpaperColor(safeContext)
-            reindexApps(actionsManager.customCharMappings.value)
             _tagsBackupPreview.value = null
         }
     }
@@ -1697,23 +1860,19 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val customCharMappings: StateFlow<Map<String, Char>> = actionsManager.customCharMappings
 
     fun addOrUpdateCharMapping(symbol: String, targetChar: Char) {
-        val updated = actionsManager.addOrUpdateCharMapping(symbol, targetChar)
-        reindexApps(updated)
+        actionsManager.addOrUpdateCharMapping(symbol, targetChar)
     }
 
     fun addCharMappings(mappings: Map<String, Char>) {
-        val updated = actionsManager.addCharMappings(mappings)
-        reindexApps(updated)
+        actionsManager.addCharMappings(mappings)
     }
 
     fun removeCharMapping(symbol: String) {
-        val updated = actionsManager.removeCharMapping(symbol)
-        reindexApps(updated)
+        actionsManager.removeCharMapping(symbol)
     }
 
     fun resetCharMappings() {
-        val updated = actionsManager.resetCharMappings()
-        reindexApps(updated)
+        actionsManager.resetCharMappings()
     }
 
     fun exportCharMappingsJson(uri: Uri) {
@@ -1733,7 +1892,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             try {
                 val count = actionsManager.importCharMappingsFromUri(uri, merge)
                 withContext(Dispatchers.Main) {
-                    reindexApps(actionsManager.customCharMappings.value)
                     onResult(Result.success(count))
                 }
             } catch (e: Exception) {
@@ -1744,22 +1902,20 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    private fun reindexApps(customMappings: Map<String, Char> = actionsManager.customCharMappings.value) {
-        val currentApps = _apps.value
-        if (currentApps.isEmpty()) return
-        val reindexed = currentApps.map { app ->
-            val firstSymbol = extractFirstSymbol(app.label)
-            val newSearchChar = mapToSearchChar(firstSymbol, customMappings)
-            if (app.searchChar != newSearchChar) {
-                app.copy(searchChar = newSearchChar)
-            } else {
-                app
-            }
-        }
-        _apps.value = reindexed
+    private val breakIterator = object : ThreadLocal<java.text.BreakIterator>() {
+        override fun initialValue(): java.text.BreakIterator = java.text.BreakIterator.getCharacterInstance()
     }
 
-    private val breakIterator = ThreadLocal.withInitial { java.text.BreakIterator.getCharacterInstance() }
+    private fun isPlainNonCombiningChar(c: Char): Boolean {
+        if (c in ' '..'~') return true
+        if (Character.isSurrogate(c)) return false
+        if (c in '\uFE00'..'\uFE0F') return false
+        val type = Character.getType(c).toByte()
+        return type != Character.NON_SPACING_MARK &&
+            type != Character.COMBINING_SPACING_MARK &&
+            type != Character.ENCLOSING_MARK &&
+            type != Character.FORMAT
+    }
 
     /**
      * Extracts the first symbol or character from a string using BreakIterator.
@@ -1769,9 +1925,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         if (trimmed.isEmpty()) return ""
         if (trimmed.length == 1) return trimmed
         val firstChar = trimmed[0]
-        // Fast path: standard ASCII / Latin / Cyrillic single character without surrogate or combining marks
-        if (firstChar in 'a'..'z' || firstChar in 'A'..'Z' || firstChar in '0'..'9' ||
-            firstChar in '\u0400'..'\u04FF') {
+        // Fast path: standard ASCII / Latin / Cyrillic single character not followed by a combining mark, variation selector, or keycap
+        if ((firstChar in 'a'..'z' || firstChar in 'A'..'Z' || firstChar in '0'..'9' ||
+                firstChar in '\u0400'..'\u04FF') &&
+            isPlainNonCombiningChar(trimmed[1])
+        ) {
             return trimmed.substring(0, 1)
         }
         val iterator = breakIterator.get() ?: java.text.BreakIterator.getCharacterInstance()
@@ -1787,7 +1945,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         if (symbol.isEmpty()) return '#'
 
         customMappings[symbol]?.let { return it }
-        customMappings[symbol.uppercase()]?.let { return it }
+        customMappings[symbol.uppercase(Locale.ROOT)]?.let { return it }
+        customMappings[symbol.lowercase(Locale.ROOT)]?.let { return it }
 
         if (symbol.length == 1) {
             val char = symbol[0]
@@ -1853,14 +2012,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         invalidateIconCache(packageName)
         if (packageName == IconPackManager.activePackageName) {
             IconPackManager.onPackageRemoved(packageName)
+            _selectedIconPack.value = null
             editPrefs { remove("icon_pack_package") }
-            _iconPackVersion.value = System.currentTimeMillis()
+            appColorManager.invalidateCache()
+            _iconPackVersion.value = _iconPackVersion.value + 1L
         } else {
             IconPackManager.onAppRemoved(packageName)
         }
         actionsManager.onPackageRemoved(packageName, user)
         if (user != Process.myUserHandle()) {
-            onProfileAvailabilityChanged(user, isAvailable = true)
+            val um = safeContext.getSystemService(Context.USER_SERVICE) as? UserManager
+            val isQuiet = try { um?.isQuietModeEnabled(user) ?: false } catch (_: Throwable) { false }
+            onProfileAvailabilityChanged(user, isAvailable = !isQuiet)
             return
         }
         scheduleDebouncedPackageRefresh()
@@ -1869,7 +2032,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun onPackageAddedOrUpdated(packageName: String, user: UserHandle = Process.myUserHandle()) {
         invalidateIconCache(packageName)
         if (user != Process.myUserHandle()) {
-            onProfileAvailabilityChanged(user, isAvailable = true)
+            val um = safeContext.getSystemService(Context.USER_SERVICE) as? UserManager
+            val isQuiet = try { um?.isQuietModeEnabled(user) ?: false } catch (_: Throwable) { false }
+            onProfileAvailabilityChanged(user, isAvailable = !isQuiet)
             return
         }
         scheduleDebouncedPackageRefresh(packageName)
@@ -1878,11 +2043,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun invalidateAllIconCaches() {
         dev.msbs.cyclauncher.coil.IconEpochManager.clear()
         dev.msbs.cyclauncher.icons.IconShapeHelper.invalidateCache()
+        appColorManager.invalidateCache()
         try {
             val imageLoader = coil3.SingletonImageLoader.get(getApplication())
             imageLoader.memoryCache?.clear()
         } catch (_: Exception) {}
-        _iconPackVersion.value = System.currentTimeMillis()
+        _iconPackVersion.value = _iconPackVersion.value + 1L
         reloadInstalledIconPacks()
         loadInstalledApps()
     }
@@ -1909,14 +2075,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val cacheLock = Any()
     @Volatile
     private var personalAppsCache: List<AppInfo> = emptyList()
-    @Volatile
-    private var workAppsCache: List<AppInfo> = emptyList()
+    private val workAppsCache: MutableMap<UserHandle, List<AppInfo>> = mutableMapOf()
     @Volatile
     private var privateAppsCache: List<AppInfo> = emptyList()
 
     private fun updateCombinedApps() {
         val combined = synchronized(cacheLock) {
-            (personalAppsCache + workAppsCache + privateAppsCache)
+            val workApps = workAppsCache.values.flatten()
+            (personalAppsCache + workApps + privateAppsCache)
                 .distinctBy { it.componentKey }
                 .sortedBy { it.normalizedLabel }
         }
@@ -2043,7 +2209,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 }
             }
 
-            var newWorkApps = emptyList<AppInfo>()
+            val newWorkAppsMap = mutableMapOf<UserHandle, List<AppInfo>>()
             var newPrivateApps = emptyList<AppInfo>()
 
             for (profile in profiles) {
@@ -2059,14 +2225,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     }
                 } else if (profileType == ProfileType.WORK) {
                     if (!isQuiet) {
-                        newWorkApps = loadAppsForProfile(profile, ProfileType.WORK)
+                        newWorkAppsMap[profile] = loadAppsForProfile(profile, ProfileType.WORK)
                     }
                 }
             }
 
             synchronized(cacheLock) {
                 personalAppsCache = newPersonalApps
-                workAppsCache = newWorkApps
+                workAppsCache.clear()
+                workAppsCache.putAll(newWorkAppsMap)
                 privateAppsCache = newPrivateApps
             }
 
@@ -2077,62 +2244,72 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
             val keysToPrewarm = (actionsManager.favorites.value + actionsManager.history.value).distinct()
             prewarmIcons(keysToPrewarm)
-            appColorManager.indexApps(viewModelScope, _apps.value, _iconPackVersion.value)
+            val currentAppsSnapshot = _apps.value
+            if (currentAppsSnapshot.isNotEmpty() && safeContext.isUserUnlockedSafe()) {
+                appColorManager.indexApps(
+                    viewModelScope,
+                    currentAppsSnapshot,
+                    computeIconPackColorVersion(_selectedIconPack.value)
+                )
+            }
 
-            // In the background without blocking app list presentation, track update timestamps
-            launch(Dispatchers.IO) {
-                val personalSnapshot = synchronized(cacheLock) { personalAppsCache }
-                val prevUpdateTimes = actionsManager.loadAppUpdateTimes()
-                val isFirstTimeTracking = prevUpdateTimes.isEmpty()
-                val currentUpdateTimes = mutableMapOf<String, Long>()
-                val newlyInstalledOrUpdated = mutableListOf<Pair<String, Long>>()
+            // Skip update-time diffing and DE writes during Direct Boot (when only ~5 Direct Boot apps are visible)
+            if (safeContext.isUserUnlockedSafe()) {
+                // In the background without blocking app list presentation, track update timestamps
+                launch(Dispatchers.IO) {
+                    val personalSnapshot = synchronized(cacheLock) { personalAppsCache }
+                    val prevUpdateTimes = actionsManager.loadAppUpdateTimes()
+                    val isFirstTimeTracking = prevUpdateTimes.isEmpty()
+                    val currentUpdateTimes = mutableMapOf<String, Long>()
+                    val newlyInstalledOrUpdated = mutableListOf<Pair<String, Long>>()
 
-                for (app in personalSnapshot) {
-                    val pkgName = app.packageName
-                    if (!currentUpdateTimes.containsKey(pkgName)) {
-                        val updateTime = app.lastUpdateTime
-                        if (updateTime > 0L) {
-                            currentUpdateTimes[pkgName] = updateTime
-                        }
-                    }
-                }
-
-                if (!isFirstTimeTracking) {
                     for (app in personalSnapshot) {
                         val pkgName = app.packageName
-                        val compKey = app.componentKey
-                        val updateTime = currentUpdateTimes[pkgName] ?: 0L
-
-                        if (updateTime > 0L) {
-                            val prevTime = prevUpdateTimes[pkgName]
-                            if (prevTime == null || updateTime > prevTime) {
-                                newlyInstalledOrUpdated.add(compKey to updateTime)
+                        if (!currentUpdateTimes.containsKey(pkgName)) {
+                            val updateTime = app.lastUpdateTime
+                            if (updateTime > 0L) {
+                                currentUpdateTimes[pkgName] = updateTime
                             }
                         }
                     }
 
-                    if (newlyInstalledOrUpdated.isNotEmpty()) {
-                        val sortedKeys = newlyInstalledOrUpdated
-                            .sortedBy { it.second }
-                            .map { it.first }
-                        actionsManager.onAppsInstalledOrUpdated(sortedKeys)
-                    }
-                } else if (actionsManager.history.value.isEmpty()) {
-                    val topRecent = personalSnapshot
-                        .mapNotNull { app ->
-                            val pkg = app.packageName
-                            val time = currentUpdateTimes[pkg] ?: 0L
-                            if (time > 0L) (app.componentKey to time) else null
-                        }
-                        .sortedBy { it.second }
-                        .takeLast(5)
-                        .map { it.first }
-                    if (topRecent.isNotEmpty()) {
-                        actionsManager.setInitialHistory(topRecent)
-                    }
-                }
+                    if (!isFirstTimeTracking) {
+                        for (app in personalSnapshot) {
+                            val pkgName = app.packageName
+                            val compKey = app.componentKey
+                            val updateTime = currentUpdateTimes[pkgName] ?: 0L
 
-                actionsManager.saveAppUpdateTimes(currentUpdateTimes)
+                            if (updateTime > 0L) {
+                                val prevTime = prevUpdateTimes[pkgName]
+                                if (prevTime == null || updateTime > prevTime) {
+                                    newlyInstalledOrUpdated.add(compKey to updateTime)
+                                }
+                            }
+                        }
+
+                        if (newlyInstalledOrUpdated.isNotEmpty()) {
+                            val sortedKeys = newlyInstalledOrUpdated
+                                .sortedBy { it.second }
+                                .map { it.first }
+                            actionsManager.onAppsInstalledOrUpdated(sortedKeys)
+                        }
+                    } else if (actionsManager.history.value.isEmpty()) {
+                        val topRecent = personalSnapshot
+                            .mapNotNull { app ->
+                                val pkg = app.packageName
+                                val time = currentUpdateTimes[pkg] ?: 0L
+                                if (time > 0L) (app.componentKey to time) else null
+                            }
+                            .sortedBy { it.second }
+                            .takeLast(5)
+                            .map { it.first }
+                        if (topRecent.isNotEmpty()) {
+                            actionsManager.setInitialHistory(topRecent)
+                        }
+                    }
+
+                    actionsManager.saveAppUpdateTimes(currentUpdateTimes)
+                }
             }
         }
     }

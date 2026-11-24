@@ -64,6 +64,14 @@ object AppColorExtractor {
     }
 
     private fun analyzeBitmapPixels(bitmap: Bitmap): AppColorBucket {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && bitmap.config == Bitmap.Config.HARDWARE) {
+            val software = bitmap.copy(Bitmap.Config.ARGB_8888, false) ?: return AppColorBucket.MONOCHROME
+            return try {
+                analyzeBitmapPixels(software)
+            } finally {
+                software.recycle()
+            }
+        }
         val width = bitmap.width
         val height = bitmap.height
         val totalPixels = width * height
@@ -150,11 +158,27 @@ object AppColorExtractor {
         try {
             if (drawable is BitmapDrawable && drawable.bitmap != null) {
                 val src = drawable.bitmap
+                val isHardware = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && src.config == Bitmap.Config.HARDWARE
                 if (src.width == size && src.height == size) {
-                    return src
+                    return if (isHardware) {
+                        src.copy(Bitmap.Config.ARGB_8888, false)
+                    } else {
+                        src
+                    }
                 }
                 if (src.width > 0 && src.height > 0) {
-                    return Bitmap.createScaledBitmap(src, size, size, true)
+                    val readableSrc = if (isHardware) {
+                        src.copy(Bitmap.Config.ARGB_8888, false) ?: return null
+                    } else {
+                        src
+                    }
+                    return try {
+                        Bitmap.createScaledBitmap(readableSrc, size, size, true)
+                    } finally {
+                        if (readableSrc !== src) {
+                            readableSrc.recycle()
+                        }
+                    }
                 }
             }
             val safeSize = size.coerceAtLeast(1)
