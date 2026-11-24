@@ -109,17 +109,28 @@ fun TutorialOverlay(
     val accentColor = accentColorEnum.color
     val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
-    var isSuccessFlash by remember { mutableStateOf(false) }
+    var isStepAdvancing by remember { mutableStateOf(false) }
+    var pendingNextStepJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
     var tutorialOverlayState by remember { mutableStateOf<SwipeDownOverlayState?>(null) }
     var tutorialPaletteOverlayState by remember { mutableStateOf<QuickPaletteOverlayState?>(null) }
     var tutorialPaletteColor by remember { mutableStateOf<AppColorBucket?>(null) }
     var tutorialSelectedFeedback by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(stepIndex) {
+    LaunchedEffect(stepIndex, showTutorial) {
+        pendingNextStepJob?.cancel()
+        pendingNextStepJob = null
+        isStepAdvancing = false
         tutorialOverlayState = null
         tutorialPaletteOverlayState = null
         tutorialSelectedFeedback = null
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            pendingNextStepJob?.cancel()
+            pendingNextStepJob = null
+        }
     }
 
     val context = LocalContext.current
@@ -129,7 +140,14 @@ fun TutorialOverlay(
     val cardWidthPx = with(density) { 160.dp.toPx() }
     val screenMarginPx = with(density) { 16.dp.toPx() }
 
-    val steps = remember(handSide, context) {
+    val currentScreenWidthPx by rememberUpdatedState(screenWidthPx)
+    val currentCardWidthPx by rememberUpdatedState(cardWidthPx)
+    val currentScreenMarginPx by rememberUpdatedState(screenMarginPx)
+    val currentHandSide by rememberUpdatedState(handSide)
+    val currentOnNavigateToSearch by rememberUpdatedState(onNavigateToSearch)
+    val currentOnNavigateToMain by rememberUpdatedState(onNavigateToMain)
+
+    val steps = remember(handSide, context, configuration) {
         listOf(
             TutorialStepInfo(
                 title = context.getString(R.string.tutorial_step1_title),
@@ -183,32 +201,62 @@ fun TutorialOverlay(
     }
 
     val currentStep = steps.getOrNull(stepIndex) ?: return
+    val currentStepRef by rememberUpdatedState(currentStep)
 
     fun triggerSuccessAndNext() {
-        if (!isSuccessFlash) {
-            isSuccessFlash = true
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            val currentGesture = currentStep.gestureType
-            viewModel.nextTutorialStep()
-            isSuccessFlash = false
+        if (isStepAdvancing) return
+        isStepAdvancing = true
+        pendingNextStepJob?.cancel()
+        pendingNextStepJob = null
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        val currentGesture = currentStepRef.gestureType
+        viewModel.nextTutorialStep()
 
-            if (currentGesture == GestureType.SWIPE_UP) {
-                onNavigateToSearch()
-            } else if (currentGesture == GestureType.SIDE_BACK) {
-                onNavigateToMain()
-            }
+        if (currentGesture == GestureType.SWIPE_UP) {
+            currentOnNavigateToSearch()
+        } else if (currentGesture == GestureType.SIDE_BACK) {
+            currentOnNavigateToMain()
         }
     }
 
-    if (showTutorial && currentStep.gestureType == GestureType.SIDE_BACK) {
-        BackHandler {
+    fun scheduleDelayedNextStep() {
+        if (isStepAdvancing || pendingNextStepJob?.isActive == true) return
+        pendingNextStepJob?.cancel()
+        pendingNextStepJob = coroutineScope.launch {
+            delay(850)
             triggerSuccessAndNext()
         }
     }
 
-    if (showTutorial && tutorialPaletteOverlayState != null) {
-        BackHandler {
-            tutorialPaletteOverlayState = null
+    val currentTriggerSuccessAndNext by rememberUpdatedState(::triggerSuccessAndNext)
+    val currentScheduleDelayedNextStep by rememberUpdatedState(::scheduleDelayedNextStep)
+
+    BackHandler(enabled = showTutorial) {
+        when {
+            tutorialPaletteOverlayState != null -> {
+                tutorialPaletteOverlayState = null
+            }
+            currentStepRef.gestureType == GestureType.SIDE_BACK -> {
+                triggerSuccessAndNext()
+            }
+            stepIndex > 0 -> {
+                pendingNextStepJob?.cancel()
+                pendingNextStepJob = null
+                isStepAdvancing = false
+                val prevStep = stepIndex - 1
+                viewModel.setTutorialStep(prevStep)
+                if (prevStep == 0) {
+                    currentOnNavigateToMain()
+                } else if (prevStep == 1) {
+                    currentOnNavigateToSearch()
+                }
+            }
+            else -> {
+                pendingNextStepJob?.cancel()
+                pendingNextStepJob = null
+                viewModel.completeTutorial()
+                currentOnNavigateToMain()
+            }
         }
     }
 
@@ -243,25 +291,26 @@ fun TutorialOverlay(
                             totalDragX += dragAmount.x
                             totalDragY += dragAmount.y
 
-                            if (currentStep.gestureType == GestureType.SWIPE_DOWN) {
+                            if (currentStepRef.gestureType == GestureType.SWIPE_DOWN) {
                                 val dragThreshold = 20f
                                 if (totalDragY > dragThreshold || isTutorialSwipeDownActive) {
                                     isTutorialSwipeDownActive = true
                                     val currentPos = change.position
+                                    val activeHand = currentHandSide
                                     val target = resolveSwipeDownTarget(
                                         anchorX = startOffset.x,
                                         currentX = currentPos.x,
-                                        handSide = handSide,
-                                        screenWidthPx = screenWidthPx,
-                                        cardWidthPx = cardWidthPx,
-                                        screenMarginPx = screenMarginPx
+                                        handSide = activeHand,
+                                        screenWidthPx = currentScreenWidthPx,
+                                        cardWidthPx = currentCardWidthPx,
+                                        screenMarginPx = currentScreenMarginPx
                                     )
                                     lastTarget = target
                                     if (tutorialOverlayState == null) {
                                         tutorialOverlayState = SwipeDownOverlayState(
                                             anchorPosition = startOffset,
                                             currentPosition = currentPos,
-                                            handSide = handSide,
+                                            handSide = activeHand,
                                             selectedTarget = target
                                         )
                                     } else if (tutorialOverlayState?.selectedTarget != target) {
@@ -274,8 +323,9 @@ fun TutorialOverlay(
                         },
                         onDragEnd = {
                             val threshold = 60f
-                            when (currentStep.gestureType) {
-                                GestureType.SWIPE_UP -> if (totalDragY < -threshold) triggerSuccessAndNext()
+                            val activeHand = currentHandSide
+                            when (currentStepRef.gestureType) {
+                                GestureType.SWIPE_UP -> if (totalDragY < -threshold) currentTriggerSuccessAndNext()
                                 GestureType.SWIPE_DOWN -> {
                                     if (isTutorialSwipeDownActive || totalDragY > threshold) {
                                         tutorialOverlayState = null
@@ -286,25 +336,22 @@ fun TutorialOverlay(
                                             context.getString(R.string.quick_action_quick_settings_title)
                                         }
                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        coroutineScope.launch {
-                                            delay(850)
-                                            triggerSuccessAndNext()
-                                        }
+                                        currentScheduleDelayedNextStep()
                                     }
                                 }
                                 GestureType.SIDE_BACK -> {
-                                    val isBackDirection = if (handSide == HandSide.LEFT) totalDragX < -threshold else totalDragX > threshold
-                                    if (isBackDirection || kotlin.math.abs(totalDragX) > threshold) triggerSuccessAndNext()
+                                    val isBackDirection = if (activeHand == HandSide.LEFT) totalDragX < -threshold else totalDragX > threshold
+                                    if (isBackDirection || kotlin.math.abs(totalDragX) > threshold) currentTriggerSuccessAndNext()
                                 }
                                 GestureType.SWIPE_HIGHLIGHTS -> {
-                                    val isMatch = when (handSide) {
+                                    val isMatch = when (activeHand) {
                                         HandSide.RIGHT -> totalDragX > threshold
                                         HandSide.LEFT -> totalDragX < -threshold
                                     }
-                                    if (isMatch || kotlin.math.abs(totalDragX) > threshold) triggerSuccessAndNext()
+                                    if (isMatch || kotlin.math.abs(totalDragX) > threshold) currentTriggerSuccessAndNext()
                                 }
                                 GestureType.HISTORY_POSITION_TOGGLE -> {
-                                    if (kotlin.math.abs(totalDragY) > threshold) triggerSuccessAndNext()
+                                    if (kotlin.math.abs(totalDragY) > threshold) currentTriggerSuccessAndNext()
                                 }
                                 else -> {}
                             }
@@ -316,19 +363,19 @@ fun TutorialOverlay(
                     )
                 }
                 .pointerInput(stepIndex) {
-                    if (currentStep.gestureType == GestureType.LONG_PRESS || currentStep.gestureType == GestureType.FAVORITES_HISTORY) {
+                    if (currentStepRef.gestureType == GestureType.LONG_PRESS || currentStepRef.gestureType == GestureType.FAVORITES_HISTORY) {
                         detectTapGestures(
                             onLongPress = {
-                                triggerSuccessAndNext()
+                                currentTriggerSuccessAndNext()
                             }
                         )
-                    } else if (currentStep.gestureType == GestureType.QUICK_PALETTE) {
+                    } else if (currentStepRef.gestureType == GestureType.QUICK_PALETTE) {
                         detectTapGestures(
                             onTap = { offset ->
                                 if (tutorialPaletteOverlayState == null) {
                                     tutorialPaletteOverlayState = QuickPaletteOverlayState(
                                         anchorPosition = offset,
-                                        handSide = handSide
+                                        handSide = currentHandSide
                                     )
                                 }
                             }
@@ -377,6 +424,8 @@ fun TutorialOverlay(
                     val skipInteractionSource = remember { MutableInteractionSource() }
                     TextButton(
                         onClick = {
+                            pendingNextStepJob?.cancel()
+                            pendingNextStepJob = null
                             viewModel.completeTutorial()
                             onNavigateToMain()
                         },
@@ -546,6 +595,9 @@ fun TutorialOverlay(
                                     val backInteractionSource = remember { MutableInteractionSource() }
                                     TextButton(
                                         onClick = {
+                                            pendingNextStepJob?.cancel()
+                                            pendingNextStepJob = null
+                                            isStepAdvancing = false
                                             val prevStep = stepIndex - 1
                                             viewModel.setTutorialStep(prevStep)
                                             if (prevStep == 0) {
@@ -627,19 +679,13 @@ fun TutorialOverlay(
                         tutorialPaletteColor = bucket
                         tutorialSelectedFeedback = context.getString(R.string.side_overlay_colors_title)
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        coroutineScope.launch {
-                            delay(850)
-                            triggerSuccessAndNext()
-                        }
+                        scheduleDelayedNextStep()
                     },
                     onOpenHistoryMenu = {
                         tutorialPaletteOverlayState = null
                         tutorialSelectedFeedback = context.getString(R.string.history_menu_title)
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        coroutineScope.launch {
-                            delay(850)
-                            triggerSuccessAndNext()
-                        }
+                        scheduleDelayedNextStep()
                     },
                     onDismiss = {
                         tutorialPaletteOverlayState = null

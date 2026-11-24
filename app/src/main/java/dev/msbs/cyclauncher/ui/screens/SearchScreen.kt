@@ -67,22 +67,21 @@ fun SearchScreen(
     enabled: Boolean = true,
     appWidgetHost: AppWidgetHost? = null,
     appWidgetManager: AppWidgetManager? = null,
+    widgetUnlockGeneration: Int = 0,
     onConfigureWidget: ((widgetId: Int, isReconfigure: Boolean, options: Bundle?, callback: (Boolean) -> Unit) -> Unit)? = null,
     onBackToMain: () -> Unit = {},
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, Offset) -> Unit
 ) {
     val context = LocalContext.current
-    val isTextSearchMode by viewModel.isTextSearchMode.collectAsState()
+    val isTempTextSearch by viewModel.isTempTextSearch.collectAsState()
     val selectedLetter by viewModel.selectedLetter.collectAsState()
-    val selectedColor by viewModel.selectedColor.collectAsState()
     val searchMethod by viewModel.searchMethod.collectAsState()
     val handSide by viewModel.handSide.collectAsState()
-    val searchWidgetsConfig by viewModel.searchWidgetsConfig.collectAsState()
 
     BackHandler(enabled = enabled) {
-        if (isTextSearchMode) {
-            viewModel.toggleTextSearchMode()
+        if (isTempTextSearch) {
+            viewModel.exitTempTextSearch()
         } else {
             onBackToMain()
         }
@@ -104,18 +103,20 @@ fun SearchScreen(
         optionsProvider = { ctx, _ ->
             dev.msbs.cyclauncher.widget.WidgetBindHelper.createSearchWidgetOptions(ctx)
         },
-        onWidgetBound = { widgetId, _, target ->
+        onWidgetBound = { widgetId, providerInfo, target ->
+            viewModel.trackWidgetProvider(widgetId, providerInfo)
             val replaceWidget: (Int?, (Int) -> Unit) -> Unit = { oldId, updateAction ->
                 if (oldId != null && oldId != widgetId) {
                     try { host?.deleteAppWidgetId(oldId) } catch (_: Exception) {}
                 }
                 updateAction(widgetId)
             }
+            val currentSearchWidgets = viewModel.searchWidgetsConfig.value
             val sideSearchConfig = viewModel.sideSearchWidgetsConfig.value
             val sideAlphabetConfig = viewModel.sideAlphabetWidgetsConfig.value
             when (target) {
-                WidgetPickTarget.WHEEL_LEFT -> replaceWidget(searchWidgetsConfig.leftWidgetId) { viewModel.setSearchWidget(true, it) }
-                WidgetPickTarget.WHEEL_RIGHT -> replaceWidget(searchWidgetsConfig.rightWidgetId) { viewModel.setSearchWidget(false, it) }
+                WidgetPickTarget.WHEEL_LEFT -> replaceWidget(currentSearchWidgets.leftWidgetId) { viewModel.setSearchWidget(true, it) }
+                WidgetPickTarget.WHEEL_RIGHT -> replaceWidget(currentSearchWidgets.rightWidgetId) { viewModel.setSearchWidget(false, it) }
                 WidgetPickTarget.SIDE_SEARCH_TOP -> replaceWidget(sideSearchConfig.topWidgetId) { viewModel.setSideSearchWidget(true, it) }
                 WidgetPickTarget.SIDE_SEARCH_BOTTOM -> replaceWidget(sideSearchConfig.bottomWidgetId) { viewModel.setSideSearchWidget(false, it) }
                 WidgetPickTarget.SIDE_ALPHABET_TOP -> replaceWidget(sideAlphabetConfig.topWidgetId) { viewModel.setSideAlphabetWidget(true, it) }
@@ -133,6 +134,7 @@ fun SearchScreen(
                 widgetPickTarget = if (isLeft) WidgetPickTarget.WHEEL_LEFT else WidgetPickTarget.WHEEL_RIGHT
             },
             visible = selectedLetter == null,
+            widgetUnlockGeneration = widgetUnlockGeneration,
             modifier = compartmentModifier
         )
     }
@@ -141,20 +143,28 @@ fun SearchScreen(
         onAppClick(appKey)
     }
 
-    when (searchMethod) {
-        SearchMethod.TEXT -> {
-            TextSearchInterface(
-                viewModel = viewModel,
-                onAppClick = onSearchAppClick,
-                onAppLongClick = onAppLongClick
-            )
-        }
+    if (isTempTextSearch || searchMethod == SearchMethod.TEXT) {
+        TextSearchInterface(
+            viewModel = viewModel,
+            enabled = enabled,
+            onClose = {
+                if (isTempTextSearch) {
+                    viewModel.exitTempTextSearch()
+                } else {
+                    onBackToMain()
+                }
+            },
+            onAppClick = onSearchAppClick,
+            onAppLongClick = onAppLongClick
+        )
+    } else when (searchMethod) {
         SearchMethod.SIDE_ALPHABET -> {
             SideAlphabetSearchLayout(
                 viewModel = viewModel,
                 handSide = handSide,
                 appWidgetHost = host,
                 appWidgetManager = manager,
+                widgetUnlockGeneration = widgetUnlockGeneration,
                 onPickSideWidget = { isTop ->
                     widgetPickTarget = if (isTop) WidgetPickTarget.SIDE_SEARCH_TOP else WidgetPickTarget.SIDE_SEARCH_BOTTOM
                 },
@@ -165,7 +175,7 @@ fun SearchScreen(
                 onAppLongClick = onAppLongClick
             )
         }
-        SearchMethod.WHEEL -> {
+        else -> {
             WheelSearchLayout(
                 viewModel = viewModel,
                 handSide = handSide,
@@ -232,7 +242,7 @@ fun WheelSearchLayout(
         val animationsEnabled = LocalAnimationsEnabled.current
         val haptic = LocalHapticFeedback.current
 
-        val handleTopDragStart = {
+        val currentHandleTopDragStart by rememberUpdatedState {
             if (viewModel.selectedLetter.value == null) {
                 val count = ALPHABET_WHEEL_CHARS.size
                 val raw = ((scrollOffset.value % count) + count) % count
@@ -250,7 +260,7 @@ fun WheelSearchLayout(
                 density = density,
                 stepSize = stepSize,
                 animationsEnabled = animationsEnabled,
-                onDragStart = handleTopDragStart
+                onDragStart = { currentHandleTopDragStart() }
             )
 
         Box(

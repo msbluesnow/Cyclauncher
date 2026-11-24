@@ -20,6 +20,8 @@ import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
 import android.app.Application
 import android.app.WallpaperColors
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProviderInfo
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -116,14 +118,42 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val prefsExecutor = java.util.concurrent.Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "LauncherPrefsThread").apply { isDaemon = true }
     }
+    @Volatile
+    private var isCleared = false
+
     private fun editPrefs(action: SharedPreferences.Editor.() -> Unit) {
-        prefsExecutor.execute {
-            try {
-                val editor = prefs.edit()
-                editor.action()
-                editor.apply()
-            } catch (_: Exception) {}
+        if (isCleared || prefsExecutor.isShutdown) return
+        try {
+            prefsExecutor.execute {
+                try {
+                    val editor = prefs.edit()
+                    editor.action()
+                    editor.apply()
+                } catch (_: Exception) {}
+            }
+        } catch (_: java.util.concurrent.RejectedExecutionException) {
+            // ViewModel already cleared
         }
+    }
+
+    /**
+     * Flushes all queued preferences and storage writes synchronously to disk before process exit/relaunch.
+     */
+    fun flushPendingPersistence() {
+        if (!isCleared && !prefsExecutor.isShutdown) {
+            try {
+                val future = prefsExecutor.submit {
+                    try { prefs.edit().commit() } catch (_: Exception) {}
+                }
+                future.get(2L, java.util.concurrent.TimeUnit.SECONDS)
+            } catch (_: Exception) {
+                try { prefs.edit().commit() } catch (_: Exception) {}
+            }
+        } else {
+            try { prefs.edit().commit() } catch (_: Exception) {}
+        }
+        actionsManager.flushPendingWrites()
+        appColorManager.flushPendingWrites()
     }
 
     private val actionsManager = AppActionsManager(safeContext)
@@ -172,13 +202,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _showSearchHistory = MutableStateFlow(true)
     val showSearchHistory: StateFlow<Boolean> = _showSearchHistory
 
-    private val _sideAlphabetSlotMode = MutableStateFlow(loadSideAlphabetSlotMode())
+    private val _sideAlphabetSlotMode = MutableStateFlow(SideAlphabetSlotMode.HISTORY)
     val sideAlphabetSlotMode: StateFlow<SideAlphabetSlotMode> = _sideAlphabetSlotMode.asStateFlow()
 
-    private val _sideAlphabetWidgetsConfig = MutableStateFlow(loadSideAlphabetWidgetsConfig())
+    private val _sideAlphabetWidgetsConfig = MutableStateFlow(SideDualWidgetConfig())
     val sideAlphabetWidgetsConfig: StateFlow<SideDualWidgetConfig> = _sideAlphabetWidgetsConfig.asStateFlow()
 
-    private val _sideAlphabetWidgetId = MutableStateFlow<Int?>(_sideAlphabetWidgetsConfig.value.topWidgetId ?: _sideAlphabetWidgetsConfig.value.bottomWidgetId)
+    private val _sideAlphabetWidgetId = MutableStateFlow<Int?>(null)
     val sideAlphabetWidgetId: StateFlow<Int?> = _sideAlphabetWidgetId.asStateFlow()
 
     private val _animationsEnabled = MutableStateFlow(true)
@@ -233,6 +263,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _sideAlphabetButtonYRatio = MutableStateFlow(0.23f)
     val sideAlphabetButtonYRatio: StateFlow<Float> = _sideAlphabetButtonYRatio
 
+    private val _isTempTextSearch = MutableStateFlow(false)
+    val isTempTextSearch: StateFlow<Boolean> = _isTempTextSearch
+
     private val _isTextSearchMode = MutableStateFlow(false)
     val isTextSearchMode: StateFlow<Boolean> = _isTextSearchMode
 
@@ -249,6 +282,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _selectedIconPack = MutableStateFlow<String?>(null)
     val selectedIconPack: StateFlow<String?> = _selectedIconPack
 
+    private val _systemIconPackPackage = MutableStateFlow<String?>(null)
+    val systemIconPackPackage: StateFlow<String?> = _systemIconPackPackage
+
     private val _installedIconPacks = MutableStateFlow<List<IconPackInfo>>(emptyList())
     val installedIconPacks: StateFlow<List<IconPackInfo>> = _installedIconPacks
 
@@ -262,9 +298,41 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val privateSpaceUser: StateFlow<UserHandle?> = _privateSpaceUser
 
     private var iconPackLoadJob: Job? = null
+    private var prewarmJob: Job? = null
     private var privateLoadJob: Job? = null
     private val workLoadJobs = mutableMapOf<UserHandle, Job>()
     private val profileJobsLock = Any()
+
+    @Volatile
+    private var widgetHostDeleter: ((Int) -> Unit)? = null
+    private val widgetProviderMap = java.util.concurrent.ConcurrentHashMap<Int, Pair<String, UserHandle>>()
+
+    @Volatile
+    private var lastLoadedLocale: String? = null
+
+    fun setWidgetHostDeleter(deleter: ((Int) -> Unit)?) {
+        widgetHostDeleter = deleter
+    }
+
+    fun trackWidgetProvider(widgetId: Int, info: AppWidgetProviderInfo?) {
+        if (info == null) return
+        val pkg = info.provider?.packageName ?: return
+        val profile = try { info.profile } catch (_: Throwable) { null } ?: Process.myUserHandle()
+        widgetProviderMap[widgetId] = pkg to profile
+    }
+
+    fun onLocaleChangedIfNeeded(config: Configuration) {
+        val currentLocale = try {
+            config.locales.toLanguageTags()
+        } catch (_: Throwable) {
+            Locale.getDefault().toLanguageTag()
+        }
+        if (lastLoadedLocale != null && lastLoadedLocale != currentLocale) {
+            lastLoadedLocale = currentLocale
+            invalidateWidgetGroupsCache()
+            refreshApps(force = true)
+        }
+    }
 
     private val unlockLock = Any()
     private val startedWhileLocked = !application.isUserUnlockedSafe()
@@ -315,6 +383,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             }
             val savedIconPack = prefs.safeGetString("icon_pack_package", null)?.takeIf { it.isNotBlank() }
             _selectedIconPack.value = savedIconPack
+            _systemIconPackPackage.value = IconPackManager.getSystemIconPackPackage(safeContext)
             _installedIconPacks.value = IconPackManager.getInstalledIconPacks(safeContext)
             IconPackManager.loadIconPack(safeContext, savedIconPack, forceReload = true)
             try {
@@ -333,7 +402,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 val requested = userManager?.requestQuietModeEnabled(true, user) ?: false
                 if (requested) {
-                    onProfileAvailabilityChanged(user, isAvailable = false)
+                    onProfileAvailabilityChanged(user, isAvailable = false, forceState = true)
                 }
             }
         } catch (_: Throwable) {}
@@ -352,10 +421,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         } catch (_: Throwable) {}
     }
 
-    fun onProfileAvailabilityChanged(user: UserHandle, isAvailable: Boolean) {
+    fun onProfileAvailabilityChanged(user: UserHandle, isAvailable: Boolean, forceState: Boolean = false) {
         val profileType = ProfileType.fromUserHandle(safeContext, user)
         val userManager = safeContext.getSystemService(Context.USER_SERVICE) as? UserManager
-        val effectiveAvailable = if (userManager != null) {
+        val effectiveAvailable = if (forceState) {
+            isAvailable
+        } else if (userManager != null) {
             try {
                 !userManager.isQuietModeEnabled(user)
             } catch (_: Throwable) {
@@ -369,6 +440,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             _privateSpaceUser.value = user
             _isPrivateSpaceLocked.value = !effectiveAvailable
             if (!effectiveAvailable) {
+                prewarmJob?.cancel()
                 synchronized(profileJobsLock) {
                     privateLoadJob?.cancel()
                     privateLoadJob = null
@@ -377,6 +449,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     privateAppsCache = emptyList()
                 }
                 updateCombinedApps()
+                invalidateWidgetGroupsCache()
                 try {
                     val imageLoader = coil3.SingletonImageLoader.get(getApplication())
                     val serial = try { userManager?.getSerialNumberForUser(user) ?: -1L } catch (_: Exception) { -1L }
@@ -396,6 +469,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                             privateAppsCache = loaded
                         }
                         updateCombinedApps()
+                        invalidateWidgetGroupsCache()
                         val keysToPrewarm = loaded.map { it.componentKey }
                         prewarmIcons(keysToPrewarm)
                         appColorManager.indexApps(
@@ -416,6 +490,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     workAppsCache.remove(user)
                 }
                 updateCombinedApps()
+                invalidateWidgetGroupsCache()
             } else {
                 synchronized(profileJobsLock) {
                     workLoadJobs[user]?.cancel()
@@ -428,6 +503,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                             workAppsCache[user] = loaded
                         }
                         updateCombinedApps()
+                        invalidateWidgetGroupsCache()
                         appColorManager.indexApps(
                             scope = viewModelScope,
                             apps = loaded,
@@ -556,11 +632,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun requestReset() {
         _autoTagsPreview.value = null
         _tagsBackupPreview.value = null
-        if (_isTextSearchMode.value) {
-            _isTextSearchMode.value = false
-            _searchText.value = ""
-            _searchMethod.value = lastAlphabetSearchMethod
+        if (_isTempTextSearch.value) {
+            _isTempTextSearch.value = false
+            _isTextSearchMode.value = (_searchMethod.value == SearchMethod.TEXT)
         }
+        _searchText.value = ""
         _historyScrollToBottomTrigger.value = System.currentTimeMillis()
         _resetRequest.tryEmit(Unit)
     }
@@ -684,7 +760,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }.sortedBy { it.normalizedLabel }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _highlightWidgets = MutableStateFlow<List<HighlightWidgetConfig>>(loadHighlightWidgets())
+    private val _highlightWidgets = MutableStateFlow<List<HighlightWidgetConfig>>(emptyList())
     val highlightWidgets: StateFlow<List<HighlightWidgetConfig>> = _highlightWidgets
 
     private fun loadHighlightWidgets(): List<HighlightWidgetConfig> {
@@ -767,7 +843,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    private val _highlightSectionOrder = MutableStateFlow<List<HighlightSection>>(loadHighlightSectionOrder())
+    private val _highlightSectionOrder = MutableStateFlow<List<HighlightSection>>(HighlightSection.values().toList())
     val highlightSectionOrder: StateFlow<List<HighlightSection>> = _highlightSectionOrder.asStateFlow()
 
     private fun loadHighlightSectionOrder(): List<HighlightSection> {
@@ -807,7 +883,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    private val _searchWidgetsConfig = MutableStateFlow<SearchWidgetsConfig>(loadSearchWidgetsConfig())
+    private val _searchWidgetsConfig = MutableStateFlow<SearchWidgetsConfig>(SearchWidgetsConfig())
     val searchWidgetsConfig: StateFlow<SearchWidgetsConfig> = _searchWidgetsConfig.asStateFlow()
 
     private fun loadSearchWidgetsConfig(): SearchWidgetsConfig = SearchWidgetsConfig(
@@ -845,13 +921,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         setSearchWidget(isLeft, null)
     }
 
-    private val _sideSearchWidgetsConfig = MutableStateFlow(loadSideSearchWidgetsConfig())
+    private val _sideSearchWidgetsConfig = MutableStateFlow(SideDualWidgetConfig())
     val sideSearchWidgetsConfig: StateFlow<SideDualWidgetConfig> = _sideSearchWidgetsConfig.asStateFlow()
 
-    private val _sideSearchWidgetId = MutableStateFlow<Int?>(_sideSearchWidgetsConfig.value.topWidgetId ?: _sideSearchWidgetsConfig.value.bottomWidgetId)
+    private val _sideSearchWidgetId = MutableStateFlow<Int?>(null)
     val sideSearchWidgetId: StateFlow<Int?> = _sideSearchWidgetId.asStateFlow()
 
-    private val _sideSearchWidgetLayout = MutableStateFlow(_sideSearchWidgetsConfig.value.layout)
+    private val _sideSearchWidgetLayout = MutableStateFlow(SideSearchWidgetLayout())
     val sideSearchWidgetLayout: StateFlow<SideSearchWidgetLayout> = _sideSearchWidgetLayout.asStateFlow()
 
     private fun loadSideDualWidgetConfig(prefix: String, legacyIdKey: String): SideDualWidgetConfig {
@@ -908,11 +984,19 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private fun SideDualWidgetConfig.withAssignedSlot(isTop: Boolean, widgetId: Int?): SideDualWidgetConfig =
         if (isTop) {
-            copy(topWidgetId = widgetId)
-        } else if (topWidgetId == null) {
-            copy(topWidgetId = widgetId)
+            if (widgetId == null) {
+                copy(topWidgetId = bottomWidgetId, bottomWidgetId = null, splitRatio = 0.5f)
+            } else {
+                copy(topWidgetId = widgetId)
+            }
         } else {
-            copy(bottomWidgetId = widgetId)
+            if (widgetId == null) {
+                copy(bottomWidgetId = null, splitRatio = 0.5f)
+            } else if (topWidgetId == null) {
+                copy(topWidgetId = widgetId, bottomWidgetId = null, splitRatio = 0.5f)
+            } else {
+                copy(bottomWidgetId = widgetId)
+            }
         }
 
     private fun SideDualWidgetConfig.withoutSlot(isTop: Boolean): SideDualWidgetConfig =
@@ -1146,7 +1230,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
         val savedIconPack = prefs.safeGetString("icon_pack_package", null)?.takeIf { it.isNotBlank() }
         _selectedIconPack.value = savedIconPack
-        iconPackLoadJob = viewModelScope.launch {
+        iconPackLoadJob = viewModelScope.launch(Dispatchers.IO) {
+            _systemIconPackPackage.value = IconPackManager.getSystemIconPackPackage(safeContext)
             _installedIconPacks.value = IconPackManager.getInstalledIconPacks(safeContext)
             IconPackManager.loadIconPack(safeContext, savedIconPack)
             if (IconPackManager.activePackageName != null) {
@@ -1163,7 +1248,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
 
         loadInstalledApps()
-        updateDefaultLauncherStatus()
         refreshDynamicWallpaperColor(safeContext)
         _searchListAlignment.value = if (_handSide.value == HandSide.LEFT) TextAlign.Start else TextAlign.End
     }
@@ -1219,6 +1303,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val savedSearchMethod = prefs.safeGetString("search_method", SearchMethod.SIDE_ALPHABET.name) ?: SearchMethod.SIDE_ALPHABET.name
         val initialMethod = try { SearchMethod.valueOf(savedSearchMethod) } catch (e: Exception) { SearchMethod.SIDE_ALPHABET }
         _searchMethod.value = initialMethod
+        _isTempTextSearch.value = false
         _isTextSearchMode.value = (initialMethod == SearchMethod.TEXT)
 
         val savedLastAlphabet = prefs.safeGetString("last_alphabet_search_method", SearchMethod.SIDE_ALPHABET.name) ?: SearchMethod.SIDE_ALPHABET.name
@@ -1240,7 +1325,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         if (reloadIconPack && savedIconPack != _selectedIconPack.value) {
             _selectedIconPack.value = savedIconPack
             iconPackLoadJob?.cancel()
-            iconPackLoadJob = viewModelScope.launch {
+            iconPackLoadJob = viewModelScope.launch(Dispatchers.IO) {
+                _systemIconPackPackage.value = IconPackManager.getSystemIconPackPackage(safeContext)
                 _installedIconPacks.value = IconPackManager.getInstalledIconPacks(safeContext)
                 IconPackManager.loadIconPack(safeContext, savedIconPack, forceReload = true)
                 try {
@@ -1297,6 +1383,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun resetSearchFilters() {
         _selectedLetter.value = null
         _selectedColor.value = null
+        _searchText.value = ""
+        exitTempTextSearch()
     }
 
     fun setSideAlphabetButtonYRatio(ratio: Float) {
@@ -1307,6 +1395,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun setSearchMethod(method: SearchMethod) {
         _searchMethod.value = method
+        _isTempTextSearch.value = false
         if (method != SearchMethod.TEXT) {
             lastAlphabetSearchMethod = method
         }
@@ -1320,13 +1409,25 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun toggleTextSearchMode() {
-        val nextMethod = if (_searchMethod.value == SearchMethod.TEXT) {
-            lastAlphabetSearchMethod
-        } else {
-            SearchMethod.TEXT
+    fun exitTempTextSearch() {
+        if (_isTempTextSearch.value) {
+            _isTempTextSearch.value = false
+            _isTextSearchMode.value = (_searchMethod.value == SearchMethod.TEXT)
+            _searchText.value = ""
         }
-        setSearchMethod(nextMethod)
+    }
+
+    fun toggleTextSearchMode() {
+        if (_searchMethod.value == SearchMethod.TEXT) {
+            setSearchMethod(lastAlphabetSearchMethod)
+        } else {
+            val next = !_isTempTextSearch.value
+            _isTempTextSearch.value = next
+            _isTextSearchMode.value = next
+            if (!next) {
+                _searchText.value = ""
+            }
+        }
     }
 
     fun setSearchText(text: String) { _searchText.value = text }
@@ -1353,16 +1454,20 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         editPrefs { putBoolean("animations_enabled", enabled) }
     }
 
-    fun setCapsuleAlpha(alpha: Float) {
+    fun setCapsuleAlpha(alpha: Float, persist: Boolean = true) {
         val clamped = alpha.coerceIn(0f, 1f)
         _capsuleAlpha.value = clamped
-        editPrefs { putFloat("capsule_alpha", clamped) }
+        if (persist) {
+            editPrefs { putFloat("capsule_alpha", clamped) }
+        }
     }
 
-    fun setScreenScrimAlpha(alpha: Float) {
+    fun setScreenScrimAlpha(alpha: Float, persist: Boolean = true) {
         val clamped = alpha.coerceIn(0f, 1f)
         _screenScrimAlpha.value = clamped
-        editPrefs { putFloat("screen_scrim_alpha", clamped) }
+        if (persist) {
+            editPrefs { putFloat("screen_scrim_alpha", clamped) }
+        }
     }
 
     fun setScreenScrimIsDark(isDark: Boolean) {
@@ -1375,10 +1480,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         editPrefs { putBoolean("capsule_is_dark", isDark) }
     }
 
-    fun setPopupAlpha(alpha: Float) {
+    fun setPopupAlpha(alpha: Float, persist: Boolean = true) {
         val clamped = alpha.coerceIn(0f, 1f)
         _popupAlpha.value = clamped
-        editPrefs { putFloat("popup_alpha", clamped) }
+        if (persist) {
+            editPrefs { putFloat("popup_alpha", clamped) }
+        }
     }
 
     fun setMarqueeEnabled(enabled: Boolean) {
@@ -1500,12 +1607,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun reloadInstalledIconPacks() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
+            _systemIconPackPackage.value = IconPackManager.getSystemIconPackPackage(safeContext)
             val packs = IconPackManager.getInstalledIconPacks(safeContext)
             _installedIconPacks.value = packs
             val active = _selectedIconPack.value
             if (active != null && packs.none { it.packageName == active }) {
-                setIconPack(null)
+                withContext(Dispatchers.Main) {
+                    setIconPack(null)
+                }
             }
         }
     }
@@ -1589,6 +1699,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     val isAppsLoading: Boolean
         get() = loadAppsJob?.isActive == true
+
+    val hasLoadedApps: Boolean
+        get() = _apps.value.isNotEmpty()
 
     fun refreshApps(force: Boolean = false) {
         if (!force && loadAppsJob?.isActive == true) {
@@ -1999,17 +2112,146 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
             }
-            val activePack = _selectedIconPack.value
+            val activePack = _selectedIconPack.value ?: IconPackManager.activePackageName
+            val activePackUpdated = activePack != null && packages.contains(activePack)
             if (!activePack.isNullOrEmpty()) {
                 IconPackManager.loadIconPack(safeContext, activePack, forceReload = true)
+                if (activePackUpdated) {
+                    try {
+                        val imageLoader = coil3.SingletonImageLoader.get(getApplication())
+                        imageLoader.memoryCache?.clear()
+                    } catch (_: Exception) {}
+                    _iconPackVersion.value = _iconPackVersion.value + 1L
+                }
             }
             reloadInstalledIconPacks()
             loadInstalledApps()
         }
     }
 
+    fun refreshWidgetProviderMapAsync() {
+        viewModelScope.launch(Dispatchers.IO) {
+            refreshWidgetProviderMap()
+        }
+    }
+
+    private fun refreshWidgetProviderMap() {
+        if (!safeContext.isUserUnlockedSafe()) return
+        try {
+            val manager = AppWidgetManager.getInstance(safeContext) ?: return
+            val allIds = buildList {
+                _highlightWidgets.value.forEach { add(it.id) }
+                _searchWidgetsConfig.value.leftWidgetId?.let { add(it) }
+                _searchWidgetsConfig.value.rightWidgetId?.let { add(it) }
+                _sideSearchWidgetsConfig.value.topWidgetId?.let { add(it) }
+                _sideSearchWidgetsConfig.value.bottomWidgetId?.let { add(it) }
+                _sideAlphabetWidgetsConfig.value.topWidgetId?.let { add(it) }
+                _sideAlphabetWidgetsConfig.value.bottomWidgetId?.let { add(it) }
+            }
+            val activeIdSet = allIds.toHashSet()
+            widgetProviderMap.keys.removeAll { it !in activeIdSet }
+            for (id in allIds) {
+                val info = try { manager.getAppWidgetInfo(id) } catch (_: Exception) { null }
+                if (info != null) {
+                    trackWidgetProvider(id, info)
+                }
+            }
+        } catch (_: Throwable) {}
+    }
+
+    private fun hasAnyLockedSecondaryProfile(): Boolean {
+        val um = safeContext.getSystemService(Context.USER_SERVICE) as? UserManager ?: return false
+        val myUser = Process.myUserHandle()
+        return try {
+            um.userProfiles.any { profile ->
+                profile != myUser && try { um.isQuietModeEnabled(profile) } catch (_: Throwable) { false }
+            }
+        } catch (_: Throwable) {
+            false
+        }
+    }
+
+    private fun cleanupOrphanedWidgetsForPackage(packageName: String, user: UserHandle) {
+        if (!safeContext.isUserUnlockedSafe()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val manager = AppWidgetManager.getInstance(safeContext) ?: return@launch
+                val anyLockedSecondary = hasAnyLockedSecondaryProfile()
+
+                fun shouldPurgeWidgetId(id: Int): Boolean {
+                    val info = try { manager.getAppWidgetInfo(id) } catch (_: Exception) { null }
+                    if (info != null) {
+                        val infoPkg = info.provider?.packageName
+                        val infoProfile = try { info.profile } catch (_: Throwable) { null } ?: Process.myUserHandle()
+                        return infoPkg == packageName && infoProfile == user
+                    }
+                    val tracked = widgetProviderMap[id]
+                    if (tracked != null) {
+                        return tracked.first == packageName && tracked.second == user
+                    }
+                    // If no secondary profile is locked and user is unlocked, null provider info means dead/uninstalled widget
+                    return !anyLockedSecondary
+                }
+
+                val deleteIds = mutableListOf<Int>()
+
+                val highlightToRemove = _highlightWidgets.value.map { it.id }.filter(::shouldPurgeWidgetId)
+                if (highlightToRemove.isNotEmpty()) {
+                    highlightToRemove.forEach { id ->
+                        removeHighlightWidget(id)
+                        deleteIds.add(id)
+                    }
+                }
+
+                val searchCfg = _searchWidgetsConfig.value
+                searchCfg.leftWidgetId?.takeIf(::shouldPurgeWidgetId)?.let { id ->
+                    removeSearchWidget(true)
+                    deleteIds.add(id)
+                }
+                searchCfg.rightWidgetId?.takeIf(::shouldPurgeWidgetId)?.let { id ->
+                    removeSearchWidget(false)
+                    deleteIds.add(id)
+                }
+
+                val sideSearchCfg = _sideSearchWidgetsConfig.value
+                val purgeSideSearchBottom = sideSearchCfg.bottomWidgetId?.takeIf(::shouldPurgeWidgetId)
+                val purgeSideSearchTop = sideSearchCfg.topWidgetId?.takeIf(::shouldPurgeWidgetId)
+                if (purgeSideSearchBottom != null) {
+                    removeSideSearchWidget(false)
+                    deleteIds.add(purgeSideSearchBottom)
+                }
+                if (purgeSideSearchTop != null) {
+                    removeSideSearchWidget(true)
+                    deleteIds.add(purgeSideSearchTop)
+                }
+
+                val sideAlphaCfg = _sideAlphabetWidgetsConfig.value
+                val purgeSideAlphaBottom = sideAlphaCfg.bottomWidgetId?.takeIf(::shouldPurgeWidgetId)
+                val purgeSideAlphaTop = sideAlphaCfg.topWidgetId?.takeIf(::shouldPurgeWidgetId)
+                if (purgeSideAlphaBottom != null) {
+                    removeSideAlphabetWidget(false)
+                    deleteIds.add(purgeSideAlphaBottom)
+                }
+                if (purgeSideAlphaTop != null) {
+                    removeSideAlphabetWidget(true)
+                    deleteIds.add(purgeSideAlphaTop)
+                }
+
+                if (deleteIds.isNotEmpty()) {
+                    val deleter = widgetHostDeleter
+                    for (id in deleteIds.distinct()) {
+                        widgetProviderMap.remove(id)
+                        try { deleter?.invoke(id) } catch (_: Exception) {}
+                    }
+                }
+            } catch (_: Throwable) {}
+        }
+    }
+
     fun onPackageRemoved(packageName: String, user: UserHandle = Process.myUserHandle()) {
         invalidateIconCache(packageName)
+        invalidateWidgetGroupsCache()
+        cleanupOrphanedWidgetsForPackage(packageName, user)
         if (packageName == IconPackManager.activePackageName) {
             IconPackManager.onPackageRemoved(packageName)
             _selectedIconPack.value = null
@@ -2031,6 +2273,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun onPackageAddedOrUpdated(packageName: String, user: UserHandle = Process.myUserHandle()) {
         invalidateIconCache(packageName)
+        invalidateWidgetGroupsCache()
         if (user != Process.myUserHandle()) {
             val um = safeContext.getSystemService(Context.USER_SERVICE) as? UserManager
             val isQuiet = try { um?.isQuietModeEnabled(user) ?: false } catch (_: Throwable) { false }
@@ -2044,6 +2287,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         dev.msbs.cyclauncher.coil.IconEpochManager.clear()
         dev.msbs.cyclauncher.icons.IconShapeHelper.invalidateCache()
         appColorManager.invalidateCache()
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                dev.msbs.cyclauncher.icons.IconShapeHelper.preload(safeContext)
+            } catch (_: Exception) {}
+        }
         try {
             val imageLoader = coil3.SingletonImageLoader.get(getApplication())
             imageLoader.memoryCache?.clear()
@@ -2061,8 +2309,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 val slashPrefix = "appicon:$packageName/"
                 val colonPrefix = "appicon:$packageName:"
                 val hashPrefix = "appicon:$packageName#"
-                val keysToRemove = memoryCache.keys.filter { key ->
-                    val keyStr = key.toString()
+                val keysToRemove = memoryCache.keys.filter { cacheKey ->
+                    val keyStr = cacheKey.key
                     keyStr.startsWith(slashPrefix) ||
                         keyStr.startsWith(colonPrefix) ||
                         keyStr.startsWith(hashPrefix)
@@ -2146,6 +2394,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private var loadAppsJob: kotlinx.coroutines.Job? = null
 
+    @Volatile
     private var _cachedWidgetGroups: List<dev.msbs.cyclauncher.ui.components.AppWidgetGroup>? = null
 
     suspend fun getWidgetGroups(): List<dev.msbs.cyclauncher.ui.components.AppWidgetGroup> = withContext(Dispatchers.IO) {
@@ -2161,9 +2410,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private fun loadInstalledApps() {
         loadAppsJob?.cancel()
-        invalidateWidgetGroupsCache()
         loadAppsJob = viewModelScope.launch(Dispatchers.IO) {
             val context = safeContext
+            lastLoadedLocale = try {
+                getApplication<Application>().resources.configuration.locales.toLanguageTags()
+            } catch (_: Throwable) {
+                Locale.getDefault().toLanguageTag()
+            }
             val userManager = context.getSystemService(Context.USER_SERVICE) as? UserManager
             val myUser = Process.myUserHandle()
             val profiles = try { userManager?.userProfiles ?: listOf(myUser) } catch (_: Throwable) { listOf(myUser) }
@@ -2241,9 +2494,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             _isPrivateSpaceLocked.value = privateLocked
 
             updateCombinedApps()
+            invalidateWidgetGroupsCache()
+            refreshWidgetProviderMap()
 
             val keysToPrewarm = (actionsManager.favorites.value + actionsManager.history.value).distinct()
             prewarmIcons(keysToPrewarm)
+
+            // Wait for any in-flight icon pack parse before indexing colors so stock icons
+            // are never committed under the icon pack's version hash (SEAM-07)
+            val pendingIconPackJob = iconPackLoadJob
+            if (pendingIconPackJob != null && pendingIconPackJob !== coroutineContext[Job]) {
+                try { pendingIconPackJob.join() } catch (_: Throwable) {}
+            }
             val currentAppsSnapshot = _apps.value
             if (currentAppsSnapshot.isNotEmpty() && safeContext.isUserUnlockedSafe()) {
                 appColorManager.indexApps(
@@ -2315,27 +2577,45 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
-     * Prewarms icons for currently active favorites and recent history items.
+     * Prewarms icons for currently active favorites and recent history items,
+     * strictly filtered against unlocked loaded apps so locked Private Space icons are never fetched.
      */
     fun prewarmActiveIcons() {
-        val keys = (actionsManager.favorites.value + actionsManager.history.value).distinct()
+        val unlockedKeys = _apps.value.mapTo(HashSet()) { it.componentKey }
+        if (unlockedKeys.isEmpty()) return
+        val keys = (actionsManager.favorites.value + actionsManager.history.value)
+            .asSequence()
+            .filter { !it.startsWith("tag:") && it in unlockedKeys }
+            .distinct()
+            .toList()
         prewarmIcons(keys)
     }
 
     /**
      * Preloads favorite and recent icons asynchronously on a low-priority background dispatcher
      * so that returning to the home screen has 0ms icon pop-in delay.
+     * Strictly filters against currently unlocked [_apps] keys to prevent locked Private Space cache leaks.
      */
     fun prewarmIcons(componentKeys: Collection<String>) {
         if (componentKeys.isEmpty()) return
-        viewModelScope.launch(Dispatchers.IO.limitedParallelism(2)) {
+        val unlockedKeys = _apps.value.mapTo(HashSet()) { it.componentKey }
+        if (unlockedKeys.isEmpty()) return
+        val allowedKeys = componentKeys
+            .asSequence()
+            .filter { !it.startsWith("tag:") && it in unlockedKeys }
+            .distinct()
+            .take(40)
+            .toList()
+        if (allowedKeys.isEmpty()) return
+        prewarmJob?.cancel()
+        prewarmJob = viewModelScope.launch(Dispatchers.IO.limitedParallelism(2)) {
             try {
                 val app = getApplication<Application>()
                 val imageLoader = coil3.SingletonImageLoader.get(app)
                 val density = app.resources.displayMetrics.density
                 val px = (48 * density).roundToInt().coerceAtLeast(1)
-                for (key in componentKeys.take(40)) {
-                    if (key.startsWith("tag:")) continue
+                for (key in allowedKeys) {
+                    if (!isActive) break
                     val request = coil3.request.ImageRequest.Builder(app)
                         .data(dev.msbs.cyclauncher.coil.AppIconKey(key))
                         .size(px)
@@ -2348,6 +2628,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     override fun onCleared() {
         super.onCleared()
+        isCleared = true
+        widgetHostDeleter = null
         prefsExecutor.shutdown()
         actionsManager.shutdown()
     }

@@ -33,7 +33,11 @@ class LauncherBackupManager(
             "custom_char_mappings", "history", "search_history", "app_icon_colors",
             "cached_colors_algo_version", "cached_colors_icon_pack_version",
             "app_last_update_times", "recently_updated_apps", "prefs_migrated_to_de",
-            "is_default_launcher"
+            "is_default_launcher",
+            "highlight_widgets", "highlight_widgets_v2",
+            "search_widget_left_id", "search_widget_right_id",
+            "side_search_widget_top_id", "side_search_widget_bottom_id", "side_search_widget_id",
+            "side_alphabet_widget_top_id", "side_alphabet_widget_bottom_id", "side_alphabet_widget_id"
         )
         const val MAX_LABEL_LENGTH = 256
         const val MAX_TAG_NAME_LENGTH = 128
@@ -492,6 +496,7 @@ class LauncherBackupManager(
         if (!settingsObj.has("side_search_widget_offset_x")) settingsObj.put("side_search_widget_offset_x", "0.5")
         if (!settingsObj.has("side_search_widget_offset_y")) settingsObj.put("side_search_widget_offset_y", "0.5")
         if (!settingsObj.has("last_alphabet_search_method")) settingsObj.put("last_alphabet_search_method", "SIDE_ALPHABET")
+        if (!settingsObj.has("is_history_paused")) settingsObj.put("is_history_paused", prefs.getBoolean("is_history_paused", false).toString())
 
         val appLang = LocaleUtils.getCurrentLanguageCode(context)
         if (appLang.isNotBlank()) {
@@ -766,8 +771,12 @@ class LauncherBackupManager(
                 }
             } else {
                 val packageToTagNames = mutableMapOf<String, MutableList<String>>()
+                val fallbackSkipKeys = setOf(
+                    "custom_labels", "labels", "favorites", "apps", "version",
+                    "tag_app_orders", "settings", "custom_char_mappings", "mappings"
+                )
                 root.keys().forEach { rawTagName ->
-                    if (rawTagName in setOf("custom_labels", "labels", "favorites", "apps", "version", "tag_app_orders", "settings")) return@forEach
+                    if (rawTagName in fallbackSkipKeys) return@forEach
                     val tagName = rawTagName.trim().take(MAX_TAG_NAME_LENGTH)
                     if (tagName.isEmpty()) return@forEach
                     val arr = root.optJSONArray(rawTagName) ?: return@forEach

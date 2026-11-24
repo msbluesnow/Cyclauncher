@@ -77,6 +77,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -88,6 +89,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Main settings screen with preferences for layout, theme, colors, backup, and community links.
@@ -127,8 +131,11 @@ fun SettingsScreen(
     val popupAlpha by viewModel.popupAlpha.collectAsState()
     val selectedIconPack by viewModel.selectedIconPack.collectAsState()
     val installedIconPacks by viewModel.installedIconPacks.collectAsState()
+    val systemIconPackPackage by viewModel.systemIconPackPackage.collectAsState()
 
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val mainScrollState = rememberScrollState()
 
     var showDefaultLauncherDialog by remember { mutableStateOf(false) }
     var pendingDefaultLauncherResult by remember { mutableStateOf(false) }
@@ -136,6 +143,20 @@ fun SettingsScreen(
     var showCharacterMappingScreen by remember { mutableStateOf(false) }
     var showIconPackDialog by remember { mutableStateOf(false) }
     var showKeepAndroidOpenDialog by remember { mutableStateOf(false) }
+    var showAccentColorDialog by remember { mutableStateOf(false) }
+    var isRelaunching by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.resetRequest.collect {
+            showCharacterMappingScreen = false
+            showAutoTagsScreen = false
+            showIconPackDialog = false
+            showDefaultLauncherDialog = false
+            showKeepAndroidOpenDialog = false
+            showAccentColorDialog = false
+            pendingDefaultLauncherResult = false
+        }
+    }
 
     val exportBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -148,10 +169,9 @@ fun SettingsScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                viewModel.updateDefaultLauncherStatus()
-                if (pendingDefaultLauncherResult) {
-                    pendingDefaultLauncherResult = false
+            if (event == Lifecycle.Event.ON_RESUME && pendingDefaultLauncherResult) {
+                pendingDefaultLauncherResult = false
+                viewModel.updateDefaultLauncherStatus {
                     showDefaultLauncherDialog = true
                 }
             }
@@ -196,11 +216,11 @@ fun SettingsScreen(
             onBack = onBack
         )
 
-        // Scrollable content
+        // Scrollable content (hoisted scrollState preserves position across subscreens)
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(mainScrollState)
                 .padding(horizontal = 24.dp, vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -265,6 +285,7 @@ fun SettingsScreen(
                             customCharMappings = customCharMappings,
                             selectedIconPack = selectedIconPack,
                             installedIconPacks = installedIconPacks,
+                            systemIconPackPackage = systemIconPackPackage,
                             accentColor = accentColor,
                             primaryTextColor = primaryTextColor,
                             showShadows = showShadows,
@@ -294,12 +315,12 @@ fun SettingsScreen(
                             capsuleAlpha = capsuleAlpha,
                             capsuleIsDark = capsuleIsDark,
                             popupAlpha = popupAlpha,
-                            onScrimAlphaChange = { viewModel.setScreenScrimAlpha(it) },
+                            onScrimAlphaChange = { value, persist -> viewModel.setScreenScrimAlpha(value, persist) },
                             onScrimIsDarkChange = { viewModel.setScreenScrimIsDark(it) },
-                            onCapsuleAlphaChange = { viewModel.setCapsuleAlpha(it) },
+                            onCapsuleAlphaChange = { value, persist -> viewModel.setCapsuleAlpha(value, persist) },
                             onCapsuleIsDarkChange = { viewModel.setCapsuleIsDark(it) },
-                            onPopupAlphaChange = { viewModel.setPopupAlpha(it) },
-                            onAccentColorChange = { viewModel.setAccentColor(it) },
+                            onPopupAlphaChange = { value, persist -> viewModel.setPopupAlpha(value, persist) },
+                            onOpenAccentColorDialog = { showAccentColorDialog = true },
                             onShadowsChange = { viewModel.setShowShadows(it) },
                             onShadowColorChange = { viewModel.setShadowColor(it) },
                             onPrimaryTextColorChange = { viewModel.setPrimaryTextColor(it) },
@@ -353,12 +374,22 @@ fun SettingsScreen(
                                 viewModel.openDefaultLauncherSettings(context)
                             },
                             onRelaunchClick = {
-                                val pm = context.packageManager
-                                val intent = pm.getLaunchIntentForPackage(context.packageName)
-                                if (intent != null) {
-                                    val mainIntent = Intent.makeRestartActivityTask(intent.component)
-                                    context.startActivity(mainIntent)
-                                    Runtime.getRuntime().exit(0)
+                                if (!isRelaunching) {
+                                    isRelaunching = true
+                                    coroutineScope.launch {
+                                        withContext(Dispatchers.IO) {
+                                            viewModel.flushPendingPersistence()
+                                        }
+                                        val pm = context.packageManager
+                                        val intent = pm.getLaunchIntentForPackage(context.packageName)
+                                        if (intent != null) {
+                                            val mainIntent = Intent.makeRestartActivityTask(intent.component)
+                                            context.startActivity(mainIntent)
+                                            Runtime.getRuntime().exit(0)
+                                        } else {
+                                            isRelaunching = false
+                                        }
+                                    }
                                 }
                             }
                         )
@@ -447,10 +478,24 @@ fun SettingsScreen(
         IconPackSelectionDialog(
             installedIconPacks = installedIconPacks,
             selectedPackageName = selectedIconPack,
+            systemPackPkg = systemIconPackPackage,
             accentColor = accentColor,
             popupTheme = popupTheme,
             onSelect = { viewModel.setIconPack(it) },
             onDismiss = { showIconPackDialog = false }
+        )
+    }
+
+    if (showAccentColorDialog) {
+        AccentColorDialog(
+            selectedColor = accentColor,
+            popupTheme = popupTheme,
+            isWallpaperDark = isWpDark,
+            onDismiss = { showAccentColorDialog = false },
+            onSelect = {
+                viewModel.setAccentColor(it)
+                showAccentColorDialog = false
+            }
         )
     }
 
@@ -1186,8 +1231,11 @@ private fun StatusBarAndAnimationsSection(
                 }
 
                 val context = LocalContext.current
+                val configuration = LocalConfiguration.current
                 var languageExpanded by remember { mutableStateOf(false) }
-                var currentLangCode by remember { mutableStateOf(LocaleUtils.getCurrentLanguageCode(context)) }
+                var currentLangCode by remember(context, configuration) {
+                    mutableStateOf(LocaleUtils.getCurrentLanguageCode(context))
+                }
                 val currentLang = remember(currentLangCode) {
                     LocaleUtils.SUPPORTED_LANGUAGES.find { it.code == currentLangCode }
                         ?: LocaleUtils.SUPPORTED_LANGUAGES.first()
@@ -1438,6 +1486,7 @@ private fun MappingAndIconPackSection(
     customCharMappings: Map<String, Char>,
     selectedIconPack: String?,
     installedIconPacks: List<IconPackInfo>,
+    systemIconPackPackage: String?,
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
@@ -1454,7 +1503,8 @@ private fun MappingAndIconPackSection(
         verticalAlignment = Alignment.CenterVertically
     ) {
         val context = LocalContext.current
-        val charMappingSummary = remember(customCharMappings, context) {
+        val configuration = LocalConfiguration.current
+        val charMappingSummary = remember(customCharMappings, context, configuration) {
             getCharMappingSummary(context, customCharMappings)
         }
 
@@ -1511,12 +1561,13 @@ private fun MappingAndIconPackSection(
             }
         }
 
-        val activePack = remember(selectedIconPack, installedIconPacks) {
+        val activePack = remember(selectedIconPack, installedIconPacks, systemIconPackPackage) {
             if (selectedIconPack != null) {
                 installedIconPacks.find { it.packageName == selectedIconPack }
+            } else if (systemIconPackPackage != null) {
+                installedIconPacks.find { it.packageName == systemIconPackPackage }
             } else {
-                val sysPkg = IconPackManager.getSystemIconPackPackage(context)
-                if (sysPkg != null) installedIconPacks.find { it.packageName == sysPkg } else null
+                null
             }
         }
 
@@ -1582,12 +1633,12 @@ private fun ThemeAndColorsSection(
     capsuleAlpha: Float,
     capsuleIsDark: Boolean,
     popupAlpha: Float,
-    onScrimAlphaChange: (Float) -> Unit,
+    onScrimAlphaChange: (Float, Boolean) -> Unit,
     onScrimIsDarkChange: (Boolean) -> Unit,
-    onCapsuleAlphaChange: (Float) -> Unit,
+    onCapsuleAlphaChange: (Float, Boolean) -> Unit,
     onCapsuleIsDarkChange: (Boolean) -> Unit,
-    onPopupAlphaChange: (Float) -> Unit,
-    onAccentColorChange: (AccentColor) -> Unit,
+    onPopupAlphaChange: (Float, Boolean) -> Unit,
+    onOpenAccentColorDialog: () -> Unit,
     onShadowsChange: (Boolean) -> Unit,
     onShadowColorChange: (PrimaryTextColor) -> Unit,
     onPrimaryTextColorChange: (PrimaryTextColor) -> Unit,
@@ -1620,7 +1671,7 @@ private fun ThemeAndColorsSection(
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
-            AccentColorDropdown(accentColor, primaryTextColor, popupTheme, isWpDark, onAccentColorChange)
+            AccentColorDropdown(accentColor, primaryTextColor, onOpenAccentColorDialog)
         }
 
         Column(modifier = Modifier.weight(1f)) {
@@ -1854,13 +1905,22 @@ private fun ThemeAndColorsSection(
                     1 -> capsuleAlpha
                     else -> popupAlpha
                 }
+                var pendingPersistAlpha by remember(selectedLayer) { mutableFloatStateOf(currentAlpha) }
                 Slider(
                     value = currentAlpha,
-                    onValueChange = {
+                    onValueChange = { nextValue ->
+                        pendingPersistAlpha = nextValue
                         when (selectedLayer) {
-                            0 -> onScrimAlphaChange(it)
-                            1 -> onCapsuleAlphaChange(it)
-                            else -> onPopupAlphaChange(it)
+                            0 -> onScrimAlphaChange(nextValue, false)
+                            1 -> onCapsuleAlphaChange(nextValue, false)
+                            else -> onPopupAlphaChange(nextValue, false)
+                        }
+                    },
+                    onValueChangeFinished = {
+                        when (selectedLayer) {
+                            0 -> onScrimAlphaChange(pendingPersistAlpha, true)
+                            1 -> onCapsuleAlphaChange(pendingPersistAlpha, true)
+                            else -> onPopupAlphaChange(pendingPersistAlpha, true)
                         }
                     },
                     valueRange = 0f..1f,
@@ -2289,12 +2349,8 @@ private fun CommunityButton(
 private fun AccentColorDropdown(
     selectedColor: AccentColor,
     primaryTextColor: PrimaryTextColor = PrimaryTextColor.WHITE,
-    popupTheme: PopupTheme = PopupTheme.DARK,
-    isWallpaperDark: Boolean = false,
-    onSelect: (AccentColor) -> Unit
+    onOpenDialog: () -> Unit
 ) {
-    var showDialog by remember { mutableStateOf(false) }
-
     Box {
         Row(
             modifier = Modifier
@@ -2302,7 +2358,7 @@ private fun AccentColorDropdown(
                 .clip(RoundedCornerShape(8.dp))
                 .background(primaryTextColor.capsuleColor(0.08f, isNested = true))
                 .border(1.dp, primaryTextColor.capsuleBorderColor(0.18f), RoundedCornerShape(8.dp))
-                .clickable { showDialog = true }
+                .clickable(onClick = onOpenDialog)
                 .padding(horizontal = 12.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -2334,19 +2390,6 @@ private fun AccentColorDropdown(
                 shadowColorOverride = shadowSettings.shadowColorOverride
             )
         }
-
-        if (showDialog) {
-            AccentColorDialog(
-                selectedColor = selectedColor,
-                popupTheme = popupTheme,
-                isWallpaperDark = isWallpaperDark,
-                onDismiss = { showDialog = false },
-                onSelect = {
-                    onSelect(it)
-                    showDialog = false
-                }
-            )
-        }
     }
 }
 
@@ -2365,7 +2408,17 @@ private fun AccentColorDialog(
     val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(if (selectedColor.isCustom) 1 else 0) }
     val isWpDark = isWallpaperDark
-    val wallpaperColor = remember(context, isWpDark, selectedColor) { AccentColor.getWallpaperAccentColor(context) }
+    val wallpaperColor by produceState(
+        initialValue = AccentColor.getCachedWallpaperTheme()?.accentColor
+            ?: if (selectedColor.isDynamicWallpaper) selectedColor.color else AccentColor.ECHO_BLUE_LIGHT.color,
+        key1 = context,
+        key2 = isWpDark
+    ) {
+        val cached = AccentColor.getCachedWallpaperTheme()
+        value = cached?.accentColor ?: withContext(Dispatchers.IO) {
+            AccentColor.getWallpaperAccentColor(context)
+        }
+    }
 
     val initialHsv = remember(selectedColor) {
         val hsv = FloatArray(3)
@@ -2488,7 +2541,7 @@ private fun AccentColorDialog(
                                 shape = RoundedCornerShape(12.dp)
                             )
                             .clickable {
-                                onSelect(AccentColor.wallpaper(context))
+                                onSelect(AccentColor.wallpaperFromColor(wallpaperColor))
                             }
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -3215,6 +3268,7 @@ private fun MainColorSelector(
 private fun IconPackSelectionDialog(
     installedIconPacks: List<IconPackInfo>,
     selectedPackageName: String?,
+    systemPackPkg: String?,
     accentColor: AccentColor,
     popupTheme: PopupTheme = PopupTheme.DARK,
     onSelect: (String?) -> Unit,
@@ -3241,8 +3295,6 @@ private fun IconPackSelectionDialog(
             ) {
                 // Option 1: Default (System)
                 val isDefaultSelected = selectedPackageName == null
-                val context = LocalContext.current
-                val systemPackPkg = remember { IconPackManager.getSystemIconPackPackage(context) }
                 val systemPackName = remember(systemPackPkg, installedIconPacks) {
                     if (systemPackPkg != null) {
                         installedIconPacks.find { it.packageName == systemPackPkg }?.name ?: systemPackPkg

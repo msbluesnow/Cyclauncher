@@ -150,19 +150,31 @@ data class AccentColor(
             val accentColor: Color
         )
 
+        private data class CachedWallpaperState(
+            val theme: WallpaperTheme,
+            val primaryArgb: Int?,
+            val secondaryArgb: Int?,
+            val tertiaryArgb: Int?,
+            val hints: Int,
+            val uiModeNight: Int
+        )
+
         @Volatile
-        private var lastResolvedTheme: WallpaperTheme? = null
-        @Volatile
-        private var lastWallpaperColorsPrimary: Int? = null
-        @Volatile
-        private var lastWallpaperColorsHints: Int? = null
+        private var cachedWallpaperState: CachedWallpaperState? = null
+
+        /**
+         * Returns the last atomically resolved [WallpaperTheme] from memory without performing
+         * any WallpaperManager Binder IPC (safe to call on the Main Thread during composition).
+         */
+        fun getCachedWallpaperTheme(): WallpaperTheme? = cachedWallpaperState?.theme
 
         /**
          * Resolves both wallpaper darkness and adaptive accent color in a SINGLE pass,
-         * with in-memory caching to eliminate redundant Binder IPC calls to WallpaperManager.
+         * with atomic in-memory caching to eliminate redundant Binder IPC calls to WallpaperManager.
          */
         fun resolveWallpaperTheme(context: Context, cachedColors: WallpaperColors? = null): WallpaperTheme {
             return try {
+                val uiModeNight = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
                 var colors = cachedColors
                 if (colors == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
                     val wpManager = context.getSystemService(Context.WALLPAPER_SERVICE) as? WallpaperManager
@@ -172,11 +184,24 @@ data class AccentColor(
                     } catch (_: Exception) { null }
                 }
 
-                val primaryArgb = colors?.primaryColor?.toArgb()
-                val hints = colors?.colorHints ?: 0
-                val cached = lastResolvedTheme
-                if (cached != null && primaryArgb != null && primaryArgb == lastWallpaperColorsPrimary && hints == lastWallpaperColorsHints) {
-                    return cached
+                val primaryArgb = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) colors?.primaryColor?.toArgb() else null
+                val secondaryArgb = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) colors?.secondaryColor?.toArgb() else null
+                val tertiaryArgb = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) colors?.tertiaryColor?.toArgb() else null
+                val hints = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) colors?.colorHints ?: 0 else 0
+
+                val cached = cachedWallpaperState
+                if (cached != null) {
+                    val sameColors = primaryArgb != null &&
+                        primaryArgb == cached.primaryArgb &&
+                        secondaryArgb == cached.secondaryArgb &&
+                        tertiaryArgb == cached.tertiaryArgb &&
+                        hints == cached.hints
+                    val sameFallbackMode = primaryArgb == null &&
+                        cached.primaryArgb == null &&
+                        uiModeNight == cached.uiModeNight
+                    if (sameColors || sameFallbackMode) {
+                        return cached.theme
+                    }
                 }
 
                 val isWpDark = isWallpaperDark(context, colors)
@@ -192,9 +217,14 @@ data class AccentColor(
 
                 val finalColor = applyAdaptiveHueShift(rawColor ?: Color(0xFF19AEFF), isWpDark)
                 val theme = WallpaperTheme(isDark = isWpDark, accentColor = finalColor)
-                lastWallpaperColorsPrimary = primaryArgb
-                lastWallpaperColorsHints = hints
-                lastResolvedTheme = theme
+                cachedWallpaperState = CachedWallpaperState(
+                    theme = theme,
+                    primaryArgb = primaryArgb,
+                    secondaryArgb = secondaryArgb,
+                    tertiaryArgb = tertiaryArgb,
+                    hints = hints,
+                    uiModeNight = uiModeNight
+                )
                 theme
             } catch (_: Exception) {
                 val isNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
@@ -207,6 +237,9 @@ data class AccentColor(
          * using adaptive Hue Angle Shift (bright tone on dark wallpapers, dark tone on light wallpapers).
          */
         fun getWallpaperAccentColor(context: Context, cachedColors: WallpaperColors? = null): Color {
+            if (cachedColors == null) {
+                cachedWallpaperState?.let { return it.theme.accentColor }
+            }
             return resolveWallpaperTheme(context, cachedColors).accentColor
         }
 
@@ -216,9 +249,6 @@ data class AccentColor(
          */
         fun isWallpaperDark(context: Context, cachedColors: WallpaperColors? = null): Boolean {
             try {
-                if (cachedColors == null) {
-                    lastResolvedTheme?.let { return it.isDark }
-                }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
                     val colors = cachedColors ?: run {
                         val wpManager = context.getSystemService(Context.WALLPAPER_SERVICE) as? WallpaperManager
@@ -271,10 +301,10 @@ data class AccentColor(
         }
 
         /**
-         * Creates a dynamic Wallpaper AccentColor instance for the given context.
+         * Creates a dynamic Wallpaper AccentColor instance from a pre-resolved [Color]
+         * without performing any WallpaperManager Binder IPC on the caller thread.
          */
-        fun wallpaper(context: Context, cachedColors: WallpaperColors? = null): AccentColor {
-            val dynamicColor = getWallpaperAccentColor(context, cachedColors)
+        fun wallpaperFromColor(dynamicColor: Color): AccentColor {
             return AccentColor(
                 name = "WALLPAPER",
                 displayName = "Hue Angle Shift",
@@ -282,6 +312,13 @@ data class AccentColor(
                 glowColor = dynamicColor.copy(alpha = 0.2f),
                 isDynamicWallpaper = true
             )
+        }
+
+        /**
+         * Creates a dynamic Wallpaper AccentColor instance for the given context.
+         */
+        fun wallpaper(context: Context, cachedColors: WallpaperColors? = null): AccentColor {
+            return wallpaperFromColor(getWallpaperAccentColor(context, cachedColors))
         }
 
         /**

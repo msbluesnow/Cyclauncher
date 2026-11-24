@@ -192,13 +192,15 @@ fun AutoResizingText(
     val shadow = primaryTextColor.getShadow(showShadows || shadowSettings.showShadows, shadowSettings.shadowColorOverride)
     val textStyle = MaterialTheme.typography.bodyLarge.copy(shadow = shadow)
     val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
 
     BoxWithConstraints(modifier = modifier) {
         val maxPx = constraints.maxWidth.toFloat()
         val maxFontSize = targetFontSize.sp
         val minFontSize = 10.sp
 
-        val optimalFontSize = remember(text, textStyle, maxPx, targetFontSize) {
+        val optimalFontSize = remember(text, textStyle, maxPx, targetFontSize, density, configuration) {
             if (maxPx <= 0f || maxPx.isInfinite() || text.isEmpty()) {
                 maxFontSize
             } else {
@@ -265,6 +267,8 @@ fun AdaptiveHeaderTitle(
     textAlign: TextAlign = TextAlign.Center
 ) {
     val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
 
     BoxWithConstraints(
         modifier = modifier,
@@ -272,7 +276,7 @@ fun AdaptiveHeaderTitle(
     ) {
         val maxPx = constraints.maxWidth.toFloat()
 
-        val optimalFontSize = remember(text, style, maxPx, minFontSize, maxFontSize) {
+        val optimalFontSize = remember(text, style, maxPx, minFontSize, maxFontSize, density, configuration) {
             if (maxPx <= 0f || text.isEmpty()) {
                 maxFontSize
             } else {
@@ -398,12 +402,15 @@ fun rememberAppIconPainter(iconKey: String, sizeDp: Int = 48): Painter {
     val density = androidx.compose.ui.platform.LocalDensity.current
     val iconPackVersion = LocalIconPackVersion.current
     val pkgName = iconKey.substringBefore('/').substringBefore('#')
-    val epoch = dev.msbs.cyclauncher.coil.IconEpochManager.getEpoch(pkgName)
+    val epoch = dev.msbs.cyclauncher.coil.IconEpochManager.observeEpoch(pkgName)
+    val clearVersion = dev.msbs.cyclauncher.coil.IconEpochManager.observeGlobalClearVersion()
+    val shapeGen = dev.msbs.cyclauncher.icons.IconShapeHelper.shapeGeneration
+    val packVersionKey = "${dev.msbs.cyclauncher.icons.IconPackManager.activePackageName.orEmpty()}@${dev.msbs.cyclauncher.icons.IconPackManager.packGeneration}"
     return rememberAsyncImagePainter(
-        model = remember(iconKey, sizeDp, density, iconPackVersion, epoch) {
+        model = remember(iconKey, sizeDp, density, iconPackVersion, epoch, clearVersion, shapeGen, packVersionKey) {
             val px = with(density) { sizeDp.dp.roundToPx() }.coerceAtLeast(1)
             ImageRequest.Builder(context)
-                .data(dev.msbs.cyclauncher.coil.AppIconKey(iconKey, epoch))
+                .data(dev.msbs.cyclauncher.coil.AppIconKey(iconKey, epoch, packVersionKey, shapeGen))
                 .size(px)
                 .diskCachePolicy(CachePolicy.DISABLED)
                 .memoryCachePolicy(CachePolicy.ENABLED)

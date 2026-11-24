@@ -13,6 +13,7 @@ import android.util.SizeF
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -26,6 +27,19 @@ import kotlin.math.max
  * Shared utility for allocating, binding, and configuring Android AppWidgets across screens.
  */
 object WidgetBindHelper {
+
+    private const val HIGHLIGHT_HAND_PADDING_DP = 56
+    private const val HIGHLIGHT_CARD_PADDING_DP = 8
+
+    /**
+     * Computes the actual inner content width in DP for a Highlight screen widget card,
+     * matching HighlightScreen's 56dp hand-side inset and 8dp card horizontal padding.
+     */
+    fun computeHighlightWidgetWidthDp(screenWidthDp: Int, widthFraction: Float = 1.0f): Int {
+        val availableWidthDp = (screenWidthDp - HIGHLIGHT_HAND_PADDING_DP).coerceAtLeast(40)
+        return ((availableWidthDp * widthFraction.coerceIn(0.2f, 1.0f)).toInt() - HIGHLIGHT_CARD_PADDING_DP)
+            .coerceAtLeast(40)
+    }
 
     /**
      * Calculates a native optimal height in DP for an AppWidget based on target cells or minHeight.
@@ -46,8 +60,9 @@ object WidgetBindHelper {
     fun createHighlightWidgetOptions(context: Context, providerInfo: AppWidgetProviderInfo): Bundle {
         val displayDensity = context.resources.displayMetrics.density
         val optimalHeight = calculateOptimalWidgetHeight(providerInfo, displayDensity)
-        val screenWidthDp = (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
-        val targetWidthDp = (screenWidthDp * 1.0f).toInt() - 24
+        val screenWidthDp = context.resources.configuration.screenWidthDp.takeIf { it > 0 }
+            ?: (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
+        val targetWidthDp = computeHighlightWidgetWidthDp(screenWidthDp, 1.0f)
         return Bundle().apply {
             putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, targetWidthDp)
             putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, targetWidthDp)
@@ -65,13 +80,22 @@ object WidgetBindHelper {
      */
     fun createSearchWidgetOptions(context: Context): Bundle {
         val displayDensity = context.resources.displayMetrics.density
-        val screenWidthDp = (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
-        val targetWidthDp = (screenWidthDp * 0.5f).toInt()
+        val screenWidthDp = context.resources.configuration.screenWidthDp.takeIf { it > 0 }
+            ?: (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
+        val targetWidthDp = (screenWidthDp * 0.5f).toInt().coerceAtLeast(40)
         return Bundle().apply {
             putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, targetWidthDp)
             putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, targetWidthDp)
             putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 140)
             putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 300)
+        }
+    }
+
+    fun safeProfile(providerInfo: AppWidgetProviderInfo): android.os.UserHandle {
+        return try {
+            providerInfo.profile ?: Process.myUserHandle()
+        } catch (_: Throwable) {
+            Process.myUserHandle()
         }
     }
 }
@@ -94,6 +118,7 @@ fun <T> rememberWidgetBindHandler(
     onWidgetBound: (widgetId: Int, providerInfo: AppWidgetProviderInfo, target: T) -> Unit
 ): (AppWidgetProviderInfo, T) -> Unit {
     val context = LocalContext.current
+    val currentHost by rememberUpdatedState(host)
     val currentOnConfigure by rememberUpdatedState(onConfigureWidget)
     val currentOptionsProvider by rememberUpdatedState(optionsProvider)
     val currentOnWidgetBound by rememberUpdatedState(onWidgetBound)
@@ -101,6 +126,20 @@ fun <T> rememberWidgetBindHandler(
     var pendingBindWidgetId by remember { mutableIntStateOf(AppWidgetManager.INVALID_APPWIDGET_ID) }
     var pendingBindProvider by remember { mutableStateOf<AppWidgetProviderInfo?>(null) }
     var pendingBindTarget by remember { mutableStateOf<T?>(null) }
+
+    DisposableEffect(host) {
+        onDispose {
+            val leakedId = pendingBindWidgetId
+            if (leakedId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                pendingBindWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+                pendingBindProvider = null
+                pendingBindTarget = null
+                try {
+                    host?.deleteAppWidgetId(leakedId)
+                } catch (_: Exception) {}
+            }
+        }
+    }
 
     val checkConfigureAndCommit: (Int, AppWidgetProviderInfo, Bundle?, T) -> Unit = { widgetId, providerInfo, optionsBundle, target ->
         val configLauncher = currentOnConfigure
@@ -110,7 +149,7 @@ fun <T> rememberWidgetBindHandler(
                     currentOnWidgetBound(widgetId, providerInfo, target)
                 } else {
                     try {
-                        host?.deleteAppWidgetId(widgetId)
+                        currentHost?.deleteAppWidgetId(widgetId)
                     } catch (_: Exception) {}
                 }
             }
@@ -124,45 +163,72 @@ fun <T> rememberWidgetBindHandler(
     ) { result ->
         val widgetId = pendingBindWidgetId
         val target = pendingBindTarget
-        if (result.resultCode == Activity.RESULT_OK && widgetId != AppWidgetManager.INVALID_APPWIDGET_ID && target != null) {
-            val provider = manager.getAppWidgetInfo(widgetId) ?: pendingBindProvider
-            if (provider != null) {
-                val options = currentOptionsProvider(context, provider)
-                checkConfigureAndCommit(widgetId, provider, options, target)
-            }
-        } else if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-            try {
-                host?.deleteAppWidgetId(widgetId)
-            } catch (_: Exception) {}
-        }
+        val fallbackProvider = pendingBindProvider
         pendingBindWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
         pendingBindProvider = null
         pendingBindTarget = null
+
+        if (result.resultCode == Activity.RESULT_OK && widgetId != AppWidgetManager.INVALID_APPWIDGET_ID && target != null) {
+            val provider = try {
+                manager.getAppWidgetInfo(widgetId)
+            } catch (_: Exception) {
+                null
+            } ?: fallbackProvider
+            if (provider != null) {
+                val options = currentOptionsProvider(context, provider)
+                try {
+                    manager.updateAppWidgetOptions(widgetId, options)
+                } catch (_: Exception) {}
+                checkConfigureAndCommit(widgetId, provider, options, target)
+            } else {
+                try {
+                    currentHost?.deleteAppWidgetId(widgetId)
+                } catch (_: Exception) {}
+            }
+        } else if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+            try {
+                currentHost?.deleteAppWidgetId(widgetId)
+            } catch (_: Exception) {}
+        }
     }
 
     return { providerInfo, target ->
-        if (host != null) {
+        val activeHost = currentHost
+        if (activeHost != null) {
+            val previousPending = pendingBindWidgetId
+            if (previousPending != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                pendingBindWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+                pendingBindProvider = null
+                pendingBindTarget = null
+                try {
+                    activeHost.deleteAppWidgetId(previousPending)
+                } catch (_: Exception) {}
+            }
+
             val newWidgetId = try {
-                host.allocateAppWidgetId()
+                activeHost.allocateAppWidgetId()
             } catch (_: Exception) {
                 AppWidgetManager.INVALID_APPWIDGET_ID
             }
 
             if (newWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
                 val options = currentOptionsProvider(context, providerInfo)
+                val profile = WidgetBindHelper.safeProfile(providerInfo)
                 val canBind = try {
-                    val profile = providerInfo.profile ?: Process.myUserHandle()
                     manager.bindAppWidgetIdIfAllowed(newWidgetId, profile, providerInfo.provider, options)
                 } catch (_: Exception) {
                     false
                 }
 
-                try {
-                    manager.updateAppWidgetOptions(newWidgetId, options)
-                } catch (_: Exception) {}
-
                 if (canBind) {
-                    val finalInfo = manager.getAppWidgetInfo(newWidgetId) ?: providerInfo
+                    try {
+                        manager.updateAppWidgetOptions(newWidgetId, options)
+                    } catch (_: Exception) {}
+                    val finalInfo = try {
+                        manager.getAppWidgetInfo(newWidgetId)
+                    } catch (_: Exception) {
+                        null
+                    } ?: providerInfo
                     checkConfigureAndCommit(newWidgetId, finalInfo, options, target)
                 } else {
                     pendingBindWidgetId = newWidgetId
@@ -172,12 +238,17 @@ fun <T> rememberWidgetBindHandler(
                         val bindIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
                             putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, newWidgetId)
                             putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, providerInfo.provider)
-                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, providerInfo.profile ?: Process.myUserHandle())
+                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, profile)
                             putExtra(AppWidgetManager.EXTRA_APPWIDGET_OPTIONS, options)
                         }
                         bindWidgetLauncher.launch(bindIntent)
                     } catch (_: Exception) {
-                        checkConfigureAndCommit(newWidgetId, providerInfo, options, target)
+                        pendingBindWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+                        pendingBindProvider = null
+                        pendingBindTarget = null
+                        try {
+                            activeHost.deleteAppWidgetId(newWidgetId)
+                        } catch (_: Exception) {}
                     }
                 }
             }

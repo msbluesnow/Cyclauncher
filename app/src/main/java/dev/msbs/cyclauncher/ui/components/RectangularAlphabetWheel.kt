@@ -206,7 +206,7 @@ fun RectangularAlphabetWheel(
         val totalLength = pathMeasure.length
 
         val animationsEnabled = LocalAnimationsEnabled.current
-        val handleDragStart = {
+        val currentHandleDragStart by rememberUpdatedState {
             tapJob?.cancel()
             isTapAnimating = false
             if (!userHasInteracted) {
@@ -228,7 +228,7 @@ fun RectangularAlphabetWheel(
                     density = density,
                     stepSize = stepSize,
                     animationsEnabled = animationsEnabled,
-                    onDragStart = handleDragStart
+                    onDragStart = { currentHandleDragStart() }
                 ),
             contentAlignment = Alignment.Center
         ) {
@@ -396,9 +396,19 @@ fun AppsGrid(
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val iconPackVersion = dev.msbs.cyclauncher.ui.theme.LocalIconPackVersion.current
-    val iconShape = remember(context, iconPackVersion) {
-        dev.msbs.cyclauncher.icons.IconShapeHelper.getComposeShape(context)
+    val iconShape by produceState(
+        initialValue = dev.msbs.cyclauncher.icons.IconShapeHelper.getCachedComposeShape()
+            ?: dev.msbs.cyclauncher.icons.IconShapeHelper.defaultComposeShape,
+        key1 = context,
+        key2 = iconPackVersion
+    ) {
+        value = dev.msbs.cyclauncher.icons.IconShapeHelper.resolveComposeShapeAsync(context)
     }
+
+    val outerWidthPx = with(density) { (stepSize * 10).toPx() }
+    val outerHeightPx = with(density) { (stepSize * 5).toPx() }
+    val paddingXPx = (outerWidthPx - 9 * s) / 2f
+    val paddingYPx = (outerHeightPx - 4 * s) / 2f
 
     displayApps.forEachIndexed { index, app ->
         val row = index / maxCols
@@ -409,6 +419,8 @@ fun AppsGrid(
 
         val x = rowStartXPx + col * (dynamicSizePx + spacingPx)
         val y = startYPx + row * (dynamicSizePx + spacingPx)
+
+        val currentAnchorOffset by rememberUpdatedState(wheelPosition + Offset(paddingXPx + x, paddingYPx + y))
 
         val iconSizeDp = dynamicSize.value.toInt()
         val painter = rememberAppIconPainter(app.iconKey, iconSizeDp)
@@ -432,12 +444,7 @@ fun AppsGrid(
                     detectTapGestures(
                         onTap = { currentOnAppClick(app.componentKey) },
                         onLongPress = { offset ->
-                            val outerWidthPx = with(density) { (stepSize * 10).toPx() }
-                            val outerHeightPx = with(density) { (stepSize * 5).toPx() }
-                            val paddingXPx = (outerWidthPx - 9 * s) / 2f
-                            val paddingYPx = (outerHeightPx - 4 * s) / 2f
-
-                            currentOnAppLongClick(app.componentKey, wheelPosition + Offset(paddingXPx + x + offset.x, paddingYPx + y + offset.y))
+                            currentOnAppLongClick(app.componentKey, currentAnchorOffset + offset)
                         }
                     )
                 }
@@ -474,6 +481,7 @@ private fun AlphabetLetterItem(
     }
 
     val density = LocalDensity.current
+    val currentOnClick by rememberUpdatedState(onClick)
     val circleRadiusPx = remember(stepSize, density) { with(density) { (stepSize * 0.85f).toPx() / 2f } }
     val stroke1Dp = remember(density) { with(density) { Stroke(width = 1.dp.toPx()) } }
 
@@ -520,7 +528,7 @@ private fun AlphabetLetterItem(
             }
             .pointerInput(letter, index) {
                 detectTapGestures(
-                    onTap = { onClick() }
+                    onTap = { currentOnClick() }
                 )
             },
         contentAlignment = Alignment.Center

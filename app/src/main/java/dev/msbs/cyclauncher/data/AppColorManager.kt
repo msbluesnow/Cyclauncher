@@ -30,21 +30,60 @@ import org.json.JSONObject
  */
 class AppColorManager(context: Context) {
     private val appContext = context.getSafeStorageContext()
-    private val prefs: SharedPreferences = appContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+    private val legacyPrefs: SharedPreferences = appContext.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences = appContext.getSharedPreferences("launcher_cache_prefs", Context.MODE_PRIVATE)
     private val stateLock = Any()
 
     companion object {
         private const val CURRENT_ALGO_VERSION = 5
     }
 
-    private var lastIndexedIconPackVersion: Long = prefs.getLong("cached_colors_icon_pack_version", -1L)
+    init {
+        migrateLegacyColorCacheIfNeeded()
+    }
+
+    private fun migrateLegacyColorCacheIfNeeded() {
+        try {
+            val hasNewData = prefs.contains("app_icon_colors") || prefs.contains("cached_colors_algo_version")
+            val hasLegacyData = legacyPrefs.contains("app_icon_colors") ||
+                legacyPrefs.contains("cached_colors_algo_version") ||
+                legacyPrefs.contains("cached_colors_icon_pack_version")
+            if (!hasLegacyData) return
+            if (!hasNewData) {
+                val editor = prefs.edit()
+                legacyPrefs.getString("app_icon_colors", null)?.let { editor.putString("app_icon_colors", it) }
+                if (legacyPrefs.contains("cached_colors_icon_pack_version")) {
+                    editor.putLong("cached_colors_icon_pack_version", legacyPrefs.getLong("cached_colors_icon_pack_version", -1L))
+                }
+                if (legacyPrefs.contains("cached_colors_algo_version")) {
+                    editor.putInt("cached_colors_algo_version", legacyPrefs.getInt("cached_colors_algo_version", 0))
+                }
+                if (appContext.isUserUnlockedSafe()) {
+                    editor.apply()
+                }
+            }
+            if (appContext.isUserUnlockedSafe()) {
+                legacyPrefs.edit()
+                    .remove("app_icon_colors")
+                    .remove("cached_colors_icon_pack_version")
+                    .remove("cached_colors_algo_version")
+                    .apply()
+            }
+        } catch (_: Exception) {}
+    }
+
+    private var lastIndexedIconPackVersion: Long = prefs.getLong(
+        "cached_colors_icon_pack_version",
+        legacyPrefs.getLong("cached_colors_icon_pack_version", -1L)
+    )
     private var indexingJob: Job? = null
 
     private val _appColors = MutableStateFlow<Map<String, AppColorBucket>>(loadCachedColors())
     val appColors: StateFlow<Map<String, AppColorBucket>> = _appColors
 
     private fun loadCachedColors(): Map<String, AppColorBucket> {
-        val savedAlgoVersion = prefs.getInt("cached_colors_algo_version", 0)
+        val sourcePrefs = if (prefs.contains("cached_colors_algo_version") || prefs.contains("app_icon_colors")) prefs else legacyPrefs
+        val savedAlgoVersion = sourcePrefs.getInt("cached_colors_algo_version", 0)
         if (savedAlgoVersion < CURRENT_ALGO_VERSION) {
             if (appContext.isUserUnlockedSafe()) {
                 prefs.edit()
@@ -57,7 +96,7 @@ class AppColorManager(context: Context) {
             return emptyMap()
         }
 
-        val jsonStr = prefs.getString("app_icon_colors", null) ?: return emptyMap()
+        val jsonStr = sourcePrefs.getString("app_icon_colors", null) ?: return emptyMap()
         val result = mutableMapOf<String, AppColorBucket>()
         try {
             val json = JSONObject(jsonStr)
@@ -96,8 +135,20 @@ class AppColorManager(context: Context) {
         synchronized(stateLock) {
             indexingJob?.cancel()
             indexingJob = null
+            migrateLegacyColorCacheIfNeeded()
             lastIndexedIconPackVersion = prefs.getLong("cached_colors_icon_pack_version", -1L)
             _appColors.value = loadCachedColors()
+        }
+    }
+
+    /**
+     * Synchronously commits any pending SharedPreferences edits to disk (used before process relaunch).
+     */
+    fun flushPendingWrites() {
+        synchronized(stateLock) {
+            try {
+                prefs.edit().commit()
+            } catch (_: Exception) {}
         }
     }
 

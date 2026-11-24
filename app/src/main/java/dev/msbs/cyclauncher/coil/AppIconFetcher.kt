@@ -8,6 +8,14 @@ import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.Process
+import android.os.UserHandle
+import android.os.UserManager
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableLongState
+import androidx.compose.runtime.mutableLongStateOf
 import coil3.ImageLoader
 import coil3.asImage
 import coil3.decode.DataSource
@@ -16,36 +24,92 @@ import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
 import coil3.key.Keyer
 import coil3.request.Options
+import dev.msbs.cyclauncher.icons.IconPackManager
+import dev.msbs.cyclauncher.icons.IconShapeHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
-import dev.msbs.cyclauncher.icons.IconPackManager
-
-/** Manager tracking per-package version epochs for immediate Coil memory cache invalidation. */
+/**
+ * Manager tracking per-package version epochs with Compose snapshot reactivity
+ * for immediate Coil memory cache invalidation and single-package recomposition.
+ */
 object IconEpochManager {
-    private val packageEpochs = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val packageEpochs = ConcurrentHashMap<String, Long>()
+    private val composePackageStates = ConcurrentHashMap<String, MutableLongState>()
+    private val globalClearCounter = AtomicLong(0L)
+    private val composeGlobalClearVersion = mutableLongStateOf(0L)
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     fun getEpoch(packageName: String): Long = packageEpochs[packageName] ?: 0L
 
+    @Composable
+    fun observeGlobalClearVersion(): Long = composeGlobalClearVersion.longValue
+
+    /**
+     * Compose-tracked read of a package's icon epoch.
+     * Only icons for [packageName] recompose when [incrementEpoch] is called for it;
+     * all icons recompose when [clear] is invoked.
+     */
+    @Composable
+    fun observeEpoch(packageName: String): Long {
+        // Subscribe to global cache clear version
+        composeGlobalClearVersion.longValue
+        val state = composePackageStates.computeIfAbsent(packageName) {
+            mutableLongStateOf(packageEpochs[packageName] ?: 0L)
+        }
+        val observed = state.longValue
+        val authoritative = packageEpochs[packageName] ?: 0L
+        return if (authoritative == 0L) observed else maxOf(observed, authoritative)
+    }
+
     fun incrementEpoch(packageName: String): Long {
-        return packageEpochs.compute(packageName) { _, current -> (current ?: 0L) + 1L } ?: 1L
+        val next = packageEpochs.compute(packageName) { _, current -> (current ?: 0L) + 1L } ?: 1L
+        val state = composePackageStates.computeIfAbsent(packageName) { mutableLongStateOf(next) }
+        val updateSnapshot = Runnable {
+            state.longValue = packageEpochs[packageName] ?: next
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            updateSnapshot.run()
+        } else {
+            mainHandler.post(updateSnapshot)
+        }
+        return next
     }
 
     fun clear() {
         packageEpochs.clear()
+        val nextClear = globalClearCounter.incrementAndGet()
+        val updateSnapshot = Runnable {
+            for ((pkg, state) in composePackageStates) {
+                state.longValue = packageEpochs[pkg] ?: 0L
+            }
+            composeGlobalClearVersion.longValue = nextClear
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            updateSnapshot.run()
+        } else {
+            mainHandler.post(updateSnapshot)
+        }
     }
 }
 
-/** Key representing an application icon in "packageName/activityName" format with version epoch. */
+/**
+ * Key representing an application icon in "packageName/activityName" format with version epoch,
+ * active icon pack version, and system icon shape generation.
+ */
 data class AppIconKey(
     val componentKey: String,
-    val epoch: Long = IconEpochManager.getEpoch(componentKey.substringBefore('/').substringBefore('#'))
+    val epoch: Long = IconEpochManager.getEpoch(componentKey.substringBefore('/').substringBefore('#')),
+    val iconPackVersionKey: String = "${IconPackManager.activePackageName.orEmpty()}@${IconPackManager.packGeneration}",
+    val shapeGeneration: Long = IconShapeHelper.shapeGeneration
 )
 
 /** Coil 3 Keyer for computing stable memory cache keys for [AppIconKey]. */
 class AppIconKeyer : Keyer<AppIconKey> {
     override fun key(data: AppIconKey, options: Options): String {
-        return "appicon:${data.componentKey}:e=${data.epoch}"
+        return "appicon:${data.componentKey}:e=${data.epoch}:p=${data.iconPackVersionKey}:s=${data.shapeGeneration}"
     }
 }
 
@@ -56,30 +120,43 @@ internal class AppIconFetcher private constructor(
     private val options: Options,
 ) : Fetcher {
 
-    companion object {
-        private val iconDispatcher = Dispatchers.IO.limitedParallelism(4)
-        private val userProfilesCache = java.util.concurrent.ConcurrentHashMap<String, android.os.UserHandle>()
+    private data class ResolvedDrawable(
+        val drawable: Drawable,
+        val isFallback: Boolean
+    )
 
-        fun updateUserProfiles(profiles: List<android.os.UserHandle>, userManager: android.os.UserManager? = null) {
-            userProfilesCache.clear()
+    companion object {
+        private const val SERIAL_PREFIX = "serial:"
+        private const val HASH_PREFIX = "hash:"
+        private val iconDispatcher = Dispatchers.IO.limitedParallelism(4)
+
+        @Volatile
+        private var userProfilesCache: Map<String, UserHandle> = emptyMap()
+
+        fun updateUserProfiles(profiles: List<UserHandle>, userManager: UserManager? = null) {
+            val newMap = HashMap<String, UserHandle>(profiles.size * 2)
             for (p in profiles) {
-                userProfilesCache[p.hashCode().toString()] = p
+                newMap["$HASH_PREFIX${p.hashCode()}"] = p
                 try {
                     val serial = userManager?.getSerialNumberForUser(p)
                     if (serial != null && serial >= 0L) {
-                        userProfilesCache[serial.toString()] = p
+                        newMap["$SERIAL_PREFIX$serial"] = p
                     }
                 } catch (_: Throwable) {}
             }
+            userProfilesCache = newMap
         }
 
         fun evictProfileIcons(imageLoader: ImageLoader, userSuffixes: Collection<String>) {
             try {
                 val memoryCache = imageLoader.memoryCache ?: return
-                val suffixes = userSuffixes.map { "#$it" }
-                val keysToRemove = memoryCache.keys.filter { key ->
-                    val keyStr = key.toString()
-                    suffixes.any { keyStr.contains(it) }
+                val exactMarkers = userSuffixes
+                    .filter { it.isNotBlank() }
+                    .map { "#$it:e=" }
+                if (exactMarkers.isEmpty()) return
+                val keysToRemove = memoryCache.keys.filter { cacheKey ->
+                    val keyStr = cacheKey.key
+                    exactMarkers.any { marker -> keyStr.contains(marker) }
                 }
                 for (k in keysToRemove) {
                     memoryCache.remove(k)
@@ -92,50 +169,122 @@ internal class AppIconFetcher private constructor(
         try {
             val slashIndex = key.componentKey.indexOf('/')
             val pkg: String
-            val activity: String?
+            val activityWithUser: String?
             if (slashIndex > 0) {
                 pkg = key.componentKey.substring(0, slashIndex)
-                activity = key.componentKey.substring(slashIndex + 1).takeIf { it.isNotBlank() }
+                activityWithUser = key.componentKey.substring(slashIndex + 1).takeIf { it.isNotBlank() }
             } else {
                 pkg = key.componentKey.substringBefore('#')
-                activity = null
+                activityWithUser = null
             }
             if (pkg.isBlank()) return@withContext null
             val pm = context.packageManager
 
+            val userIdentifierStr = key.componentKey.substringAfter('#', "")
+            val myUser = Process.myUserHandle()
+            val targetUser = resolveTargetUser(context, userIdentifierStr, myUser)
+
+            // Never load or cache icons for a secondary profile while it is in quiet/locked mode
+            if (targetUser != myUser) {
+                val userManager = context.getSystemService(Context.USER_SERVICE) as? UserManager
+                val isQuiet = try {
+                    userManager?.isQuietModeEnabled(targetUser) == true
+                } catch (_: Throwable) {
+                    false
+                }
+                if (isQuiet) {
+                    return@withContext null
+                }
+            }
+
             val iconPackDrawable: Drawable? = try {
-                IconPackManager.getIcon(key.componentKey)
+                val rawPackIcon = IconPackManager.getIcon(key.componentKey)
+                if (rawPackIcon != null && targetUser != myUser) {
+                    try {
+                        pm.getUserBadgedIcon(rawPackIcon, targetUser)
+                    } catch (_: Throwable) {
+                        rawPackIcon
+                    }
+                } else {
+                    rawPackIcon
+                }
             } catch (_: Throwable) {
                 null
             }
 
-            var isFallback = false
-            val drawable: Drawable = iconPackDrawable ?: try {
-                if (activity != null) {
-                    resolveIcon(context, pm, pkg, activity)
-                } else {
-                    pm.getApplicationIcon(pkg)
-                }
-            } catch (_: Throwable) {
+            val resolved: ResolvedDrawable = if (iconPackDrawable != null) {
+                ResolvedDrawable(iconPackDrawable, isFallback = false)
+            } else {
                 try {
-                    pm.getApplicationIcon(pkg)
+                    if (activityWithUser != null) {
+                        resolveIcon(context, pm, pkg, activityWithUser, targetUser, myUser)
+                    } else {
+                        val appDrawable = pm.getApplicationIcon(pkg)
+                        val badged = if (targetUser != myUser) {
+                            try { pm.getUserBadgedIcon(appDrawable, targetUser) } catch (_: Throwable) { appDrawable }
+                        } else {
+                            appDrawable
+                        }
+                        ResolvedDrawable(badged, isFallback = false)
+                    }
                 } catch (_: Throwable) {
-                    isFallback = true
-                    pm.defaultActivityIcon
+                    try {
+                        val appDrawable = pm.getApplicationIcon(pkg)
+                        val badged = if (targetUser != myUser) {
+                            try { pm.getUserBadgedIcon(appDrawable, targetUser) } catch (_: Throwable) { appDrawable }
+                        } else {
+                            appDrawable
+                        }
+                        ResolvedDrawable(badged, isFallback = targetUser != myUser)
+                    } catch (_: Throwable) {
+                        ResolvedDrawable(pm.defaultActivityIcon, isFallback = true)
+                    }
                 }
             }
 
-            val targetSize = resolveTargetSize(drawable, options)
-            val bitmap = drawableToBitmap(drawable, targetSize) ?: return@withContext null
+            val targetSize = resolveTargetSize(resolved.drawable, options)
+            val bitmap = drawableToBitmap(resolved.drawable, targetSize) ?: return@withContext null
 
+            // Mark fallback images shareable=false so Coil 3's MemoryCacheService never caches them
             ImageFetchResult(
-                image = bitmap.asImage(),
-                isSampled = isFallback,
-                dataSource = if (isFallback) DataSource.NETWORK else DataSource.DISK,
+                image = bitmap.asImage(shareable = !resolved.isFallback),
+                isSampled = resolved.isFallback,
+                dataSource = if (resolved.isFallback) DataSource.NETWORK else DataSource.DISK,
             )
         } catch (_: Throwable) {
             null
         }
+    }
+
+    private fun resolveTargetUser(context: Context, userIdentifierStr: String, myUser: UserHandle): UserHandle {
+        if (userIdentifierStr.isEmpty()) return myUser
+        val cache = userProfilesCache
+        cache["$SERIAL_PREFIX$userIdentifierStr"]?.let { return it }
+        cache["$HASH_PREFIX$userIdentifierStr"]?.let { return it }
+
+        val userManager = context.getSystemService(Context.USER_SERVICE) as? UserManager ?: return myUser
+        val asLong = userIdentifierStr.toLongOrNull()
+        val foundBySerial = if (asLong != null) {
+            try { userManager.getUserForSerialNumber(asLong) } catch (_: Throwable) { null }
+        } else null
+        if (foundBySerial != null) {
+            val updated = HashMap(userProfilesCache)
+            updated["$SERIAL_PREFIX$userIdentifierStr"] = foundBySerial
+            userProfilesCache = updated
+            return foundBySerial
+        }
+        val foundByHash = try {
+            userManager.userProfiles.find { it.hashCode().toString() == userIdentifierStr }
+        } catch (_: Throwable) {
+            null
+        }
+        if (foundByHash != null) {
+            val updated = HashMap(userProfilesCache)
+            updated["$HASH_PREFIX$userIdentifierStr"] = foundByHash
+            userProfilesCache = updated
+            return foundByHash
+        }
+        return myUser
     }
 
     private fun resolveTargetSize(drawable: Drawable, options: Options): Int {
@@ -168,7 +317,7 @@ internal class AppIconFetcher private constructor(
             android.graphics.Paint.FILTER_BITMAP_FLAG
         )
 
-        val scaledPath = dev.msbs.cyclauncher.icons.IconShapeHelper.getScaledPath(context, safeSize)
+        val scaledPath = IconShapeHelper.getScaledPath(context, safeSize)
 
         canvas.save()
         canvas.clipPath(scaledPath)
@@ -196,37 +345,24 @@ internal class AppIconFetcher private constructor(
         return bitmap
     }
 
-    private fun resolveIcon(context: Context, pm: PackageManager, pkg: String, activityWithUser: String): Drawable {
+    private fun resolveIcon(
+        context: Context,
+        pm: PackageManager,
+        pkg: String,
+        activityWithUser: String,
+        targetUser: UserHandle,
+        myUser: UserHandle
+    ): ResolvedDrawable {
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
         val iconDpi = am?.launcherLargeIconDensity?.takeIf { it > 0 } ?: context.resources.displayMetrics.densityDpi
         val activity = activityWithUser.substringBefore('#')
-        val userIdentifierStr = activityWithUser.substringAfter('#', "")
-
-        val myUser = android.os.Process.myUserHandle()
-        val targetUser = if (userIdentifierStr.isNotEmpty()) {
-            userProfilesCache[userIdentifierStr] ?: run {
-                val userManager = context.getSystemService(Context.USER_SERVICE) as? android.os.UserManager
-                val asLong = userIdentifierStr.toLongOrNull()
-                val foundBySerial = if (asLong != null && userManager != null) {
-                    try { userManager.getUserForSerialNumber(asLong) } catch (_: Throwable) { null }
-                } else null
-                val found = foundBySerial
-                    ?: userManager?.userProfiles?.find { it.hashCode().toString() == userIdentifierStr }
-                if (found != null) {
-                    userProfilesCache[userIdentifierStr] = found
-                    found
-                } else {
-                    myUser
-                }
-            }
-        } else {
-            myUser
-        }
 
         // Fast path for primary personal profile: load high-density launcher asset via PackageManager
         if (targetUser == myUser) {
             val component = android.content.ComponentName(pkg, activity)
-            loadActivityDrawable(pm, component, iconDpi)?.let { return it }
+            loadActivityDrawable(pm, component, iconDpi)?.let {
+                return ResolvedDrawable(it, isFallback = false)
+            }
         }
 
         // Secondary profiles (Work Profile / Private Space): resolve badged icon via LauncherApps using preferred density
@@ -236,14 +372,27 @@ internal class AppIconFetcher private constructor(
                 val list = launcherApps.getActivityList(pkg, targetUser)
                 val activityInfo = list.firstOrNull { it.componentName.className == activity } ?: list.firstOrNull()
                 if (activityInfo != null) {
-                    return activityInfo.getBadgedIcon(iconDpi)
+                    return ResolvedDrawable(activityInfo.getBadgedIcon(iconDpi), isFallback = false)
                 }
             } catch (_: Exception) {}
         }
 
         val component = android.content.ComponentName(pkg, activity)
-        val drawable = loadActivityDrawable(pm, component, iconDpi) ?: pm.defaultActivityIcon
-        return pm.getUserBadgedIcon(drawable, targetUser)
+        val loaded = loadActivityDrawable(pm, component, iconDpi)
+        if (loaded != null) {
+            val badged = if (targetUser != myUser) {
+                try { pm.getUserBadgedIcon(loaded, targetUser) } catch (_: Throwable) { loaded }
+            } else {
+                loaded
+            }
+            return ResolvedDrawable(badged, isFallback = targetUser != myUser)
+        }
+        val fallback = if (targetUser != myUser) {
+            try { pm.getUserBadgedIcon(pm.defaultActivityIcon, targetUser) } catch (_: Throwable) { pm.defaultActivityIcon }
+        } else {
+            pm.defaultActivityIcon
+        }
+        return ResolvedDrawable(fallback, isFallback = true)
     }
 
     private fun loadActivityDrawable(

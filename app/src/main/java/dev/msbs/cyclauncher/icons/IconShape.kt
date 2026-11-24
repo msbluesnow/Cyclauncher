@@ -9,25 +9,102 @@ import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asComposePath
 import androidx.core.graphics.PathParser
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Utility for resolving the active system icon shape Path mask.
  */
 object IconShapeHelper {
 
+    private data class ShapeSnapshot(
+        val generation: Long,
+        val basePath: Path,
+        val composeShape: Shape
+    )
+
+    private data class ScaledPathEntry(
+        val generation: Long,
+        val path: Path
+    )
+
+    private val generationCounter = AtomicLong(1L)
+
     @Volatile
-    private var cachedSystemPath: Path? = null
-    private val scaledPathCache = java.util.concurrent.ConcurrentHashMap<Int, Path>()
+    private var snapshot: ShapeSnapshot? = null
+
+    private val scaledPathCache = ConcurrentHashMap<Int, ScaledPathEntry>()
+
+    val shapeGeneration: Long
+        get() = generationCounter.get()
+
+    val defaultComposeShape: Shape by lazy {
+        buildComposeShape(
+            parseOrFallback("M 50 0 C 80 0 100 20 100 50 C 100 80 80 100 50 100 C 20 100 0 80 0 50 C 0 20 20 0 50 0 Z", 30f)
+        )
+    }
+
+    /**
+     * Returns the already-resolved Compose [Shape] if cached, without performing Binder IPC.
+     */
+    fun getCachedComposeShape(): Shape? = snapshot?.composeShape
+
+    /**
+     * Pre-resolves the system icon shape off the Main Thread so Compose consumers read a cached snapshot.
+     */
+    fun preload(context: Context) {
+        getOrResolveSnapshot(context.applicationContext)
+    }
+
+    /**
+     * Resolves the Compose [Shape] on [Dispatchers.IO] without blocking the Main Thread.
+     */
+    suspend fun resolveComposeShapeAsync(context: Context): Shape {
+        snapshot?.let { current ->
+            if (current.generation == generationCounter.get()) {
+                return current.composeShape
+            }
+        }
+        return withContext(Dispatchers.IO) {
+            getOrResolveSnapshot(context.applicationContext).composeShape
+        }
+    }
 
     /**
      * Resolves the Path for a normalized 100x100 box corresponding to the system icon shape overlay.
      * Caches the resolved path to prevent repeated Binder IPC queries and SVG parsing.
      */
     fun getSystemPath(context: Context, forceRefresh: Boolean = false): Path {
+        return Path(getOrResolveSnapshot(context, forceRefresh).basePath)
+    }
+
+    private fun getOrResolveSnapshot(context: Context, forceRefresh: Boolean = false): ShapeSnapshot {
+        val currentGen = generationCounter.get()
         if (!forceRefresh) {
-            cachedSystemPath?.let { return Path(it) }
+            snapshot?.let { cached ->
+                if (cached.generation == currentGen) {
+                    return cached
+                }
+            }
         }
 
+        val resolved = querySystemPath(context.applicationContext)
+        val composeShape = buildComposeShape(resolved)
+        val newSnapshot = ShapeSnapshot(
+            generation = currentGen,
+            basePath = resolved,
+            composeShape = composeShape
+        )
+        // Only publish if no invalidation happened while querying Settings IPC
+        if (generationCounter.get() == currentGen) {
+            snapshot = newSnapshot
+        }
+        return newSnapshot
+    }
+
+    private fun querySystemPath(context: Context): Path {
         val cr = context.contentResolver
         var shapeName = ""
 
@@ -51,7 +128,7 @@ object IconShapeHelper {
             }
         }
 
-        val resolved = when {
+        return when {
             shapeName.contains("circle") || shapeName.contains("circular") ->
                 Path().apply { addCircle(50f, 50f, 50f, Path.Direction.CW) }
             shapeName.contains("rounded") || shapeName.contains("roundedrect") ->
@@ -66,47 +143,56 @@ object IconShapeHelper {
                 // Default: Squircle (modern Android standard)
                 parseOrFallback("M 50 0 C 80 0 100 20 100 50 C 100 80 80 100 50 100 C 20 100 0 80 0 50 C 0 20 20 0 50 0 Z", 30f)
         }
-
-        cachedSystemPath = resolved
-        return Path(resolved)
     }
 
     /**
      * Returns a cached scaled Path for the given pixel [size], avoiding redundant allocations
      * and matrix transformations during icon rasterization.
-     * Always returns a defensive copy of the cached Path to ensure thread safety when called
-     * concurrently across multiple threads during icon rasterization.
+     * Guarded by an atomic generation counter so workers never write or read stale paths after [invalidateCache].
+     * Always returns a defensive copy of the cached Path for thread safety.
      */
     fun getScaledPath(context: Context, size: Int): Path {
         val safeSize = size.coerceAtLeast(1)
-        val cached = scaledPathCache.getOrPut(safeSize) {
-            val basePath = getSystemPath(context)
-            val scale = safeSize / 100f
-            val matrix = Matrix().apply { setScale(scale, scale) }
-            Path(basePath).apply { transform(matrix) }
+        val snap = getOrResolveSnapshot(context)
+        val gen = snap.generation
+        val existing = scaledPathCache[safeSize]
+        if (existing != null && existing.generation == gen) {
+            return Path(existing.path)
         }
-        return Path(cached)
+        val scale = safeSize / 100f
+        val matrix = Matrix().apply { setScale(scale, scale) }
+        val scaled = Path(snap.basePath).apply { transform(matrix) }
+        if (generationCounter.get() == gen) {
+            scaledPathCache[safeSize] = ScaledPathEntry(gen, scaled)
+        }
+        return Path(scaled)
     }
 
     /**
      * Returns a Compose [Shape] matching the active system icon shape mask.
      */
     fun getComposeShape(context: Context): Shape {
-        val basePath = getSystemPath(context)
+        return getOrResolveSnapshot(context).composeShape
+    }
+
+    private fun buildComposeShape(basePath: Path): Shape {
+        val frozenBase = Path(basePath)
         return GenericShape { size, _ ->
             val matrix = Matrix().apply {
                 setScale(size.width / 100f, size.height / 100f)
             }
-            val scaled = Path(basePath).apply { transform(matrix) }
+            val scaled = Path(frozenBase).apply { transform(matrix) }
             addPath(scaled.asComposePath())
         }
     }
 
     /**
-     * Clears the cached system path so it can be re-queried upon system theme changes.
+     * Clears the cached system path and advances the atomic generation counter so it is re-queried
+     * upon system theme changes without allowing in-flight workers to write stale paths.
      */
     fun invalidateCache() {
-        cachedSystemPath = null
+        generationCounter.incrementAndGet()
+        snapshot = null
         scaledPathCache.clear()
     }
 

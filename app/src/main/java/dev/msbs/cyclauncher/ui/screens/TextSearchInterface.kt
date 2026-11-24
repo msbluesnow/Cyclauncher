@@ -22,6 +22,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
@@ -31,6 +33,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun TextSearchInterface(
     viewModel: LauncherViewModel,
+    enabled: Boolean = true,
+    onClose: () -> Unit = { viewModel.toggleTextSearchMode() },
     onAppClick: (String) -> Unit,
     onAppLongClick: (AppInfo, androidx.compose.ui.geometry.Offset) -> Unit
 ) {
@@ -40,17 +44,27 @@ fun TextSearchInterface(
     val showShadows by viewModel.showShadows.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
     val primaryTextColor by viewModel.primaryTextColor.collectAsState()
-    
-    val focusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(focusRequester) {
-        // Small delay to allow layout to settle before requesting focus,
-        // which prevents attachment crashes on some physical devices.
-        kotlinx.coroutines.delay(100)
-        try {
-            focusRequester.requestFocus()
-        } catch (e: Exception) {
-            // Safe fallback
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(enabled, focusRequester) {
+        if (enabled) {
+            // Small delay to allow layout to settle before requesting focus,
+            // which prevents attachment crashes on some physical devices.
+            kotlinx.coroutines.delay(100)
+            try {
+                focusRequester.requestFocus()
+                keyboardController?.show()
+            } catch (_: Exception) {
+                // Safe fallback
+            }
+        } else {
+            try {
+                focusManager.clearFocus(force = true)
+                keyboardController?.hide()
+            } catch (_: Exception) {}
         }
     }
 
@@ -99,7 +113,7 @@ fun TextSearchInterface(
             accentColor = accentColor,
             primaryTextColor = primaryTextColor,
             showShadows = showShadows,
-            onClick = { viewModel.toggleTextSearchMode() }
+            onClick = onClose
         )
     }
 }

@@ -72,6 +72,7 @@ fun SideAlphabetSearchLayout(
     handSide: HandSide,
     appWidgetHost: AppWidgetHost? = null,
     appWidgetManager: AppWidgetManager? = null,
+    widgetUnlockGeneration: Int = 0,
     onPickSideWidget: (isTop: Boolean) -> Unit = {},
     onPickSideAlphabetWidget: (isTop: Boolean) -> Unit = {},
     onAppClick: (String) -> Unit,
@@ -227,7 +228,8 @@ fun SideAlphabetSearchLayout(
                                         .weight(1f)
                                         .fillMaxWidth()
                                         .padding(bottom = 6.dp),
-                                    openOptionsTrigger = widgetOptionsTrigger
+                                    openOptionsTrigger = widgetOptionsTrigger,
+                                    widgetUnlockGeneration = widgetUnlockGeneration
                                 )
                             }
                             SideAlphabetSlotMode.DISABLED -> {
@@ -282,7 +284,8 @@ fun SideAlphabetSearchLayout(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .padding(horizontal = 4.dp, vertical = 6.dp),
-                                visible = widgetsVisible
+                                visible = widgetsVisible,
+                                widgetUnlockGeneration = widgetUnlockGeneration
                             )
                         }
                         if (!widgetsVisible) {
@@ -339,6 +342,7 @@ fun SideAlphabetSearchLayout(
             }
 
             val totalHeightPx = with(density) { totalHeight.toPx() }
+            val currentTotalHeightPx by rememberUpdatedState(totalHeightPx)
             val minYRatio = 0.05f
             val effectiveYRatio = localYRatio.coerceIn(minYRatio, 0.85f)
 
@@ -357,8 +361,9 @@ fun SideAlphabetSearchLayout(
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     },
                     onVerticalDrag = { deltaPx ->
-                        if (totalHeightPx > 0f) {
-                            val deltaRatio = -deltaPx / totalHeightPx
+                        val heightPx = currentTotalHeightPx
+                        if (heightPx > 0f) {
+                            val deltaRatio = -deltaPx / heightPx
                             localYRatio = (localYRatio + deltaRatio).coerceIn(minYRatio, 0.85f)
                         }
                     },
@@ -546,20 +551,22 @@ private fun SideAlphabetGrid(
 ) {
     val cols = 4
     val rows = 7
+    val spacing = 2.dp
     val density = LocalDensity.current
+    val currentDensity by rememberUpdatedState(density)
     val currentOnLetterSelected by rememberUpdatedState(onLetterSelected)
     val currentSelectedLetter by rememberUpdatedState(selectedLetter)
     val haptic = LocalHapticFeedback.current
     var gridBoundsSize by remember { mutableStateOf(androidx.compose.ui.geometry.Size.Zero) }
 
     fun getCharFromOffset(offset: Offset): Char? {
-        if (gridBoundsSize.width > 0f) {
-            val spacingPx = with(density) { 2.dp.toPx() }
-            val tileW = (gridBoundsSize.width - (cols - 1) * spacingPx) / cols
-            val step = tileW + spacingPx
-            if (step > 0f) {
-                val c = (offset.x / step).toInt().coerceIn(0, cols - 1)
-                val r = (offset.y / step).toInt().coerceIn(0, rows - 1)
+        if (gridBoundsSize.width > 0f && gridBoundsSize.height > 0f) {
+            val spacingPx = with(currentDensity) { spacing.toPx() }
+            val stepX = (gridBoundsSize.width + spacingPx) / cols
+            val stepY = (gridBoundsSize.height + spacingPx) / rows
+            if (stepX > 0f && stepY > 0f) {
+                val c = (offset.x / stepX).toInt().coerceIn(0, cols - 1)
+                val r = (offset.y / stepY).toInt().coerceIn(0, rows - 1)
                 val index = r * cols + c
                 if (index in alphabet.indices) {
                     return alphabet[index]
@@ -569,58 +576,63 @@ private fun SideAlphabetGrid(
         return null
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(max = maxGridHeight)
             .padding(bottom = 6.dp, start = 2.dp, end = 2.dp)
-            .onGloballyPositioned { gridBoundsSize = it.size.toSize() }
-            .pointerInput(alphabet) {
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    val downChar = getCharFromOffset(down.position)
-                    var lastChar = downChar
-                    var hasDragged = false
-                    val initialSelectedLetter = currentSelectedLetter
-
-                    if (downChar != null) {
-                        if (downChar != initialSelectedLetter) {
-                            currentOnLetterSelected(downChar, false)
-                        } else {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        }
-                    }
-
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                        if (!change.pressed) {
-                            val upChar = getCharFromOffset(change.position)
-                            if (!hasDragged && upChar == downChar && downChar == initialSelectedLetter && downChar != null) {
-                                currentOnLetterSelected(downChar, true)
-                            }
-                            break
-                        }
-
-                        val char = getCharFromOffset(change.position)
-                        if (char != null && char != lastChar) {
-                            hasDragged = true
-                            lastChar = char
-                            change.consume()
-                            currentOnLetterSelected(char, false)
-                        }
-                    }
-                }
-            }
     ) {
+        val maxTileWidth = ((maxWidth - spacing * (cols - 1)) / cols).coerceAtLeast(16.dp)
+        val maxTileHeight = ((maxHeight - spacing * (rows - 1)) / rows).coerceAtLeast(16.dp)
+        val tileHeight = minOf(maxTileWidth, maxTileHeight)
+
         Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { gridBoundsSize = it.size.toSize() }
+                .pointerInput(alphabet, density) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val downChar = getCharFromOffset(down.position)
+                        var lastChar = downChar
+                        var hasDragged = false
+                        val initialSelectedLetter = currentSelectedLetter
+
+                        if (downChar != null) {
+                            if (downChar != initialSelectedLetter) {
+                                currentOnLetterSelected(downChar, false)
+                            } else {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            }
+                        }
+
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if (!change.pressed) {
+                                val upChar = getCharFromOffset(change.position)
+                                if (!hasDragged && upChar == downChar && downChar == initialSelectedLetter && downChar != null) {
+                                    currentOnLetterSelected(downChar, true)
+                                }
+                                break
+                            }
+
+                            val char = getCharFromOffset(change.position)
+                            if (char != null && char != lastChar) {
+                                hasDragged = true
+                                lastChar = char
+                                change.consume()
+                                currentOnLetterSelected(char, false)
+                            }
+                        }
+                    }
+                },
+            verticalArrangement = Arrangement.spacedBy(spacing)
         ) {
             for (r in 0 until rows) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    horizontalArrangement = Arrangement.spacedBy(spacing)
                 ) {
                     for (c in 0 until cols) {
                         val index = r * cols + c
@@ -633,6 +645,7 @@ private fun SideAlphabetGrid(
                                 accentColor = accentColor,
                                 primaryTextColor = primaryTextColor,
                                 showShadows = showShadows,
+                                tileHeight = tileHeight,
                                 modifier = Modifier.weight(1f)
                             )
                         } else {
@@ -655,16 +668,18 @@ private fun LetterTile(
     accentColor: AccentColor,
     primaryTextColor: PrimaryTextColor,
     showShadows: Boolean,
+    tileHeight: Dp,
     modifier: Modifier = Modifier
 ) {
     val shadow = primaryTextColor.getShadow(showShadows, LocalShadowSettings.current.shadowColorOverride)
     val tileBackground = if (isSelected) accentColor.color.copy(alpha = 0.30f) else primaryTextColor.capsuleColor(0.08f)
     val tileBorderColor = if (isSelected) accentColor.color else primaryTextColor.capsuleBorderColor(0.12f)
     val textColor = if (isSelected) accentColor.color else primaryTextColor.color
+    val fontSizeSp = (tileHeight.value * 0.56f).coerceIn(11f, 20f).sp
 
     Box(
         modifier = modifier
-            .aspectRatio(1f)
+            .height(tileHeight)
             .clip(RoundedCornerShape(8.dp))
             .background(tileBackground)
             .border(1.dp, tileBorderColor, RoundedCornerShape(8.dp)),
@@ -673,7 +688,7 @@ private fun LetterTile(
         Text(
             text = char.toString(),
             color = textColor,
-            fontSize = 20.sp,
+            fontSize = fontSizeSp,
             fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
             style = MaterialTheme.typography.bodyMedium.copy(shadow = shadow)
         )

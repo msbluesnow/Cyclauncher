@@ -24,7 +24,7 @@ import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.ShadowSettings
 import dev.msbs.cyclauncher.R
-import dev.msbs.cyclauncher.widget.LauncherAppWidgetHost
+import dev.msbs.cyclauncher.utils.isUserUnlockedSafe
 import dev.msbs.cyclauncher.widget.LauncherAppWidgetHostView
 
 import android.app.Activity
@@ -143,6 +143,7 @@ fun HighlightScreen(
     viewModel: LauncherViewModel,
     appWidgetHost: AppWidgetHost? = null,
     appWidgetManager: AppWidgetManager? = null,
+    widgetUnlockGeneration: Int = 0,
     onClose: () -> Unit,
     onAppClick: (String) -> Unit = {},
     onConfigureWidget: ((widgetId: Int, isReconfigure: Boolean, options: Bundle?, callback: (Boolean) -> Unit) -> Unit)? = null,
@@ -171,8 +172,12 @@ fun HighlightScreen(
     val viewConfiguration = LocalViewConfiguration.current
     val density = LocalDensity.current
     val closeSwipeThresholdPx = remember(density) { density.run { 50.dp.toPx() } }
+    val currentCloseSwipeThresholdPx by rememberUpdatedState(closeSwipeThresholdPx)
+    val currentTouchSlop by rememberUpdatedState(viewConfiguration.touchSlop)
+    val currentOnClose by rememberUpdatedState(onClose)
 
-    val host = appWidgetHost ?: remember { LauncherAppWidgetHost(context.applicationContext, 1024) }
+    // Use ONLY the Activity-managed AppWidgetHost (never allocate an unmanaged fallback host)
+    val host = appWidgetHost
     val manager = appWidgetManager ?: remember { AppWidgetManager.getInstance(context.applicationContext) }
 
     var showCustomWidgetPicker by remember { mutableStateOf(false) }
@@ -190,6 +195,7 @@ fun HighlightScreen(
             dev.msbs.cyclauncher.widget.WidgetBindHelper.createHighlightWidgetOptions(ctx, provider)
         },
         onWidgetBound = { widgetId, providerInfo, _ ->
+            viewModel.trackWidgetProvider(widgetId, providerInfo)
             val defaultHeight = dev.msbs.cyclauncher.widget.WidgetBindHelper.calculateOptimalWidgetHeight(providerInfo, density.density)
             viewModel.addHighlightWidget(widgetId, defaultHeight, 1.0f)
         }
@@ -233,7 +239,7 @@ fun HighlightScreen(
                             totalDragX += delta.x
                             totalDragY += delta.y
 
-                            if (!isHorizontal && kotlin.math.abs(totalDragX) > viewConfiguration.touchSlop &&
+                            if (!isHorizontal && kotlin.math.abs(totalDragX) > currentTouchSlop &&
                                 kotlin.math.abs(totalDragX) > kotlin.math.abs(totalDragY) * 1.3f
                             ) {
                                 isHorizontal = true
@@ -241,12 +247,12 @@ fun HighlightScreen(
 
                             if (isHorizontal) {
                                 val isDismissDirection = when (handSide) {
-                                    HandSide.RIGHT -> totalDragX < -closeSwipeThresholdPx
-                                    HandSide.LEFT -> totalDragX > closeSwipeThresholdPx
+                                    HandSide.RIGHT -> totalDragX < -currentCloseSwipeThresholdPx
+                                    HandSide.LEFT -> totalDragX > currentCloseSwipeThresholdPx
                                 }
                                 if (isDismissDirection) {
                                     change.consume()
-                                    onClose()
+                                    currentOnClose()
                                     break
                                 }
                             }
@@ -567,6 +573,7 @@ fun HighlightScreen(
                     handSide = handSide,
                     appWidgetHost = host,
                     appWidgetManager = manager,
+                    widgetUnlockGeneration = widgetUnlockGeneration,
                     accentColor = accentColor,
                     buttonTextColor = buttonTextColor,
                     showShadows = showShadows,
@@ -582,7 +589,7 @@ fun HighlightScreen(
                     onDeleteWidget = { widgetId ->
                         viewModel.removeHighlightWidget(widgetId)
                         try {
-                            host.deleteAppWidgetId(widgetId)
+                            host?.deleteAppWidgetId(widgetId)
                         } catch (_: Exception) {}
                     },
                     onMoveUp = { widgetId -> viewModel.moveHighlightWidgetUp(widgetId) },
@@ -1244,8 +1251,9 @@ private fun RecentAppChip(
 private fun WidgetsSection(
     widgetConfigs: List<HighlightWidgetConfig>,
     handSide: HandSide,
-    appWidgetHost: AppWidgetHost,
+    appWidgetHost: AppWidgetHost?,
     appWidgetManager: AppWidgetManager,
+    widgetUnlockGeneration: Int = 0,
     accentColor: AccentColor,
     buttonTextColor: PrimaryTextColor,
     showShadows: Boolean,
@@ -1384,7 +1392,7 @@ private fun WidgetsSection(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 for ((index, config) in widgetConfigs.withIndex()) {
-                    key(config.id, appWidgetHost) {
+                    key(config.id, appWidgetHost, widgetUnlockGeneration) {
                         WidgetCard(
                             config = config,
                             canMoveUp = index > 0,
@@ -1395,6 +1403,7 @@ private fun WidgetsSection(
                             handSide = handSide,
                             appWidgetHost = appWidgetHost,
                             appWidgetManager = appWidgetManager,
+                            widgetUnlockGeneration = widgetUnlockGeneration,
                             accentColor = accentColor,
                             buttonTextColor = buttonTextColor,
                             primaryTextColor = primaryTextColor,
@@ -1416,6 +1425,25 @@ private fun WidgetsSection(
 }
 
 /**
+ * Checks whether any secondary profile (Work or Private Space) is currently in quiet/locked mode.
+ */
+private fun hasAnyLockedSecondaryProfile(context: android.content.Context): Boolean {
+    val um = context.getSystemService(android.content.Context.USER_SERVICE) as? android.os.UserManager ?: return false
+    val myUser = android.os.Process.myUserHandle()
+    return try {
+        um.userProfiles.any { profile ->
+            profile != myUser && try {
+                um.isQuietModeEnabled(profile) || !um.isUserUnlocked(profile)
+            } catch (_: Throwable) {
+                false
+            }
+        }
+    } catch (_: Throwable) {
+        false
+    }
+}
+
+/**
  * Individual widget host container with hand-side edge docking, pencil reconfigure button,
  * maximized widget area, and smooth hold-to-delete line animation.
  */
@@ -1428,8 +1456,9 @@ private fun WidgetCard(
     onMoveUp: () -> Unit = {},
     onMoveDown: () -> Unit = {},
     handSide: HandSide,
-    appWidgetHost: AppWidgetHost,
+    appWidgetHost: AppWidgetHost?,
     appWidgetManager: AppWidgetManager,
+    widgetUnlockGeneration: Int = 0,
     accentColor: AccentColor,
     buttonTextColor: PrimaryTextColor,
     primaryTextColor: PrimaryTextColor,
@@ -1442,40 +1471,21 @@ private fun WidgetCard(
     onDelete: () -> Unit
 ) {
     val context = LocalContext.current
-    val widgetInfo = remember(config.id, appWidgetManager) {
-        try {
-            appWidgetManager.getAppWidgetInfo(config.id)
-        } catch (_: Exception) {
+    val configuration = LocalConfiguration.current
+    val isUserUnlocked = remember(widgetUnlockGeneration) { context.isUserUnlockedSafe() }
+    val widgetInfo = remember(config.id, appWidgetManager, appWidgetHost, widgetUnlockGeneration) {
+        if (appWidgetHost == null || !isUserUnlocked) {
             null
+        } else {
+            try {
+                appWidgetManager.getAppWidgetInfo(config.id)
+            } catch (_: Exception) {
+                null
+            }
         }
     }
 
-    if (widgetInfo == null) {
-        LaunchedEffect(config.id) { onDelete() }
-        return
-    }
-
-    val label = remember(widgetInfo) {
-        try {
-            widgetInfo.loadLabel(context.packageManager)
-        } catch (_: Exception) {
-            "Widget"
-        }
-    }
-
-    // Keep reference to detach cleanly on disposal
-    var currentHostView by remember { mutableStateOf<LauncherAppWidgetHostView?>(null) }
-    DisposableEffect(config.id, appWidgetHost) {
-        onDispose {
-            (currentHostView?.parent as? ViewGroup)?.removeView(currentHostView)
-            currentHostView = null
-        }
-    }
-
-    var showResizeDialog by remember { mutableStateOf(false) }
     val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
-
-    // Hold-to-delete progress line state matching TagEditHeader
     val haptic = LocalHapticFeedback.current
     var isDeletePressed by remember { mutableStateOf(false) }
     val deleteColor = Color(0xFFEF4444)
@@ -1495,6 +1505,151 @@ private fun WidgetCard(
     } else {
         RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 14.dp, bottomEnd = 14.dp)
     }
+
+    // NEVER auto-delete widgets when widgetInfo == null: during Direct Boot or while a Work/Private
+    // profile is locked/quiet, AppWidgetManager legitimately returns null until unlocked.
+    // Render a locked/unavailable placeholder card with manual hold-to-delete instead.
+    if (widgetInfo == null || appWidgetHost == null) {
+        val isLockedState = remember(widgetUnlockGeneration, appWidgetHost) {
+            !isUserUnlocked || appWidgetHost == null || hasAnyLockedSecondaryProfile(context)
+        }
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = cardAlignment
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(config.widthFraction),
+                shape = cardShape,
+                colors = CardDefaults.cardColors(containerColor = primaryTextColor.capsuleColor(0.04f)),
+                border = BorderStroke(0.8.dp, primaryTextColor.color.copy(alpha = if (showShadows) 0.20f else 0.10f))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 8.dp, end = 0.dp, top = 2.dp, bottom = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f, fill = true),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.widget_title),
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = primaryTextColor.color.copy(alpha = 0.7f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = TextStyle(shadow = shadow),
+                                modifier = Modifier.widthIn(max = 160.dp)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f, fill = true)
+                                    .padding(horizontal = 6.dp)
+                                    .height(2.5.dp),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                if (deleteProgress > 0f) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .fillMaxHeight()
+                                            .clip(CircleShape)
+                                            .background(deleteColor.copy(alpha = 0.18f))
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth(deleteProgress)
+                                            .fillMaxHeight()
+                                            .clip(CircleShape)
+                                            .background(deleteColor)
+                                    )
+                                }
+                            }
+                        }
+
+                        if (!isLockedState) {
+                            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(CircleShape)
+                                        .background(if (deleteProgress > 0f) deleteColor.copy(alpha = 0.2f) else Color.Transparent)
+                                        .pointerInput(Unit) {
+                                            awaitEachGesture {
+                                                awaitFirstDown(requireUnconsumed = false)
+                                                isDeletePressed = true
+                                                waitForUpOrCancellation()
+                                                isDeletePressed = false
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    ShadowedIcon(
+                                        imageVector = Icons.Outlined.Delete,
+                                        contentDescription = stringResource(R.string.highlight_widget_delete_hold),
+                                        tint = if (deleteProgress > 0f) deleteColor else deleteColor.copy(alpha = 0.85f),
+                                        modifier = Modifier.size(17.dp),
+                                        showShadows = showShadows,
+                                        primaryTextColor = primaryTextColor,
+                                        shadowSettings = shadowSettings
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp)
+                            .height(config.heightDp.coerceIn(72, 140).dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(primaryTextColor.capsuleColor(0.06f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        ShadowedIcon(
+                            imageVector = if (isLockedState) Icons.Outlined.Lock else Icons.Outlined.Widgets,
+                            contentDescription = null,
+                            tint = primaryTextColor.color.copy(alpha = 0.45f),
+                            size = 24.dp,
+                            showShadows = showShadows,
+                            primaryTextColor = primaryTextColor,
+                            shadowSettings = shadowSettings
+                        )
+                    }
+                }
+            }
+        }
+        return
+    }
+
+    val label = remember(widgetInfo) {
+        try {
+            widgetInfo.loadLabel(context.packageManager)
+        } catch (_: Exception) {
+            "Widget"
+        }
+    }
+
+    // Keep reference to detach cleanly on disposal
+    var currentHostView by remember(config.id, appWidgetHost, widgetUnlockGeneration) {
+        mutableStateOf<LauncherAppWidgetHostView?>(null)
+    }
+    DisposableEffect(config.id, appWidgetHost, widgetUnlockGeneration) {
+        onDispose {
+            (currentHostView?.parent as? ViewGroup)?.removeView(currentHostView)
+            currentHostView = null
+        }
+    }
+
+    var showResizeDialog by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -1685,7 +1840,11 @@ private fun WidgetCard(
                         .height(config.heightDp.dp)
                         .clip(RoundedCornerShape(10.dp))
                 ) {
-                    key(config.id, appWidgetHost) {
+                    val targetWidthDp = dev.msbs.cyclauncher.widget.WidgetBindHelper.computeHighlightWidgetWidthDp(
+                        screenWidthDp = configuration.screenWidthDp,
+                        widthFraction = config.widthFraction
+                    )
+                    key(config.id, appWidgetHost, widgetUnlockGeneration) {
                         AndroidView(
                             factory = { ctx ->
                                 try {
@@ -1703,9 +1862,6 @@ private fun WidgetCard(
                             modifier = Modifier.fillMaxSize(),
                             update = { view ->
                                 try {
-                                    val displayDensity = context.resources.displayMetrics.density
-                                    val screenWidthDp = (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
-                                    val targetWidthDp = (screenWidthDp * config.widthFraction).toInt() - 24
                                     (view as? LauncherAppWidgetHostView)?.applyWidgetSize(targetWidthDp, config.heightDp)
                                 } catch (_: Throwable) {}
                             }

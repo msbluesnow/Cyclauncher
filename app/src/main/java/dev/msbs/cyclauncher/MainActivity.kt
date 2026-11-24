@@ -18,12 +18,16 @@ import dev.msbs.cyclauncher.ui.screens.MainMenuScreen
 import dev.msbs.cyclauncher.ui.screens.SearchScreen
 import dev.msbs.cyclauncher.ui.screens.SettingsScreen
 import dev.msbs.cyclauncher.utils.LocaleUtils
+import dev.msbs.cyclauncher.utils.isUserUnlockedSafe
 
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
 import android.content.BroadcastReceiver
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
+import android.os.Build
 import androidx.compose.animation.togetherWith
 import android.content.Context
 import android.content.Intent
@@ -82,14 +86,20 @@ class MainActivity : ComponentActivity() {
     private var wallpaperColorsListener: Any? = null
     private var launcherAppsHandlerThread: android.os.HandlerThread? = null
     private var launcherAppsCallback: android.content.pm.LauncherApps.Callback? = null
-    private var appWidgetHost: AppWidgetHost? = null
-    private var appWidgetManager: AppWidgetManager? = null
+    private val appWidgetHostState = mutableStateOf<AppWidgetHost?>(null)
+    private val appWidgetManagerState = mutableStateOf<AppWidgetManager?>(null)
+    private val widgetUnlockGenerationState = mutableIntStateOf(0)
+    private val appWidgetHost: AppWidgetHost?
+        get() = appWidgetHostState.value
+    private val appWidgetManager: AppWidgetManager?
+        get() = appWidgetManagerState.value
     private var unlockReceiver: BroadcastReceiver? = null
     private var hideStatusBarRetryRunnable: Runnable? = null
+    private var lastConfiguration: Configuration? = null
 
     companion object {
-        private const val REQUEST_CONFIGURE_WIDGET = 1025
-        private const val REQUEST_RECONFIGURE_WIDGET = 1026
+        private const val REQUEST_CONFIGURE_WIDGET_BASE = 2000
+        private const val REQUEST_CONFIGURE_WIDGET_MAX = 2999
     }
 
     private val systemReceiver = object : BroadcastReceiver() {
@@ -98,6 +108,7 @@ class MainActivity : ComponentActivity() {
             when (action) {
                 "android.intent.action.PROFILE_AVAILABLE",
                 "android.intent.action.MANAGED_PROFILE_AVAILABLE" -> {
+                    widgetUnlockGenerationState.intValue += 1
                     val user = androidx.core.content.IntentCompat.getParcelableExtra(intent, Intent.EXTRA_USER, android.os.UserHandle::class.java)
                     if (user != null) {
                         viewModel.onProfileAvailabilityChanged(user, isAvailable = true)
@@ -107,6 +118,7 @@ class MainActivity : ComponentActivity() {
                 }
                 "android.intent.action.PROFILE_UNAVAILABLE",
                 "android.intent.action.MANAGED_PROFILE_UNAVAILABLE" -> {
+                    widgetUnlockGenerationState.intValue += 1
                     val user = androidx.core.content.IntentCompat.getParcelableExtra(intent, Intent.EXTRA_USER, android.os.UserHandle::class.java)
                     if (user != null) {
                         viewModel.onProfileAvailabilityChanged(user, isAvailable = false)
@@ -115,12 +127,14 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 Intent.ACTION_USER_UNLOCKED -> {
+                    initAppWidgets()
                     viewModel.onUserUnlocked(application)
                 }
                 Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE,
                 Intent.ACTION_EXTERNAL_APPLICATIONS_UNAVAILABLE,
                 "android.intent.action.PROFILE_ACCESSIBLE",
                 "android.intent.action.PROFILE_INACCESSIBLE" -> {
+                    widgetUnlockGenerationState.intValue += 1
                     viewModel.refreshApps()
                 }
                 "android.intent.action.OVERLAY_CHANGED",
@@ -138,9 +152,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
+        lastConfiguration = Configuration(resources.configuration)
+        viewModel.onLocaleChangedIfNeeded(resources.configuration)
+        viewModel.setWidgetHostDeleter { widgetId ->
+            try {
+                appWidgetHost?.deleteAppWidgetId(widgetId)
+            } catch (_: Exception) {}
+        }
+
         initAppWidgetsIfUnlocked()
-        
+
         isDefaultLauncherCached = viewModel.isDefaultLauncher()
         val onBackPressedCallback = object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -154,10 +176,6 @@ class MainActivity : ComponentActivity() {
             }
         }
         onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
-
-        viewModel.updateDefaultLauncherStatus { isDefault ->
-            isDefaultLauncherCached = isDefault
-        }
         
         val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
         if (launcherApps != null) {
@@ -241,59 +259,25 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             CyclauncherTheme {
-                val hideStatusBar by viewModel.hideStatusBar.collectAsState()
-                val animationsEnabled by viewModel.animationsEnabled.collectAsState()
-                val marqueeEnabled by viewModel.marqueeEnabled.collectAsState()
-                val screenScrimAlpha by viewModel.screenScrimAlpha.collectAsState()
-                val screenScrimIsDark by viewModel.screenScrimIsDark.collectAsState()
-                val capsuleAlpha by viewModel.capsuleAlpha.collectAsState()
-                val capsuleIsDark by viewModel.capsuleIsDark.collectAsState()
-                val popupAlpha by viewModel.popupAlpha.collectAsState()
-                val popupTheme by viewModel.popupTheme.collectAsState()
-                val primaryTextColor by viewModel.primaryTextColor.collectAsState()
-                val hapticFeedbackEnabled by viewModel.hapticFeedbackEnabled.collectAsState()
-                val showShadows by viewModel.showShadows.collectAsState()
-                val shadowColorOverride by viewModel.shadowColor.collectAsState()
-                val iconPackVersion by viewModel.iconPackVersion.collectAsState()
+                LauncherCompositionLocals(viewModel) {
+                    StatusBarController(
+                        viewModel = viewModel,
+                        onUpdateStatusBar = ::updateStatusBarVisibility
+                    )
 
-                val currentHaptic = LocalHapticFeedback.current
-                val customHaptic = remember(hapticFeedbackEnabled, currentHaptic) {
-                    object : androidx.compose.ui.hapticfeedback.HapticFeedback {
-                        override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) {
-                            if (hapticFeedbackEnabled) {
-                                currentHaptic.performHapticFeedback(hapticFeedbackType)
-                            }
-                        }
-                    }
-                }
-
-                CompositionLocalProvider(
-                    LocalHapticFeedback provides customHaptic,
-                    dev.msbs.cyclauncher.ui.theme.LocalShadowSettings provides dev.msbs.cyclauncher.ui.theme.ShadowSettings(showShadows, shadowColorOverride),
-                    dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled provides animationsEnabled,
-                    dev.msbs.cyclauncher.ui.theme.LocalMarqueeEnabled provides marqueeEnabled,
-                    dev.msbs.cyclauncher.ui.theme.LocalCapsuleAlpha provides capsuleAlpha,
-                    dev.msbs.cyclauncher.ui.theme.LocalCapsuleIsDark provides capsuleIsDark,
-                    dev.msbs.cyclauncher.ui.theme.LocalPopupTheme provides popupTheme,
-                    dev.msbs.cyclauncher.ui.theme.LocalPopupAlpha provides popupAlpha,
-                    dev.msbs.cyclauncher.ui.theme.LocalIconPackVersion provides iconPackVersion
-                ) {
-                    LaunchedEffect(hideStatusBar) {
-                        updateStatusBarVisibility(hideStatusBar)
-                    }
-
+                    val animationsEnabled = dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled.current
                     val horizontalPagerState = rememberPagerState { 2 }
                     val verticalPagerState = rememberPagerState { 2 }
                     val scope = rememberCoroutineScope()
                     val fastAnimSpec = remember { tween<Float>(durationMillis = 200, easing = FastOutSlowInEasing) }
                     val slideAnimSpec = remember { tween<androidx.compose.ui.unit.IntOffset>(durationMillis = 180, easing = FastOutSlowInEasing) }
-                    
+
                     var showActionMenuFor by remember { mutableStateOf<AppInfo?>(null) }
                     var showRenameDialogFor by remember { mutableStateOf<AppInfo?>(null) }
                     var showTagDialogFor by remember { mutableStateOf<AppInfo?>(null) }
                     var tagToEditForDialog by remember { mutableStateOf<Tag?>(null) }
                     var isHighlightScreenVisible by remember { mutableStateOf(false) }
-                    
+
                     var menuSource by remember { mutableStateOf("none") }
                     var menuOffset by remember { mutableStateOf(Offset.Zero) }
 
@@ -310,10 +294,16 @@ class MainActivity : ComponentActivity() {
                         viewModel.resetRequest.collect {
                             dismissTransientDialogs()
                             isHighlightScreenVisible = false
-                            if (horizontalPagerState.currentPage != 0) {
+                            if (horizontalPagerState.currentPage != 0 ||
+                                horizontalPagerState.targetPage != 0 ||
+                                horizontalPagerState.currentPageOffsetFraction != 0f
+                            ) {
                                 horizontalPagerState.scrollToPage(0)
                             }
-                            if (verticalPagerState.currentPage != 0) {
+                            if (verticalPagerState.currentPage != 0 ||
+                                verticalPagerState.targetPage != 0 ||
+                                verticalPagerState.currentPageOffsetFraction != 0f
+                            ) {
                                 verticalPagerState.scrollToPage(0)
                             }
                         }
@@ -323,15 +313,12 @@ class MainActivity : ComponentActivity() {
                         isHighlightScreenVisible = false
                     }
 
-                    val showTutorial by viewModel.showTutorial.collectAsState()
-
-                    LaunchedEffect(showTutorial) {
-                        if (showTutorial) {
-                            horizontalPagerState.scrollToPage(0)
-                            verticalPagerState.scrollToPage(0)
-                            isHighlightScreenVisible = false
-                        }
-                    }
+                    TutorialResetEffect(
+                        viewModel = viewModel,
+                        horizontalPagerState = horizontalPagerState,
+                        verticalPagerState = verticalPagerState,
+                        onHideHighlight = { isHighlightScreenVisible = false }
+                    )
 
                     val isOnMainScreen by remember {
                         derivedStateOf {
@@ -375,44 +362,41 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    LaunchedEffect(shouldListenWidgets) {
+                    val currentHost = appWidgetHostState.value
+                    val currentManager = appWidgetManagerState.value
+                    val widgetUnlockGeneration = widgetUnlockGenerationState.intValue
+
+                    LaunchedEffect(shouldListenWidgets, currentHost) {
                         isHighlightScreenActive = shouldListenWidgets
                         if (shouldListenWidgets) {
                             if (isHighlightScreenVisible) {
                                 dismissTransientDialogs()
                             }
-                            try { appWidgetHost?.startListening() } catch (_: Exception) {}
+                            try { currentHost?.startListening() } catch (_: Exception) {}
                         } else {
-                            try { appWidgetHost?.stopListening() } catch (_: Exception) {}
+                            try { currentHost?.stopListening() } catch (_: Exception) {}
                         }
                     }
-                    
-                    val handSide by viewModel.handSide.collectAsState()
-                    val accentColor by viewModel.accentColor.collectAsState()
-                    val buttonTextColor by viewModel.buttonTextColor.collectAsState()
-                    val allTags by viewModel.tags.collectAsState()
-                    val appTagsMap by viewModel.appTags.collectAsState()
-                    val autoTagsPreview by viewModel.autoTagsPreview.collectAsState()
-                    val tagsBackupPreview by viewModel.tagsBackupPreview.collectAsState()
 
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = Color.Transparent
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
-                            ScreenScrim(screenScrimAlpha, isDark = screenScrimIsDark) {
-                                HorizontalPager(
+                            ScreenScrimLayer(viewModel = viewModel)
+
+                            HorizontalPager(
                                 state = horizontalPagerState,
                                 modifier = Modifier.fillMaxSize(),
                                 beyondViewportPageCount = 0,
-                                userScrollEnabled = false 
+                                userScrollEnabled = false
                             ) { hIndex ->
                                 if (hIndex == 0) {
                                     VerticalPager(
                                         state = verticalPagerState,
                                         modifier = Modifier.fillMaxSize(),
                                         beyondViewportPageCount = 1,
-                                        userScrollEnabled = false 
+                                        userScrollEnabled = false
                                     ) { vIndex ->
                                         if (vIndex == 0) {
                                             val isActionMenuOpen = showActionMenuFor != null || showRenameDialogFor != null || showTagDialogFor != null || tagToEditForDialog != null
@@ -420,7 +404,7 @@ class MainActivity : ComponentActivity() {
                                                 targetState = isHighlightScreenVisible,
                                                 transitionSpec = {
                                                     if (animationsEnabled) {
-                                                        val direction = if (targetState == (handSide == HandSide.RIGHT)) 1 else -1
+                                                        val direction = if (targetState == (viewModel.handSide.value == HandSide.RIGHT)) 1 else -1
                                                         (androidx.compose.animation.slideInHorizontally(
                                                             initialOffsetX = { fullWidth -> direction * fullWidth },
                                                             animationSpec = slideAnimSpec
@@ -444,8 +428,9 @@ class MainActivity : ComponentActivity() {
                                                 if (showHighlight) {
                                                     HighlightScreen(
                                                         viewModel = viewModel,
-                                                        appWidgetHost = appWidgetHost,
-                                                        appWidgetManager = appWidgetManager,
+                                                        appWidgetHost = currentHost,
+                                                        appWidgetManager = currentManager,
+                                                        widgetUnlockGeneration = widgetUnlockGeneration,
                                                         onClose = { isHighlightScreenVisible = false },
                                                         onAppClick = ::openApp,
                                                         onConfigureWidget = ::startWidgetConfiguration,
@@ -461,10 +446,10 @@ class MainActivity : ComponentActivity() {
                                                         isActive = isOnMainScreen,
                                                         isActionMenuOpen = isActionMenuOpen,
                                                         onAppClick = ::openApp,
-                                                        onAppLongClick = { app, offset -> 
+                                                        onAppLongClick = { app, offset ->
                                                             showActionMenuFor = app
                                                             menuOffset = offset
-                                                            menuSource = "history_or_favorites" 
+                                                            menuSource = "history_or_favorites"
                                                         },
                                                         onSwipeUp = {
                                                             scope.launch { verticalPagerState.scrollToPageCompat(1, animationsEnabled, fastAnimSpec) }
@@ -485,8 +470,9 @@ class MainActivity : ComponentActivity() {
                                             SearchScreen(
                                                 viewModel = viewModel,
                                                 enabled = isSearchActive,
-                                                appWidgetHost = appWidgetHost,
-                                                appWidgetManager = appWidgetManager,
+                                                appWidgetHost = currentHost,
+                                                appWidgetManager = currentManager,
+                                                widgetUnlockGeneration = widgetUnlockGeneration,
                                                 onConfigureWidget = ::startWidgetConfiguration,
                                                 onBackToMain = {
                                                     scope.launch { verticalPagerState.scrollToPageCompat(0, animationsEnabled, fastAnimSpec) }
@@ -495,7 +481,7 @@ class MainActivity : ComponentActivity() {
                                                     viewModel.setSelectedLetter(null)
                                                     openApp(appKey)
                                                 },
-                                                onAppLongClick = { app, offset -> 
+                                                onAppLongClick = { app, offset ->
                                                     showActionMenuFor = app
                                                     menuOffset = offset
                                                     menuSource = "search"
@@ -513,97 +499,23 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             }
-                        }
 
-                            showActionMenuFor?.let { app ->
-                                val componentKey = app.componentKey
-                                AppActionMenu(
-                                    app = app,
-                                    isFavorite = viewModel.isFavorite(componentKey),
-                                    offset = menuOffset,
-                                    onDismiss = { showActionMenuFor = null },
-                                    onToggleFavorite = { viewModel.toggleFavorite(componentKey) },
-                                    onUninstall = { uninstallApp(app) },
-                                    onInfo = { openAppInfo(app) },
-                                    onRename = { showRenameDialogFor = app },
-                                    onTagsClick = { showTagDialogFor = app },
-                                    accentColor = accentColor,
-                                    popupTheme = popupTheme
-                                )
-                            }
-
-                            showRenameDialogFor?.let { app ->
-                                RenameDialog(
-                                    initialValue = app.label,
-                                    accentColor = accentColor,
-                                    buttonTextColor = buttonTextColor,
-                                    popupTheme = popupTheme,
-                                    onDismiss = { showRenameDialogFor = null },
-                                    onConfirm = { newName ->
-                                        viewModel.renameApp(app.componentKey, newName)
-                                        showRenameDialogFor = null
-                                    }
-                                )
-                            }
-
-                            showTagDialogFor?.let { app ->
-                                val key = app.componentKey
-                                TagSelectionDialog(
-                                    app = app,
-                                    allTags = allTags,
-                                    assignedTagIds = appTagsMap[key]
-                                        ?: (if (app.profileType == dev.msbs.cyclauncher.model.ProfileType.PERSONAL) appTagsMap[app.packageName] else null)
-                                        ?: emptyList(),
-                                    onToggleTag = { tagId -> viewModel.toggleTagForApp(key, tagId) },
-                                    onCreateTag = { name, color, emoji -> viewModel.createTag(Tag(name = name, color = color, emoji = emoji)) },
-                                    onUpdateTag = { tag -> viewModel.updateTag(tag) },
-                                    onDeleteTag = { tagId -> viewModel.deleteTag(tagId) },
-                                    onDismiss = { showTagDialogFor = null },
-                                    accentColor = accentColor,
-                                    buttonTextColor = buttonTextColor,
-                                    popupTheme = popupTheme
-                                )
-                            }
-
-                            tagToEditForDialog?.let { tag ->
-                                TagEditDialog(
-                                    tag = tag,
-                                    onDismiss = { tagToEditForDialog = null },
-                                    onConfirm = { name, color, emoji ->
-                                        viewModel.updateTag(tag.copy(name = name, color = color, emoji = emoji))
-                                        tagToEditForDialog = null
-                                    },
-                                    onDelete = {
-                                        viewModel.deleteTag(tag.id)
-                                        tagToEditForDialog = null
-                                    },
-                                    accentColor = accentColor,
-                                    buttonTextColor = buttonTextColor,
-                                    popupTheme = popupTheme
-                                )
-                            }
-
-                            autoTagsPreview?.let { preview ->
-                                AutoTagsConfirmDialog(
-                                    preview = preview,
-                                    accentColor = accentColor,
-                                    buttonTextColor = buttonTextColor,
-                                    popupTheme = popupTheme,
-                                    onConfirm = { viewModel.applyAutoTags() },
-                                    onDismiss = { viewModel.dismissAutoTagsPreview() }
-                                )
-                            }
-
-                            tagsBackupPreview?.let { preview ->
-                                TagsBackupConfirmDialog(
-                                    preview = preview,
-                                    accentColor = accentColor,
-                                    buttonTextColor = buttonTextColor,
-                                    popupTheme = popupTheme,
-                                    onConfirm = { viewModel.applyTagsBackup() },
-                                    onDismiss = { viewModel.dismissTagsBackupPreview() }
-                                )
-                            }
+                            LauncherDialogOverlays(
+                                viewModel = viewModel,
+                                showActionMenuFor = showActionMenuFor,
+                                menuOffset = menuOffset,
+                                showRenameDialogFor = showRenameDialogFor,
+                                showTagDialogFor = showTagDialogFor,
+                                tagToEditForDialog = tagToEditForDialog,
+                                onDismissActionMenu = { showActionMenuFor = null },
+                                onRequestRename = { showRenameDialogFor = it },
+                                onRequestTags = { showTagDialogFor = it },
+                                onDismissRename = { showRenameDialogFor = null },
+                                onDismissTagDialog = { showTagDialogFor = null },
+                                onDismissTagEdit = { tagToEditForDialog = null },
+                                onUninstallApp = ::uninstallApp,
+                                onOpenAppInfo = ::openAppInfo
+                            )
 
                             TutorialOverlay(
                                 viewModel = viewModel,
@@ -622,10 +534,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun initAppWidgetsIfUnlocked() {
-        val userManager = getSystemService(Context.USER_SERVICE) as? android.os.UserManager
-        if (userManager == null || userManager.isUserUnlocked) {
+        if (isUserUnlockedSafe()) {
             initAppWidgets()
-        } else {
+        } else if (unlockReceiver == null) {
             val filter = android.content.IntentFilter(Intent.ACTION_USER_UNLOCKED)
             val receiver = object : android.content.BroadcastReceiver() {
                 override fun onReceive(context: Context?, intent: Intent?) {
@@ -648,10 +559,20 @@ class MainActivity : ComponentActivity() {
 
     private fun initAppWidgets() {
         try {
-            if (appWidgetHost == null) {
-                appWidgetHost = dev.msbs.cyclauncher.widget.LauncherAppWidgetHost(this, 1024)
-                appWidgetManager = AppWidgetManager.getInstance(this)
+            if (appWidgetHostState.value == null) {
+                val appCtx = applicationContext
+                val host = dev.msbs.cyclauncher.widget.LauncherAppWidgetHost(appCtx, 1024)
+                val manager = AppWidgetManager.getInstance(appCtx)
+                appWidgetHostState.value = host
+                appWidgetManagerState.value = manager
+                viewModel.refreshWidgetProviderMapAsync()
+                if (isHighlightScreenActive && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
+                    try {
+                        host.startListening()
+                    } catch (_: Exception) {}
+                }
             }
+            widgetUnlockGenerationState.intValue += 1
         } catch (_: Exception) {}
     }
 
@@ -725,15 +646,50 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private var pendingWidgetConfigureCallback: ((Boolean) -> Unit)? = null
+    private val pendingWidgetConfigureCallbacks = mutableMapOf<Int, (Boolean) -> Unit>()
+    private val configureRequestCodeToWidgetId = mutableMapOf<Int, Int>()
+    private var nextConfigureRequestCode = REQUEST_CONFIGURE_WIDGET_BASE
+
+    private fun allocateConfigureRequestCode(): Int {
+        val span = REQUEST_CONFIGURE_WIDGET_MAX - REQUEST_CONFIGURE_WIDGET_BASE + 1
+        repeat(span) {
+            val candidate = nextConfigureRequestCode
+            nextConfigureRequestCode = if (candidate >= REQUEST_CONFIGURE_WIDGET_MAX) {
+                REQUEST_CONFIGURE_WIDGET_BASE
+            } else {
+                candidate + 1
+            }
+            if (!configureRequestCodeToWidgetId.containsKey(candidate)) {
+                return candidate
+            }
+        }
+        return REQUEST_CONFIGURE_WIDGET_BASE
+    }
+
+    private fun cancelPendingWidgetConfigurations() {
+        val pending = pendingWidgetConfigureCallbacks.values.toList()
+        pendingWidgetConfigureCallbacks.clear()
+        configureRequestCodeToWidgetId.clear()
+        pending.forEach { callback ->
+            try {
+                callback(false)
+            } catch (_: Exception) {}
+        }
+    }
 
     fun startWidgetConfiguration(widgetId: Int, isReconfigure: Boolean, options: Bundle? = null, callback: (Boolean) -> Unit) {
         val host = appWidgetHost ?: run {
             callback(false)
             return
         }
-        pendingWidgetConfigureCallback = callback
-        val requestCode = if (isReconfigure) REQUEST_RECONFIGURE_WIDGET else REQUEST_CONFIGURE_WIDGET
+        // Clean up any stale entry for the same widgetId before registering a new one
+        configureRequestCodeToWidgetId.entries.removeAll { it.value == widgetId }
+        pendingWidgetConfigureCallbacks.remove(widgetId)?.let { stale ->
+            try { stale(false) } catch (_: Exception) {}
+        }
+        val requestCode = allocateConfigureRequestCode()
+        pendingWidgetConfigureCallbacks[widgetId] = callback
+        configureRequestCodeToWidgetId[requestCode] = widgetId
         try {
             host.startAppWidgetConfigureActivityForResult(
                 this,
@@ -743,7 +699,8 @@ class MainActivity : ComponentActivity() {
                 options
             )
         } catch (_: Exception) {
-            pendingWidgetConfigureCallback = null
+            configureRequestCodeToWidgetId.remove(requestCode)
+            pendingWidgetConfigureCallbacks.remove(widgetId)
             callback(false)
         }
     }
@@ -752,15 +709,20 @@ class MainActivity : ComponentActivity() {
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_CONFIGURE_WIDGET || requestCode == REQUEST_RECONFIGURE_WIDGET) {
-            val callback = pendingWidgetConfigureCallback
-            pendingWidgetConfigureCallback = null
-            callback?.invoke(resultCode == Activity.RESULT_OK)
+        if (requestCode in REQUEST_CONFIGURE_WIDGET_BASE..REQUEST_CONFIGURE_WIDGET_MAX) {
+            val widgetId = configureRequestCodeToWidgetId.remove(requestCode)
+            if (widgetId != null) {
+                val callback = pendingWidgetConfigureCallbacks.remove(widgetId)
+                callback?.invoke(resultCode == Activity.RESULT_OK)
+            }
         }
     }
 
     override fun onResume() {
         super.onResume()
+        if (appWidgetHost == null && isUserUnlockedSafe()) {
+            initAppWidgets()
+        }
         viewModel.onUserUnlockedIfNeeded(application)
         if (pendingProfileLaunchComponent != null && pendingProfileLaunchWasPaused && !pendingProfileLaunchRetried) {
             val elapsed = android.os.SystemClock.elapsedRealtime() - pendingProfileLaunchTimeMs
@@ -792,7 +754,7 @@ class MainActivity : ComponentActivity() {
                 viewModel.refreshApps()
             }
         }
-        if (viewModel.apps.value.isEmpty()) {
+        if (!viewModel.hasLoadedApps) {
             if (!viewModel.isAppsLoading) {
                 viewModel.refreshApps()
             }
@@ -813,12 +775,32 @@ class MainActivity : ComponentActivity() {
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
-        viewModel.refreshDynamicWallpaperColor(this)
-        viewModel.invalidateAllIconCaches()
+        val prevConfig = lastConfiguration
+        val diff = prevConfig?.diff(newConfig) ?: -1
+        lastConfiguration = Configuration(newConfig)
+
+        if (diff == -1 || (diff and ActivityInfo.CONFIG_UI_MODE) != 0) {
+            enableEdgeToEdge()
+            val shouldHideStatusBar = viewModel.hideStatusBar.value
+            updateStatusBarVisibility(shouldHideStatusBar)
+            viewModel.refreshDynamicWallpaperColor(this)
+        }
+
+        if (diff == -1 || (diff and ActivityInfo.CONFIG_LOCALE) != 0) {
+            viewModel.onLocaleChangedIfNeeded(newConfig)
+        }
+
+        val iconCacheMask = ActivityInfo.CONFIG_UI_MODE or
+            ActivityInfo.CONFIG_DENSITY or
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) ActivityInfo.CONFIG_ASSETS_PATHS else 0
+        if (diff == -1 || (diff and iconCacheMask) != 0) {
+            viewModel.invalidateAllIconCaches()
+        }
     }
 
     override fun onDestroy() {
-        super.onDestroy()
+        viewModel.setWidgetHostDeleter(null)
+        cancelPendingWidgetConfigurations()
         clearPendingProfileLaunch()
         hideStatusBarRetryRunnable?.let {
             window.decorView.removeCallbacks(it)
@@ -828,14 +810,18 @@ class MainActivity : ComponentActivity() {
             try { unregisterReceiver(it) } catch (_: Exception) {}
             unlockReceiver = null
         }
-        unregisterReceiver(systemReceiver)
+        try {
+            unregisterReceiver(systemReceiver)
+        } catch (_: Exception) {}
         launcherAppsCallback?.let { cb ->
             val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as? android.content.pm.LauncherApps
             try {
                 launcherApps?.unregisterCallback(cb)
             } catch (_: Exception) {}
+            launcherAppsCallback = null
         }
         launcherAppsHandlerThread?.quitSafely()
+        launcherAppsHandlerThread = null
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1 && wallpaperColorsListener != null) {
             val wpManager = getSystemService(android.app.WallpaperManager::class.java)
             try {
@@ -843,12 +829,18 @@ class MainActivity : ComponentActivity() {
                     wpManager?.removeOnColorsChangedListener(it)
                 }
             } catch (_: Exception) {}
+            wallpaperColorsListener = null
         }
+        try {
+            appWidgetHost?.stopListening()
+        } catch (_: Exception) {}
+        super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         clearPendingProfileLaunch()
+        cancelPendingWidgetConfigurations()
         setIntent(intent)
         viewModel.requestReset()
     }
@@ -1300,4 +1292,250 @@ private suspend fun androidx.compose.foundation.pager.PagerState.scrollToPageCom
     animationSpec: androidx.compose.animation.core.AnimationSpec<Float>
 ) {
     if (animated) animateScrollToPage(page, animationSpec = animationSpec) else scrollToPage(page)
+}
+
+@Composable
+private fun LauncherCompositionLocals(
+    viewModel: LauncherViewModel,
+    content: @Composable () -> Unit
+) {
+    val animationsEnabled by viewModel.animationsEnabled.collectAsState()
+    val marqueeEnabled by viewModel.marqueeEnabled.collectAsState()
+    val capsuleAlpha by viewModel.capsuleAlpha.collectAsState()
+    val capsuleIsDark by viewModel.capsuleIsDark.collectAsState()
+    val popupAlpha by viewModel.popupAlpha.collectAsState()
+    val popupTheme by viewModel.popupTheme.collectAsState()
+    val hapticFeedbackEnabled by viewModel.hapticFeedbackEnabled.collectAsState()
+    val showShadows by viewModel.showShadows.collectAsState()
+    val shadowColorOverride by viewModel.shadowColor.collectAsState()
+    val iconPackVersion by viewModel.iconPackVersion.collectAsState()
+
+    val currentHaptic = LocalHapticFeedback.current
+    val customHaptic = remember(hapticFeedbackEnabled, currentHaptic) {
+        object : androidx.compose.ui.hapticfeedback.HapticFeedback {
+            override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) {
+                if (hapticFeedbackEnabled) {
+                    currentHaptic.performHapticFeedback(hapticFeedbackType)
+                }
+            }
+        }
+    }
+    val shadowSettings = remember(showShadows, shadowColorOverride) {
+        dev.msbs.cyclauncher.ui.theme.ShadowSettings(showShadows, shadowColorOverride)
+    }
+
+    CompositionLocalProvider(
+        LocalHapticFeedback provides customHaptic,
+        dev.msbs.cyclauncher.ui.theme.LocalShadowSettings provides shadowSettings,
+        dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled provides animationsEnabled,
+        dev.msbs.cyclauncher.ui.theme.LocalMarqueeEnabled provides marqueeEnabled,
+        dev.msbs.cyclauncher.ui.theme.LocalCapsuleAlpha provides capsuleAlpha,
+        dev.msbs.cyclauncher.ui.theme.LocalCapsuleIsDark provides capsuleIsDark,
+        dev.msbs.cyclauncher.ui.theme.LocalPopupTheme provides popupTheme,
+        dev.msbs.cyclauncher.ui.theme.LocalPopupAlpha provides popupAlpha,
+        dev.msbs.cyclauncher.ui.theme.LocalIconPackVersion provides iconPackVersion,
+        content = content
+    )
+}
+
+@Composable
+private fun StatusBarController(
+    viewModel: LauncherViewModel,
+    onUpdateStatusBar: (Boolean) -> Unit
+) {
+    val hideStatusBar by viewModel.hideStatusBar.collectAsState()
+    val currentOnUpdate by rememberUpdatedState(onUpdateStatusBar)
+    LaunchedEffect(hideStatusBar) {
+        currentOnUpdate(hideStatusBar)
+    }
+}
+
+@Composable
+private fun ScreenScrimLayer(viewModel: LauncherViewModel) {
+    val screenScrimAlpha by viewModel.screenScrimAlpha.collectAsState()
+    val screenScrimIsDark by viewModel.screenScrimIsDark.collectAsState()
+    ScreenScrim(alpha = screenScrimAlpha, isDark = screenScrimIsDark) {}
+}
+
+@Composable
+private fun TutorialResetEffect(
+    viewModel: LauncherViewModel,
+    horizontalPagerState: androidx.compose.foundation.pager.PagerState,
+    verticalPagerState: androidx.compose.foundation.pager.PagerState,
+    onHideHighlight: () -> Unit
+) {
+    val showTutorial by viewModel.showTutorial.collectAsState()
+    val currentOnHideHighlight by rememberUpdatedState(onHideHighlight)
+    LaunchedEffect(showTutorial) {
+        if (showTutorial) {
+            horizontalPagerState.scrollToPage(0)
+            verticalPagerState.scrollToPage(0)
+            currentOnHideHighlight()
+        }
+    }
+}
+
+@Composable
+private fun LauncherDialogOverlays(
+    viewModel: LauncherViewModel,
+    showActionMenuFor: AppInfo?,
+    menuOffset: Offset,
+    showRenameDialogFor: AppInfo?,
+    showTagDialogFor: AppInfo?,
+    tagToEditForDialog: Tag?,
+    onDismissActionMenu: () -> Unit,
+    onRequestRename: (AppInfo) -> Unit,
+    onRequestTags: (AppInfo) -> Unit,
+    onDismissRename: () -> Unit,
+    onDismissTagDialog: () -> Unit,
+    onDismissTagEdit: () -> Unit,
+    onUninstallApp: (AppInfo) -> Unit,
+    onOpenAppInfo: (AppInfo) -> Unit
+) {
+    val autoTagsPreview by viewModel.autoTagsPreview.collectAsState()
+    val tagsBackupPreview by viewModel.tagsBackupPreview.collectAsState()
+
+    val hasAnyOverlay = showActionMenuFor != null ||
+        showRenameDialogFor != null ||
+        showTagDialogFor != null ||
+        tagToEditForDialog != null ||
+        autoTagsPreview != null ||
+        tagsBackupPreview != null
+
+    if (!hasAnyOverlay) return
+
+    ActiveLauncherDialogOverlays(
+        viewModel = viewModel,
+        showActionMenuFor = showActionMenuFor,
+        menuOffset = menuOffset,
+        showRenameDialogFor = showRenameDialogFor,
+        showTagDialogFor = showTagDialogFor,
+        tagToEditForDialog = tagToEditForDialog,
+        autoTagsPreview = autoTagsPreview,
+        tagsBackupPreview = tagsBackupPreview,
+        onDismissActionMenu = onDismissActionMenu,
+        onRequestRename = onRequestRename,
+        onRequestTags = onRequestTags,
+        onDismissRename = onDismissRename,
+        onDismissTagDialog = onDismissTagDialog,
+        onDismissTagEdit = onDismissTagEdit,
+        onUninstallApp = onUninstallApp,
+        onOpenAppInfo = onOpenAppInfo
+    )
+}
+
+@Composable
+private fun ActiveLauncherDialogOverlays(
+    viewModel: LauncherViewModel,
+    showActionMenuFor: AppInfo?,
+    menuOffset: Offset,
+    showRenameDialogFor: AppInfo?,
+    showTagDialogFor: AppInfo?,
+    tagToEditForDialog: Tag?,
+    autoTagsPreview: AutoTagsPreview?,
+    tagsBackupPreview: TagsBackupPreview?,
+    onDismissActionMenu: () -> Unit,
+    onRequestRename: (AppInfo) -> Unit,
+    onRequestTags: (AppInfo) -> Unit,
+    onDismissRename: () -> Unit,
+    onDismissTagDialog: () -> Unit,
+    onDismissTagEdit: () -> Unit,
+    onUninstallApp: (AppInfo) -> Unit,
+    onOpenAppInfo: (AppInfo) -> Unit
+) {
+    val accentColor by viewModel.accentColor.collectAsState()
+    val buttonTextColor by viewModel.buttonTextColor.collectAsState()
+    val popupTheme = dev.msbs.cyclauncher.ui.theme.LocalPopupTheme.current
+
+    showActionMenuFor?.let { app ->
+        val componentKey = app.componentKey
+        AppActionMenu(
+            app = app,
+            isFavorite = viewModel.isFavorite(componentKey),
+            offset = menuOffset,
+            onDismiss = onDismissActionMenu,
+            onToggleFavorite = { viewModel.toggleFavorite(componentKey) },
+            onUninstall = { onUninstallApp(app) },
+            onInfo = { onOpenAppInfo(app) },
+            onRename = { onRequestRename(app) },
+            onTagsClick = { onRequestTags(app) },
+            accentColor = accentColor,
+            popupTheme = popupTheme
+        )
+    }
+
+    showRenameDialogFor?.let { app ->
+        RenameDialog(
+            initialValue = app.label,
+            accentColor = accentColor,
+            buttonTextColor = buttonTextColor,
+            popupTheme = popupTheme,
+            onDismiss = onDismissRename,
+            onConfirm = { newName ->
+                viewModel.renameApp(app.componentKey, newName)
+                onDismissRename()
+            }
+        )
+    }
+
+    showTagDialogFor?.let { app ->
+        val allTags by viewModel.tags.collectAsState()
+        val appTagsMap by viewModel.appTags.collectAsState()
+        val key = app.componentKey
+        TagSelectionDialog(
+            app = app,
+            allTags = allTags,
+            assignedTagIds = appTagsMap[key]
+                ?: (if (app.profileType == dev.msbs.cyclauncher.model.ProfileType.PERSONAL) appTagsMap[app.packageName] else null)
+                ?: emptyList(),
+            onToggleTag = { tagId -> viewModel.toggleTagForApp(key, tagId) },
+            onCreateTag = { name, color, emoji -> viewModel.createTag(Tag(name = name, color = color, emoji = emoji)) },
+            onUpdateTag = { tag -> viewModel.updateTag(tag) },
+            onDeleteTag = { tagId -> viewModel.deleteTag(tagId) },
+            onDismiss = onDismissTagDialog,
+            accentColor = accentColor,
+            buttonTextColor = buttonTextColor,
+            popupTheme = popupTheme
+        )
+    }
+
+    tagToEditForDialog?.let { tag ->
+        TagEditDialog(
+            tag = tag,
+            onDismiss = onDismissTagEdit,
+            onConfirm = { name, color, emoji ->
+                viewModel.updateTag(tag.copy(name = name, color = color, emoji = emoji))
+                onDismissTagEdit()
+            },
+            onDelete = {
+                viewModel.deleteTag(tag.id)
+                onDismissTagEdit()
+            },
+            accentColor = accentColor,
+            buttonTextColor = buttonTextColor,
+            popupTheme = popupTheme
+        )
+    }
+
+    autoTagsPreview?.let { preview ->
+        AutoTagsConfirmDialog(
+            preview = preview,
+            accentColor = accentColor,
+            buttonTextColor = buttonTextColor,
+            popupTheme = popupTheme,
+            onConfirm = { viewModel.applyAutoTags() },
+            onDismiss = { viewModel.dismissAutoTagsPreview() }
+        )
+    }
+
+    tagsBackupPreview?.let { preview ->
+        TagsBackupConfirmDialog(
+            preview = preview,
+            accentColor = accentColor,
+            buttonTextColor = buttonTextColor,
+            popupTheme = popupTheme,
+            onConfirm = { viewModel.applyTagsBackup() },
+            onDismiss = { viewModel.dismissTagsBackupPreview() }
+        )
+    }
 }

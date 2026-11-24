@@ -137,7 +137,9 @@ fun MainMenuScreen(
 
     val popularTagsWithApps by viewModel.popularTagsWithApps.collectAsState()
 
-    BackHandler(enabled = isTagFolderReorderMode) {
+    BackHandler(enabled = isReorderMode || isHistoryEditMode || isTagFolderReorderMode) {
+        isReorderMode = false
+        isHistoryEditMode = false
         isTagFolderReorderMode = false
     }
 
@@ -271,12 +273,14 @@ fun MainMenuScreen(
 
     val density = LocalDensity.current
     val swipeHighlightThresholdPx = remember(density) { density.run { 55.dp.toPx() } }
+    val currentSwipeHighlightThresholdPx by rememberUpdatedState(swipeHighlightThresholdPx)
 
     val safeOnSettingsClick: () -> Unit = {
         if (isActive && !isActionMenuOpen && !isAnyEditMode && System.currentTimeMillis() - lastItemActionTime > 400L) {
             currentOnSettingsClick()
         }
     }
+    val currentSafeOnSettingsClick by rememberUpdatedState(safeOnSettingsClick)
 
     Box(
         modifier = Modifier
@@ -329,7 +333,7 @@ fun MainMenuScreen(
                     }
 
                     if (!isChildTarget && dragOrTimeout == null && !isDragY && !isHorizontalDrag) {
-                        safeOnSettingsClick()
+                        currentSafeOnSettingsClick()
                         isLongPressHandled = true
                         while (true) {
                             val event = awaitPointerEvent(pass = PointerEventPass.Initial)
@@ -363,9 +367,10 @@ fun MainMenuScreen(
                             }
 
                             if (isHorizontalDrag && isCenterStart && !isHighlightTriggered) {
+                                val thresholdPx = currentSwipeHighlightThresholdPx
                                 val isDirectionMatch = when (handSide) {
-                                    HandSide.RIGHT -> totalDragX > swipeHighlightThresholdPx
-                                    HandSide.LEFT -> totalDragX < -swipeHighlightThresholdPx
+                                    HandSide.RIGHT -> totalDragX > thresholdPx
+                                    HandSide.LEFT -> totalDragX < -thresholdPx
                                 }
                                 if (isDirectionMatch) {
                                     isHighlightTriggered = true
@@ -964,15 +969,18 @@ private fun ColumnScope.TagsContentBlock(
     var itemWidthPx by remember { mutableFloatStateOf(0f) }
     var itemHeightPx by remember { mutableFloatStateOf(0f) }
 
-    val localPopularTags = remember { mutableStateListOf<Pair<Tag, List<AppInfo>>>().apply { addAll(popularTags) } }
-    LaunchedEffect(popularTags, draggingTagId) {
+    val uniquePopularTags = remember(popularTags) { popularTags.distinctBy { it.first.id } }
+    val localPopularTags = remember { mutableStateListOf<Pair<Tag, List<AppInfo>>>().apply { addAll(uniquePopularTags) } }
+    LaunchedEffect(uniquePopularTags, draggingTagId) {
         if (draggingTagId == null) {
             localPopularTags.clear()
-            localPopularTags.addAll(popularTags)
+            localPopularTags.addAll(uniquePopularTags)
         }
     }
 
     val currentOnReorderTagById by rememberUpdatedState(onReorderTagById)
+    val currentOnTagSectionIconClick by rememberUpdatedState(onTagSectionIconClick)
+    val currentSetReorderMode by rememberUpdatedState(setReorderMode)
 
     LaunchedEffect(isReorderMode) {
         if (!isReorderMode) {
@@ -984,6 +992,9 @@ private fun ColumnScope.TagsContentBlock(
 
     val colSpacingPx = with(density) { 8.dp.toPx() }
     val rowSpacingPx = with(density) { 8.dp.toPx() }
+    val currentIsRtl by rememberUpdatedState(isRtl)
+    val currentColSpacingPx by rememberUpdatedState(colSpacingPx)
+    val currentRowSpacingPx by rememberUpdatedState(rowSpacingPx)
 
     Column(
         modifier = Modifier
@@ -1039,10 +1050,11 @@ private fun ColumnScope.TagsContentBlock(
                                     dragOffset += dragAmount
 
                                     if (itemWidthPx > 0f && itemHeightPx > 0f) {
-                                        val colStep = itemWidthPx + colSpacingPx
-                                        val rowStep = itemHeightPx + rowSpacingPx
+                                        val colStep = itemWidthPx + currentColSpacingPx
+                                        val rowStep = itemHeightPx + currentRowSpacingPx
+                                        val activeIsRtl = currentIsRtl
 
-                                        val effectiveDx = if (isRtl) -dragOffset.x else dragOffset.x
+                                        val effectiveDx = if (activeIsRtl) -dragOffset.x else dragOffset.x
                                         val effectiveDy = -dragOffset.y
 
                                         // 35% Hysteresis to prevent flickering near cell boundaries
@@ -1071,7 +1083,7 @@ private fun ColumnScope.TagsContentBlock(
                                                 val actualRowChange = (targetIndex / 3) - curRow
 
                                                 val dxToSub =
-                                                    if (isRtl) -actualColChange * colStep else actualColChange * colStep
+                                                    if (activeIsRtl) -actualColChange * colStep else actualColChange * colStep
                                                 val dyToSub = -actualRowChange * rowStep
 
                                                 dragOffset = Offset(dragOffset.x - dxToSub, dragOffset.y - dyToSub)
@@ -1124,9 +1136,11 @@ private fun ColumnScope.TagsContentBlock(
                             .then(itemAnimModifier)
                             .zIndex(if (isDraggingThis) 10f else 1f)
                             .onGloballyPositioned { coordinates ->
-                                if (itemWidthPx == 0f && coordinates.size.width > 0) {
-                                    itemWidthPx = coordinates.size.width.toFloat()
-                                    itemHeightPx = coordinates.size.height.toFloat()
+                                if (coordinates.size.width > 0 && coordinates.size.height > 0) {
+                                    val w = coordinates.size.width.toFloat()
+                                    val h = coordinates.size.height.toFloat()
+                                    if (itemWidthPx != w) itemWidthPx = w
+                                    if (itemHeightPx != h) itemHeightPx = h
                                 }
                             }
                             .graphicsLayer {
@@ -1206,15 +1220,15 @@ private fun ColumnScope.TagsContentBlock(
                             onLongPress = {
                                 if (!isReorderMode) {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    onTagSectionIconClick(tagIconPosition + it)
+                                    currentOnTagSectionIconClick(tagIconPosition + it)
                                 }
                             },
                             onTap = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 if (isReorderMode) {
-                                    setReorderMode(false)
+                                    currentSetReorderMode(false)
                                 } else {
-                                    onTagSectionIconClick(tagIconPosition + it)
+                                    currentOnTagSectionIconClick(tagIconPosition + it)
                                 }
                             }
                         )
@@ -1296,6 +1310,9 @@ private fun ColumnScope.HistoryContentBlock(
     onAppLongClick: (AppInfo, Offset) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
+    val uniqueHistory = remember(history) { history.distinctBy { it.componentKey } }
+    val currentOnHistoryIconClick by rememberUpdatedState(onHistoryIconClick)
+    val currentSetHistoryEditMode by rememberUpdatedState(setHistoryEditMode)
 
     LazyColumn(
         state = listState,
@@ -1306,7 +1323,7 @@ private fun ColumnScope.HistoryContentBlock(
         reverseLayout = true,
         userScrollEnabled = true
     ) {
-        items(history, key = { it.componentKey }) { app ->
+        items(uniqueHistory, key = { it.componentKey }) { app ->
             val appKey = app.componentKey
             val isRecentlyUpdated =
                 recentlyUpdatedApps.contains(appKey) ||
@@ -1448,16 +1465,16 @@ private fun ColumnScope.HistoryContentBlock(
                         onLongPress = {
                             if (!isHistoryEditMode) {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onHistoryIconClick(historyIconPosition + it)
+                                currentOnHistoryIconClick(historyIconPosition + it)
                             }
                         },
                         onTap = {
                             if (isHistoryEditMode) {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                setHistoryEditMode(false)
+                                currentSetHistoryEditMode(false)
                             } else {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onHistoryIconClick(historyIconPosition + it)
+                                currentOnHistoryIconClick(historyIconPosition + it)
                             }
                         }
                     )
@@ -1567,16 +1584,18 @@ private fun FavoritesSection(
     var itemHeightPx by remember { mutableFloatStateOf(0f) }
     val favoritesListState = rememberLazyListState()
 
-    val localFavorites = remember { mutableStateListOf<FavoriteItem>().apply { addAll(favorites) } }
-    LaunchedEffect(favorites, draggingKey) {
+    val uniqueFavorites = remember(favorites) { favorites.distinctBy { it.key } }
+    val localFavorites = remember { mutableStateListOf<FavoriteItem>().apply { addAll(uniqueFavorites) } }
+    LaunchedEffect(uniqueFavorites, draggingKey) {
         if (draggingKey == null) {
             localFavorites.clear()
-            localFavorites.addAll(favorites)
+            localFavorites.addAll(uniqueFavorites)
         }
     }
 
     val currentOnReorder by rememberUpdatedState(onReorder)
     val currentOnReorderKeys by rememberUpdatedState(onReorderKeys)
+    val currentSetReorderMode by rememberUpdatedState(setReorderMode)
     LaunchedEffect(isReorderMode) {
         if (!isReorderMode) {
             draggingKey = null
@@ -1600,6 +1619,11 @@ private fun FavoritesSection(
     val cardWidthPx = with(density) { 160.dp.toPx() }
     val screenMarginPx = with(density) { 16.dp.toPx() }
     val cancelDistancePx = with(density) { 80.dp.toPx() }
+    val currentHandSide by rememberUpdatedState(handSide)
+    val currentScreenWidthPx by rememberUpdatedState(screenWidthPx)
+    val currentCardWidthPx by rememberUpdatedState(cardWidthPx)
+    val currentScreenMarginPx by rememberUpdatedState(screenMarginPx)
+    val currentCancelDistancePx by rememberUpdatedState(cancelDistancePx)
 
     var sectionPositionInRoot by remember { mutableStateOf(Offset.Zero) }
 
@@ -1655,10 +1679,10 @@ private fun FavoritesSection(
                                         lastCurrentTarget = resolveSwipeDownTarget(
                                             anchorX = anchorRootPos.x,
                                             currentX = anchorRootPos.x,
-                                            handSide = handSide,
-                                            screenWidthPx = screenWidthPx,
-                                            cardWidthPx = cardWidthPx,
-                                            screenMarginPx = screenMarginPx
+                                            handSide = currentHandSide,
+                                            screenWidthPx = currentScreenWidthPx,
+                                            cardWidthPx = currentCardWidthPx,
+                                            screenMarginPx = currentScreenMarginPx
                                         )
                                         currentOnStartSwipeDownOverlay(anchorRootPos)
                                         change.consume()
@@ -1682,7 +1706,7 @@ private fun FavoritesSection(
                         if (!lastDownChange.pressed) {
                             if (isSwipeDownActive) {
                                 val currentRootPos = sectionPositionInRoot + lastDownChange.position
-                                if (currentRootPos.y < anchorRootPos.y - cancelDistancePx) {
+                                if (currentRootPos.y < anchorRootPos.y - currentCancelDistancePx) {
                                     currentOnCancelSwipeDownOverlay()
                                 } else {
                                     currentOnEndSwipeDownOverlay(lastCurrentTarget)
@@ -1707,7 +1731,7 @@ private fun FavoritesSection(
 
                                     if (!change.pressed) {
                                         if (isSwipeDownActive) {
-                                            if (currentRootPos.y < anchorRootPos.y - cancelDistancePx) {
+                                            if (currentRootPos.y < anchorRootPos.y - currentCancelDistancePx) {
                                                 currentOnCancelSwipeDownOverlay()
                                             } else {
                                                 currentOnEndSwipeDownOverlay(lastCurrentTarget)
@@ -1744,10 +1768,10 @@ private fun FavoritesSection(
                                             lastCurrentTarget = resolveSwipeDownTarget(
                                                 anchorX = anchorRootPos.x,
                                                 currentX = currentRootPos.x,
-                                                handSide = handSide,
-                                                screenWidthPx = screenWidthPx,
-                                                cardWidthPx = cardWidthPx,
-                                                screenMarginPx = screenMarginPx
+                                                handSide = currentHandSide,
+                                                screenWidthPx = currentScreenWidthPx,
+                                                cardWidthPx = currentCardWidthPx,
+                                                screenMarginPx = currentScreenMarginPx
                                             )
                                             currentOnStartSwipeDownOverlay(anchorRootPos)
                                         } else if (!isDrag) {
@@ -1767,10 +1791,10 @@ private fun FavoritesSection(
                                         lastCurrentTarget = resolveSwipeDownTarget(
                                             anchorX = anchorRootPos.x,
                                             currentX = currentRootPos.x,
-                                            handSide = handSide,
-                                            screenWidthPx = screenWidthPx,
-                                            cardWidthPx = cardWidthPx,
-                                            screenMarginPx = screenMarginPx
+                                            handSide = currentHandSide,
+                                            screenWidthPx = currentScreenWidthPx,
+                                            cardWidthPx = currentCardWidthPx,
+                                            screenMarginPx = currentScreenMarginPx
                                         )
                                         currentOnUpdateSwipeDownOverlay(currentRootPos, lastCurrentTarget)
                                     }
@@ -1826,6 +1850,8 @@ private fun FavoritesSection(
                     val density = LocalDensity.current
                     val fallbackItemHeightPx = with(density) { 48.dp.toPx() }
                     val spacingPx = with(density) { 12.dp.toPx() }
+                    val currentFallbackItemHeightPx by rememberUpdatedState(fallbackItemHeightPx)
+                    val currentSpacingPx by rememberUpdatedState(spacingPx)
 
                     val itemAnimModifier =
                         if (animationsEnabled && !isDraggingThis) Modifier.animateItem() else Modifier
@@ -1881,7 +1907,7 @@ private fun FavoritesSection(
                                     dragVerticalOffset += dragAmount.y
 
                                     val stepHeight =
-                                        (if (itemHeightPx > 0f) itemHeightPx else fallbackItemHeightPx) + spacingPx
+                                        (if (itemHeightPx > 0f) itemHeightPx else currentFallbackItemHeightPx) + currentSpacingPx
                                     val effectiveDy = -dragVerticalOffset
 
                                     // 35% Hysteresis to prevent flickering near item boundaries
@@ -1912,8 +1938,9 @@ private fun FavoritesSection(
                             .height(48.dp)
                             .then(itemAnimModifier)
                             .onGloballyPositioned { coordinates ->
-                                if (itemHeightPx == 0f && coordinates.size.height > 0) {
-                                    itemHeightPx = coordinates.size.height.toFloat()
+                                val h = coordinates.size.height.toFloat()
+                                if (h > 0f && itemHeightPx != h) {
+                                    itemHeightPx = h
                                 }
                             }
                             .graphicsLayer {
@@ -2039,13 +2066,13 @@ private fun FavoritesSection(
                             onLongPress = {
                                 if (!isReorderMode) {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    setReorderMode(true)
+                                    currentSetReorderMode(true)
                                 }
                             },
                             onTap = {
                                 if (isReorderMode) {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    setReorderMode(false)
+                                    currentSetReorderMode(false)
                                 }
                             }
                         )

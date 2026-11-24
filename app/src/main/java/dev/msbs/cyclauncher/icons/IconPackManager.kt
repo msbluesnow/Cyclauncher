@@ -23,6 +23,7 @@ import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.InputStream
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Information about an installed icon pack on the device.
@@ -69,12 +70,16 @@ object IconPackManager {
 
     private val loadMutex = Mutex()
     private val stateLock = Any()
+    private val generationCounter = AtomicLong(0L)
 
     @Volatile
     private var state: IconPackState = IconPackState()
 
     val activePackageName: String?
         get() = state.packageName
+
+    val packGeneration: Long
+        get() = generationCounter.get()
 
     /**
      * Attempts to auto-detect the active icon pack package configured in the system / custom ROM settings.
@@ -210,7 +215,10 @@ object IconPackManager {
      */
     fun unload() {
         synchronized(stateLock) {
-            state = IconPackState()
+            if (state.packageName != null || state.resources != null || state.componentToDrawable.isNotEmpty()) {
+                state = IconPackState()
+                generationCounter.incrementAndGet()
+            }
         }
     }
 
@@ -218,6 +226,7 @@ object IconPackManager {
         synchronized(stateLock) {
             if (state.packageName == packageName) {
                 state = IconPackState()
+                generationCounter.incrementAndGet()
             }
         }
     }
@@ -328,6 +337,7 @@ object IconPackManager {
                 )
                 synchronized(stateLock) {
                     state = newState
+                    generationCounter.incrementAndGet()
                 }
             } catch (e: CancellationException) {
                 throw e

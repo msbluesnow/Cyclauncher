@@ -2,12 +2,15 @@ package dev.msbs.cyclauncher
 
 import android.app.Application
 import android.content.Context
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
+import android.os.Build
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import dev.msbs.cyclauncher.coil.AppIconFetcher
-
+import dev.msbs.cyclauncher.icons.IconShapeHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -19,16 +22,24 @@ import kotlinx.coroutines.launch
 class CyclauncherApp : Application(), SingletonImageLoader.Factory {
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    @Volatile
     private var imageLoader: ImageLoader? = null
+
+    private var lastConfig: Configuration? = null
 
     override fun onCreate() {
         super.onCreate()
+        lastConfig = Configuration(resources.configuration)
         appScope.launch {
             try {
                 val legacyCache = cacheDir.resolve("image_cache")
                 if (legacyCache.exists()) {
                     legacyCache.deleteRecursively()
                 }
+            } catch (_: Exception) {}
+            try {
+                IconShapeHelper.preload(this@CyclauncherApp)
             } catch (_: Exception) {}
         }
     }
@@ -52,7 +63,7 @@ class CyclauncherApp : Application(), SingletonImageLoader.Factory {
     }
 
     private val memoryCache: MemoryCache?
-        get() = imageLoader?.memoryCache ?: SingletonImageLoader.get(this).memoryCache
+        get() = imageLoader?.memoryCache
 
     @Suppress("DEPRECATION")
     override fun onTrimMemory(level: Int) {
@@ -73,11 +84,19 @@ class CyclauncherApp : Application(), SingletonImageLoader.Factory {
         } catch (_: Exception) {}
     }
 
-    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+    override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        try {
-            memoryCache?.clear()
-        } catch (_: Exception) {}
+        val prev = lastConfig
+        val diff = prev?.diff(newConfig) ?: 0
+        lastConfig = Configuration(newConfig)
+        val iconAffectingMask = ActivityInfo.CONFIG_UI_MODE or
+            ActivityInfo.CONFIG_DENSITY or
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) ActivityInfo.CONFIG_ASSETS_PATHS else 0
+        if ((diff and iconAffectingMask) != 0) {
+            try {
+                memoryCache?.clear()
+            } catch (_: Exception) {}
+        }
     }
 
     private companion object {
