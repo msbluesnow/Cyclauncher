@@ -86,7 +86,7 @@ private fun StaticCursorBasicTextField(
         enabled = enabled,
         readOnly = readOnly,
         textStyle = textStyle,
-        cursorBrush = if (animationsEnabled) SolidColor(effectiveCursorColor) else SolidColor(Color.Transparent),
+        cursorBrush = if (animationsEnabled) SolidColor(effectiveCursorColor) else SolidColor(Color.Unspecified),
         visualTransformation = visualTransformation,
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,

@@ -9,6 +9,7 @@ import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -17,6 +18,8 @@ import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build
+import android.os.UserHandle
+import android.util.LruCache
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -82,6 +85,22 @@ data class AppWidgetGroup(
     val iconKey: String,
     val widgets: List<WidgetEntryUi>
 )
+
+private data class WidgetPreviewCacheKey(
+    val provider: ComponentName,
+    val profile: UserHandle
+)
+
+private object WidgetPreviewBitmapCache {
+    private const val MAX_ENTRIES = 64
+    private val cache = LruCache<WidgetPreviewCacheKey, ImageBitmap>(MAX_ENTRIES)
+
+    fun get(key: WidgetPreviewCacheKey): ImageBitmap? = cache.get(key)
+
+    fun put(key: WidgetPreviewCacheKey, bitmap: ImageBitmap) {
+        cache.put(key, bitmap)
+    }
+}
 
 private fun Drawable.toSafeBitmap(maxDimensionPx: Int = 360): Bitmap? {
     return try {
@@ -500,7 +519,7 @@ fun CustomWidgetPickerSheet(
                             items(filteredGroups, key = { it.packageName }) { group ->
                                 AppWidgetAccordionCard(
                                     group = group,
-                                    initiallyExpanded = filteredGroups.size <= 3 || searchQuery.isNotBlank(),
+                                    initiallyExpanded = filteredGroups.size <= 3,
                                     accentColor = accentColor,
                                     popupTheme = popupTheme,
                                     animationsEnabled = animationsEnabled,
@@ -633,8 +652,19 @@ private fun SingleWidgetPreviewCard(
     val widgetInfo = widgetEntry.providerInfo
     val label = widgetEntry.label
 
-    val previewBitmap by produceState<ImageBitmap?>(initialValue = null, widgetInfo) {
-        value = withContext(Dispatchers.IO) {
+    val cacheKey = remember(widgetInfo) {
+        WidgetPreviewCacheKey(widgetInfo.provider, widgetInfo.profile)
+    }
+    val previewBitmap by produceState<ImageBitmap?>(
+        initialValue = WidgetPreviewBitmapCache.get(cacheKey),
+        key1 = cacheKey
+    ) {
+        val cached = WidgetPreviewBitmapCache.get(cacheKey)
+        if (cached != null) {
+            value = cached
+            return@produceState
+        }
+        val loaded = withContext(Dispatchers.IO) {
             try {
                 val drawable = widgetInfo.loadPreviewImage(context, 0)
                     ?: widgetInfo.loadIcon(context, 0)
@@ -644,6 +674,10 @@ private fun SingleWidgetPreviewCard(
                 null
             }
         }
+        if (loaded != null) {
+            WidgetPreviewBitmapCache.put(cacheKey, loaded)
+        }
+        value = loaded
     }
 
     // Calculate grid dimensions (e.g. 4x2 or 2x1)

@@ -77,9 +77,13 @@ fun RectangularAlphabetWheel(
     
     var wheelPosition by remember { mutableStateOf(Offset.Zero) }
     var userHasInteracted by remember { mutableStateOf(false) }
+    var isTapAnimating by remember { mutableStateOf(false) }
+    var tapJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    var lastEmittedLetter by remember { mutableStateOf(selectedLetter) }
 
     LaunchedEffect(selectedLetter) {
         userHasInteracted = (selectedLetter != null)
+        lastEmittedLetter = selectedLetter
     }
 
     BoxWithConstraints(modifier = modifier) {
@@ -104,8 +108,10 @@ fun RectangularAlphabetWheel(
         }
 
         LaunchedEffect(activeIndex) {
-            if (userHasInteracted || selectedLetter != null) {
-                currentOnLetterSelected(alphabet[activeIndex])
+            val candidate = alphabet[activeIndex]
+            if (!isTapAnimating && (userHasInteracted || selectedLetter != null) && candidate != lastEmittedLetter) {
+                lastEmittedLetter = candidate
+                currentOnLetterSelected(candidate)
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             }
         }
@@ -199,10 +205,15 @@ fun RectangularAlphabetWheel(
         val pathMeasure = remember(indicatorPath) { PathMeasure().apply { setPath(indicatorPath, false) } }
         val totalLength = pathMeasure.length
 
+        val animationsEnabled = LocalAnimationsEnabled.current
         val handleDragStart = {
+            tapJob?.cancel()
+            isTapAnimating = false
             if (!userHasInteracted) {
                 userHasInteracted = true
-                currentOnLetterSelected(alphabet[activeIndex])
+                val candidate = alphabet[activeIndex]
+                lastEmittedLetter = candidate
+                currentOnLetterSelected(candidate)
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             }
         }
@@ -216,6 +227,7 @@ fun RectangularAlphabetWheel(
                     scrollOffset = scrollOffset,
                     density = density,
                     stepSize = stepSize,
+                    animationsEnabled = animationsEnabled,
                     onDragStart = handleDragStart
                 ),
             contentAlignment = Alignment.Center
@@ -275,7 +287,6 @@ fun RectangularAlphabetWheel(
                         }
                     }
             ) {
-                val animationsEnabled = LocalAnimationsEnabled.current
                 alphabet.forEachIndexed { index, letter ->
                     AlphabetLetterItem(
                         letter = letter,
@@ -290,21 +301,38 @@ fun RectangularAlphabetWheel(
                         pos = getRectPosition(index),
                         onClick = {
                             userHasInteracted = true
+                            lastEmittedLetter = letter
                             currentOnLetterSelected(letter)
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            scope.launch {
-                                if (animationsEnabled) {
-                                    scrollOffset.animateTo(
-                                        targetValue = index.toFloat(),
-                                        animationSpec = spring(
-                                            dampingRatio = Spring.DampingRatioLowBouncy,
-                                            stiffness = Spring.StiffnessLow
+                            tapJob?.cancel()
+                            val count = alphabet.size
+                            val current = scrollOffset.value
+                            val currentMod = ((current % count) + count) % count
+                            var delta = index.toFloat() - currentMod
+                            if (delta > count / 2f) delta -= count
+                            else if (delta < -count / 2f) delta += count
+                            val target = current + delta
+                            isTapAnimating = true
+                            val job = scope.launch {
+                                try {
+                                    if (animationsEnabled) {
+                                        scrollOffset.animateTo(
+                                            targetValue = target,
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioLowBouncy,
+                                                stiffness = Spring.StiffnessLow
+                                            )
                                         )
-                                    )
-                                } else {
-                                    scrollOffset.snapTo(index.toFloat())
+                                    } else {
+                                        scrollOffset.snapTo(target)
+                                    }
+                                } finally {
+                                    if (tapJob === coroutineContext[kotlinx.coroutines.Job]) {
+                                        isTapAnimating = false
+                                    }
                                 }
                             }
+                            tapJob = job
                         }
                     )
                 }
@@ -595,7 +623,7 @@ fun Modifier.alphabetWheelDragGesture(
             }
 
             dragChannel.close()
-            dragJob.cancel()
+            dragJob.join()
 
             launch {
                 if (animationsEnabled) {
