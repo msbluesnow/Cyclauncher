@@ -44,7 +44,7 @@ class LauncherAppWidgetHostView(context: Context) : AppWidgetHostView(context) {
     init {
         super.setPadding(0, 0, 0, 0)
         isFocusable = true
-        isClickable = true
+        isClickable = false
         layoutParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT
@@ -56,11 +56,30 @@ class LauncherAppWidgetHostView(context: Context) : AppWidgetHostView(context) {
         super.setPadding(0, 0, 0, 0)
     }
 
+    private fun hasScrollableChildAt(group: ViewGroup, x: Float, y: Float): Boolean {
+        for (i in 0 until group.childCount) {
+            val child = group.getChildAt(i)
+            if (child.visibility != VISIBLE) continue
+            val localX = x - child.left + group.scrollX
+            val localY = y - child.top + group.scrollY
+            if (localX >= 0f && localX < child.width && localY >= 0f && localY < child.height) {
+                if (child.canScrollVertically(-1) || child.canScrollVertically(1)) {
+                    return true
+                }
+                if (child is ViewGroup && hasScrollableChildAt(child, localX, localY)) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                // Request parent (Compose scroll/gesture detectors) to not steal touches
-                parent?.requestDisallowInterceptTouchEvent(true)
+                if (hasScrollableChildAt(this, ev.x, ev.y)) {
+                    parent?.requestDisallowInterceptTouchEvent(true)
+                }
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 parent?.requestDisallowInterceptTouchEvent(false)
@@ -70,8 +89,15 @@ class LauncherAppWidgetHostView(context: Context) : AppWidgetHostView(context) {
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        if (ev.actionMasked == MotionEvent.ACTION_DOWN) {
-            parent?.requestDisallowInterceptTouchEvent(true)
+        when (ev.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                if (hasScrollableChildAt(this, ev.x, ev.y)) {
+                    parent?.requestDisallowInterceptTouchEvent(true)
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                parent?.requestDisallowInterceptTouchEvent(false)
+            }
         }
         return super.dispatchTouchEvent(ev)
     }

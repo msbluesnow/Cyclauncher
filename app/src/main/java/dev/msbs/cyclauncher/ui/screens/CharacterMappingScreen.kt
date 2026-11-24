@@ -3,8 +3,12 @@ package dev.msbs.cyclauncher.ui.screens
 import dev.msbs.cyclauncher.ui.theme.capsuleColor
 import dev.msbs.cyclauncher.LauncherViewModel
 import dev.msbs.cyclauncher.ui.theme.AccentColor
+import dev.msbs.cyclauncher.ui.theme.LocalAnimationsEnabled
 import dev.msbs.cyclauncher.ui.theme.PrimaryTextColor
 import dev.msbs.cyclauncher.ui.theme.LocalShadowSettings
+import kotlinx.coroutines.launch
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import dev.msbs.cyclauncher.R
 import dev.msbs.cyclauncher.ui.components.ScreenTopBar
 import dev.msbs.cyclauncher.ui.components.TouchMarqueeText
@@ -67,8 +71,12 @@ fun CharacterMappingScreen(
     val customMappings by viewModel.customCharMappings.collectAsState()
     val handSide by viewModel.handSide.collectAsState()
     val shadowSettings = LocalShadowSettings.current
+    val animationsEnabled = LocalAnimationsEnabled.current
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val scrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
+    val inputFocusRequester = remember { FocusRequester() }
 
     val shadow = primaryTextColor.getShadow(showShadows, shadowSettings.shadowColorOverride)
 
@@ -126,7 +134,7 @@ fun CharacterMappingScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(horizontal = 24.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -197,7 +205,9 @@ fun CharacterMappingScreen(
                                 unfocusedBorderColor = primaryTextColor.color.copy(alpha = 0.2f)
                             ),
                             cursorColor = accentColor.color,
-                            modifier = Modifier.weight(1.3f),
+                            modifier = Modifier
+                                .weight(1.3f)
+                                .focusRequester(inputFocusRequester),
                             shape = RoundedCornerShape(10.dp),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() })
@@ -636,6 +646,15 @@ fun CharacterMappingScreen(
                             onAddSymbolClick = {
                                 selectedTargetChar = targetChar
                                 inputSymbol = ""
+                                coroutineScope.launch {
+                                    if (animationsEnabled) {
+                                        scrollState.animateScrollTo(0)
+                                    } else {
+                                        scrollState.scrollTo(0)
+                                    }
+                                    inputFocusRequester.requestFocus()
+                                    keyboardController?.show()
+                                }
                             },
                             onOpenDetails = {
                                 viewingLetterDetail = targetChar

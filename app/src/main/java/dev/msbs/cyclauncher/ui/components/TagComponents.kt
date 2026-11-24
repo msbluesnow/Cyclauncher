@@ -1,7 +1,5 @@
 package dev.msbs.cyclauncher.ui.components
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationEndReason
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
@@ -426,11 +424,11 @@ fun TagFolderPopup(
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
                 } else {
-                    val shakeRotation: Float
-                    val shakeTranslation: Float
+                    val shakeRotationState: State<Float>
+                    val shakeTranslationState: State<Float>
                     if (isEditMode && animationsEnabled) {
                         val infiniteTransition = rememberInfiniteTransition(label = "tag_popup_shake")
-                        val rot by infiniteTransition.animateFloat(
+                        shakeRotationState = infiniteTransition.animateFloat(
                             initialValue = -3.2f,
                             targetValue = 3.2f,
                             animationSpec = infiniteRepeatable(
@@ -439,7 +437,7 @@ fun TagFolderPopup(
                             ),
                             label = "popup_shake_rot"
                         )
-                        val trans by infiniteTransition.animateFloat(
+                        shakeTranslationState = infiniteTransition.animateFloat(
                             initialValue = -1.2f,
                             targetValue = 1.2f,
                             animationSpec = infiniteRepeatable(
@@ -448,14 +446,12 @@ fun TagFolderPopup(
                             ),
                             label = "popup_shake_trans"
                         )
-                        shakeRotation = rot
-                        shakeTranslation = trans
                     } else {
-                        shakeRotation = 0f
-                        shakeTranslation = 0f
+                        shakeRotationState = remember { mutableFloatStateOf(0f) }
+                        shakeTranslationState = remember { mutableFloatStateOf(0f) }
                     }
 
-                    val localApps = remember(apps) { mutableStateListOf<AppInfo>().apply { addAll(apps) } }
+                    val localApps = remember { mutableStateListOf<AppInfo>().apply { addAll(apps) } }
                     LaunchedEffect(apps, draggingKey) {
                         if (draggingKey == null) {
                             localApps.clear()
@@ -521,7 +517,6 @@ fun TagFolderPopup(
                                 }
                                 val movedItem = localApps.removeAt(curIndex)
                                 localApps.add(targetItem.index, movedItem)
-                                currentOnReorderApp?.invoke(curIndex, targetItem.index)
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             }
                         }
@@ -578,19 +573,14 @@ fun TagFolderPopup(
 
                                 val itemAnimModifier = if (animationsEnabled && !isDraggingThis) Modifier.animateItem() else Modifier
 
-                                val itemRotation = if (isEditMode && !isDraggingThis) {
-                                    if (index % 2 == 0) shakeRotation else -shakeRotation
-                                } else 0f
-
-                                val itemTranslation = if (isEditMode && !isDraggingThis) {
-                                    if ((index / 2) % 2 == 0) shakeTranslation else -shakeTranslation
-                                } else 0f
-
                                 val gestureModifier = if (isEditMode) {
                                     Modifier.pointerInput(appKey, localApps.size) {
                                         detectDragGestures(
                                             onDragStart = {
-                                                val itemInfo = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+                                                val curIdx = localApps.indexOfFirst { it.componentKey == appKey }
+                                                val itemInfo = if (curIdx != -1) {
+                                                    gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == curIdx }
+                                                } else null
                                                 if (itemInfo != null) {
                                                     draggingKey = appKey
                                                     draggingInitialOffset = Offset(itemInfo.offset.x.toFloat(), itemInfo.offset.y.toFloat())
@@ -601,6 +591,7 @@ fun TagFolderPopup(
                                                 }
                                             },
                                             onDrag = { change, dragAmount ->
+                                                if (draggingKey != appKey) return@detectDragGestures
                                                 change.consume()
                                                 draggingDelta += dragAmount
 
@@ -610,51 +601,25 @@ fun TagFolderPopup(
                                                 checkForMove()
                                             },
                                             onDragEnd = {
-                                                autoScrollSpeed = 0f
-                                                draggingKey = null
-                                                draggingDelta = Offset.Zero
-                                                currentOnSaveOrder?.invoke(localApps.map { it.componentKey })
+                                                if (draggingKey == appKey) {
+                                                    autoScrollSpeed = 0f
+                                                    draggingKey = null
+                                                    draggingDelta = Offset.Zero
+                                                    currentOnSaveOrder?.invoke(localApps.map { it.componentKey })
+                                                }
                                             },
                                             onDragCancel = {
-                                                autoScrollSpeed = 0f
-                                                draggingKey = null
-                                                draggingDelta = Offset.Zero
-                                                currentOnSaveOrder?.invoke(localApps.map { it.componentKey })
+                                                if (draggingKey == appKey) {
+                                                    autoScrollSpeed = 0f
+                                                    draggingKey = null
+                                                    draggingDelta = Offset.Zero
+                                                    currentOnSaveOrder?.invoke(localApps.map { it.componentKey })
+                                                }
                                             }
                                         )
                                     }
                                 } else {
                                     Modifier
-                                }
-
-                                val curItemInfo = if (isDraggingThis) {
-                                    gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
-                                } else null
-
-                                val itemTranslationX = if (isDraggingThis) {
-                                    if (curItemInfo != null) {
-                                        val draggedVisualX = draggingInitialOffset.x + draggingDelta.x
-                                        draggedVisualX - curItemInfo.offset.x
-                                    } else {
-                                        draggingDelta.x
-                                    }
-                                } else if (isEditMode) {
-                                    itemTranslation
-                                } else {
-                                    0f
-                                }
-
-                                val itemTranslationY = if (isDraggingThis) {
-                                    if (curItemInfo != null) {
-                                        val draggedVisualY = draggingInitialOffset.y + draggingDelta.y
-                                        draggedVisualY - curItemInfo.offset.y
-                                    } else {
-                                        draggingDelta.y
-                                    }
-                                } else if (isEditMode) {
-                                    if (index % 2 == 0) itemTranslation * 0.4f else -itemTranslation * 0.4f
-                                } else {
-                                    0f
                                 }
 
                                 Box(
@@ -667,9 +632,31 @@ fun TagFolderPopup(
                                             scaleY = scale
                                             this.alpha = alpha
                                             shadowElevation = if (isDraggingThis) 16.dp.toPx() else 0f
-                                            translationX = itemTranslationX
-                                            translationY = itemTranslationY
-                                            rotationZ = if (isDraggingThis) 0f else itemRotation
+                                            if (isDraggingThis) {
+                                                val curItemInfo = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == appKey }
+                                                translationX = if (curItemInfo != null) {
+                                                    (draggingInitialOffset.x + draggingDelta.x) - curItemInfo.offset.x
+                                                } else {
+                                                    draggingDelta.x
+                                                }
+                                                translationY = if (curItemInfo != null) {
+                                                    (draggingInitialOffset.y + draggingDelta.y) - curItemInfo.offset.y
+                                                } else {
+                                                    draggingDelta.y
+                                                }
+                                                rotationZ = 0f
+                                            } else if (isEditMode) {
+                                                val rot = shakeRotationState.value
+                                                val trans = shakeTranslationState.value
+                                                val signedTrans = if ((index / 2) % 2 == 0) trans else -trans
+                                                translationX = signedTrans
+                                                translationY = if (index % 2 == 0) signedTrans * 0.4f else -signedTrans * 0.4f
+                                                rotationZ = if (index % 2 == 0) rot else -rot
+                                            } else {
+                                                translationX = 0f
+                                                translationY = 0f
+                                                rotationZ = 0f
+                                            }
                                         }
                                         .then(gestureModifier)
                                 ) {
@@ -770,7 +757,10 @@ private fun TagFolderScrollbar(
             1.0f
         }
         val minThumbHeightPx = with(density) { 28.dp.toPx() }
-        val thumbHeightPx = (trackHeightPx * thumbHeightRatio).coerceIn(minThumbHeightPx, trackHeightPx)
+        val thumbHeightPx = (trackHeightPx * thumbHeightRatio).coerceIn(
+            minOf(minThumbHeightPx, trackHeightPx),
+            trackHeightPx
+        )
 
         val firstVisibleRow = gridState.firstVisibleItemIndex / 3
         val firstRowOffset = gridState.firstVisibleItemScrollOffset.toFloat()
@@ -1176,33 +1166,22 @@ fun TagFolderActionMenu(
                 // 4. Delete Tag with trash can icon and hold-to-delete line (1.2s)
                 val haptic = LocalHapticFeedback.current
                 var isDeletePressed by remember { mutableStateOf(false) }
-                val deleteProgress = remember { Animatable(0f) }
                 val deleteColor = Color(0xFFEF4444)
                 val holdDurationMs = 1200L
-
-                LaunchedEffect(isDeletePressed) {
-                    if (isDeletePressed) {
-                        val result = deleteProgress.animateTo(
-                            targetValue = 1f,
-                            animationSpec = tween(
-                                durationMillis = holdDurationMs.toInt(),
-                                easing = LinearEasing
-                            )
-                        )
-                        if (result.endReason == AnimationEndReason.Finished && deleteProgress.value >= 0.99f) {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onDismiss()
-                            onDeleteTag()
-                        }
-                    } else {
-                        deleteProgress.snapTo(0f)
+                val deleteProgress by rememberHoldToConfirmProgress(
+                    isPressed = isDeletePressed,
+                    holdDurationMs = holdDurationMs,
+                    onConfirmed = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onDismiss()
+                        onDeleteTag()
                     }
-                }
+                )
 
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(if (deleteProgress.value > 0f) deleteColor.copy(alpha = 0.12f) else Color.Transparent)
+                        .background(if (deleteProgress > 0f) deleteColor.copy(alpha = 0.12f) else Color.Transparent)
                         .pointerInput(Unit) {
                             awaitEachGesture {
                                 awaitFirstDown(requireUnconsumed = false)
@@ -1217,13 +1196,13 @@ fun TagFolderActionMenu(
                     Icon(
                         imageVector = Icons.Outlined.Delete,
                         contentDescription = stringResource(R.string.tag_menu_hold_to_delete),
-                        tint = if (deleteProgress.value > 0f) deleteColor else deleteColor.copy(alpha = 0.85f),
+                        tint = if (deleteProgress > 0f) deleteColor else deleteColor.copy(alpha = 0.85f),
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = stringResource(R.string.tag_menu_delete),
-                        color = if (deleteProgress.value > 0f) deleteColor else deleteColor.copy(alpha = 0.85f),
+                        color = if (deleteProgress > 0f) deleteColor else deleteColor.copy(alpha = 0.85f),
                         style = MaterialTheme.typography.bodyLarge
                     )
 
@@ -1235,7 +1214,7 @@ fun TagFolderActionMenu(
                             .height(2.5.dp),
                         contentAlignment = Alignment.CenterEnd
                     ) {
-                        if (deleteProgress.value > 0f) {
+                        if (deleteProgress > 0f) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1245,7 +1224,7 @@ fun TagFolderActionMenu(
                             )
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth(deleteProgress.value)
+                                    .fillMaxWidth(deleteProgress)
                                     .fillMaxHeight()
                                     .clip(CircleShape)
                                     .background(deleteColor)

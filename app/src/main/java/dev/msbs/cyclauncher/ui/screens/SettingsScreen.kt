@@ -131,6 +131,7 @@ fun SettingsScreen(
     val context = LocalContext.current
 
     var showDefaultLauncherDialog by remember { mutableStateOf(false) }
+    var pendingDefaultLauncherResult by remember { mutableStateOf(false) }
     var showAutoTagsScreen by remember { mutableStateOf(false) }
     var showCharacterMappingScreen by remember { mutableStateOf(false) }
     var showIconPackDialog by remember { mutableStateOf(false) }
@@ -149,6 +150,10 @@ fun SettingsScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.updateDefaultLauncherStatus()
+                if (pendingDefaultLauncherResult) {
+                    pendingDefaultLauncherResult = false
+                    showDefaultLauncherDialog = true
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -344,8 +349,8 @@ fun SettingsScreen(
                             showShadows = showShadows,
                             shadowColorOverride = shadowColorOverride,
                             onDefaultClick = {
+                                pendingDefaultLauncherResult = true
                                 viewModel.openDefaultLauncherSettings(context)
-                                showDefaultLauncherDialog = true
                             },
                             onRelaunchClick = {
                                 val pm = context.packageManager
@@ -464,8 +469,13 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    if (!currentIsDefault) viewModel.openDefaultLauncherSettings(context) else showDefaultLauncherDialog =
-                        false
+                    if (!currentIsDefault) {
+                        pendingDefaultLauncherResult = true
+                        showDefaultLauncherDialog = false
+                        viewModel.openDefaultLauncherSettings(context)
+                    } else {
+                        showDefaultLauncherDialog = false
+                    }
                 }) {
                     Text(if (currentIsDefault) stringResource(R.string.settings_default_launcher_great) else stringResource(R.string.settings_default_launcher_set), color = accentColor.color)
                 }
@@ -2362,16 +2372,16 @@ private fun AccentColorDialog(
         android.graphics.Color.colorToHSV(selectedColor.color.toArgb(), hsv)
         hsv
     }
-    var currentHue by remember { mutableFloatStateOf(initialHsv[0]) }
-    var currentSat by remember { mutableFloatStateOf(initialHsv[1].coerceAtLeast(0.1f)) }
-    var currentVal by remember { mutableFloatStateOf(initialHsv[2].coerceAtLeast(0.1f)) }
+    var currentHue by remember(selectedColor) { mutableFloatStateOf(initialHsv[0]) }
+    var currentSat by remember(selectedColor) { mutableFloatStateOf(initialHsv[1]) }
+    var currentVal by remember(selectedColor) { mutableFloatStateOf(initialHsv[2]) }
 
     val customPickedColor = remember(currentHue, currentSat, currentVal) {
         val hsv = floatArrayOf(currentHue, currentSat, currentVal)
         Color(android.graphics.Color.HSVToColor(hsv))
     }
 
-    var hexInputText by remember {
+    var hexInputText by remember(selectedColor) {
         val argb = selectedColor.color.toArgb()
         mutableStateOf(String.format("%06X", 0xFFFFFF and argb))
     }
@@ -2645,7 +2655,7 @@ private fun AccentColorDialog(
                                 val col = Color(android.graphics.Color.HSVToColor(hsv))
                                 hexInputText = String.format("%06X", 0xFFFFFF and col.toArgb())
                             },
-                            valueRange = 0.05f..1f,
+                            valueRange = 0f..1f,
                             colors = SliderDefaults.colors(
                                 thumbColor = customPickedColor,
                                 activeTrackColor = customPickedColor,
@@ -2668,7 +2678,7 @@ private fun AccentColorDialog(
                                 val col = Color(android.graphics.Color.HSVToColor(hsv))
                                 hexInputText = String.format("%06X", 0xFFFFFF and col.toArgb())
                             },
-                            valueRange = 0.05f..1f,
+                            valueRange = 0f..1f,
                             colors = SliderDefaults.colors(
                                 thumbColor = customPickedColor,
                                 activeTrackColor = customPickedColor,

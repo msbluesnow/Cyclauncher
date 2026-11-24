@@ -9,6 +9,7 @@ import dev.msbs.cyclauncher.model.HighlightSection
 import dev.msbs.cyclauncher.ui.components.CustomWidgetPickerSheet
 import dev.msbs.cyclauncher.ui.components.appItemGestures
 import dev.msbs.cyclauncher.ui.components.rememberAppIconPainter
+import dev.msbs.cyclauncher.ui.components.rememberHoldToConfirmProgress
 import dev.msbs.cyclauncher.ui.components.ScreenTopBar
 import dev.msbs.cyclauncher.ui.components.ShadowedIcon
 import dev.msbs.cyclauncher.ui.components.TouchMarqueeText
@@ -51,9 +52,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationEndReason
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -162,11 +160,7 @@ fun HighlightScreen(
     val popupTheme by viewModel.popupTheme.collectAsState()
 
     val apps by viewModel.apps.collectAsState()
-    val tags by viewModel.tags.collectAsState()
     val appTagsMap by viewModel.appTags.collectAsState()
-    val favoriteItems by viewModel.favoriteItems.collectAsState()
-    val historyApps by viewModel.historyApps.collectAsState()
-    val recentlyUpdatedKeys by viewModel.recentlyUpdatedApps.collectAsState()
     val highlightWidgets by viewModel.highlightWidgets.collectAsState()
     val untaggedApps by viewModel.untaggedApps.collectAsState()
     val isPrivateSpaceLocked by viewModel.isPrivateSpaceLocked.collectAsState()
@@ -371,6 +365,13 @@ fun HighlightScreen(
                 val sectionsScrollState = rememberScrollState()
                 val layoutDirection = if (handSide == HandSide.RIGHT) LayoutDirection.Rtl else LayoutDirection.Ltr
 
+                LaunchedEffect(sections) {
+                    val current = expandedSection
+                    if (current != null && sections.none { it.section == current }) {
+                        expandedSection = null
+                    }
+                }
+
                 LaunchedEffect(handSide) {
                     sectionsScrollState.scrollTo(0)
                 }
@@ -472,6 +473,10 @@ fun HighlightScreen(
 
                                     when (currentSection) {
                                         HighlightSection.OVERVIEW -> {
+                                            val tags by viewModel.tags.collectAsState()
+                                            val favoriteItems by viewModel.favoriteItems.collectAsState()
+                                            val historyApps by viewModel.historyApps.collectAsState()
+
                                             HighlightSectionHeader(
                                                 title = stringResource(R.string.highlight_section_overview),
                                                 icon = Icons.Outlined.AutoAwesome,
@@ -1366,10 +1371,10 @@ private fun WidgetsSection(
                 }
             }
         } else {
-            // Widgets docked flush to the right edge with adaptive thumb scroll space on left
+            // Symmetric 56.dp thumb scroll & edge-dismiss corridor on the active hand side
             val handPadding = when (handSide) {
                 HandSide.LEFT -> PaddingValues(start = 56.dp, end = 0.dp)
-                HandSide.RIGHT -> PaddingValues(start = 24.dp, end = 0.dp)
+                HandSide.RIGHT -> PaddingValues(start = 0.dp, end = 56.dp)
             }
 
             Column(
@@ -1379,7 +1384,7 @@ private fun WidgetsSection(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 for ((index, config) in widgetConfigs.withIndex()) {
-                    key(config.id) {
+                    key(config.id, appWidgetHost) {
                         WidgetCard(
                             config = config,
                             canMoveUp = index > 0,
@@ -1437,7 +1442,7 @@ private fun WidgetCard(
     onDelete: () -> Unit
 ) {
     val context = LocalContext.current
-    val widgetInfo = remember(config.id) {
+    val widgetInfo = remember(config.id, appWidgetManager) {
         try {
             appWidgetManager.getAppWidgetInfo(config.id)
         } catch (_: Exception) {
@@ -1460,7 +1465,7 @@ private fun WidgetCard(
 
     // Keep reference to detach cleanly on disposal
     var currentHostView by remember { mutableStateOf<LauncherAppWidgetHostView?>(null) }
-    DisposableEffect(config.id) {
+    DisposableEffect(config.id, appWidgetHost) {
         onDispose {
             (currentHostView?.parent as? ViewGroup)?.removeView(currentHostView)
             currentHostView = null
@@ -1473,30 +1478,23 @@ private fun WidgetCard(
     // Hold-to-delete progress line state matching TagEditHeader
     val haptic = LocalHapticFeedback.current
     var isDeletePressed by remember { mutableStateOf(false) }
-    val deleteProgress = remember { Animatable(0f) }
     val deleteColor = Color(0xFFEF4444)
-
-    LaunchedEffect(isDeletePressed) {
-        if (isDeletePressed) {
-            val result = deleteProgress.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(
-                    durationMillis = if (animationsEnabled) 1200 else 100,
-                    easing = LinearEasing
-                )
-            )
-            if (result.endReason == AnimationEndReason.Finished && deleteProgress.value >= 0.99f) {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                onDelete()
-            }
-        } else {
-            deleteProgress.snapTo(0f)
+    val deleteProgress by rememberHoldToConfirmProgress(
+        isPressed = isDeletePressed,
+        holdDurationMs = 1200L,
+        onConfirmed = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onDelete()
         }
-    }
+    )
 
-    // Always align card to CenterEnd so controls and card are flush to the outer edge
-    val cardAlignment = Alignment.CenterEnd
-    val cardShape = RoundedCornerShape(topStart = 14.dp, bottomStart = 14.dp, topEnd = 0.dp, bottomEnd = 0.dp)
+    // Align card away from the 56.dp thumb corridor so controls dock flush to the opposite edge
+    val cardAlignment = if (handSide == HandSide.LEFT) Alignment.CenterEnd else Alignment.CenterStart
+    val cardShape = if (handSide == HandSide.LEFT) {
+        RoundedCornerShape(topStart = 14.dp, bottomStart = 14.dp, topEnd = 0.dp, bottomEnd = 0.dp)
+    } else {
+        RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 14.dp, bottomEnd = 14.dp)
+    }
 
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -1544,7 +1542,7 @@ private fun WidgetCard(
                                 .height(2.5.dp),
                             contentAlignment = Alignment.CenterStart
                         ) {
-                            if (deleteProgress.value > 0f) {
+                            if (deleteProgress > 0f) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -1554,7 +1552,7 @@ private fun WidgetCard(
                                 )
                                 Box(
                                     modifier = Modifier
-                                        .fillMaxWidth(deleteProgress.value)
+                                        .fillMaxWidth(deleteProgress)
                                         .fillMaxHeight()
                                         .clip(CircleShape)
                                         .background(deleteColor)
@@ -1654,7 +1652,7 @@ private fun WidgetCard(
                                 modifier = Modifier
                                     .size(28.dp)
                                     .clip(CircleShape)
-                                    .background(if (deleteProgress.value > 0f) deleteColor.copy(alpha = 0.2f) else Color.Transparent)
+                                    .background(if (deleteProgress > 0f) deleteColor.copy(alpha = 0.2f) else Color.Transparent)
                                     .pointerInput(Unit) {
                                         awaitEachGesture {
                                             awaitFirstDown(requireUnconsumed = false)
@@ -1668,7 +1666,7 @@ private fun WidgetCard(
                                 ShadowedIcon(
                                     imageVector = Icons.Outlined.Delete,
                                     contentDescription = stringResource(R.string.highlight_widget_delete_hold),
-                                    tint = if (deleteProgress.value > 0f) deleteColor else deleteColor.copy(alpha = 0.85f),
+                                    tint = if (deleteProgress > 0f) deleteColor else deleteColor.copy(alpha = 0.85f),
                                     modifier = Modifier.size(17.dp),
                                     showShadows = showShadows,
                                     primaryTextColor = primaryTextColor,
@@ -1687,30 +1685,32 @@ private fun WidgetCard(
                         .height(config.heightDp.dp)
                         .clip(RoundedCornerShape(10.dp))
                 ) {
-                    AndroidView(
-                        factory = { ctx ->
-                            try {
-                                val view = (appWidgetHost.createView(ctx, config.id, widgetInfo) as? LauncherAppWidgetHostView)
-                                    ?: LauncherAppWidgetHostView(ctx).apply {
-                                        setAppWidget(config.id, widgetInfo)
-                                    }
-                                (view.parent as? ViewGroup)?.removeView(view)
-                                currentHostView = view
-                                view
-                            } catch (_: Throwable) {
-                                android.widget.FrameLayout(ctx)
+                    key(config.id, appWidgetHost) {
+                        AndroidView(
+                            factory = { ctx ->
+                                try {
+                                    val view = (appWidgetHost.createView(ctx, config.id, widgetInfo) as? LauncherAppWidgetHostView)
+                                        ?: LauncherAppWidgetHostView(ctx).apply {
+                                            setAppWidget(config.id, widgetInfo)
+                                        }
+                                    (view.parent as? ViewGroup)?.removeView(view)
+                                    currentHostView = view
+                                    view
+                                } catch (_: Throwable) {
+                                    android.widget.FrameLayout(ctx)
+                                }
+                            },
+                            modifier = Modifier.fillMaxSize(),
+                            update = { view ->
+                                try {
+                                    val displayDensity = context.resources.displayMetrics.density
+                                    val screenWidthDp = (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
+                                    val targetWidthDp = (screenWidthDp * config.widthFraction).toInt() - 24
+                                    (view as? LauncherAppWidgetHostView)?.applyWidgetSize(targetWidthDp, config.heightDp)
+                                } catch (_: Throwable) {}
                             }
-                        },
-                        modifier = Modifier.fillMaxSize(),
-                        update = { view ->
-                            try {
-                                val displayDensity = context.resources.displayMetrics.density
-                                val screenWidthDp = (context.resources.displayMetrics.widthPixels / displayDensity).toInt()
-                                val targetWidthDp = (screenWidthDp * config.widthFraction).toInt() - 24
-                                (view as? LauncherAppWidgetHostView)?.applyWidgetSize(targetWidthDp, config.heightDp)
-                            } catch (_: Throwable) {}
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -1919,22 +1919,36 @@ private fun HighlightPrivateSpaceContent(
             }
         }
     } else {
-        androidx.compose.foundation.layout.FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        Column(
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            for (app in apps) {
-                dev.msbs.cyclauncher.ui.components.AppListItemWithIcon(
-                    app = app,
-                    handSide = handSide,
-                    iconSize = 44,
-                    fontSize = 14,
-                    accentColor = accentColor,
-                    onClick = { onAppClick(app.componentKey) },
-                    onLongClick = { offset -> onAppLongClick(app, offset) },
-                    primaryTextColor = primaryTextColor,
-                    showShadows = showShadows
-                )
+            apps.chunked(2).forEach { rowApps ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    rowApps.forEach { app ->
+                        key(app.componentKey) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                dev.msbs.cyclauncher.ui.components.AppListItemWithIcon(
+                                    app = app,
+                                    handSide = handSide,
+                                    iconSize = 44,
+                                    fontSize = 14,
+                                    accentColor = accentColor,
+                                    onClick = { onAppClick(app.componentKey) },
+                                    onLongClick = { offset -> onAppLongClick(app, offset) },
+                                    primaryTextColor = primaryTextColor,
+                                    showShadows = showShadows
+                                )
+                            }
+                        }
+                    }
+                    if (rowApps.size == 1) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
             }
         }
     }

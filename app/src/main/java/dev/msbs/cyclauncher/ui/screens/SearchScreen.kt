@@ -132,6 +132,7 @@ fun SearchScreen(
             onPickWidget = { isLeft ->
                 widgetPickTarget = if (isLeft) WidgetPickTarget.WHEEL_LEFT else WidgetPickTarget.WHEEL_RIGHT
             },
+            visible = selectedLetter == null,
             modifier = compartmentModifier
         )
     }
@@ -257,7 +258,7 @@ fun WheelSearchLayout(
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            if (selectedLetter == null && showSearchWidgets) {
+            if (showSearchWidgets) {
                 widgetCompartment?.invoke(
                     Modifier
                         .fillMaxSize()
@@ -274,8 +275,16 @@ fun WheelSearchLayout(
                         .weight(1f)
                 }
 
+                val sideGestureModifier = if (selectedLetter == null && showSearchWidgets) {
+                    Modifier
+                        .fillMaxHeight()
+                        .weight(1f)
+                } else {
+                    scrollModifier
+                }
+
                 if (listAlignment == TextAlign.End) {
-                    Box(modifier = scrollModifier)
+                    Box(modifier = sideGestureModifier)
                     Box(modifier = appsSideModifier) {
                         if (selectedLetter != null) {
                             AppListContent(
@@ -307,7 +316,7 @@ fun WheelSearchLayout(
                             )
                         }
                     }
-                    Box(modifier = scrollModifier)
+                    Box(modifier = sideGestureModifier)
                 }
             }
         }

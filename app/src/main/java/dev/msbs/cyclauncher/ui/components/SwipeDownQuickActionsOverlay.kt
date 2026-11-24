@@ -134,10 +134,9 @@ fun SwipeDownQuickActionsOverlay(
         topInsetPx,
         bottomInsetPx
     ) {
-        val cardCenterY = state.anchorPosition.y.coerceIn(
-            topInsetPx + cardHeightPx / 2f,
-            screenHeightPx - bottomInsetPx - cardHeightPx / 2f
-        )
+        val minCenterY = topInsetPx + cardHeightPx / 2f
+        val maxCenterY = maxOf(minCenterY, screenHeightPx - bottomInsetPx - cardHeightPx / 2f)
+        val cardCenterY = state.anchorPosition.y.coerceIn(minCenterY, maxCenterY)
         val cardTopY = cardCenterY - cardHeightPx / 2f
 
         var notifLeftX: Float

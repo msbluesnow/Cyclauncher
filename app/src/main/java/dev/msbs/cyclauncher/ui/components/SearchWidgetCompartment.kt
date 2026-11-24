@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -73,7 +74,8 @@ fun SearchWidgetCompartment(
     appWidgetHost: AppWidgetHost?,
     appWidgetManager: AppWidgetManager?,
     onPickWidget: (isLeft: Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    visible: Boolean = true
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -97,7 +99,9 @@ fun SearchWidgetCompartment(
 
     val manager = appWidgetManager ?: remember { AppWidgetManager.getInstance(context.applicationContext) }
 
-    BoxWithConstraints(modifier = modifier) {
+    BoxWithConstraints(
+        modifier = modifier.graphicsLayer { alpha = if (visible) 1f else 0f }
+    ) {
         val totalWidth = maxWidth
         val totalHeight = maxHeight
         val dividerWidth = 16.dp
@@ -129,6 +133,7 @@ fun SearchWidgetCompartment(
                     accentColor = accentColor.color,
                     primaryTextColor = primaryTextColor,
                     isResizing = isDraggingDivider,
+                    visible = visible,
                     onPick = { onPickWidget(true) },
                     onOptions = { slotForOptions = true }
                 )
@@ -139,7 +144,8 @@ fun SearchWidgetCompartment(
                 modifier = Modifier
                     .width(dividerWidth)
                     .fillMaxHeight()
-                    .pointerInput(Unit) {
+                    .pointerInput(visible) {
+                        if (!visible) return@pointerInput
                         detectTapGestures(
                             onDoubleTap = {
                                 localRatio = 0.5f
@@ -148,7 +154,8 @@ fun SearchWidgetCompartment(
                             }
                         )
                     }
-                    .pointerInput(Unit) {
+                    .pointerInput(visible) {
+                        if (!visible) return@pointerInput
                         detectHorizontalDragGestures(
                             onDragStart = { isDraggingDivider = true },
                             onDragEnd = {
@@ -208,6 +215,7 @@ fun SearchWidgetCompartment(
                     accentColor = accentColor.color,
                     primaryTextColor = primaryTextColor,
                     isResizing = isDraggingDivider,
+                    visible = visible,
                     onPick = { onPickWidget(false) },
                     onOptions = { slotForOptions = false }
                 )
@@ -315,11 +323,12 @@ private fun SingleWidgetSlot(
     accentColor: Color,
     primaryTextColor: PrimaryTextColor,
     isResizing: Boolean = false,
+    visible: Boolean = true,
     onPick: () -> Unit,
     onOptions: () -> Unit
 ) {
     val context = LocalContext.current
-    val widgetInfo = remember(widgetId) {
+    val widgetInfo = remember(widgetId, manager) {
         widgetId?.let {
             try {
                 manager.getAppWidgetInfo(it)
@@ -329,7 +338,7 @@ private fun SingleWidgetSlot(
         }
     }
 
-    var cachedHostView by remember(widgetId) { mutableStateOf<LauncherAppWidgetHostView?>(null) }
+    var cachedHostView by remember(widgetId, appWidgetHost) { mutableStateOf<LauncherAppWidgetHostView?>(null) }
 
     if (widgetId == null || widgetInfo == null) {
         // Empty Slot Placeholder
@@ -339,7 +348,7 @@ private fun SingleWidgetSlot(
                 .clip(RoundedCornerShape(12.dp))
                 .background(primaryTextColor.capsuleColor(0.08f))
                 .border(1.dp, primaryTextColor.capsuleBorderColor(0.12f), RoundedCornerShape(12.dp))
-                .clickable(onClick = onPick),
+                .clickable(enabled = visible, onClick = onPick),
             contentAlignment = Alignment.Center
         ) {
             Column(
@@ -383,7 +392,8 @@ private fun SingleWidgetSlot(
                 onCacheView = { cachedHostView = it },
                 targetWidthDp = targetWidthDp,
                 targetHeightDp = targetHeightDp,
-                isResizing = isResizing || slotWidthPx <= 0f || slotHeightPx <= 0f
+                isResizing = isResizing || slotWidthPx <= 0f || slotHeightPx <= 0f,
+                visible = visible
             )
 
             // Discreet options button overlay in the upper corner
@@ -394,7 +404,7 @@ private fun SingleWidgetSlot(
                     .size(22.dp)
                     .clip(CircleShape)
                     .background(Color.Black.copy(alpha = 0.38f))
-                    .clickable(onClick = onOptions),
+                    .clickable(enabled = visible, onClick = onOptions),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -432,7 +442,9 @@ fun SideDualWidgetSlot(
     showShadows: Boolean,
     shadowSettings: ShadowSettings,
     handSide: HandSide = HandSide.RIGHT,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    visible: Boolean = true,
+    openOptionsTrigger: Int = 0
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -463,29 +475,47 @@ fun SideDualWidgetSlot(
     var liveOffsetX by remember { mutableStateOf<Float?>(null) }
     var liveOffsetY by remember { mutableStateOf<Float?>(null) }
 
-    BackHandler(enabled = isMoving) { isMoving = false }
+    BackHandler(enabled = isMoving && visible) { isMoving = false }
+
+    LaunchedEffect(visible) {
+        if (!visible) isMoving = false
+    }
 
     val layout = config.layout
     val currentLayout by rememberUpdatedState(layout)
 
-    var cachedTopHostView by remember(topWidgetId) { mutableStateOf<LauncherAppWidgetHostView?>(null) }
-    var cachedBottomHostView by remember(bottomWidgetId) { mutableStateOf<LauncherAppWidgetHostView?>(null) }
+    var cachedTopHostView by remember(topWidgetId, appWidgetHost) { mutableStateOf<LauncherAppWidgetHostView?>(null) }
+    var cachedBottomHostView by remember(bottomWidgetId, appWidgetHost) { mutableStateOf<LauncherAppWidgetHostView?>(null) }
 
-    val topInfo = remember(topWidgetId) {
+    val topInfo = remember(topWidgetId, manager) {
         topWidgetId?.let {
             try { manager.getAppWidgetInfo(it) } catch (_: Exception) { null }
         }
     }
-    val bottomInfo = remember(bottomWidgetId) {
+    val bottomInfo = remember(bottomWidgetId, manager) {
         bottomWidgetId?.let {
             try { manager.getAppWidgetInfo(it) } catch (_: Exception) { null }
         }
     }
 
+    LaunchedEffect(openOptionsTrigger) {
+        if (openOptionsTrigger > 0) {
+            val isTopActive = topWidgetId != null && topInfo != null
+            val isBottomActive = bottomWidgetId != null && bottomInfo != null
+            if (isTopActive || isBottomActive) {
+                slotForOptions = isTopActive
+            } else {
+                onPickWidget(true)
+            }
+        }
+    }
+
     BoxWithConstraints(
-        modifier = modifier.then(
-            if (isMoving) Modifier.pointerInput(Unit) { detectTapGestures { isMoving = false } } else Modifier
-        )
+        modifier = modifier
+            .graphicsLayer { alpha = if (visible) 1f else 0f }
+            .then(
+                if (isMoving && visible) Modifier.pointerInput(Unit) { detectTapGestures { isMoving = false } } else Modifier
+            )
     ) {
         val totalWidth = maxWidth
         val totalHeight = maxHeight
@@ -498,7 +528,7 @@ fun SideDualWidgetSlot(
                     .clip(RoundedCornerShape(12.dp))
                     .background(primaryTextColor.capsuleColor(0.08f))
                     .border(1.dp, primaryTextColor.capsuleBorderColor(0.12f), RoundedCornerShape(12.dp))
-                    .clickable { onPickWidget(true) },
+                    .clickable(enabled = visible) { onPickWidget(true) },
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -579,7 +609,8 @@ fun SideDualWidgetSlot(
                                 onCacheView = { cachedTopHostView = it },
                                 targetWidthDp = widgetWidth.value.roundToInt().coerceAtLeast(30),
                                 targetHeightDp = topHeight.value.roundToInt().coerceAtLeast(30),
-                                isResizing = isDraggingDivider
+                                isResizing = isDraggingDivider,
+                                visible = visible
                             )
 
                             if (!isMoving) {
@@ -590,7 +621,7 @@ fun SideDualWidgetSlot(
                                         .size(24.dp)
                                         .clip(CircleShape)
                                         .background(Color.Black.copy(alpha = 0.38f))
-                                        .clickable { slotForOptions = true },
+                                        .clickable(enabled = visible) { slotForOptions = true },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -608,7 +639,8 @@ fun SideDualWidgetSlot(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(dividerHeight)
-                                .pointerInput(Unit) {
+                                .pointerInput(visible) {
+                                    if (!visible) return@pointerInput
                                     detectTapGestures(
                                         onDoubleTap = {
                                             localRatio = 0.5f
@@ -617,7 +649,8 @@ fun SideDualWidgetSlot(
                                         }
                                     )
                                 }
-                                .pointerInput(Unit) {
+                                .pointerInput(visible) {
+                                    if (!visible) return@pointerInput
                                     detectVerticalDragGestures(
                                         onDragStart = { isDraggingDivider = true },
                                         onDragEnd = {
@@ -672,7 +705,8 @@ fun SideDualWidgetSlot(
                                 onCacheView = { cachedBottomHostView = it },
                                 targetWidthDp = widgetWidth.value.roundToInt().coerceAtLeast(30),
                                 targetHeightDp = bottomHeight.value.roundToInt().coerceAtLeast(30),
-                                isResizing = isDraggingDivider
+                                isResizing = isDraggingDivider,
+                                visible = visible
                             )
 
                             if (!isMoving) {
@@ -683,7 +717,7 @@ fun SideDualWidgetSlot(
                                         .size(24.dp)
                                         .clip(CircleShape)
                                         .background(Color.Black.copy(alpha = 0.38f))
-                                        .clickable { slotForOptions = false },
+                                        .clickable(enabled = visible) { slotForOptions = false },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -717,7 +751,8 @@ fun SideDualWidgetSlot(
                                 if (isTopActive) cachedTopHostView = it else cachedBottomHostView = it
                             },
                             targetWidthDp = widgetWidth.value.roundToInt().coerceAtLeast(30),
-                            targetHeightDp = widgetHeight.value.roundToInt().coerceAtLeast(30)
+                            targetHeightDp = widgetHeight.value.roundToInt().coerceAtLeast(30),
+                            visible = visible
                         )
 
                         if (!isMoving) {
@@ -734,7 +769,7 @@ fun SideDualWidgetSlot(
                                         .size(24.dp)
                                         .clip(CircleShape)
                                         .background(Color.Black.copy(alpha = 0.45f))
-                                        .clickable { onPickWidget(!isTopActive) },
+                                        .clickable(enabled = visible) { onPickWidget(!isTopActive) },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -751,7 +786,7 @@ fun SideDualWidgetSlot(
                                         .size(24.dp)
                                         .clip(CircleShape)
                                         .background(Color.Black.copy(alpha = 0.38f))
-                                        .clickable { slotForOptions = isTopActive },
+                                        .clickable(enabled = visible) { slotForOptions = isTopActive },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -1027,38 +1062,42 @@ private fun SingleEmbeddedWidgetView(
     onCacheView: (LauncherAppWidgetHostView) -> Unit,
     targetWidthDp: Int,
     targetHeightDp: Int,
-    isResizing: Boolean = false
+    isResizing: Boolean = false,
+    visible: Boolean = true
 ) {
-    AndroidView(
-        factory = { ctx ->
-            try {
-                val view = cachedHostView ?: run {
-                    val host = appWidgetHost
-                    val created = (host?.createView(ctx, widgetId, widgetInfo) as? LauncherAppWidgetHostView)
-                        ?: LauncherAppWidgetHostView(ctx).apply {
-                            setAppWidget(widgetId, widgetInfo)
-                        }
-                    onCacheView(created)
-                    created
-                }
-                (view.parent as? ViewGroup)?.removeView(view)
-                view
-            } catch (_: Throwable) {
-                android.widget.FrameLayout(ctx)
-            }
-        },
-        modifier = Modifier.fillMaxSize(),
-        update = { view ->
-            if (!isResizing) {
+    key(widgetId, appWidgetHost) {
+        AndroidView(
+            factory = { ctx ->
                 try {
-                    (view as? LauncherAppWidgetHostView)?.applyWidgetSize(
-                        targetWidthDp.coerceAtLeast(30),
-                        targetHeightDp.coerceAtLeast(30)
-                    )
-                } catch (_: Throwable) {}
+                    val view = cachedHostView ?: run {
+                        val host = appWidgetHost
+                        val created = (host?.createView(ctx, widgetId, widgetInfo) as? LauncherAppWidgetHostView)
+                            ?: LauncherAppWidgetHostView(ctx).apply {
+                                setAppWidget(widgetId, widgetInfo)
+                            }
+                        onCacheView(created)
+                        created
+                    }
+                    (view.parent as? ViewGroup)?.removeView(view)
+                    view
+                } catch (_: Throwable) {
+                    android.widget.FrameLayout(ctx)
+                }
+            },
+            modifier = Modifier.fillMaxSize(),
+            update = { view ->
+                view.visibility = if (visible) android.view.View.VISIBLE else android.view.View.INVISIBLE
+                if (!isResizing) {
+                    try {
+                        (view as? LauncherAppWidgetHostView)?.applyWidgetSize(
+                            targetWidthDp.coerceAtLeast(30),
+                            targetHeightDp.coerceAtLeast(30)
+                        )
+                    } catch (_: Throwable) {}
+                }
             }
-        }
-    )
+        )
+    }
 }
 
 /**
@@ -1071,7 +1110,8 @@ fun SideSearchWidgetSlot(
     appWidgetManager: AppWidgetManager?,
     onPickWidget: (isTop: Boolean) -> Unit,
     handSide: HandSide = HandSide.RIGHT,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    visible: Boolean = true
 ) {
     val config by viewModel.sideSearchWidgetsConfig.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
@@ -1103,7 +1143,8 @@ fun SideSearchWidgetSlot(
         showShadows = showShadows,
         shadowSettings = shadowSettings,
         handSide = handSide,
-        modifier = modifier
+        modifier = modifier,
+        visible = visible
     )
 }
 
@@ -1160,7 +1201,8 @@ fun SideAlphabetWidgetSlot(
     appWidgetManager: AppWidgetManager?,
     onPickWidget: (isTop: Boolean) -> Unit,
     handSide: HandSide = HandSide.RIGHT,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    openOptionsTrigger: Int = 0
 ) {
     val config by viewModel.sideAlphabetWidgetsConfig.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
@@ -1192,7 +1234,8 @@ fun SideAlphabetWidgetSlot(
         showShadows = showShadows,
         shadowSettings = shadowSettings,
         handSide = handSide,
-        modifier = modifier
+        modifier = modifier,
+        openOptionsTrigger = openOptionsTrigger
     )
 }
 

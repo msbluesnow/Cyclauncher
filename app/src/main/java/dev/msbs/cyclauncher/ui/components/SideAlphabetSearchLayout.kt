@@ -125,6 +125,7 @@ fun SideAlphabetSearchLayout(
     var selectedHistoryMenuOffset by remember { mutableStateOf<Offset?>(null) }
     var isHistoryEditMode by remember { mutableStateOf(false) }
     var quickPaletteOverlayState by remember { mutableStateOf<QuickPaletteOverlayState?>(null) }
+    var widgetOptionsTrigger by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(historyApps.isEmpty()) {
         if (historyApps.isEmpty()) {
@@ -225,7 +226,8 @@ fun SideAlphabetSearchLayout(
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxWidth()
-                                        .padding(bottom = 6.dp)
+                                        .padding(bottom = 6.dp),
+                                    openOptionsTrigger = widgetOptionsTrigger
                                 )
                             }
                             SideAlphabetSlotMode.DISABLED -> {
@@ -268,21 +270,22 @@ fun SideAlphabetSearchLayout(
 
                 @Composable
                 fun SearchContentPane(paneModifier: Modifier) {
+                    val widgetsVisible = selectedLetter == null && selectedColor == null
                     Box(modifier = paneModifier) {
-                        if (selectedLetter == null && selectedColor == null) {
-                            if (showSearchWidgets) {
-                                SideSearchWidgetSlot(
-                                    viewModel = viewModel,
-                                    appWidgetHost = appWidgetHost,
-                                    appWidgetManager = appWidgetManager,
-                                    onPickWidget = onPickSideWidget,
-                                    handSide = handSide,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(horizontal = 4.dp, vertical = 6.dp)
-                                )
-                            }
-                        } else {
+                        if (showSearchWidgets) {
+                            SideSearchWidgetSlot(
+                                viewModel = viewModel,
+                                appWidgetHost = appWidgetHost,
+                                appWidgetManager = appWidgetManager,
+                                onPickWidget = onPickSideWidget,
+                                handSide = handSide,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 4.dp, vertical = 6.dp),
+                                visible = widgetsVisible
+                            )
+                        }
+                        if (!widgetsVisible) {
                             SideAppListContent(
                                 apps = filteredApps,
                                 handSide = handSide,
@@ -418,8 +421,12 @@ fun SideAlphabetSearchLayout(
             },
             onOpenWidgetAction = {
                 quickPaletteOverlayState = null
-                val targetIsTop = sideAlphabetConfig.topWidgetId == null || sideAlphabetConfig.bottomWidgetId != null
-                onPickSideAlphabetWidget(targetIsTop)
+                val hasWidget = sideAlphabetConfig.topWidgetId != null || sideAlphabetConfig.bottomWidgetId != null
+                if (hasWidget) {
+                    widgetOptionsTrigger++
+                } else {
+                    onPickSideAlphabetWidget(true)
+                }
             },
             onDismiss = {
                 quickPaletteOverlayState = null
@@ -769,6 +776,21 @@ private fun SnakeHistoryLazyColumn(
     val listState = rememberLazyListState()
     val rowCount = (history.size + 2) / 3
     val rowHeight = 60.dp
+    val animationsEnabled = LocalAnimationsEnabled.current
+    val shakeRotationState: State<Float> = if (isEditMode && animationsEnabled) {
+        val infiniteTransition = rememberInfiniteTransition(label = "snake_edit_shake")
+        infiniteTransition.animateFloat(
+            initialValue = -2.5f,
+            targetValue = 2.5f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 110, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "snake_shake_rot"
+        )
+    } else {
+        remember { mutableFloatStateOf(0f) }
+    }
 
     LazyColumn(
         state = listState,
@@ -869,6 +891,7 @@ private fun SnakeHistoryLazyColumn(
                                 app = app,
                                 iconSize = 44.dp,
                                 isEditMode = isEditMode,
+                                shakeRotationState = shakeRotationState,
                                 colorFilter = colorFilter,
                                 onClick = { onAppClick(app.componentKey) },
                                 onLongClick = { offset -> onAppLongClick(app, offset) },
@@ -888,6 +911,7 @@ private fun SnakeHistoryLazyColumn(
                                 app = app,
                                 iconSize = 44.dp,
                                 isEditMode = isEditMode,
+                                shakeRotationState = shakeRotationState,
                                 colorFilter = colorFilter,
                                 onClick = { onAppClick(app.componentKey) },
                                 onLongClick = { offset -> onAppLongClick(app, offset) },
@@ -907,6 +931,7 @@ private fun SnakeHistoryLazyColumn(
                                 app = app,
                                 iconSize = 44.dp,
                                 isEditMode = isEditMode,
+                                shakeRotationState = shakeRotationState,
                                 colorFilter = colorFilter,
                                 onClick = { onAppClick(app.componentKey) },
                                 onLongClick = { offset -> onAppLongClick(app, offset) },
@@ -925,6 +950,7 @@ private fun SnakeAppIcon(
     app: AppInfo,
     iconSize: Dp,
     isEditMode: Boolean,
+    shakeRotationState: State<Float>,
     colorFilter: ColorFilter? = null,
     onClick: () -> Unit,
     onLongClick: (Offset) -> Unit,
@@ -933,27 +959,11 @@ private fun SnakeAppIcon(
     var itemPosition by remember { mutableStateOf(Offset.Zero) }
     val painter = rememberAppIconPainter(app.iconKey, 48)
     val haptic = LocalHapticFeedback.current
-    val animationsEnabled = LocalAnimationsEnabled.current
-
-    val shakeRotation by if (isEditMode && animationsEnabled) {
-        val infiniteTransition = rememberInfiniteTransition(label = "snake_edit_shake")
-        infiniteTransition.animateFloat(
-            initialValue = -2.5f,
-            targetValue = 2.5f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 110, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "snake_shake_rot"
-        )
-    } else {
-        remember { mutableStateOf(0f) }
-    }
 
     Box(
         modifier = Modifier
             .size(iconSize)
-            .graphicsLayer { rotationZ = shakeRotation }
+            .graphicsLayer { rotationZ = if (isEditMode) shakeRotationState.value else 0f }
             .onGloballyPositioned { itemPosition = it.positionInRoot() }
             .pointerInput(app.componentKey, isEditMode) {
                 detectTapGestures(

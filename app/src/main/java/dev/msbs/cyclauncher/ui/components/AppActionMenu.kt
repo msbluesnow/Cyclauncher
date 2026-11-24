@@ -32,10 +32,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationEndReason
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -493,25 +489,15 @@ private fun TagEditHeader(
 ) {
     val haptic = LocalHapticFeedback.current
     var isPressed by remember { mutableStateOf(false) }
-    val progress = remember { Animatable(0f) }
-
-    LaunchedEffect(isPressed) {
-        if (isPressed && onDelete != null) {
-            val result = progress.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(
-                    durationMillis = holdDurationMs.toInt(),
-                    easing = LinearEasing
-                )
-            )
-            if (result.endReason == AnimationEndReason.Finished && progress.value >= 0.99f) {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                onDelete()
-            }
-        } else {
-            progress.snapTo(0f)
+    val progress by rememberHoldToConfirmProgress(
+        isPressed = isPressed,
+        holdDurationMs = holdDurationMs,
+        enabled = onDelete != null,
+        onConfirmed = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onDelete?.invoke()
         }
-    }
+    )
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -533,7 +519,7 @@ private fun TagEditHeader(
                     .height(3.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
-                if (progress.value > 0f) {
+                if (progress > 0f) {
                     // Subtle background track
                     Box(
                         modifier = Modifier
@@ -545,7 +531,7 @@ private fun TagEditHeader(
                     // Active filling line from title to trash icon
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(progress.value)
+                            .fillMaxWidth(progress)
                             .fillMaxHeight()
                             .clip(CircleShape)
                             .background(deleteColor)
@@ -558,7 +544,7 @@ private fun TagEditHeader(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(if (progress.value > 0f) deleteColor.copy(alpha = 0.15f) else Color.Transparent)
+                    .background(if (progress > 0f) deleteColor.copy(alpha = 0.15f) else Color.Transparent)
                     .pointerInput(Unit) {
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
@@ -572,7 +558,7 @@ private fun TagEditHeader(
                 Icon(
                     imageVector = Icons.Outlined.Delete,
                     contentDescription = stringResource(R.string.tag_dialog_hold_to_delete),
-                    tint = if (progress.value > 0f) deleteColor else deleteColor.copy(alpha = 0.85f),
+                    tint = if (progress > 0f) deleteColor else deleteColor.copy(alpha = 0.85f),
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -612,29 +598,31 @@ fun TagEditDialog(
         )
     }
 
-    var name by remember { mutableStateOf(tag?.name ?: "") }
-    var selectedColor by remember { mutableStateOf(tag?.color ?: quickSwatches[0]) }
-    var emojiText by remember { mutableStateOf(tag?.emoji ?: "") }
+    var name by remember(tag) { mutableStateOf(tag?.name ?: "") }
+    var selectedColor by remember(tag) { mutableStateOf(tag?.color ?: quickSwatches[0]) }
+    var emojiText by remember(tag) { mutableStateOf(tag?.emoji ?: "") }
     var showEmojiPicker by remember { mutableStateOf(true) }
     var showAllIconsDialog by remember { mutableStateOf(false) }
-    var iconTab by remember { mutableIntStateOf(if (TagIconRegistry.isVectorIcon(tag?.emoji) || tag?.emoji.isNullOrBlank()) 0 else 1) }
+    var iconTab by remember(tag) { mutableIntStateOf(if (TagIconRegistry.isVectorIcon(tag?.emoji) || tag?.emoji.isNullOrBlank()) 0 else 1) }
 
     val isInitialCustom = remember(tag?.color) {
         tag?.color != null && !quickSwatches.contains(tag.color)
     }
-    var selectedTab by remember { mutableIntStateOf(if (isInitialCustom) 1 else 0) }
+    var selectedTab by remember(tag) { mutableIntStateOf(if (isInitialCustom) 1 else 0) }
 
-    val initialHsv = remember(selectedColor) {
+    val initialHsv = remember(tag) {
+        val initialColor = tag?.color ?: quickSwatches[0]
         val hsv = FloatArray(3)
-        android.graphics.Color.colorToHSV(selectedColor.toArgb(), hsv)
+        android.graphics.Color.colorToHSV(initialColor.toArgb(), hsv)
         hsv
     }
-    var currentHue by remember { mutableFloatStateOf(initialHsv[0]) }
-    var currentSat by remember { mutableFloatStateOf(initialHsv[1].coerceAtLeast(0.1f)) }
-    var currentVal by remember { mutableFloatStateOf(initialHsv[2].coerceAtLeast(0.1f)) }
+    var currentHue by remember(tag) { mutableFloatStateOf(initialHsv[0]) }
+    var currentSat by remember(tag) { mutableFloatStateOf(initialHsv[1]) }
+    var currentVal by remember(tag) { mutableFloatStateOf(initialHsv[2]) }
 
-    var hexInputText by remember {
-        val argb = selectedColor.toArgb()
+    var hexInputText by remember(tag) {
+        val initialColor = tag?.color ?: quickSwatches[0]
+        val argb = initialColor.toArgb()
         mutableStateOf(String.format("%06X", 0xFFFFFF and argb))
     }
 
@@ -1180,7 +1168,7 @@ fun TagEditDialog(
                                 hexInputText = String.format("%06X", 0xFFFFFF and col.toArgb())
                                 selectedColor = col
                             },
-                            valueRange = 0.05f..1f,
+                            valueRange = 0f..1f,
                             colors = SliderDefaults.colors(
                                 thumbColor = selectedColor,
                                 activeTrackColor = selectedColor,
@@ -1204,7 +1192,7 @@ fun TagEditDialog(
                                 hexInputText = String.format("%06X", 0xFFFFFF and col.toArgb())
                                 selectedColor = col
                             },
-                            valueRange = 0.05f..1f,
+                            valueRange = 0f..1f,
                             colors = SliderDefaults.colors(
                                 thumbColor = selectedColor,
                                 activeTrackColor = selectedColor,

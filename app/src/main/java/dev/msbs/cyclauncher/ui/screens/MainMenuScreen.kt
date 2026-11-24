@@ -106,10 +106,6 @@ fun MainMenuScreen(
 ) {
     val favoriteItems by viewModel.favoriteItems.collectAsState()
     val history by viewModel.historyApps.collectAsState()
-    val tags by viewModel.tags.collectAsState()
-    val appTags by viewModel.appTags.collectAsState()
-    val tagAppOrders by viewModel.tagAppOrders.collectAsState()
-    val apps by viewModel.apps.collectAsState()
     val handSide by viewModel.handSide.collectAsState()
     val showShadows by viewModel.showShadows.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
@@ -479,13 +475,8 @@ fun MainMenuScreen(
                         markItemAction()
                         isTagFolderReorderMode = it
                     },
-                    onReorderTag = { from, to ->
-                        if (from in popularTagsWithApps.indices && to in popularTagsWithApps.indices) {
-                            viewModel.reorderTagById(
-                                popularTagsWithApps[from].first.id,
-                                popularTagsWithApps[to].first.id
-                            )
-                        }
+                    onReorderTagById = { fromTagId, toTagId ->
+                        viewModel.reorderTagById(fromTagId, toTagId)
                     },
                     onRemoveFromHistory = { viewModel.removeFromHistory(it) },
                     onHistoryIconClick = { offset ->
@@ -547,6 +538,7 @@ fun MainMenuScreen(
         }
 
         selectedTagForMenu?.let { (tag, taggedApps, offset) ->
+            val tags by viewModel.tags.collectAsState()
             val currentTag = tags.find { it.id == tag.id } ?: tag
             TagFolderActionMenu(
                 tag = currentTag,
@@ -626,6 +618,10 @@ fun MainMenuScreen(
         }
 
         selectedTagForPopup?.let { (tag, _, offset) ->
+            val tags by viewModel.tags.collectAsState()
+            val appTags by viewModel.appTags.collectAsState()
+            val tagAppOrders by viewModel.tagAppOrders.collectAsState()
+            val apps by viewModel.apps.collectAsState()
             val currentTag = tags.find { it.id == tag.id } ?: tag
             val currentTaggedApps = remember(tags, appTags, tagAppOrders, apps, currentTag.id) {
                 val rawApps = apps.filter { app ->
@@ -647,9 +643,6 @@ fun MainMenuScreen(
                 onAppLongClick = onAppLongClick,
                 onRemoveAppFromTag = { tagId, componentKey ->
                     viewModel.toggleTagForApp(componentKey, tagId)
-                },
-                onReorderApp = { fromIndex, toIndex ->
-                    viewModel.reorderAppInTag(currentTag.id, fromIndex, toIndex, currentTaggedApps)
                 },
                 onSaveOrder = { orderedKeys ->
                     viewModel.updateTagAppOrder(currentTag.id, orderedKeys)
@@ -705,7 +698,7 @@ private fun HistorySection(
     setHistoryEditMode: (Boolean) -> Unit,
     isTagFolderReorderMode: Boolean = false,
     setTagFolderReorderMode: (Boolean) -> Unit = {},
-    onReorderTag: (Int, Int) -> Unit = { _, _ -> },
+    onReorderTagById: (String, String) -> Unit = { _, _ -> },
     onRemoveFromHistory: (String) -> Unit,
     onHistoryIconClick: (Offset) -> Unit,
     onTagSectionIconClick: (Offset) -> Unit = {},
@@ -737,10 +730,10 @@ private fun HistorySection(
         }
     }
 
-    LaunchedEffect(showTagsArea, showHistoryArea) {
+    LaunchedEffect(showTagsArea, showHistoryArea, popularTags.isEmpty()) {
         isHistoryShiftedUp = false
         if (!showHistoryArea) setHistoryEditMode(false)
-        if (!showTagsArea) setTagFolderReorderMode(false)
+        if (!showTagsArea || popularTags.isEmpty()) setTagFolderReorderMode(false)
     }
 
     LaunchedEffect(history.isEmpty()) {
@@ -763,7 +756,7 @@ private fun HistorySection(
             monochromeTags = monochromeTags,
             isReorderMode = isTagFolderReorderMode,
             setReorderMode = setTagFolderReorderMode,
-            onReorderTag = onReorderTag,
+            onReorderTagById = onReorderTagById,
             onTagSectionIconClick = onTagSectionIconClick,
             onSettingsClick = currentOnSettingsClick,
             onTagFolderClick = onTagFolderClick,
@@ -810,7 +803,7 @@ private fun HistorySection(
                     TagsBlock(hasHistoryArea = false)
                 }
             }
-            !showTagsArea -> {
+            !showTagsArea || popularTags.isEmpty() -> {
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Bottom,
@@ -923,7 +916,7 @@ private fun ColumnScope.TagsContentBlock(
     monochromeTags: Boolean = false,
     isReorderMode: Boolean = false,
     setReorderMode: (Boolean) -> Unit = {},
-    onReorderTag: (Int, Int) -> Unit = { _, _ -> },
+    onReorderTagById: (String, String) -> Unit = { _, _ -> },
     onTagSectionIconClick: (Offset) -> Unit = {},
     onSettingsClick: () -> Unit,
     onTagFolderClick: (Tag, List<AppInfo>, Offset) -> Unit,
@@ -938,9 +931,11 @@ private fun ColumnScope.TagsContentBlock(
     val density = LocalDensity.current
     val animationsEnabled = LocalAnimationsEnabled.current
 
-    val (shakeRotation, shakeTranslation) = if (isReorderMode && animationsEnabled) {
+    val shakeRotationState: State<Float>
+    val shakeTranslationState: State<Float>
+    if (isReorderMode && animationsEnabled) {
         val infiniteTransition = rememberInfiniteTransition(label = "tag_shake")
-        val rot by infiniteTransition.animateFloat(
+        shakeRotationState = infiniteTransition.animateFloat(
             initialValue = -3.5f,
             targetValue = 3.5f,
             animationSpec = infiniteRepeatable(
@@ -949,7 +944,7 @@ private fun ColumnScope.TagsContentBlock(
             ),
             label = "shake_rot"
         )
-        val trans by infiniteTransition.animateFloat(
+        shakeTranslationState = infiniteTransition.animateFloat(
             initialValue = -1.5f,
             targetValue = 1.5f,
             animationSpec = infiniteRepeatable(
@@ -958,17 +953,18 @@ private fun ColumnScope.TagsContentBlock(
             ),
             label = "shake_trans"
         )
-        rot to trans
     } else {
-        0f to 0f
+        shakeRotationState = remember { mutableFloatStateOf(0f) }
+        shakeTranslationState = remember { mutableFloatStateOf(0f) }
     }
 
     var draggingTagId by remember { mutableStateOf<String?>(null) }
+    var dragStartIndex by remember { mutableIntStateOf(-1) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var itemWidthPx by remember { mutableFloatStateOf(0f) }
     var itemHeightPx by remember { mutableFloatStateOf(0f) }
 
-    val localPopularTags = remember(popularTags) { mutableStateListOf<Pair<Tag, List<AppInfo>>>().apply { addAll(popularTags) } }
+    val localPopularTags = remember { mutableStateListOf<Pair<Tag, List<AppInfo>>>().apply { addAll(popularTags) } }
     LaunchedEffect(popularTags, draggingTagId) {
         if (draggingTagId == null) {
             localPopularTags.clear()
@@ -976,11 +972,12 @@ private fun ColumnScope.TagsContentBlock(
         }
     }
 
-    val currentOnReorderTag by rememberUpdatedState(onReorderTag)
+    val currentOnReorderTagById by rememberUpdatedState(onReorderTagById)
 
     LaunchedEffect(isReorderMode) {
         if (!isReorderMode) {
             draggingTagId = null
+            dragStartIndex = -1
             dragOffset = Offset.Zero
         }
     }
@@ -1025,20 +1022,13 @@ private fun ColumnScope.TagsContentBlock(
                     val itemAnimModifier =
                         if (animationsEnabled && !isDraggingThis) Modifier.animateItem() else Modifier
 
-                    val itemRotation = if (isReorderMode && !isDraggingThis) {
-                        if (index % 2 == 0) shakeRotation else -shakeRotation
-                    } else 0f
-
-                    val itemTranslation = if (isReorderMode && !isDraggingThis) {
-                        if ((index / 2) % 2 == 0) shakeTranslation else -shakeTranslation
-                    } else 0f
-
                     val gestureModifier = if (isReorderMode) {
                         Modifier.pointerInput(tag.id, localPopularTags.size) {
                             detectDragGestures(
                                 onDragStart = {
                                     if (draggingTagId == null || draggingTagId == tag.id) {
                                         draggingTagId = tag.id
+                                        dragStartIndex = localPopularTags.indexOfFirst { it.first.id == tag.id }
                                         dragOffset = Offset.Zero
                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     }
@@ -1087,19 +1077,40 @@ private fun ColumnScope.TagsContentBlock(
                                                 dragOffset = Offset(dragOffset.x - dxToSub, dragOffset.y - dyToSub)
                                                 val moved = localPopularTags.removeAt(curIndex)
                                                 localPopularTags.add(targetIndex, moved)
-                                                currentOnReorderTag(curIndex, targetIndex)
                                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             }
                                         }
                                     }
                                 },
                                 onDragEnd = {
-                                    draggingTagId = null
-                                    dragOffset = Offset.Zero
+                                    if (draggingTagId == tag.id) {
+                                        val finalIndex = localPopularTags.indexOfFirst { it.first.id == tag.id }
+                                        if (dragStartIndex != -1 && finalIndex != -1 && finalIndex != dragStartIndex) {
+                                            val targetIndex = if (finalIndex > dragStartIndex) finalIndex - 1 else finalIndex + 1
+                                            val targetTagId = localPopularTags.getOrNull(targetIndex)?.first?.id
+                                            if (targetTagId != null) {
+                                                currentOnReorderTagById(tag.id, targetTagId)
+                                            }
+                                        }
+                                        draggingTagId = null
+                                        dragStartIndex = -1
+                                        dragOffset = Offset.Zero
+                                    }
                                 },
                                 onDragCancel = {
-                                    draggingTagId = null
-                                    dragOffset = Offset.Zero
+                                    if (draggingTagId == tag.id) {
+                                        val finalIndex = localPopularTags.indexOfFirst { it.first.id == tag.id }
+                                        if (dragStartIndex != -1 && finalIndex != -1 && finalIndex != dragStartIndex) {
+                                            val targetIndex = if (finalIndex > dragStartIndex) finalIndex - 1 else finalIndex + 1
+                                            val targetTagId = localPopularTags.getOrNull(targetIndex)?.first?.id
+                                            if (targetTagId != null) {
+                                                currentOnReorderTagById(tag.id, targetTagId)
+                                            }
+                                        }
+                                        draggingTagId = null
+                                        dragStartIndex = -1
+                                        dragOffset = Offset.Zero
+                                    }
                                 }
                             )
                         }
@@ -1127,10 +1138,13 @@ private fun ColumnScope.TagsContentBlock(
                                     translationY = dragOffset.y
                                     rotationZ = 0f
                                 } else if (isReorderMode) {
-                                    rotationZ = itemRotation
-                                    translationX = itemTranslation
+                                    val rot = shakeRotationState.value
+                                    val trans = shakeTranslationState.value
+                                    val signedTrans = if ((index / 2) % 2 == 0) trans else -trans
+                                    rotationZ = if (index % 2 == 0) rot else -rot
+                                    translationX = signedTrans
                                     translationY =
-                                        if (index % 2 == 0) itemTranslation * 0.4f else -itemTranslation * 0.4f
+                                        if (index % 2 == 0) signedTrans * 0.4f else -signedTrans * 0.4f
                                 }
                             }
                             .then(gestureModifier),
@@ -1548,10 +1562,12 @@ private fun FavoritesSection(
 
     val haptic = LocalHapticFeedback.current
     var draggingKey by remember { mutableStateOf<String?>(null) }
+    var dragStartIndex by remember { mutableIntStateOf(-1) }
     var dragVerticalOffset by remember { mutableFloatStateOf(0f) }
     var itemHeightPx by remember { mutableFloatStateOf(0f) }
+    val favoritesListState = rememberLazyListState()
 
-    val localFavorites = remember(favorites) { mutableStateListOf<FavoriteItem>().apply { addAll(favorites) } }
+    val localFavorites = remember { mutableStateListOf<FavoriteItem>().apply { addAll(favorites) } }
     LaunchedEffect(favorites, draggingKey) {
         if (draggingKey == null) {
             localFavorites.clear()
@@ -1564,6 +1580,7 @@ private fun FavoritesSection(
     LaunchedEffect(isReorderMode) {
         if (!isReorderMode) {
             draggingKey = null
+            dragStartIndex = -1
             dragVerticalOffset = 0f
         }
     }
@@ -1619,27 +1636,34 @@ private fun FavoritesSection(
                                 totalDragY += positionChange.y
                                 totalDragX += positionChange.x
 
-                                if (totalDragY > 40f && totalDragY > kotlin.math.abs(totalDragX) * 1.2f) {
-                                    isDrag = true
-                                    isSwipeDownActive = true
-                                    anchorRootPos = sectionPositionInRoot + change.position
-                                    lastCurrentTarget = resolveSwipeDownTarget(
-                                        anchorX = anchorRootPos.x,
-                                        currentX = anchorRootPos.x,
-                                        handSide = handSide,
-                                        screenWidthPx = screenWidthPx,
-                                        cardWidthPx = cardWidthPx,
-                                        screenMarginPx = screenMarginPx
-                                    )
-                                    currentOnStartSwipeDownOverlay(anchorRootPos)
-                                    change.consume()
-                                    return@withTimeoutOrNull true
-                                }
+                                val canListScrollInDirection =
+                                    (totalDragY > 0f && favoritesListState.canScrollForward) ||
+                                        (totalDragY < 0f && favoritesListState.canScrollBackward)
 
                                 if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragY) > kotlin.math.abs(
                                         totalDragX
                                     )
                                 ) {
+                                    if (canListScrollInDirection) {
+                                        isHorizontalDrag = true
+                                        return@withTimeoutOrNull false
+                                    }
+                                    if (totalDragY > 40f && totalDragY > kotlin.math.abs(totalDragX) * 1.2f) {
+                                        isDrag = true
+                                        isSwipeDownActive = true
+                                        anchorRootPos = sectionPositionInRoot + change.position
+                                        lastCurrentTarget = resolveSwipeDownTarget(
+                                            anchorX = anchorRootPos.x,
+                                            currentX = anchorRootPos.x,
+                                            handSide = handSide,
+                                            screenWidthPx = screenWidthPx,
+                                            cardWidthPx = cardWidthPx,
+                                            screenMarginPx = screenMarginPx
+                                        )
+                                        currentOnStartSwipeDownOverlay(anchorRootPos)
+                                        change.consume()
+                                        return@withTimeoutOrNull true
+                                    }
                                     isDrag = true
                                     change.consume()
                                     return@withTimeoutOrNull true
@@ -1707,7 +1731,13 @@ private fun FavoritesSection(
                                     totalDragX += positionChange.x
 
                                     if (!isSwipeDownActive) {
-                                        if (totalDragY > 40f && totalDragY > kotlin.math.abs(totalDragX) * 1.2f) {
+                                        val canListScrollInDirection =
+                                            (totalDragY > 0f && favoritesListState.canScrollForward) ||
+                                                (totalDragY < 0f && favoritesListState.canScrollBackward)
+                                        if (kotlin.math.abs(totalDragY) > viewConfiguration.touchSlop && kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX) && canListScrollInDirection) {
+                                            isHorizontalDrag = true
+                                            break
+                                        } else if (totalDragY > 40f && totalDragY > kotlin.math.abs(totalDragX) * 1.2f) {
                                             isDrag = true
                                             isSwipeDownActive = true
                                             anchorRootPos = currentRootPos
@@ -1769,12 +1799,13 @@ private fun FavoritesSection(
         ) {
 
             LazyColumn(
+                state = favoritesListState,
                 modifier = Modifier
                     .weight(1f, fill = false),
                 verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Bottom),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 reverseLayout = true,
-                userScrollEnabled = isReorderMode
+                userScrollEnabled = true
             ) {
                 itemsIndexed(localFavorites, key = { _, item -> item.key }) { index, item ->
                     val itemKey = item.key
@@ -1806,18 +1837,41 @@ private fun FavoritesSection(
                                     if (draggingKey == null || draggingKey == itemKey) {
                                         dragVerticalOffset = 0f
                                         draggingKey = itemKey
+                                        dragStartIndex = localFavorites.indexOfFirst { it.key == itemKey }
                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     }
                                 },
                                 onDragEnd = {
                                     if (draggingKey == itemKey) {
+                                        val finalIndex = localFavorites.indexOfFirst { it.key == itemKey }
+                                        if (dragStartIndex != -1 && finalIndex != -1 && finalIndex != dragStartIndex) {
+                                            val targetIndex = if (finalIndex > dragStartIndex) finalIndex - 1 else finalIndex + 1
+                                            val targetKey = localFavorites.getOrNull(targetIndex)?.key
+                                            if (targetKey != null && currentOnReorderKeys != null) {
+                                                currentOnReorderKeys?.invoke(itemKey, targetKey)
+                                            } else {
+                                                currentOnReorder(dragStartIndex, finalIndex)
+                                            }
+                                        }
                                         draggingKey = null
+                                        dragStartIndex = -1
                                         dragVerticalOffset = 0f
                                     }
                                 },
                                 onDragCancel = {
                                     if (draggingKey == itemKey) {
+                                        val finalIndex = localFavorites.indexOfFirst { it.key == itemKey }
+                                        if (dragStartIndex != -1 && finalIndex != -1 && finalIndex != dragStartIndex) {
+                                            val targetIndex = if (finalIndex > dragStartIndex) finalIndex - 1 else finalIndex + 1
+                                            val targetKey = localFavorites.getOrNull(targetIndex)?.key
+                                            if (targetKey != null && currentOnReorderKeys != null) {
+                                                currentOnReorderKeys?.invoke(itemKey, targetKey)
+                                            } else {
+                                                currentOnReorder(dragStartIndex, finalIndex)
+                                            }
+                                        }
                                         draggingKey = null
+                                        dragStartIndex = -1
                                         dragVerticalOffset = 0f
                                     }
                                 },
@@ -1842,15 +1896,8 @@ private fun FavoritesSection(
                                             val actualChange = targetIndex - curIndex
                                             val dyToSub = -actualChange * stepHeight
                                             dragVerticalOffset -= dyToSub
-                                            val fromKey = localFavorites[curIndex].key
-                                            val toKey = localFavorites[targetIndex].key
                                             val moved = localFavorites.removeAt(curIndex)
                                             localFavorites.add(targetIndex, moved)
-                                            if (currentOnReorderKeys != null) {
-                                                currentOnReorderKeys?.invoke(fromKey, toKey)
-                                            } else {
-                                                currentOnReorder(curIndex, targetIndex)
-                                            }
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         }
                                     }

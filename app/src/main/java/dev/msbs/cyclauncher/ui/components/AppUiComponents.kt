@@ -138,7 +138,7 @@ fun TouchMarqueeText(
     }
 
     val touchModifier = if (interactionSource == null) {
-        Modifier.pointerInput(restartTrigger) {
+        Modifier.pointerInput(Unit) {
             awaitPointerEventScope {
                 while (true) {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -150,30 +150,28 @@ fun TouchMarqueeText(
         }
     } else Modifier
 
-    key(restartTrigger) {
-        Text(
-            text = text,
-            color = color,
-            fontSize = fontSize,
-            fontWeight = fontWeight,
-            textAlign = textAlign,
-            letterSpacing = letterSpacing,
-            lineHeight = lineHeight,
-            style = style,
-            maxLines = 1,
-            softWrap = false,
-            modifier = modifier
-                .basicMarquee(
-                    iterations = iterations,
-                    animationMode = MarqueeAnimationMode.Immediately,
-                    repeatDelayMillis = repeatDelayMillis,
-                    initialDelayMillis = if (restartTrigger == 0) initialDelayMillis else 0,
-                    spacing = spacing,
-                    velocity = velocity
-                )
-                .then(touchModifier)
-        )
-    }
+    Text(
+        text = text,
+        color = color,
+        fontSize = fontSize,
+        fontWeight = fontWeight,
+        textAlign = textAlign,
+        letterSpacing = letterSpacing,
+        lineHeight = lineHeight,
+        style = style,
+        maxLines = 1,
+        softWrap = false,
+        modifier = modifier
+            .basicMarquee(
+                iterations = iterations,
+                animationMode = MarqueeAnimationMode.Immediately,
+                repeatDelayMillis = repeatDelayMillis,
+                initialDelayMillis = if (restartTrigger == 0) initialDelayMillis else restartTrigger % 2,
+                spacing = spacing,
+                velocity = velocity
+            )
+            .then(touchModifier)
+    )
 }
 
 /**
@@ -751,4 +749,40 @@ fun AppDropdownMenu(
             }
         }
     }
+}
+
+/**
+ * Drives a hold-to-confirm progress fraction [0f..1f] using monotonic wall-clock elapsed time,
+ * immune to OS MotionDurationScale=0f and LocalAnimationsEnabled=false.
+ */
+@Composable
+fun rememberHoldToConfirmProgress(
+    isPressed: Boolean,
+    holdDurationMs: Long,
+    enabled: Boolean = true,
+    onConfirmed: () -> Unit
+): State<Float> {
+    val progress = remember { mutableFloatStateOf(0f) }
+    val currentOnConfirmed by rememberUpdatedState(onConfirmed)
+
+    LaunchedEffect(isPressed, enabled, holdDurationMs) {
+        if (isPressed && enabled) {
+            val startMs = android.os.SystemClock.elapsedRealtime()
+            val duration = holdDurationMs.coerceAtLeast(1L)
+            progress.floatValue = 0f
+            while (true) {
+                val elapsed = android.os.SystemClock.elapsedRealtime() - startMs
+                val fraction = (elapsed.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                progress.floatValue = fraction
+                if (fraction >= 1f) {
+                    currentOnConfirmed()
+                    break
+                }
+                kotlinx.coroutines.delay(16L)
+            }
+        } else {
+            progress.floatValue = 0f
+        }
+    }
+    return progress
 }

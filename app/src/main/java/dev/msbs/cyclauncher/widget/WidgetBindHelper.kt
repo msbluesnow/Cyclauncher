@@ -37,7 +37,7 @@ object WidgetBindHelper {
         }
         val minHeightDp = if (info.minHeight > 0) (info.minHeight / density).toInt() else 140
         val estimatedCells = max(1, (minHeightDp + 15) / 65)
-        return (estimatedCells * 74).coerceIn(minHeightDp.coerceAtLeast(70), 420)
+        return (estimatedCells * 74).coerceIn(minHeightDp.coerceIn(70, 420), 420)
     }
 
     /**

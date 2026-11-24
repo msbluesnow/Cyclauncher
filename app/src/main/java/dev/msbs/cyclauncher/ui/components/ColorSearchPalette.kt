@@ -145,7 +145,8 @@ fun QuickPaletteOverlay(
 
     val cardTopY = remember(state.anchorPosition.y, screenHeightPx, cardHeightPx, topInsetPx, bottomInsetPx) {
         val desired = state.anchorPosition.y - with(density) { 60.dp.toPx() }
-        desired.coerceIn(topInsetPx, screenHeightPx - bottomInsetPx - cardHeightPx)
+        val maxTopY = maxOf(topInsetPx, screenHeightPx - bottomInsetPx - cardHeightPx)
+        desired.coerceIn(topInsetPx, maxTopY)
     }
 
     val cardLeftX = remember(state.handSide, screenWidthPx, cardWidthPx, screenMarginPx) {
